@@ -32,4 +32,20 @@ html = html
   .replace('/*HUISSTIJL*/', () => readFileSync('src/huisstijl-cs.css', 'utf8'))
   .replace('family=Figtree:wght@400;500;600', 'family=Figtree:wght@400;500;600&family=Montserrat:wght@300;400;500;600&family=Raleway:wght@400;500');
 writeFileSync('dist/configurator-corneille-silence.html', html);
+
+// Offline-versies: alles in één bestand (3D-bibliotheek en lettertypes ingebakken), om door te sturen.
+const threePad = new URL('../../node_modules/three/build/three.min.js', import.meta.url);
+const lettertypen = existsSync('lettertypen/lettertypen.css') ? readFileSync('lettertypen/lettertypen.css', 'utf8') : '';
+function offline(bron) {
+  let uit = bron
+    .replace(/<link rel="preconnect"[^>]*>\n?/g, '')
+    .replace(/<link href="https:\/\/fonts\.googleapis\.com[^>]*>/, () => (lettertypen ? `<style>${lettertypen}</style>` : ''))
+    .replace(/<script src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r128\/three\.min\.js"><\/script>/, () =>
+      `<script>${readFileSync(threePad, 'utf8').replace(/<\/script/gi, '<\\/script')}</script>`);
+  if (/cdnjs\.cloudflare|fonts\.googleapis/.test(uit)) throw new Error('offline-versie verwijst nog naar internet');
+  return uit;
+}
+writeFileSync('dist/configurator-demo-offline.html', offline(readFileSync('dist/configurator-demo.html', 'utf8')));
+writeFileSync('dist/configurator-corneille-silence-offline.html', offline(html));
+if (!lettertypen) console.log('Let op: geen lettertypen/lettertypen.css (scripts/haal_lettertypes.py); offline-versie gebruikt systeemletters.');
 console.log(`dist/configurator-demo.html en dist/configurator-corneille-silence.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's)`);
