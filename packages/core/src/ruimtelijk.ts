@@ -6,7 +6,7 @@
  * zoals y in het bovenaanzicht), y = hoogte vanaf de vloer.
  */
 import type { Materiaal } from './materialen.js';
-import { dragerVan, gekozenOpties, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
+import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort = 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker';
 
@@ -55,7 +55,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
   const zetel = gekozenOpties(ontwerp, catalogus);
   const hout = String(zetel.get('hout')?.teken?.kleur ?? '#c8a27a');
   const metaal = String(zetel.get('metaal')?.teken?.kleur ?? '#2b2b2b');
-  const zithoogte = Number(zetel.get('zithoogte')?.teken?.hoogte ?? 45);
+  const zithoogte = hoogtesVan(ontwerp, catalogus).zithoogte;
   const blokken: Blok[] = [];
 
   for (const e of ontwerp.elementen) {
@@ -82,7 +82,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
 
     // --- Onderbouw ---
     const potVorm = String(te('poten', 'vorm', 'conisch'));
-    const P = potVorm === 'plint' ? 4 : potVorm === 'verdekt' ? Math.min(Number(te('poothoogte', 'hoogte', 12)), 8) : Number(te('poothoogte', 'hoogte', 12));
+    const P = potVorm === 'plint' ? 4 : potVorm === 'verdekt' ? Math.min(hoogtesVan(ontwerp, catalogus, e).poothoogte, 8) : hoogtesVan(ontwerp, catalogus, e).poothoogte;
     const potKleur = opt.get('poten')?.teken?.metaal ? String(opt.get('poten')?.teken?.kleur ?? metaal) : hout;
     const potSoort: BlokSoort = opt.get('poten')?.teken?.metaal ? 'metaal' : 'hout';
     const cilinderMidden = (code: string, soort: BlokSoort, y: number, h: number, diameterB: number, diameterD: number, kleur: string, extra: Partial<Blok> = {}) => {
@@ -155,7 +155,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       lokaal('frame-r', 'hout', B - 4, 0, 4, D, P, h - P, hout, { afronding: 0.8 });
       if (v.houtframe === 'rondom') lokaal('frame-v', 'hout', 4, D - 4, B - 8, 4, P, zithoogte - kussenDik + 2 - P, hout, { afronding: 0.8 });
     };
-    const rugH = Number(te('rughoogte', 'hoogte', 80));
+    const rugH = hoogtesVan(ontwerp, catalogus, e).rughoogte;
     const losseRug = opt.get('rug')?.teken?.los === true;
     const capitonne = opt.get('rug')?.teken?.capitonne === true;
     const frameRug = losseRug ? rugH - 10 : rugH;
@@ -261,7 +261,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         break;
       }
       case 'arm': {
-        const armH = Number(te('armhoogte', 'hoogte', 62));
+        const armH = hoogtesVan(ontwerp, catalogus, e).armhoogte;
         const vorm = String(te('armstijl', 'vorm', 'strak'));
         if (vorm === 'hout') lokaal('arm', 'hout', 0, 0, B, D, P, armH - P, hout, { afronding: 1 });
         else if (vorm === 'rond' || vorm === 'engels') {

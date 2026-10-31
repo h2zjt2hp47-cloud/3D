@@ -5,6 +5,10 @@
 import {
   berekenOntwerp,
   bouw3D,
+  dragerVan,
+  gekozenOpties,
+  HOOGTE_BEREIK,
+  hoogtesVan,
   lokaalNaarWereld,
   VORMGEVING_BEREIK,
   vormgevingVan,
@@ -39,11 +43,29 @@ const geschiedenis: string[] = [];
 let volgendeId = 1;
 
 type Actie =
-  | { soort: 'slepen'; id: string; dx: number; dy: number; voor: string }
+  | { soort: 'slepen'; id: string; dx: number; dy: number; voor: string; kinderen: Kind[] }
   | { soort: 'vergroten'; id: string; voor: string }
   | { soort: 'tekenen'; type: string; x0: number; y0: number; x1: number; y1: number }
   | null;
 let actie: Actie = null;
+
+/** Rugleuningen en kussens die op een element liggen, met hun positie t.o.v. dat element (ze verhuizen mee). */
+interface Kind { id: string; dx: number; dy: number }
+function kinderenVan(e: OntwerpElement): Kind[] {
+  if (typen.get(e.type)?.opzet) return [];
+  return ontwerp.elementen
+    .filter((o) => o !== e && typen.get(o.type)?.opzet && dragerVan(ontwerp, getCatalogus(), o)?.id === e.id)
+    .map((o) => ({ id: o.id, dx: o.x - e.x, dy: o.y - e.y }));
+}
+function verhuisKinderen(e: OntwerpElement, kinderen: Kind[]) {
+  for (const k of kinderen) {
+    const o = elementVan(k.id);
+    if (o) {
+      o.x = e.x + k.dx;
+      o.y = e.y + k.dy;
+    }
+  }
+}
 let kijkvak = { x: -40, y: -40, b: 480, h: 360 };
 
 function laadOntwerp(): Ontwerp {
@@ -82,8 +104,11 @@ function magneet(e: OntwerpElement, x: number, y: number) {
   const p = { ...voetafdruk({ ...e, x, y }) };
   let besteX: number | null = null, besteY: number | null = null;
   let dX = MAGNEET + 1, dY = MAGNEET + 1;
+  const zelfOpzet = typen.get(e.type)?.opzet;
   for (const o of ontwerp.elementen) {
     if (o.id === e.id) continue;
+    // Een basiselement trekt niet naar rugleuningen/kussens (die liggen erop of erop een ander).
+    if (!zelfOpzet && typen.get(o.type)?.opzet) continue;
     const q = voetafdruk(o);
     for (const [mijn, doel] of [[p.x, q.x + q.b], [p.x + p.b, q.x], [p.x, q.x], [p.x + p.b, q.x + q.b]] as const) {
       const d = Math.abs(mijn - doel);
@@ -218,10 +243,13 @@ function opPointerDown(ev: PointerEvent) {
 
   if (rol === 'greep') {
     actie = { soort: 'vergroten', id: doel.getAttribute('data-id')!, voor: JSON.stringify(ontwerp) };
-  } else if (rol === 'element' && gereedschap === 'selecteren') {
+  } else if (rol === 'element' && (gereedschap === 'selecteren' || !typen.get(gereedschap)?.opzet)) {
+    // Op een bestaand element: selecteren en verplaatsen (ook als er nog een tekengereedschap actief is).
+    // Rugleuningen en kussens teken je wel bewust bovenop een element.
+    if (gereedschap !== 'selecteren') kiesGereedschap('selecteren');
     const e = elementVan(doel.getAttribute('data-id'))!;
     geselecteerd = e.id;
-    actie = { soort: 'slepen', id: e.id, dx: p.x - e.x, dy: p.y - e.y, voor: JSON.stringify(ontwerp) };
+    actie = { soort: 'slepen', id: e.id, dx: p.x - e.x, dy: p.y - e.y, voor: JSON.stringify(ontwerp), kinderen: kinderenVan(e) };
     toonEigenschappen();
   } else if (gereedschap !== 'selecteren') {
     actie = { soort: 'tekenen', type: gereedschap, x0: Math.round(p.x), y0: Math.round(p.y), x1: Math.round(p.x), y1: Math.round(p.y) };
@@ -241,6 +269,7 @@ function opPointerMove(ev: PointerEvent) {
     const m = ev.altKey ? { x: Math.round(p.x - actie.dx), y: Math.round(p.y - actie.dy) } : magneet(e, Math.round(p.x - actie.dx), Math.round(p.y - actie.dy));
     e.x = m.x;
     e.y = m.y;
+    verhuisKinderen(e, actie.kinderen);
   } else if (actie.soort === 'vergroten') {
     const e = elementVan(actie.id)!;
     const t = typen.get(e.type)!;
@@ -269,6 +298,8 @@ function opPointerUp() {
     onthoud();
     ontwerp.elementen.push(e);
     geselecteerd = e.id;
+    // Na het plaatsen terug naar selecteren, zodat je het element meteen kunt verplaatsen.
+    kiesGereedschap('selecteren');
   } else if (JSON.stringify(ontwerp) !== a.voor) {
     onthoud(a.voor);
   }
@@ -359,10 +390,15 @@ function kiesGereedschap(code: string) {
   gereedschap = code;
   document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.gereedschap === code)));
   svg().classList.toggle('tekenmodus', code !== 'selecteren');
+  voorvlak().classList.toggle('tekenmodus', code !== 'selecteren');
   const t = typen.get(code);
-  $('#o-hint').textContent = t
-    ? `Sleep op het tekenvlak om een ${t.label.toLowerCase()} te tekenen (${t.breedte.min}–${t.breedte.max} × ${t.diepte.min}–${t.diepte.max} cm), of klik voor de standaardmaat. Esc stopt.`
-    : 'Sleep elementen om ze te verplaatsen; ze klikken vast aan elkaar (Alt = zonder magneet). Sleep het hoekje rechtsonder om te vergroten.';
+  $('#o-hint').textContent = weergave === 'voor'
+    ? t
+      ? `Sleep in het vooraanzicht een kader: de breedte wordt de breedte van de ${t.label.toLowerCase()}, de hoogte de rug- of armhoogte. Klik voor de standaardmaat. Esc stopt.`
+      : 'Sleep een element om het zijwaarts te verplaatsen. Sleep de grepen: zijkant = breedte (de rest schuift mee), bovenkant = rug-, arm- of zithoogte, onderaan = poothoogte.'
+    : t
+      ? `Sleep op het tekenvlak om een ${t.label.toLowerCase()} te tekenen (${t.breedte.min}–${t.breedte.max} × ${t.diepte.min}–${t.diepte.max} cm), of klik voor de standaardmaat. Esc stopt.`
+      : 'Sleep elementen om ze te verplaatsen (rugleuningen en kussens verhuizen mee); ze klikken vast aan elkaar (Alt = zonder magneet). Sleep het hoekje rechtsonder om te vergroten.';
 }
 
 // ---------- aanpassingen (opties) ----------
@@ -410,6 +446,10 @@ const VORM_LABELS: Record<keyof Vormgeving, string> = {
   zachtheid: 'Zachtheid (0 = strak, 10 = heel zacht)',
   rugvorm: 'Rugvorm',
   houtframe: 'Houten frame',
+  rughoogte: 'Rughoogte (cm)',
+  armhoogte: 'Armhoogte (cm)',
+  zithoogte: 'Zithoogte (cm)',
+  poothoogte: 'Poothoogte (cm)',
 };
 const KEUZE_LABELS: Record<string, string> = {
   recht: 'Recht', hellend: 'Achterover hellend', rond: 'Afgerond',
@@ -468,11 +508,26 @@ function vormWijziging(f: () => void) {
 
 function toonModelVormgeving() {
   const vak = $('#o-vormgeving');
-  vak.replaceChildren(
+  const delen: HTMLElement[] = [
     vormgevingVelden('ov', vormgevingVan(ontwerp), ontwerp.vormgeving ?? {}, (veld, w) =>
       vormWijziging(() => (ontwerp.vormgeving = { ...(ontwerp.vormgeving ?? {}), [veld]: w })),
     ),
-  );
+  ];
+  const vrij = (['zithoogte', 'poothoogte'] as const).filter((k) => ontwerp.vormgeving?.[k] !== undefined);
+  if (vrij.length) {
+    const rij = el('div', { class: 'knoppenrij' });
+    rij.append(el('span', { class: 'klein' }, vrij.map((k) => `${VORM_LABELS[k].replace(' (cm)', '')} ${ontwerp.vormgeving![k]} cm (getekend in het vooraanzicht)`).join(' · ')));
+    const terug = el('button', { type: 'button', class: 'tweede klein-knop' }, 'Terug volgens opties') as HTMLButtonElement;
+    terug.addEventListener('click', () => {
+      onthoud();
+      for (const k of vrij) delete ontwerp.vormgeving![k];
+      toonModelVormgeving();
+      gewijzigd();
+    });
+    rij.append(terug);
+    delen.push(rij);
+  }
+  vak.replaceChildren(...delen);
 }
 
 /** Het huidige ontwerp (kopie), bv. om als model te bewaren. */
@@ -523,24 +578,261 @@ export function kiesWeergave(w: typeof weergave) {
   weergave = w;
   document.querySelectorAll<HTMLButtonElement>('[data-o-weergave]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.oWeergave === w)));
   svg().toggleAttribute('hidden', w !== 'boven');
-  $('#o-voor').hidden = w !== 'voor';
+  $('#o-voor').toggleAttribute('hidden', w !== 'voor');
   $('#o-3d').hidden = w !== '3d';
   $('#o-3d-knoppen').hidden = w !== '3d';
-  $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'poten, zithoogte, rug en armen · maten in cm' : 'draai en zoom met muis of vinger';
+  $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'klik een element · sleep de grepen · maten in cm' : 'draai en zoom met muis of vinger';
+  kiesGereedschap(gereedschap);
   if (w === '3d' && viewer === undefined) viewer = maak3D($('#o-3d'));
   toonWeergave();
 }
 
 function toonWeergave() {
-  if (weergave === 'voor') {
-    $('#o-voor').innerHTML = ontwerp.elementen.length
-      ? tekenSvg(tekenVooraanzicht(ontwerp, getCatalogus(), getMaterialen()), { breedtePx: 720, lijnkleur: '#2b2b28', maatkleur: '#3f5a52' })
-      : '<p class="klein">Nog geen elementen.</p>';
-  }
+  if (weergave === 'voor') tekenVoorvlak();
   if (weergave === '3d' && viewer) {
     viewer.formaat();
     viewer.toon(bouw3D(ontwerp, getCatalogus(), getMaterialen()));
   }
+}
+
+// ---------- vooraanzicht: klikken, grepen slepen en tekenen ----------
+type VoorActie =
+  | { soort: 'breedte'; id: string; voor: string; rechts0: number; breedte0: number }
+  | { soort: 'hoogte'; id: string; voor: string }
+  | { soort: 'poot'; id: string; voor: string }
+  | { soort: 'teken'; x0: number; y0: number; x1: number; y1: number }
+  | { soort: 'verplaats'; id: string; voor: string; dx: number; kinderen: Kind[] }
+  | null;
+let voorActie: VoorActie = null;
+let voorKijkvak = { x: -40, y: -120, b: 400, h: 170 };
+const voorvlak = () => $<SVGSVGElement>('#o-voor');
+const RUGTYPES = ['zit', 'hoek', 'rond', 'kuip', 'rugleuning'];
+
+/** Wat de greep bovenaan een element aanpast. */
+function hoogteSoort(e: OntwerpElement): 'rughoogte' | 'armhoogte' | 'zithoogte' | null {
+  const stijl = typen.get(e.type)?.tekenstijl ?? '';
+  if (RUGTYPES.includes(stijl)) return 'rughoogte';
+  if (stijl === 'arm') return 'armhoogte';
+  if (['chaise', 'zit_zonder_rug', 'poef'].includes(stijl)) return 'zithoogte';
+  return null;
+}
+
+function voorPunt(ev: PointerEvent) {
+  const m = voorvlak().getScreenCTM();
+  if (!m) return { x: 0, y: 0 };
+  const p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m.inverse());
+  return { x: p.x, y: p.y };
+}
+
+function tekenVoorvlak() {
+  const s = voorvlak();
+  const t = tekenVooraanzicht(ontwerp, getCatalogus(), getMaterialen());
+  const vormen = t.vormen.filter((v) => v.code !== 'vloer');
+  if (!voorActie) {
+    const x0 = Math.min(0, ...vormen.map((v) => v.x));
+    const x1 = Math.max(300, ...vormen.map((v) => v.x + v.breedte));
+    const y0 = Math.min(-110, ...vormen.map((v) => v.y));
+    voorKijkvak = { x: x0 - 45, y: y0 - 25, b: x1 - x0 + 110, h: -y0 + 25 + 40 };
+  }
+  s.setAttribute('viewBox', `${voorKijkvak.x} ${voorKijkvak.y} ${voorKijkvak.b} ${voorKijkvak.h}`);
+  s.replaceChildren();
+  s.append(svgEl('rect', { x: voorKijkvak.x, y: voorKijkvak.y, width: voorKijkvak.b, height: voorKijkvak.h, fill: 'transparent', 'data-rol': 'achtergrond' }));
+  s.append(svgEl('line', { x1: voorKijkvak.x + 10, y1: 0, x2: voorKijkvak.x + voorKijkvak.b - 10, y2: 0, class: 'vloer' }));
+  for (const v of vormen) {
+    const id = v.code.split('.')[0]!;
+    const attr = { fill: v.vulling ?? 'none', 'stroke-width': 0.6 * (v.lijndikte ?? 1), class: 'vorm', 'data-id': id, ...(v.lijn ? { stroke: v.lijn } : {}) };
+    s.append(v.pad ? svgEl('path', { d: v.pad, ...attr }) : svgEl('rect', { x: v.x, y: v.y, width: v.breedte, height: v.hoogte, rx: v.afronding ?? 0, ...attr }));
+  }
+  // Maten.
+  const w = t.maatlijnen.find((m) => m.code === 'breedte');
+  const h = t.maatlijnen.find((m) => m.code === 'hoogte');
+  const z = t.maatlijnen.find((m) => m.code === 'zithoogte');
+  if (w) tekenMaatlijn(s, w.x1, 16, w.x2, 16, `${w.tekst} cm`, false);
+  if (h) tekenMaatlijn(s, h.x1 + 16, h.y2, h.x1 + 16, 0, `${h.tekst} cm`, true);
+  if (z) tekenMaatlijn(s, z.x1 - 16, z.y1, z.x1 - 16, 0, z.tekst, true);
+
+  // Geselecteerd element: kader en grepen.
+  const e = elementVan(geselecteerd);
+  if (e && gereedschap === 'selecteren') {
+    const eigen = vormen.filter((v) => v.code.startsWith(`${e.id}.`));
+    if (eigen.length) {
+      const ex0 = Math.min(...eigen.map((v) => v.x)), ex1 = Math.max(...eigen.map((v) => v.x + v.breedte));
+      const top = Math.min(...eigen.map((v) => v.y));
+      s.append(svgEl('rect', { x: ex0 - 1, y: top - 1, width: ex1 - ex0 + 2, height: -top + 1, class: 'selectie' }));
+      s.append(svgEl('rect', { x: ex1 - 3, y: top / 2 - 6, width: 6, height: 12, rx: 1.5, class: 'greep h', 'data-rol': 'v-breedte', 'data-id': e.id }));
+      const soort = hoogteSoort(e);
+      const hg = hoogtesVan(ontwerp, getCatalogus(), e);
+      if (soort) {
+        const hy = soort === 'zithoogte' ? -hg.zithoogte : top;
+        s.append(svgEl('rect', { x: (ex0 + ex1) / 2 - 6, y: hy - 3, width: 12, height: 6, rx: 1.5, class: 'greep v', 'data-rol': 'v-hoogte', 'data-id': e.id }));
+        const lbl = svgEl('text', { x: (ex0 + ex1) / 2 + 9, y: hy - 4, class: 'greeplabel' });
+        lbl.textContent = soort === 'rughoogte' ? `rug ${Math.round(-top)}` : soort === 'armhoogte' ? `arm ${Math.round(-top)}` : `zit ${hg.zithoogte}`;
+        s.append(lbl);
+      }
+      const potVorm = String(gekozenOptiesUi(e).get('poten')?.teken?.vorm ?? '');
+      if (!typen.get(e.type)?.opzet && !['plint', 'housse'].includes(potVorm)) {
+        const py = -hg.poothoogte;
+        s.append(svgEl('rect', { x: ex0 + 4, y: py - 3, width: 10, height: 6, rx: 1.5, class: 'greep v', 'data-rol': 'v-poot', 'data-id': e.id }));
+        const lbl = svgEl('text', { x: ex0 + 16, y: py + 3, class: 'greeplabel' });
+        lbl.textContent = `poot ${hg.poothoogte}`;
+        s.append(lbl);
+      }
+    }
+  }
+  if (voorActie?.soort === 'teken') {
+    const x = Math.min(voorActie.x0, voorActie.x1), y = Math.min(voorActie.y0, voorActie.y1, 0);
+    const b = Math.abs(voorActie.x1 - voorActie.x0), hh = Math.max(Math.abs(Math.min(voorActie.y0, voorActie.y1)), 1);
+    s.append(svgEl('rect', { x, y, width: b, height: hh, class: 'tekenkader' }));
+    const lbl = svgEl('text', { x: x + b / 2, y: y - 4, class: 'greeplabel', 'text-anchor': 'middle' });
+    lbl.textContent = `${Math.round(b)} × ${Math.round(hh)} cm`;
+    s.append(lbl);
+  }
+}
+
+function gekozenOptiesUi(e: OntwerpElement) {
+  return gekozenOpties(ontwerp, getCatalogus(), e);
+}
+
+/** Breedte zoals in het vooraanzicht (x-richting): breedte of diepte, afhankelijk van de draaiing. */
+function xMaat(e: OntwerpElement): 'breedte' | 'diepte' {
+  return e.rotatie === 0 || e.rotatie === 180 ? 'breedte' : 'diepte';
+}
+
+function opVoorDown(ev: PointerEvent) {
+  if (ev.button !== 0) return;
+  const doel = ev.target as SVGElement;
+  const rol = doel.getAttribute('data-rol');
+  const id = doel.getAttribute('data-id');
+  const p = voorPunt(ev);
+  voorvlak().focus({ preventScroll: true });
+  if (rol === 'v-breedte' && id) {
+    const e = elementVan(id)!;
+    const f = voetafdruk(e);
+    voorActie = { soort: 'breedte', id, voor: JSON.stringify(ontwerp), rechts0: f.x + f.b, breedte0: e[xMaat(e)] };
+  } else if (rol === 'v-hoogte' && id) voorActie = { soort: 'hoogte', id, voor: JSON.stringify(ontwerp) };
+  else if (rol === 'v-poot' && id) voorActie = { soort: 'poot', id, voor: JSON.stringify(ontwerp) };
+  else if (id && elementVan(id) && (gereedschap === 'selecteren' || !typen.get(gereedschap)?.opzet)) {
+    // Op een bestaand element: selecteren en zijwaarts verplaatsen.
+    if (gereedschap !== 'selecteren') kiesGereedschap('selecteren');
+    const e = elementVan(id)!;
+    geselecteerd = id;
+    voorActie = { soort: 'verplaats', id, voor: JSON.stringify(ontwerp), dx: p.x - e.x, kinderen: kinderenVan(e) };
+    toonEigenschappen();
+    herbereken();
+  } else if (gereedschap !== 'selecteren') voorActie = { soort: 'teken', x0: Math.round(p.x), y0: Math.round(p.y), x1: Math.round(p.x), y1: Math.round(p.y) };
+  else {
+    geselecteerd = null;
+    toonEigenschappen();
+    herbereken();
+    return;
+  }
+  voorvlak().setPointerCapture(ev.pointerId);
+}
+
+function opVoorMove(ev: PointerEvent) {
+  if (!voorActie) return;
+  const p = voorPunt(ev);
+  const klemB = (w: number, b: { min: number; max: number }) => Math.round(Math.min(b.max, Math.max(b.min, w)));
+  if (voorActie.soort === 'teken') {
+    voorActie.x1 = Math.round(p.x);
+    voorActie.y1 = Math.round(p.y);
+  } else {
+    const e = elementVan(voorActie.id);
+    if (!e) return;
+    const t = typen.get(e.type)!;
+    if (voorActie.soort === 'verplaats') {
+      const doelX = Math.round(p.x - voorActie.dx);
+      e.x = ev.altKey ? doelX : magneet(e, doelX, e.y).x;
+      verhuisKinderen(e, voorActie.kinderen);
+    } else if (voorActie.soort === 'breedte') {
+      const veld = xMaat(e);
+      const bereik = veld === 'breedte' ? t.breedte : t.diepte;
+      const f = voetafdruk(e);
+      const nieuw = klemB(p.x - f.x, bereik);
+      // Herstel vanaf de begintoestand en pas dan toe, zodat herhaald slepen niet optelt.
+      ontwerp = JSON.parse(voorActie.voor) as Ontwerp;
+      const e2 = elementVan(voorActie.id)!;
+      const delta = nieuw - voorActie.breedte0;
+      const f2 = voetafdruk(e2);
+      e2[veld] = nieuw;
+      // Elementen rechts in dezelfde rij schuiven mee; rugleuningen/kussens over de volle breedte groeien mee.
+      for (const o of ontwerp.elementen) {
+        if (o === e2) continue;
+        const q = voetafdruk(o);
+        const zelfdeRij = Math.min(q.y + q.h, f2.y + f2.h) - Math.max(q.y, f2.y) > 0;
+        const opDit = typen.get(o.type)?.opzet && dragerVan(ontwerp, getCatalogus(), o)?.id === e2.id;
+        if (opDit && Math.abs(q.b - f2.b) <= 1 && xMaat(o) === xMaat(e2)) o[xMaat(o)] = Math.max(1, o[xMaat(o)] + delta);
+        else if (zelfdeRij && q.x >= voorActie.rechts0 - 1) o.x += delta;
+      }
+    } else if (voorActie.soort === 'hoogte') {
+      const soort = hoogteSoort(e);
+      const h = Math.round(-p.y);
+      if (soort === 'rughoogte') e.vorm = { ...(e.vorm ?? {}), rughoogte: klemB(h, HOOGTE_BEREIK.rughoogte) };
+      if (soort === 'armhoogte') e.vorm = { ...(e.vorm ?? {}), armhoogte: klemB(h, HOOGTE_BEREIK.armhoogte) };
+      if (soort === 'zithoogte') ontwerp.vormgeving = { ...(ontwerp.vormgeving ?? {}), zithoogte: klemB(h + (t.tekenstijl === 'poef' ? 2 : 0), HOOGTE_BEREIK.zithoogte) };
+    } else if (voorActie.soort === 'poot') {
+      ontwerp.vormgeving = { ...(ontwerp.vormgeving ?? {}), poothoogte: klemB(-p.y, HOOGTE_BEREIK.poothoogte) };
+    }
+  }
+  herbereken(false);
+  tekenVoorvlak();
+}
+
+function opVoorUp() {
+  if (!voorActie) return;
+  const a = voorActie;
+  voorActie = null;
+  if (a.soort === 'teken') {
+    const t = typen.get(gereedschap);
+    if (t) {
+      const x = Math.min(a.x0, a.x1), b = Math.abs(a.x1 - a.x0);
+      const h = Math.round(-Math.min(a.y0, a.y1, 0));
+      const klik = b < 8;
+      const breed = Math.round(Math.min(t.breedte.max, Math.max(t.breedte.min, klik ? t.breedte.standaard : b)));
+      const x0 = Math.round(klik ? x - breed / 2 : x);
+      let nieuw: OntwerpElement;
+      if (t.opzet) {
+        // Op het element met de meeste overlap in de breedte.
+        const basis = ontwerp.elementen.filter((o) => !typen.get(o.type)?.opzet);
+        const overlap = (o: OntwerpElement) => {
+          const q = voetafdruk(o);
+          return Math.min(q.x + q.b, x0 + breed) - Math.max(q.x, x0);
+        };
+        const drager = basis.sort((p1, p2) => overlap(p2) - overlap(p1))[0];
+        if (!drager || overlap(drager) <= 0) {
+          $('#o-hint').textContent = `Een ${t.label.toLowerCase()} moet op een element liggen: teken over een bestaand element.`;
+          tekenVoorvlak();
+          return;
+        }
+        const B = drager.breedte;
+        const lx = drager.rotatie === 180 ? drager.x + B - x0 - breed : x0 - drager.x;
+        const ly = t.tekenstijl === 'rugleuning' ? 0 : voorkantRug(drager);
+        nieuw = plaatsOp(drager, t.code, Math.max(0, Math.min(lx, B - 4)), ly, Math.min(breed, B), t.diepte.standaard, 0);
+      } else {
+        const basis = ontwerp.elementen.filter((o) => !typen.get(o.type)?.opzet);
+        const yRij = basis.length ? Math.min(...basis.map((o) => voetafdruk(o).y)) : 0;
+        nieuw = { id: nieuwId(), type: t.code, x: x0, y: yRij, breedte: breed, diepte: t.diepte.standaard, rotatie: 0 };
+        const m = magneet(nieuw, nieuw.x, nieuw.y);
+        nieuw.x = m.x;
+      }
+      const soort = hoogteSoort(nieuw);
+      if (!klik && h > 0) {
+        if (soort === 'rughoogte' && Math.abs(h - hoogtesVan(ontwerp, getCatalogus(), nieuw).rughoogte) > 2)
+          nieuw.vorm = { rughoogte: Math.round(Math.min(HOOGTE_BEREIK.rughoogte.max, Math.max(HOOGTE_BEREIK.rughoogte.min, h))) };
+        if (soort === 'armhoogte' && Math.abs(h - hoogtesVan(ontwerp, getCatalogus(), nieuw).armhoogte) > 2)
+          nieuw.vorm = { armhoogte: Math.round(Math.min(HOOGTE_BEREIK.armhoogte.max, Math.max(HOOGTE_BEREIK.armhoogte.min, h))) };
+      }
+      onthoud();
+      ontwerp.elementen.push(nieuw);
+      geselecteerd = nieuw.id;
+      kiesGereedschap('selecteren');
+    }
+  } else if (JSON.stringify(ontwerp) !== a.voor) {
+    onthoud(a.voor);
+  }
+  toonEigenschappen();
+  toonModelVormgeving();
+  gewijzigd();
 }
 
 // ---------- rugleuningen en kussens toevoegen op een element ----------
@@ -558,9 +850,7 @@ function voegOpzetToe(drager: OntwerpElement, wat: 'rug-achter' | 'rug-links' | 
   const B = drager.breedte, D = drager.diepte;
   const t = (code: string) => typen.get(code)!;
   const opDrager = ontwerp.elementen.filter((o) => o !== drager && typen.get(o.type)?.opzet && voetafdrukOverlapt(o, drager));
-  const heeftRug = ['zit', 'hoek', 'rond', 'kuip'].includes(typen.get(drager.type)?.tekenstijl ?? '');
-  const rugAchter = opDrager.some((o) => o.type === 'rugleuning' && o.rotatie === drager.rotatie);
-  const voor = heeftRug ? vormgevingVan(ontwerp, drager).rugdikte : rugAchter ? t('rugleuning').diepte.standaard : 0;
+  const voor = voorkantRug(drager);
   let nieuw: OntwerpElement;
   const dik = t('rugleuning').diepte.standaard;
   if (wat === 'rug-achter') nieuw = plaatsOp(drager, 'rugleuning', 0, 0, B, dik, 0);
@@ -581,6 +871,15 @@ function voegOpzetToe(drager: OntwerpElement, wat: 'rug-achter' | 'rug-links' | 
   geselecteerd = nieuw.id;
   toonEigenschappen();
   gewijzigd();
+}
+
+/** Afstand van de achterkant van een element tot de voorkant van zijn rug (eigen rug of losse rugleuning achteraan). */
+function voorkantRug(drager: OntwerpElement): number {
+  if (['zit', 'hoek', 'rond', 'kuip'].includes(typen.get(drager.type)?.tekenstijl ?? '')) return vormgevingVan(ontwerp, drager).rugdikte;
+  const rug = ontwerp.elementen.find(
+    (o) => o.type !== drager.type && typen.get(o.type)?.tekenstijl === 'rugleuning' && o.rotatie === drager.rotatie && voetafdrukOverlapt(o, drager),
+  );
+  return rug ? rug.diepte : 0;
 }
 
 function voetafdrukOverlapt(a: OntwerpElement, b: OntwerpElement) {
@@ -710,6 +1009,21 @@ function toonEigenschappen() {
     delen.push(vak);
   }
   if (elementOpties.childElementCount) delen.push(elementOpties);
+  // Vrij getekende hoogtes (vooraanzicht): tonen met terugzetknop.
+  const vrij = (['rughoogte', 'armhoogte'] as const).filter((k) => e.vorm?.[k] !== undefined);
+  if (vrij.length) {
+    const rij3 = el('div', { class: 'knoppenrij' });
+    rij3.append(el('span', { class: 'klein' }, vrij.map((k) => `${VORM_LABELS[k].replace(' (cm)', '')} ${e.vorm![k]} cm (getekend)`).join(' · ')));
+    const terug = el('button', { type: 'button', class: 'tweede klein-knop' }, 'Terug volgens opties') as HTMLButtonElement;
+    terug.addEventListener('click', () => {
+      onthoud();
+      for (const k of vrij) delete e.vorm![k];
+      toonEigenschappen();
+      gewijzigd();
+    });
+    rij3.append(terug);
+    delen.push(rij3);
+  }
   if (ontwerpVak) delen.push(ontwerpVak);
   delen.push(knoppen);
   vak.replaceChildren(...delen);
@@ -848,6 +1162,13 @@ export function startOntwerper() {
     ].join('\n');
     void kopieer(tekst, $('#o-kopieer-melding'));
   });
+
+  const vv = voorvlak();
+  vv.addEventListener('pointerdown', opVoorDown);
+  vv.addEventListener('pointermove', opVoorMove);
+  vv.addEventListener('pointerup', opVoorUp);
+  vv.addEventListener('pointercancel', opVoorUp);
+  vv.addEventListener('keydown', opToets);
 
   const s = svg();
   s.addEventListener('pointerdown', opPointerDown);

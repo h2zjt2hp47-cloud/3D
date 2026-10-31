@@ -25,8 +25,9 @@ Boven- en vooraanzicht volgen dezelfde regels: `tekenElement()` in `ontwerp.ts` 
 - `voetafdruk(e)` geeft de rechthoek in het bovenaanzicht (bij 90/270 zijn breedte en diepte omgewisseld).
 
 ## Hoogtes (één bron van waarheid)
-- Poothoogte `P` uit optie `poothoogte` (teken.hoogte); `plint` = 4, `verdekt` ≤ 8; `draaivoet` en `housse` vervangen de poten.
-- Zithoogte uit optie `zithoogte` (42/45/48). Kussendikte, rugdikte, aantal zitkussens, zachtheid, rugvorm en houten frame komen uit **vormgeving**: `vormgevingVan(ontwerp, e)` (standaard ← model ← element).
+- **Gebruik altijd `hoogtesVan(ontwerp, catalogus, e)`** → `{ zithoogte, poothoogte, rughoogte, armhoogte }`. Die neemt eerst de **vrij getekende hoogtes** (vooraanzicht): `e.vorm.rughoogte/armhoogte` per element, `ontwerp.vormgeving.zithoogte/poothoogte` voor de hele zetel; anders de opties (`teken.hoogte`). Grenzen: `HOOGTE_BEREIK`.
+- Poothoogte `P`: `plint` = 4, `verdekt` ≤ 8; `draaivoet` en `housse` vervangen de poten.
+- Zithoogte standaard uit optie `zithoogte` (42/45/48). Kussendikte, rugdikte, aantal zitkussens, zachtheid, rugvorm en houten frame komen uit **vormgeving**: `vormgevingVan(ontwerp, e)` (standaard ← model ← element).
 - Basis: van `P` tot `zithoogte − kussendikte`; zitkussen daarbovenop. Rug: van `P` tot `rughoogte` (optie `rughoogte`; bij losse rugkussens is de frame-rug 10 cm lager).
 - **Opzet-elementen** (`ElementType.opzet`: rugleuning, rugkussen, sierkussen, rolkussen) liggen op een **drager**: `dragerVan(ontwerp, catalogus, e)` (basiselement met de grootste overlap). Ze rusten op `zithoogte − kussendikte(drager)`, krijgen geen poten, mogen overlappen en nemen standaard het materiaal van de drager (`materiaalVan`).
 
@@ -46,6 +47,11 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 5. **Weergave** alleen aanpassen als er een nieuwe `vorm` of `soort` bij komt (`mesh()` in `drie-d.ts`).
 6. **Tests** (`packages/core/test/`): controleer codes, hoogtes (`y`, `h`), `vorm` en `kantel` van de blokken, en dat `controleerCatalogus()` en alle modellen geldig blijven.
 7. `npm test` en `npm run typecheck` in de root; daarna `npm run build -w @configurator/demo-web`.
+
+## Interactie in de demo (ontwerper.ts)
+- Bovenaanzicht: tekenen met een elementgereedschap; daarna springt het gereedschap terug naar "selecteren". Slepen op een bestaand element verplaatst het (ook met een tekengereedschap actief), behalve bij opzet-gereedschap (dat teken je bewust bovenop een element).
+- Rugleuningen en kussens op een element **verhuizen mee** (`kinderenVan` / `verhuisKinderen`); de magneet negeert opzet-elementen voor basiselementen.
+- Vooraanzicht is tekenbaar: element klikken/zijwaarts slepen; grepen voor breedte (rij schuift mee, rugleuning over volle breedte groeit mee), rug-/arm-/zithoogte (bovenkant) en poothoogte (onderkant); nieuw element tekenen (breedte = kader, hoogte = rug-/armhoogte); opzet komt op het element met de meeste overlap, vóór een eigen rug of losse rugleuning (`voorkantRug`).
 
 ## Weergave (drie-d.ts)
 - Afgeronde balken: `ExtrudeGeometry` van een afgerond grondvlak met bevel, gedraaid zodat de extrusie naar boven gaat; onderkant op `y = 0` van de mesh.

@@ -103,6 +103,38 @@ export interface Vormgeving {
   rugvorm: 'recht' | 'hellend' | 'rond';
   /** Zichtbaar houten frame rond de zitting. */
   houtframe: 'geen' | 'zijkant' | 'rondom';
+  /**
+   * Vrije hoogtes in cm (bv. getekend in het vooraanzicht). Leeg = volgens de gekozen opties.
+   * Rughoogte en armhoogte gelden per element; zithoogte en poothoogte voor de hele zetel.
+   */
+  rughoogte?: number;
+  armhoogte?: number;
+  zithoogte?: number;
+  poothoogte?: number;
+}
+
+export const HOOGTE_BEREIK = {
+  rughoogte: { min: 55, max: 110 },
+  armhoogte: { min: 40, max: 85 },
+  zithoogte: { min: 35, max: 55 },
+  poothoogte: { min: 0, max: 30 },
+} as const;
+
+/**
+ * De hoogtes van een element in cm: vrij getekende waarden (vormgeving) of anders de gekozen opties.
+ * Zithoogte en poothoogte komen van de zetel (Ontwerp.vormgeving), rug- en armhoogte van het element.
+ */
+export function hoogtesVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e?: OntwerpElement) {
+  const zetel = gekozenOpties(ontwerp, catalogus);
+  const opt = e ? gekozenOpties(ontwerp, catalogus, e) : zetel;
+  const v = vormgevingVan(ontwerp, e);
+  const getal = (x: unknown, s: number) => (typeof x === 'number' && Number.isFinite(x) ? x : s);
+  return {
+    zithoogte: getal(ontwerp.vormgeving?.zithoogte, getal(zetel.get('zithoogte')?.teken?.hoogte, 45)),
+    poothoogte: getal(ontwerp.vormgeving?.poothoogte, getal(opt.get('poothoogte')?.teken?.hoogte ?? zetel.get('poothoogte')?.teken?.hoogte, 12)),
+    rughoogte: getal(v.rughoogte, getal(opt.get('rughoogte')?.teken?.hoogte, 80)),
+    armhoogte: getal(v.armhoogte, getal(opt.get('armhoogte')?.teken?.hoogte, 62)),
+  };
 }
 
 export const STANDAARD_VORMGEVING: Vormgeving = { rugdikte: 18, kussendikte: 14, zitkussens: 1, zachtheid: 4, rugvorm: 'recht', houtframe: 'geen' };
@@ -583,6 +615,24 @@ export function berekenOntwerp(
       const w = v[veld];
       if (!Number.isFinite(w) || w < b.min || w > b.max)
         meldingen.push({ code: `vorm.${veld}`, ernst: 'fout', elementId: e.id, melding: `${naam}: ${veld} moet tussen ${b.min} en ${b.max} liggen.` });
+    }
+    for (const [veld, b] of Object.entries(HOOGTE_BEREIK) as [keyof typeof HOOGTE_BEREIK, { min: number; max: number }][]) {
+      const w = veld === 'zithoogte' || veld === 'poothoogte' ? ontwerp.vormgeving?.[veld] : v[veld];
+      if (w !== undefined && (!Number.isFinite(w) || w < b.min || w > b.max)) {
+        const code = `vorm.${veld}`;
+        if (!meldingen.some((x) => x.code === code && (veld === 'zithoogte' || veld === 'poothoogte' || x.elementId === e.id)))
+          meldingen.push({ code, ernst: 'fout', elementId: veld === 'zithoogte' || veld === 'poothoogte' ? undefined : e.id, melding: `${veld === 'zithoogte' || veld === 'poothoogte' ? '' : `${naam}: `}${veld} moet tussen ${b.min} en ${b.max} cm liggen.` });
+      }
+    }
+    // Vrij getekende rughoogte: meerprijs en stof per cm boven 80 cm (minder bij een lagere rug).
+    if (v.rughoogte !== undefined && ['zit', 'hoek', 'rond', 'kuip', 'rugleuning'].includes(t.tekenstijl)) {
+      const verschil = v.rughoogte - 80;
+      const bedrag = rond(((verschil * (verschil > 0 ? 0.5 : 0.25)) / 100) * prijs);
+      if (bedrag) {
+        optieBedrag += bedrag;
+        telOptie({ code: 'vormgeving', label: 'Vormgeving', niveau: 'element', standaard: '', keuzes: [] }, { code: 'eigen', label: 'eigen vormgeving' }, bedrag);
+      }
+      stofPct += verschil * 0.7;
     }
     if (vp && ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond', 'kuip'].includes(t.tekenstijl)) {
       const vormBedrag = rond(

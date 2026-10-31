@@ -16,6 +16,8 @@ export {
   berekenOntwerp,
   dragerVan,
   gekozenOpties,
+  hoogtesVan,
+  HOOGTE_BEREIK,
   lokaalNaarWereld,
   materiaalVan,
   overlapOppervlak,

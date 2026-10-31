@@ -258,6 +258,20 @@ main.catalogus { display: block; }
 .catvoorbeeld h4, .catvoorbeeld p { grid-column: 1 / -1; margin: 0; }
 .catvoorbeeld .tekening { min-height: 120px; }
 .meldingen li.ok { border-color: var(--goed); background: color-mix(in srgb, var(--goed) 10%, transparent); }
+
+#o-voor { width: 100%; height: auto; aspect-ratio: 2.4 / 1; max-height: 60vh; background: var(--papier); border-radius: 6px; touch-action: none; user-select: none; }
+#o-voor.tekenmodus { cursor: crosshair; }
+#o-voor .vorm { stroke: #2b2b28; cursor: pointer; }
+#o-voor .vloer { stroke: #9a9a96; }
+#o-voor .selectie { fill: none; stroke: #2f6fb0; stroke-width: 1.2; stroke-dasharray: 4 3; pointer-events: none; }
+#o-voor .greep { fill: #fff; stroke: #2f6fb0; stroke-width: 1.6; }
+#o-voor .greep.h { cursor: ew-resize; }
+#o-voor .greep.v { cursor: ns-resize; }
+#o-voor .greeplabel { font: 600 8px var(--tekst); fill: #2f6fb0; pointer-events: none; }
+#o-voor .maatlijn line { stroke: #3f5a52; stroke-width: .6; }
+#o-voor .maatlijn text { font: 8px var(--tekst); fill: #3f5a52; }
+#o-voor .tekenkader { fill: rgba(47,111,176,.12); stroke: #2f6fb0; stroke-width: 1.2; stroke-dasharray: 5 3; pointer-events: none; }
+#o-voor:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 [hidden] { display: none !important; }
 /*HUISSTIJL*/
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -351,7 +365,7 @@ main.catalogus { display: block; }
       <span class="klein" id="o-weergave-uitleg">raster 10 cm · maten in cm</span>
     </div>
     <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
-    <div id="o-voor" class="tekening" hidden></div>
+    <svg id="o-voor" class="voorvlak" tabindex="0" role="application" aria-label="Vooraanzicht: klik, sleep grepen of teken een element" xmlns="http://www.w3.org/2000/svg" hidden></svg>
     <div id="o-3d" class="drie-d" hidden></div>
     <div id="o-3d-knoppen" class="knoppenrij" hidden>
       <span class="klein">Standpunt:</span>

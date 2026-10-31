@@ -5,7 +5,7 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { dragerVan, gekozenOpties, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
@@ -32,7 +32,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   const tz = (groep: string, veld: string, standaard: number | string) => zetel.get(groep)?.teken?.[veld] ?? standaard;
   const hout = String(tz('hout', 'kleur', '#c8a27a'));
   const metaal = String(tz('metaal', 'kleur', '#2b2b2b'));
-  const zithoogte = Number(tz('zithoogte', 'hoogte', 45));
+  const zithoogte = hoogtesVan(ontwerp, catalogus).zithoogte;
 
   const vormen: VormResultaat[] = [];
   const rect = (code: string, x: number, y: number, b: number, h: number, vulling: string, extra: Partial<VormResultaat> = {}) => {
@@ -51,7 +51,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   /** Hoogte waarop een rugleuning of kussen rust: de bovenkant van de basis van het element eronder. */
   const draagHoogte = (e: (typeof ontwerp.elementen)[number]) => {
     const d = dragerVan(ontwerp, catalogus, e);
-    if (!d) return Number(zetel.get('poothoogte')?.teken?.hoogte ?? 12);
+    if (!d) return hoogtesVan(ontwerp, catalogus).poothoogte;
     const dt = typen.get(d.type);
     const vaste = gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting';
     if (dt?.tekenstijl === 'poef') return zithoogte - 2;
@@ -73,7 +73,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     // --- Poten / onderbouw ---
     const potenKeuze: OptieKeuze | undefined = opt.get('poten');
     const vorm = String(potenKeuze?.teken?.vorm ?? 'conisch');
-    const P = vorm === 'plint' ? 4 : vorm === 'verdekt' ? Math.min(Number(te('poothoogte', 'hoogte', 12)), 8) : Number(te('poothoogte', 'hoogte', 12));
+    const P = vorm === 'plint' ? 4 : vorm === 'verdekt' ? Math.min(hoogtesVan(ontwerp, catalogus, e).poothoogte, 8) : hoogtesVan(ontwerp, catalogus, e).poothoogte;
     const potKleur = potenKeuze?.teken?.metaal ? (potenKeuze.teken.kleur ? String(potenKeuze.teken.kleur) : metaal) : hout;
     const x0 = p.x, x1 = p.x + p.b, inset = Math.min(5, p.b / 6);
     if (t.tekenstijl !== 'console' && !t.opzet) {
@@ -128,7 +128,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       if (v.houtframe === 'rondom') rect(`${e.id}.frame-v`, x0 + 4, top(zithoogte - kussenDik), p.b - 8, 4, hout);
     };
     const rugKeuze = opt.get('rug');
-    const rugH = Number(te('rughoogte', 'hoogte', 80));
+    const rugH = hoogtesVan(ontwerp, catalogus, e).rughoogte;
     const capitonne = rugKeuze?.teken?.capitonne === true;
     const losseRug = rugKeuze?.teken?.los === true;
     const rugBoven = e.rotatie === 0 || e.rotatie === 180;
@@ -231,7 +231,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         break;
       }
       case 'arm': {
-        const armH = Number(te('armhoogte', 'hoogte', 62));
+        const armH = hoogtesVan(ontwerp, catalogus, e).armhoogte;
         const armVorm = String(te('armstijl', 'vorm', 'strak'));
         const y = top(armH), h = armH - P;
         if (armVorm === 'hout') {
