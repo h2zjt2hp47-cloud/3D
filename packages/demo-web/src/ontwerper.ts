@@ -5,6 +5,9 @@
 import {
   berekenOntwerp,
   bouw3D,
+  VORMGEVING_BEREIK,
+  vormgevingVan,
+  type Vormgeving,
   tekenSvg,
   tekenVooraanzicht,
   voetafdruk,
@@ -16,6 +19,7 @@ import {
   type OntwerpResultaat,
   type Rotatie,
 } from '../../core/src/index.js';
+import { zetelModellen } from '../../core/voorbeelden/modellen.js';
 import { startOntwerpen, zetelCatalogus } from '../../core/voorbeelden/vrij-ontwerp.js';
 import { maak3D, type Viewer3D } from './drie-d.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getKorting, getMaterialen, kopieer, laad, opWijziging, svgEl } from './staat.js';
@@ -133,7 +137,11 @@ function tekenCanvas() {
   ontwerp.elementen.forEach((e, n) => {
     const g = svgEl('g', { class: 'element', 'data-id': e.id });
     for (const v of resultaat.tekening.vormen.filter((v) => v.code.startsWith(`${e.id}.`))) {
-      g.append(svgEl('rect', { x: v.x, y: v.y, width: v.breedte, height: v.hoogte, rx: v.afronding ?? 0, fill: v.vulling ?? 'none', class: 'vorm' }));
+      g.append(
+        v.pad
+          ? svgEl('path', { d: v.pad, fill: v.vulling ?? 'none', class: 'vorm' })
+          : svgEl('rect', { x: v.x, y: v.y, width: v.breedte, height: v.hoogte, rx: v.afronding ?? 0, fill: v.vulling ?? 'none', class: 'vorm' }),
+      );
     }
     const p = voetafdruk(e);
     const klasse = ['raak', foutIds.has(e.id) ? 'fout' : letOpIds.has(e.id) ? 'let-op' : '', e.id === geselecteerd ? 'geselecteerd' : ''].join(' ');
@@ -337,6 +345,8 @@ function ongedaan() {
   ontwerp = JSON.parse(vorige) as Ontwerp;
   if (!elementVan(geselecteerd)) geselecteerd = null;
   toonAanpassingen();
+  toonModelVormgeving();
+  toonModelNaam();
   $<HTMLButtonElement>('#o-ongedaan').disabled = geschiedenis.length === 0;
   vulHoofdmateriaal();
   toonEigenschappen();
@@ -389,6 +399,98 @@ function optieGroepVeld(g: OptieGroep, huidig: string, idVoorvoegsel: string, ki
   return fs;
 }
 
+// ---------- ontwerpmodus: vormgeving ----------
+const VORM_LABELS: Record<keyof Vormgeving, string> = {
+  rugdikte: 'Rugdikte (cm)',
+  kussendikte: 'Kussendikte (cm)',
+  zitkussens: 'Zitkussens per element',
+  zachtheid: 'Zachtheid (0 = strak, 10 = heel zacht)',
+  rugvorm: 'Rugvorm',
+  houtframe: 'Houten frame',
+};
+const KEUZE_LABELS: Record<string, string> = {
+  recht: 'Recht', hellend: 'Achterover hellend', rond: 'Afgerond',
+  geen: 'Geen', zijkant: 'Zijkanten', rondom: 'Zijkanten + voorkant',
+};
+
+/**
+ * Bedieningselementen voor de vormgeving. `huidig` is de volledige vormgeving,
+ * `pas` past één waarde aan, `eigen` geeft aan welke velden afwijken (voor de markering).
+ */
+function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Partial<Vormgeving>, pas: (veld: keyof Vormgeving, w: Vormgeving[keyof Vormgeving]) => void): HTMLElement {
+  const raster = el('div', { class: 'vormraster' });
+  for (const veld of Object.keys(VORMGEVING_BEREIK) as (keyof typeof VORMGEVING_BEREIK)[]) {
+    const b = VORMGEVING_BEREIK[veld];
+    const id = `${idVoorvoegsel}-${veld}`;
+    const wrap = el('label', { for: id, class: `vormveld${veld in eigen ? ' afwijkend' : ''}` });
+    const waarde = el('output', { for: id }, String(huidig[veld]));
+    const schuif = el('input', { type: 'range', id, min: String(b.min), max: String(b.max), step: '1', value: String(huidig[veld]) }) as HTMLInputElement;
+    schuif.addEventListener('input', () => {
+      waarde.textContent = schuif.value;
+      pas(veld, Number(schuif.value));
+    });
+    const kop = el('span', { class: 'vormkop' });
+    kop.append(el('span', {}, VORM_LABELS[veld]), waarde);
+    wrap.append(kop, schuif);
+    raster.append(wrap);
+  }
+  for (const [veld, keuzes] of [['rugvorm', ['recht', 'hellend', 'rond']], ['houtframe', ['geen', 'zijkant', 'rondom']]] as const) {
+    const fs = el('fieldset', { class: `optiegroep${veld in eigen ? ' afwijkend' : ''}` });
+    fs.append(el('legend', {}, VORM_LABELS[veld]));
+    const chips = el('div', { class: 'chips' });
+    for (const k of keuzes) {
+      const id = `${idVoorvoegsel}-${veld}-${k}`;
+      const chip = el('label', { class: 'chip', for: id });
+      const r = el('input', { type: 'radio', name: `${idVoorvoegsel}-${veld}`, id, value: k }) as HTMLInputElement;
+      r.checked = huidig[veld] === k;
+      r.addEventListener('change', () => pas(veld, k));
+      chip.append(r, el('span', {}, KEUZE_LABELS[k] ?? k));
+      chips.append(chip);
+    }
+    fs.append(chips);
+    raster.append(fs);
+  }
+  return raster;
+}
+
+let vormTimer: number | undefined;
+/** Schuifbalken: niet bij elke pixel een stap in "ongedaan maken". */
+function vormWijziging(f: () => void) {
+  if (vormTimer === undefined) onthoud();
+  window.clearTimeout(vormTimer);
+  vormTimer = window.setTimeout(() => (vormTimer = undefined), 600);
+  f();
+  gewijzigd();
+}
+
+function toonModelVormgeving() {
+  const vak = $('#o-vormgeving');
+  vak.replaceChildren(
+    vormgevingVelden('ov', vormgevingVan(ontwerp), ontwerp.vormgeving ?? {}, (veld, w) =>
+      vormWijziging(() => (ontwerp.vormgeving = { ...(ontwerp.vormgeving ?? {}), [veld]: w })),
+    ),
+  );
+}
+
+/** Laadt een ontwerp (bv. een model uit de collectie) in de ontwerper. */
+export function laadInOntwerper(nieuw: Ontwerp) {
+  onthoud();
+  ontwerp = structuredClone(nieuw);
+  geselecteerd = null;
+  vulHoofdmateriaal();
+  toonAanpassingen();
+  toonModelVormgeving();
+  toonEigenschappen();
+  toonModelNaam();
+  kiesGereedschap('selecteren');
+  gewijzigd();
+}
+
+function toonModelNaam() {
+  const m = zetelModellen.find((x) => x.code === ontwerp.model);
+  $('#o-model').textContent = m ? `Vertrokken van model ${m.naam}` : 'Eigen ontwerp';
+}
+
 function toonAanpassingen() {
   const vak = $('#o-aanpassingen');
   vak.replaceChildren(
@@ -411,7 +513,7 @@ function markeerOptieFouten() {
 }
 
 // ---------- weergave: bovenaanzicht, vooraanzicht, 3D ----------
-function kiesWeergave(w: typeof weergave) {
+export function kiesWeergave(w: typeof weergave) {
   weergave = w;
   document.querySelectorAll<HTMLButtonElement>('[data-o-weergave]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.oWeergave === w)));
   svg().toggleAttribute('hidden', w !== 'boven');
@@ -511,9 +613,38 @@ function toonEigenschappen() {
     );
   }
   const delen: HTMLElement[] = [kop, rij];
+  const vormbaar = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond'].includes(t.tekenstijl);
+  let ontwerpVak: HTMLElement | null = null;
+  if (vormbaar) {
+    ontwerpVak = el('details', { class: 'ontwerpmodus', ...(e.vorm && Object.keys(e.vorm).length ? { open: '' } : {}) });
+    const sam = el('summary', {}, `Ontwerpmodus: dit element herontwerpen${e.vorm && Object.keys(e.vorm).length ? ' (aangepast)' : ''}`);
+    ontwerpVak.append(sam);
+    ontwerpVak.append(
+      vormgevingVelden(`oe-${e.id}-v`, vormgevingVan(ontwerp, e), e.vorm ?? {}, (veld, w) =>
+        vormWijziging(() => (e.vorm = { ...(e.vorm ?? {}), [veld]: w })),
+      ),
+    );
+    const vk = el('div', { class: 'knoppenrij' });
+    const alle = el('button', { type: 'button', class: 'tweede' }, `Toepassen op alle elementen "${t.label.toLowerCase()}"`) as HTMLButtonElement;
+    alle.addEventListener('click', () => {
+      onthoud();
+      for (const o of ontwerp.elementen) if (o.type === e.type && o !== e) o.vorm = { ...(e.vorm ?? {}) };
+      gewijzigd();
+    });
+    const herstel = el('button', { type: 'button', class: 'tweede' }, 'Terug naar vormgeving van het model') as HTMLButtonElement;
+    herstel.addEventListener('click', () => {
+      onthoud();
+      delete e.vorm;
+      toonEigenschappen();
+      gewijzigd();
+    });
+    vk.append(alle, herstel);
+    ontwerpVak.append(vk, el('p', { class: 'klein' }, 'Tip: bekijk het resultaat in 3D of in het vooraanzicht.'));
+  }
   if (t.tekenstijl !== 'console') delen.push(matLabel);
   delen.push(el('p', { class: 'klein' }, t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' ? `Rug aan de ${rugTekst}kant.` : t.tekenstijl === 'console' ? 'Houten tussenstuk in de gekozen houtafwerking.' : ''));
   if (elementOpties.childElementCount) delen.push(elementOpties);
+  if (ontwerpVak) delen.push(ontwerpVak);
   delen.push(knoppen);
   vak.replaceChildren(...delen);
 }
@@ -597,6 +728,8 @@ export function startOntwerper() {
       geselecteerd = null;
       vulHoofdmateriaal();
       toonAanpassingen();
+      toonModelVormgeving();
+      toonModelNaam();
       toonEigenschappen();
       kiesGereedschap(code === 'leeg' ? 'zit' : 'selecteren');
       gewijzigd();
@@ -655,6 +788,8 @@ export function startOntwerper() {
 
   vulHoofdmateriaal();
   toonAanpassingen();
+  toonModelVormgeving();
+  toonModelNaam();
   kiesGereedschap('selecteren');
   $<HTMLButtonElement>('#o-ongedaan').disabled = true;
   herbereken();

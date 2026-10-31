@@ -5,10 +5,11 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { gekozenOpties, voetafdruk, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { gekozenOpties, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
+const rugBovenOf = (e: { rotatie: number }) => e.rotatie === 0 || e.rotatie === 180;
 
 function donkerder(hex: string, factor = 0.86): string {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
@@ -95,7 +96,22 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     }
 
     const zitting = String(opt.get('zitting')?.code ?? 'losse_kussens');
-    const kussenDik = zitting === 'vaste_zitting' ? 0 : 14;
+    const v = vormgevingVan(ontwerp, e);
+    const kussenDik = zitting === 'vaste_zitting' ? 0 : v.kussendikte;
+    const zacht = 1 + v.zachtheid * 0.8;
+    /** Zitkussens naast elkaar (vooraanzicht). */
+    const zitkussens = (xa: number, b: number, yTop: number, dik: number) => {
+      const n = rugBovenOf(e) ? Math.max(1, Math.round(v.zitkussens)) : 1;
+      const kb = b / n;
+      for (let i = 0; i < n; i++)
+        rect(`${e.id}.zitkussen${n > 1 ? i + 1 : ''}`, xa + i * kb + (i ? 0.4 : 0), yTop, kb - (i < n - 1 ? 0.8 : 0), dik, stof, { afronding: zacht, ...lijn });
+    };
+    const houtframe = (h: number) => {
+      if (v.houtframe === 'geen') return;
+      rect(`${e.id}.frame-l`, x0, top(h), 4, h - P, hout, { afronding: 0.8 });
+      rect(`${e.id}.frame-r`, x1 - 4, top(h), 4, h - P, hout, { afronding: 0.8 });
+      if (v.houtframe === 'rondom') rect(`${e.id}.frame-v`, x0 + 4, top(zithoogte - kussenDik), p.b - 8, 4, hout);
+    };
     const rugKeuze = opt.get('rug');
     const rugH = Number(te('rughoogte', 'hoogte', 80));
     const capitonne = rugKeuze?.teken?.capitonne === true;
@@ -110,7 +126,8 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         const rugX = rugBoven ? x0 : e.rotatie === 90 ? x1 - 18 : x0;
         const rugB = rugBoven ? p.b : 18;
         const frameRug = losseRug ? rugH - 10 : rugH;
-        rect(`${e.id}.rug`, rugX, top(frameRug), rugB, frameRug - P, donker, { afronding: 4, ...lijn });
+        if (v.rugvorm === 'rond' && rugBoven) pad(`${e.id}.rug`, bovenRond(rugX, top(frameRug), rugB, frameRug - P, 14), rugX, top(frameRug), rugB, frameRug - P, donker, lijn);
+        else rect(`${e.id}.rug`, rugX, top(frameRug), rugB, frameRug - P, donker, { afronding: 4, ...lijn });
         if (t.tekenstijl === 'hoek') rect(`${e.id}.rug2`, e.rotatie === 0 || e.rotatie === 270 ? x0 : x1 - 18, top(frameRug), 18, frameRug - P, donker, { afronding: 4, ...lijn });
         if (capitonne && rugBoven) {
           const knopen: string[] = [];
@@ -124,10 +141,15 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             }
           pad(`${e.id}.capitonne`, knopen.join(' '), x0, top(rugH), p.b, rugH, donkerder(stof, 0.6), { lijndikte: 0.5 });
         }
-        if (losseRug && rugBoven) rect(`${e.id}.rugkussen`, x0 + 3, top(rugH), p.b - 6, rugH - zithoogte + 2, stof, { afronding: 6, ...lijn });
-        // Basis en zitkussen.
+        if (losseRug && rugBoven) {
+          const n = Math.max(1, Math.round(v.zitkussens));
+          for (let i = 0; i < n; i++)
+            rect(`${e.id}.rugkussen${n > 1 ? i + 1 : ''}`, x0 + 3 + (i * (p.b - 6)) / n, top(rugH), (p.b - 6) / n - (i < n - 1 ? 0.8 : 0), rugH - zithoogte + 2, stof, { afronding: 2 + zacht, ...lijn });
+        }
+        // Basis, houten frame en zitkussen(s).
         rect(`${e.id}.basis`, x0, top(zithoogte - kussenDik), p.b, zithoogte - kussenDik - P, donker, { afronding: 2, ...lijn });
-        if (kussenDik) rect(`${e.id}.zitkussen`, x0 + 1, top(zithoogte), p.b - 2, kussenDik, stof, { afronding: 4, ...lijn });
+        if (kussenDik) zitkussens(x0 + 1, p.b - 2, top(zithoogte), kussenDik);
+        houtframe(zithoogte + 2);
         maxHoogte = Math.max(maxHoogte, rugH);
         break;
       }
@@ -136,9 +158,30 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       case 'poef': {
         const h = t.tekenstijl === 'poef' ? zithoogte - 2 : zithoogte;
         const dik = t.tekenstijl === 'poef' ? 0 : kussenDik;
-        rect(`${e.id}.basis`, x0, top(h - dik), p.b, h - dik - P, t.tekenstijl === 'poef' ? stof : donker, { afronding: t.tekenstijl === 'poef' ? 5 : 2, ...lijn });
-        if (dik) rect(`${e.id}.zitkussen`, x0 + 1, top(h), p.b - 2, dik, stof, { afronding: 4, ...lijn });
+        rect(`${e.id}.basis`, x0, top(h - dik), p.b, h - dik - P, t.tekenstijl === 'poef' ? stof : donker, { afronding: t.tekenstijl === 'poef' ? 3 + zacht : 2, ...lijn });
+        if (dik) zitkussens(x0 + 1, p.b - 2, top(h), dik);
+        if (t.tekenstijl !== 'poef') houtframe(h + 2);
         maxHoogte = Math.max(maxHoogte, h);
+        break;
+      }
+      case 'rond': {
+        // Afgerond eindelement: ronde buitenkant (links of rechts), rug op het rechte deel.
+        const links = String(te('ronde_kant', 'kant', 'links')) === 'links';
+        const rondDeel = Math.min(e.diepte / 2, p.b);
+        const zijRond = (y: number, h: number, r: number) => {
+          const rr = Math.min(r, h, p.b);
+          return links
+            ? `M${rond(x1)} ${rond(y)} H${rond(x0 + rr)} Q${rond(x0)} ${rond(y)} ${rond(x0)} ${rond(y + rr)} V${rond(y + h)} H${rond(x1)} Z`
+            : `M${rond(x0)} ${rond(y)} H${rond(x1 - rr)} Q${rond(x1)} ${rond(y)} ${rond(x1)} ${rond(y + rr)} V${rond(y + h)} H${rond(x0)} Z`;
+        };
+        if (rugBoven && p.b > rondDeel) {
+          const rx = links ? x0 + rondDeel : x0;
+          rect(`${e.id}.rug`, rx, top(rugH), p.b - rondDeel, rugH - P, donker, { afronding: v.rugvorm === 'rond' ? 12 : 4, ...lijn });
+          maxHoogte = Math.max(maxHoogte, rugH);
+        }
+        pad(`${e.id}.basis`, zijRond(top(zithoogte - kussenDik), zithoogte - kussenDik - P, 18), x0, top(zithoogte - kussenDik), p.b, zithoogte - kussenDik - P, donker, lijn);
+        if (kussenDik) pad(`${e.id}.zitkussen`, zijRond(top(zithoogte), kussenDik, kussenDik), x0, top(zithoogte), p.b, kussenDik, stof, lijn);
+        maxHoogte = Math.max(maxHoogte, zithoogte);
         break;
       }
       case 'arm': {
@@ -167,6 +210,14 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         break;
       }
       case 'console': {
+        if (String(opt.get('console_uitvoering')?.teken?.vorm ?? '') === 'bank') {
+          const bh = zithoogte - 14;
+          rect(`${e.id}.bankblad`, x0, top(bh), p.b, 5, hout, { afronding: 1 });
+          rect(`${e.id}.bankpoot-l`, x0 + 3, top(bh - 5), 5, bh - 5, hout);
+          rect(`${e.id}.bankpoot-r`, x1 - 8, top(bh - 5), 5, bh - 5, hout);
+          maxHoogte = Math.max(maxHoogte, bh);
+          break;
+        }
         const ch = zithoogte + 10;
         rect(`${e.id}.console`, x0, top(ch), p.b, ch, hout, { afronding: 1.5 });
         const uitvoering = String(opt.get('console_uitvoering')?.teken?.vorm ?? 'open');

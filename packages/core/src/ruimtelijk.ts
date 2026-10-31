@@ -6,7 +6,7 @@
  * zoals y in het bovenaanzicht), y = hoogte vanaf de vloer.
  */
 import type { Materiaal } from './materialen.js';
-import { gekozenOpties, lokaalNaarWereld, voetafdruk, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
+import { gekozenOpties, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort = 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker';
 
@@ -29,6 +29,8 @@ export interface Blok {
   as?: 'x' | 'y' | 'z';
   /** Kegel: verhouding onderste/bovenste straal. */
   taps?: number;
+  /** Achterover hellen (rug): graden en de richting naar achter in het grondvlak. */
+  kantel?: { graden: number; richting: 'x+' | 'x-' | 'z+' | 'z-' };
 }
 
 export interface Scene3D {
@@ -37,7 +39,6 @@ export interface Scene3D {
   kader: { x: number; z: number; b: number; d: number; h: number };
 }
 
-const RUG = 18;
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
 function donkerder(hex: string, factor = 0.82): string {
@@ -86,7 +87,15 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     const potSoort: BlokSoort = opt.get('poten')?.teken?.metaal ? 'metaal' : 'hout';
     if (t.tekenstijl !== 'console') {
       if (potVorm === 'plint') lokaal('plint', 'hout', 2, 2, B - 4, D - 4, 0, P, hout);
-      else if (potVorm === 'verdekt') lokaal('verdekt', 'donker', 10, 10, B - 20, D - 20, 0, P, '#2a2a28');
+      else if (potVorm === 'verdekt' && t.tekenstijl === 'rond') {
+        // Onder een rond element: voet onder het rechte deel + ronde voet onder de bocht.
+        const links = String(te('ronde_kant', 'kant', 'links')) === 'links';
+        const r = Math.min(D / 2, B);
+        if (B - r > 12) lokaal('verdekt', 'donker', links ? r : 10, 10, B - r - 10, D - 20, 0, P, '#2a2a28');
+        const rr = Math.max(5, r - 14);
+        const w = lokaalNaarWereld(e, (links ? r : B - r) - rr, D / 2 - rr, rr * 2, rr * 2);
+        blokken.push({ code: `${e.id}.verdekt-rond`, soort: 'donker', vorm: 'cilinder', x: r2(w.x), y: 0, z: r2(w.y), b: r2(w.b), h: r2(P), d: r2(w.h), kleur: '#2a2a28' });
+      } else if (potVorm === 'verdekt') lokaal('verdekt', 'donker', 10, 10, B - 20, D - 20, 0, P, '#2a2a28');
       else if (potVorm === 'slede') {
         for (const [k, lx] of [['l', 5], ['r', B - 7]] as const) {
           lokaal(`slede-${k}-onder`, 'metaal', lx, 6, 2, D - 12, 0, 1.6, potKleur);
@@ -96,7 +105,13 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       } else {
         const dik = potVorm === 'blok' ? 6 : potVorm === 'haarspeld' ? 1.2 : 4.5;
         const ins = Math.min(6, B / 5, D / 5);
-        for (const [k, lx, ly] of [['la', ins, ins], ['ra', B - ins - dik, ins], ['lv', ins, D - ins - dik], ['rv', B - ins - dik, D - ins - dik]] as const) {
+        // Bij een rond element staan de poten aan de ronde kant meer naar binnen.
+        const rondL = t.tekenstijl === 'rond' && String(te('ronde_kant', 'kant', 'links')) === 'links';
+        const rondR = t.tekenstijl === 'rond' && !rondL;
+        const inL = rondL ? Math.min(D / 2, B) * 0.35 : ins;
+        const inR = rondR ? Math.min(D / 2, B) * 0.35 : ins;
+        const yIn = (rond: boolean) => (rond ? D * 0.2 : ins);
+        for (const [k, lx, ly] of [['la', inL, yIn(rondL)], ['ra', B - inR - dik, yIn(rondR)], ['lv', inL, D - yIn(rondL) - dik], ['rv', B - inR - dik, D - yIn(rondR) - dik]] as const) {
           const extra: Partial<Blok> = potVorm === 'blok' ? {} : { vorm: potVorm === 'conisch' ? 'kegel' : 'cilinder', taps: potVorm === 'conisch' ? 0.55 : 1 };
           lokaal(`poot-${k}`, potSoort, lx, ly, dik, dik, 0, P, potKleur, extra);
         }
@@ -104,7 +119,27 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     }
 
     const zitting = opt.get('zitting')?.code ?? 'losse_kussens';
-    const kussenDik = zitting === 'vaste_zitting' ? 0 : 14;
+    const v = vormgevingVan(ontwerp, e);
+    const RUG = v.rugdikte;
+    const kussenDik = zitting === 'vaste_zitting' ? 0 : v.kussendikte;
+    const zacht = 1.5 + v.zachtheid * 0.9;
+    const richting = ({ 0: 'z-', 90: 'x+', 180: 'z+', 270: 'x-' } as const)[e.rotatie];
+    const rugExtra: Partial<Blok> = {
+      afronding: v.rugvorm === 'rond' ? Math.min(14, RUG / 2 + 4) : 3 + v.zachtheid * 0.4,
+      ...(v.rugvorm === 'hellend' ? { kantel: { graden: 9, richting } } : {}),
+    };
+    /** Zitkussens naast elkaar op het zitvlak. */
+    const kussens = (lx: number, ly: number, lb: number, ld: number, y: number, h: number) => {
+      const n = Math.max(1, Math.round(v.zitkussens));
+      for (let i = 0; i < n; i++)
+        lokaal(`zitkussen${n > 1 ? i + 1 : ''}`, 'kussen', lx + (i * lb) / n + (i ? 0.4 : 0), ly, lb / n - (i < n - 1 ? 0.8 : 0), ld, y, h, stof, { afronding: zacht });
+    };
+    const houtframe = (h: number) => {
+      if (v.houtframe === 'geen') return;
+      lokaal('frame-l', 'hout', 0, 0, 4, D, P, h - P, hout, { afronding: 0.8 });
+      lokaal('frame-r', 'hout', B - 4, 0, 4, D, P, h - P, hout, { afronding: 0.8 });
+      if (v.houtframe === 'rondom') lokaal('frame-v', 'hout', 4, D - 4, B - 8, 4, P, zithoogte - kussenDik + 2 - P, hout, { afronding: 0.8 });
+    };
     const rugH = Number(te('rughoogte', 'hoogte', 80));
     const losseRug = opt.get('rug')?.teken?.los === true;
     const capitonne = opt.get('rug')?.teken?.capitonne === true;
@@ -116,13 +151,17 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       case 'zit':
       case 'hoek': {
         const hoek = t.tekenstijl === 'hoek';
-        lokaal('rug', 'stof', 0, 0, B, RUG, P, frameRug - P, stof, { afronding: 4 });
-        if (hoek) lokaal('rug2', 'stof', 0, RUG, RUG, D - RUG, P, frameRug - P, stof, { afronding: 4 });
-        const sx = hoek ? RUG : 0;
-        lokaal('basis', 'stof', sx, RUG, B - sx, D - RUG, P, basisH, donker, { afronding: 2 });
-        if (kussenDik) lokaal('zitkussen', 'kussen', sx + 1, RUG, B - sx - 2, D - RUG - 1, zithoogte - kussenDik, kussenDik, stof, { afronding: 5 });
+        const fr = v.houtframe === 'geen' || hoek ? 0 : 4;
+        lokaal('rug', 'stof', fr, 0, B - 2 * fr, RUG, P, frameRug - P, stof, rugExtra);
+        if (hoek) lokaal('rug2', 'stof', 0, RUG, RUG, D - RUG, P, frameRug - P, stof, { afronding: rugExtra.afronding });
+        const sx = hoek ? RUG : fr;
+        lokaal('basis', 'stof', sx, RUG, B - sx - fr, D - RUG, P, basisH, donker, { afronding: 2 });
+        if (kussenDik) kussens(sx + 1, RUG, B - sx - fr - 2, D - RUG - 1 - (v.houtframe === 'rondom' ? 4 : 0), zithoogte - kussenDik, kussenDik);
+        if (!hoek) houtframe(zithoogte + 2);
         if (losseRug) {
-          lokaal('rugkussen', 'kussen', 2, RUG - 2, B - 4, 14, zithoogte, rugH - zithoogte, stof, { afronding: 6 });
+          const n = Math.max(1, Math.round(v.zitkussens));
+          for (let i = 0; i < n; i++)
+            lokaal(`rugkussen${n > 1 ? i + 1 : ''}`, 'kussen', fr + 2 + (i * (B - 2 * fr - 4)) / n, RUG - 2, (B - 2 * fr - 4) / n - (i < n - 1 ? 0.8 : 0), 14, zithoogte, rugH - zithoogte, stof, { afronding: 2 + zacht, ...(v.rugvorm === 'hellend' ? { kantel: { graden: 9, richting } } : {}) });
           if (hoek) lokaal('rugkussen2', 'kussen', RUG - 2, RUG + 12, 14, D - RUG - 14, zithoogte, rugH - zithoogte, stof, { afronding: 6 });
         }
         if (capitonne) {
@@ -141,8 +180,27 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       case 'chaise':
       case 'zit_zonder_rug':
         lokaal('basis', 'stof', 0, 0, B, D, P, basisH, donker, { afronding: 2 });
-        if (kussenDik) lokaal('zitkussen', 'kussen', 1, 1, B - 2, D - 2, zithoogte - kussenDik, kussenDik, stof, { afronding: 6 });
+        if (kussenDik) kussens(1, 1, B - 2, D - 2, zithoogte - kussenDik, kussenDik);
+        houtframe(zithoogte + 2);
         break;
+      case 'rond': {
+        const links = String(te('ronde_kant', 'kant', 'links')) === 'links';
+        const r = Math.min(D / 2, B);
+        const recht = B - r;
+        const cilinder = (code: string, soort: BlokSoort, y: number, h: number, rr: number, kleur: string) => {
+          const w = lokaalNaarWereld(e, (links ? r : recht) - rr, D / 2 - rr, rr * 2, rr * 2);
+          blokken.push({ code: `${e.id}.${code}`, soort, vorm: 'cilinder', x: r2(w.x), y: r2(y), z: r2(w.y), b: r2(w.b), h: r2(h), d: r2(w.h), kleur });
+        };
+        const rx = links ? r : 0;
+        lokaal('basis', 'stof', rx, 0, recht, D, P, basisH, donker, { afronding: 2 });
+        cilinder('basis-rond', 'stof', P, basisH, r, donker);
+        if (kussenDik) {
+          lokaal('zitkussen', 'kussen', rx, RUG, recht, D - RUG - 1, zithoogte - kussenDik, kussenDik, stof, { afronding: zacht });
+          cilinder('zitkussen-rond', 'kussen', zithoogte - kussenDik, kussenDik, r - 1, stof);
+        }
+        if (recht > 0) lokaal('rug', 'stof', rx, 0, recht, RUG, P, frameRug - P, stof, rugExtra);
+        break;
+      }
       case 'poef':
         lokaal('poef', 'kussen', 0, 0, B, D, P, zithoogte - 2 - P, stof, { afronding: 7 });
         break;
@@ -163,6 +221,13 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         break;
       }
       case 'console': {
+        if (String(te('console_uitvoering', 'vorm', '')) === 'bank') {
+          const bh = zithoogte - 14;
+          lokaal('bankblad', 'hout', 0, 0, B, D, bh - 5, 5, hout, { afronding: 0.8 });
+          lokaal('bankpoot-l', 'hout', 3, 3, 5, D - 6, 0, bh - 5, hout);
+          lokaal('bankpoot-r', 'hout', B - 8, 3, 5, D - 6, 0, bh - 5, hout);
+          break;
+        }
         const ch = zithoogte + 10;
         const uitvoering = String(te('console_uitvoering', 'vorm', 'open'));
         lokaal('console', 'hout', 0, 0, B, D, 0, ch, hout, { afronding: 0.8 });

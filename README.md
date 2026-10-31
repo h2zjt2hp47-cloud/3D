@@ -30,17 +30,21 @@ packages/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
       sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
                         eigen stof/leder, contraststof, stofverbruik, bovenaanzicht
-      vrij-ontwerp.ts   Zetelelementen (incl. houten tussenstuk), aanpassingen (poten, poothoogte, hout,
+      modellen.ts       Modellen Kotor, Doha, Montego, Belize (benadering op basis van productfoto's)
+      vrij-ontwerp.ts   Zetelelementen (incl. houten tussenstuk, afgerond eindelement), aanpassingen (poten, poothoogte, hout,
                         metaal, zithoogte, comfort, zitting, rug, rughoogte, naden, armstijl/-hoogte,
                         extra's) en startopstellingen
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
   demo-web/             Klikbare demo, gebundeld tot één HTML-bestand:
+                        - Modellen: kies een model en pas het vrij aan
                         - Sofa/Kast op maat: formulier uit het productmodel, live prijs en tekening
                         - Vrij ontwerp: elementen tekenen, slepen (magneet), vergroten, draaien,
                           materiaal en opties per element, aanpassingen voor de hele zetel,
-                          vooraanzicht en 3D (three.js r128 via cdnjs), ongedaan maken
+                          vooraanzicht en 3D (three.js r128 via cdnjs), ongedaan maken,
+                          ontwerpmodus: vorm van elk element (rugdikte, kussens, zachtheid,
+                          rugvorm, houten frame)
                         - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
 ```
 

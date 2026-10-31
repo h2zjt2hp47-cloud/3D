@@ -207,6 +207,26 @@ td .staal { display: inline-block; vertical-align: -3px; }
 .chip .meer { color: var(--zacht); font-size: .75rem; font-variant-numeric: tabular-nums; }
 .chip .bol { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); align-self: center; }
 .optiegroep.fout .chip:has(input:checked) { border-color: var(--fout); box-shadow: inset 0 0 0 1px var(--fout); }
+
+main.modellen { display: block; }
+.intro { max-width: 70ch; margin: 0 0 16px; }
+.modellenraster { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+.modelkaart { display: grid; gap: 6px; align-content: start; }
+.modelkaart h2 { font-size: 1.4rem; }
+.modelkaart p { margin: 0; }
+.modelbeeld { background: var(--papier); border-radius: 6px; padding: 10px; display: grid; place-items: center; min-height: 150px; }
+.modelbeeld svg { max-width: 100%; height: auto; }
+.modelprijs { font-weight: 600; font-variant-numeric: tabular-nums; }
+.modelnaam { font-size: .82rem; color: var(--accent); font-weight: 600; margin: 0 0 6px; }
+.vormraster { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px 18px; }
+.vormveld { display: grid; gap: 4px; font-size: .85rem; }
+.vormkop { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+.vormkop output { font-variant-numeric: tabular-nums; color: var(--accent); }
+.vormveld input[type="range"] { accent-color: var(--accent); width: 100%; }
+.vormveld.afwijkend .vormkop span:first-child::after, .optiegroep.afwijkend legend::after { content: " · aangepast"; color: var(--let-op); font-weight: 400; }
+.ontwerpmodus { border: 1px dashed var(--accent); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+.ontwerpmodus summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+.ontwerpmodus[open] summary { margin-bottom: 10px; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -215,7 +235,8 @@ td .staal { display: inline-block; vertical-align: -3px; }
 <header>
   <h1><span id="productnaam">Sofa op maat</span><span class="demo">demoprijzen</span></h1>
   <nav class="producten" aria-label="Weergave">
-    <button type="button" data-weergave="sofa" aria-pressed="true">Sofa op maat</button>
+    <button type="button" data-weergave="modellen" aria-pressed="true">Modellen</button>
+    <button type="button" data-weergave="sofa" aria-pressed="false">Sofa op maat</button>
     <button type="button" data-weergave="ontwerp" aria-pressed="false">Vrij ontwerp</button>
     <button type="button" data-weergave="kast" aria-pressed="false">Kast op maat</button>
     <button type="button" data-weergave="materialen" aria-pressed="false">Materialen</button>
@@ -260,8 +281,14 @@ td .staal { display: inline-block; vertical-align: -3px; }
   </aside>
 </main>
 
+<main id="view-modellen" class="modellen" hidden>
+  <p class="intro klein">Kies een model als vertrekpunt en pas het daarna vrij aan: elementen, maten, stof, poten, armen, hout en de vorm van elk element. De modellen zijn een benadering op basis van productfoto's; maten, opties en prijzen zijn voorbeelden.</p>
+  <div id="modellen-lijst" class="modellenraster"></div>
+</main>
+
 <main id="view-ontwerp" class="ontwerp" hidden>
   <aside class="kaart gereedschap" aria-label="Gereedschap">
+    <p id="o-model" class="modelnaam"></p>
     <h2>Teken</h2>
     <div id="o-gereedschap" class="knoppenlijst" role="group" aria-label="Gereedschap"></div>
     <p id="o-hint" class="klein"></p>
@@ -298,6 +325,10 @@ td .staal { display: inline-block; vertical-align: -3px; }
       <span class="klein">Sleep om te draaien, scroll om te zoomen.</span>
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>
+  </section>
+  <section class="kaart">
+    <div class="kaartkop"><h2>Vormgeving van het model</h2><span class="klein">ontwerpmodus · per element aan te passen via het element</span></div>
+    <div id="o-vormgeving"></div>
   </section>
   <section class="kaart">
     <div class="kaartkop"><h2>Aanpassingen voor de hele zetel</h2><span class="klein">poten, hout, comfort, rug, naden …</span></div>

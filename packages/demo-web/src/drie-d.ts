@@ -141,6 +141,14 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     }
     const m = new THREE.Mesh(geo, materiaal(b));
     m.position.set(cx, y, cz);
+    if (b.kantel) {
+      // Achterover hellen rond de onderkant: de bovenkant gaat naar de achterkant.
+      const a = (b.kantel.graden * Math.PI) / 180;
+      if (b.kantel.richting === 'z-') m.rotation.x = -a;
+      if (b.kantel.richting === 'z+') m.rotation.x = a;
+      if (b.kantel.richting === 'x+') m.rotation.z = -a;
+      if (b.kantel.richting === 'x-') m.rotation.z = a;
+    }
     m.castShadow = b.vorm !== 'bol';
     m.receiveShadow = true;
     return m;
@@ -223,7 +231,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       sc.far = grootte * 5;
       sc.updateProjectionMatrix();
       vul.position.set(doel.x + grootte, grootte * 0.6, doel.z - grootte);
-      if (veranderd) afstand = Math.max(220, grootte * 1.9);
+      if (veranderd) afstand = Math.max(200, grootte * 1.5);
       plaatsCamera();
     },
     standpunt(naam) {
@@ -231,7 +239,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       if (naam === 'boven') { hoekH = 0; hoekV = 1.45; }
       if (naam === 'zij') { hoekH = Math.PI / 2; hoekV = 0.15; }
       if (naam === 'schuin') { hoekH = -0.6; hoekV = 0.42; }
-      afstand = Math.max(220, Math.max(kader.b, kader.d, 120) * 1.9);
+      afstand = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5);
       plaatsCamera();
     },
     formaat() {

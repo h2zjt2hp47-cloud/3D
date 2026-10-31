@@ -18,7 +18,7 @@ export interface Bereik {
 }
 
 /** Hoe een element getekend wordt (waar de rug zit, afgerond of niet). */
-export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug' | 'console';
+export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug' | 'console' | 'rond';
 
 /** Eén keuze binnen een optiegroep (bv. poten: "Conische poot"). */
 export interface OptieKeuze {
@@ -79,6 +79,59 @@ export interface ElementType {
   urenPerM: number;
 }
 
+/**
+ * Vormgeving: de vorm van een element zelf. Instelbaar voor het hele model (Ontwerp.vormgeving)
+ * en per element (OntwerpElement.vorm) in de ontwerpmodus.
+ */
+export interface Vormgeving {
+  /** Dikte van de rug in cm. */
+  rugdikte: number;
+  /** Dikte van de zitkussens in cm. */
+  kussendikte: number;
+  /** Aantal zitkussens op één element. */
+  zitkussens: number;
+  /** Zachtheid: afronding van kussens en randen (0 = strak, 10 = heel zacht). */
+  zachtheid: number;
+  /** Vorm van de rug. */
+  rugvorm: 'recht' | 'hellend' | 'rond';
+  /** Zichtbaar houten frame rond de zitting. */
+  houtframe: 'geen' | 'zijkant' | 'rondom';
+}
+
+export const STANDAARD_VORMGEVING: Vormgeving = { rugdikte: 18, kussendikte: 14, zitkussens: 1, zachtheid: 4, rugvorm: 'recht', houtframe: 'geen' };
+
+export const VORMGEVING_BEREIK = {
+  rugdikte: { min: 10, max: 30 },
+  kussendikte: { min: 8, max: 22 },
+  zitkussens: { min: 1, max: 3 },
+  zachtheid: { min: 0, max: 10 },
+} as const;
+
+/** Meerprijzen voor de vormgeving (per element). */
+export interface VormgevingPrijzen {
+  /** Per extra zitkussen boven 1. */
+  extraKussen: number;
+  /** Meerprijs in % voor een hellende of ronde rug. */
+  hellendeRugPct: number;
+  rondeRugPct: number;
+  /** Per cm rugdikte boven de standaard, per meter breedte. */
+  dikkereRugPerCmPerM: number;
+  /** Houten frame, per meter breedte. */
+  houtframeZijkant: number;
+  houtframeRondomPerM: number;
+}
+
+/** Een model uit de collectie: een vertrekopstelling met eigen vormgeving en opties. */
+export interface ModelDefinitie {
+  code: string;
+  naam: string;
+  familie: string;
+  omschrijving: string;
+  /** Uitleg over hoe zeker de gegevens zijn (bv. "benadering op basis van foto"). */
+  bron?: string;
+  ontwerp: Ontwerp;
+}
+
 export interface OntwerpCatalogus {
   naam: string;
   /** Prijsgroepen, bv. A, B, C, EIGEN. */
@@ -92,6 +145,7 @@ export interface OntwerpCatalogus {
   leveringWaarschuwingVanaf?: number;
   /** Aanpassingen: poten, armstijl, rug, comfort, naden, hout, extra's … */
   opties?: OptieGroep[];
+  vormgevingPrijzen?: VormgevingPrijzen;
 }
 
 export interface OntwerpElement {
@@ -108,6 +162,8 @@ export interface OntwerpElement {
   materiaal?: string;
   /** Keuzes voor optiegroepen op elementniveau (groepcode → keuzecode). */
   opties?: Record<string, string>;
+  /** Eigen vormgeving van dit element (ontwerpmodus); overschrijft die van het model. */
+  vorm?: Partial<Vormgeving>;
 }
 
 export interface Ontwerp {
@@ -115,6 +171,15 @@ export interface Ontwerp {
   elementen: OntwerpElement[];
   /** Keuzes voor optiegroepen op zetelniveau (groepcode → keuzecode). */
   opties?: Record<string, string>;
+  /** Vormgeving voor het hele model. */
+  vormgeving?: Partial<Vormgeving>;
+  /** Code van het model waarvan dit ontwerp vertrok (informatief). */
+  model?: string;
+}
+
+/** De vormgeving van een element: standaard ← model ← element. */
+export function vormgevingVan(ontwerp: Ontwerp, e?: OntwerpElement): Vormgeving {
+  return { ...STANDAARD_VORMGEVING, ...(ontwerp.vormgeving ?? {}), ...(e?.vorm ?? {}) };
 }
 
 /** De gekozen keuze per optiegroep voor een element (of voor de zetel als element ontbreekt). */
@@ -228,21 +293,39 @@ export function lokaalNaarWereld(e: OntwerpElement, lx: number, ly: number, lb: 
 
 const RUG = 18;
 
-function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, opties: Map<string, OptieKeuze> = new Map()): VormResultaat[] {
+function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, opties: Map<string, OptieKeuze> = new Map(), v: Vormgeving = STANDAARD_VORMGEVING): VormResultaat[] {
   const B = e.breedte, D = e.diepte;
   const donker = donkerder(kleur);
   const t = (groep: string, veld: string) => opties.get(groep)?.teken?.[veld];
   const hout = String(t('hout', 'kleur') ?? '#c8a27a');
   const delen: [string, number, number, number, number, string, number][] = [];
+  const R = v.rugdikte;
+  const zacht = 1 + v.zachtheid * 0.8;
+  const frame = v.houtframe === 'geen' ? 0 : 4;
+  /** Zitkussens naast elkaar in het zitvlak (lx0..lx0+bz, ly0..ly0+dz). */
+  const kussens = (lx0: number, ly0: number, bz: number, dz: number) => {
+    const n = Math.max(1, Math.round(v.zitkussens));
+    const kb = bz / n;
+    for (let i = 0; i < n; i++) delen.push([n > 1 ? `kussen${i + 1}` : 'kussen', lx0 + i * kb + (i ? 0.5 : 0), ly0, kb - (i < n - 1 ? 1 : 0), dz, kleur, zacht]);
+  };
+  const houtrand = () => {
+    if (!frame) return;
+    delen.push(['frame-l', 0, 0, frame, D, hout, 1], ['frame-r', B - frame, 0, frame, D, hout, 1]);
+    if (v.houtframe === 'rondom') delen.push(['frame-v', frame, D - frame, B - 2 * frame, frame, hout, 1]);
+  };
   switch (stijl) {
     case 'zit':
-      delen.push(['rug', 0, 0, B, RUG, donker, 3], ['kussen', 2, RUG + 1, B - 4, D - RUG - 3, kleur, 4]);
+      houtrand();
+      delen.push(['rug', frame, 0, B - 2 * frame, R, donker, v.rugvorm === 'rond' ? R / 2 : 3]);
+      kussens(frame + 1, R + 1, B - 2 * frame - 2, D - R - 2 - (v.houtframe === 'rondom' ? frame : 1));
       break;
     case 'hoek':
-      delen.push(['rug', 0, 0, B, RUG, donker, 3], ['rug2', 0, RUG, RUG, D - RUG, donker, 3], ['kussen', RUG + 1, RUG + 1, B - RUG - 3, D - RUG - 3, kleur, 4]);
+      delen.push(['rug', 0, 0, B, R, donker, 3], ['rug2', 0, R, R, D - R, donker, 3]);
+      kussens(R + 1, R + 1, B - R - 3, D - R - 3);
       break;
     case 'chaise':
-      delen.push(['kussen', 1, 1, B - 2, D - 2, kleur, 6]);
+      houtrand();
+      kussens(frame + 1, 1, B - 2 * frame - 2, D - 2 - (v.houtframe === 'rondom' ? frame : 0));
       break;
     case 'arm': {
       const vorm = String(t('armstijl', 'vorm') ?? 'strak');
@@ -255,6 +338,41 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
     case 'console':
       delen.push(['console', 0, 0, B, D, hout, 1.5], ['blad', 3, 3, B - 6, D - 6, donkerder(hout, 0.93), 1]);
       break;
+    case 'rond': {
+      // Afgerond eindelement: halfronde buitenkant, rug alleen op het rechte deel.
+      const links = String(t('ronde_kant', 'kant') ?? 'links') === 'links';
+      const r = Math.min(D / 2, B);
+      const rugB = Math.max(0, B - r);
+      const vormen: VormResultaat[] = [];
+      const lokaalPad = (code: string, punten: string, vulling: string) => {
+        const w = lokaalNaarWereld(e, 0, 0, B, D);
+        vormen.push({ code: `${e.id}.${code}`, x: rond(w.x), y: rond(w.y), breedte: rond(w.b), hoogte: rond(w.h), vulling, pad: punten });
+      };
+      // Contour in lokale coördinaten → wereld via de vier hoeken (draaiing in stappen van 90°).
+      const naarW = (lx: number, ly: number) => {
+        const w = lokaalNaarWereld(e, lx, ly, 0, 0);
+        return `${rond(w.x)} ${rond(w.y)}`;
+      };
+      const boog = (cx: number, cy: number, van: number, tot: number, rr: number) => {
+        const stappen = 10;
+        const pts: string[] = [];
+        for (let i = 0; i <= stappen; i++) {
+          const a = van + ((tot - van) * i) / stappen;
+          pts.push(naarW(cx + rr * Math.cos(a), cy + rr * Math.sin(a)));
+        }
+        return pts;
+      };
+      const omtrek = links
+        ? [naarW(B, 0), naarW(B, D), naarW(r, D), ...boog(r, D / 2, Math.PI / 2, (3 * Math.PI) / 2, D / 2).slice(1), naarW(B, 0)]
+        : [naarW(0, 0), naarW(B - r, 0), ...boog(B - r, D / 2, -Math.PI / 2, Math.PI / 2, D / 2).slice(1), naarW(0, D), naarW(0, 0)];
+      lokaalPad('zit', `M${omtrek.join(' L')} Z`, kleur);
+      if (rugB > 0) {
+        const lx = links ? r : 0;
+        const w = lokaalNaarWereld(e, lx, 0, rugB, R);
+        vormen.push({ code: `${e.id}.rug`, x: rond(w.x), y: rond(w.y), breedte: rond(w.b), hoogte: rond(w.h), vulling: donker, afronding: 3 });
+      }
+      return vormen;
+    }
     case 'poef':
       delen.push(['poef', 0, 0, B, D, kleur, Math.min(B, D) / 5]);
       break;
@@ -378,6 +496,28 @@ export function berekenOntwerp(
       kostprijs += (k.kost ?? 0) + (k.kostPerM ?? 0) * meterBreedte;
       telOptie(g, k, bedrag);
     }
+    // Vormgeving (ontwerpmodus): meerprijs en controle van de grenzen.
+    const v = vormgevingVan(ontwerp, e);
+    const vp = catalogus.vormgevingPrijzen;
+    for (const [veld, b] of Object.entries(VORMGEVING_BEREIK) as [keyof typeof VORMGEVING_BEREIK, { min: number; max: number }][]) {
+      const w = v[veld];
+      if (!Number.isFinite(w) || w < b.min || w > b.max)
+        meldingen.push({ code: `vorm.${veld}`, ernst: 'fout', elementId: e.id, melding: `${naam}: ${veld} moet tussen ${b.min} en ${b.max} liggen.` });
+    }
+    if (vp && ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond'].includes(t.tekenstijl)) {
+      const vormBedrag = rond(
+        Math.max(0, Math.round(v.zitkussens) - 1) * vp.extraKussen +
+          (t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' || t.tekenstijl === 'rond'
+            ? ((v.rugvorm === 'hellend' ? vp.hellendeRugPct : v.rugvorm === 'rond' ? vp.rondeRugPct : 0) / 100) * prijs +
+              Math.max(0, v.rugdikte - STANDAARD_VORMGEVING.rugdikte) * vp.dikkereRugPerCmPerM * meterBreedte
+            : 0) +
+          (v.houtframe === 'zijkant' ? vp.houtframeZijkant : v.houtframe === 'rondom' ? vp.houtframeRondomPerM * meterBreedte + vp.houtframeZijkant : 0),
+      );
+      if (vormBedrag) {
+        optieBedrag += vormBedrag;
+        telOptie({ code: 'vormgeving', label: 'Vormgeving', niveau: 'element', standaard: '', keuzes: [] }, { code: 'eigen', label: 'eigen vormgeving' }, vormBedrag);
+      }
+    }
     prijs = rond(prijs + optieBedrag);
     bruto += prijs;
 
@@ -393,7 +533,7 @@ export function berekenOntwerp(
     kostprijs += frameKost + uren * catalogus.uurloon;
 
     elementen.push({ id: e.id, type: t.code, label: t.label, breedte: e.breedte, diepte: e.diepte, materiaal: t.tekenstijl === 'console' ? '' : m?.code ?? '', groep, prijs, optieBedrag: rond(optieBedrag), stofM: rond(stofM, 2) });
-    vormen.push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc', gekozen));
+    vormen.push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc', gekozen, v));
   });
 
   // Opties op zetelniveau die eenmalig tellen (bv. houtafwerking).

@@ -22,7 +22,7 @@ export const standaardMaterialen: Materiaal[] = [
   { code: 'linnen_ficelle', naam: 'Linnen Ficelle', soort: 'stof', groep: 'B', kleur: '#c9b48f', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
   { code: 'linnen_travertin', naam: 'Linnen Travertin', soort: 'stof', groep: 'B', kleur: '#d8d2c6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
   { code: 'linnen_brume', naam: 'Linnen Brume', soort: 'stof', groep: 'B', kleur: '#a9b3a6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
-  { code: 'boucle_belize', naam: 'Bouclé Belize', soort: 'stof', groep: 'C', kleur: '#ece6da', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
+  { code: 'boucle_belize', naam: 'Bouclé Écru', soort: 'stof', groep: 'C', kleur: '#ece6da', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
   { code: 'jacquard_ruit', naam: 'Jacquard ruit (patroon 32 cm)', soort: 'stof', groep: 'C', kleur: '#b9a58a', rapport: 32, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
   { code: 'eigen_stof', naam: 'Eigen stof van de klant (COM)', soort: 'stof', groep: 'EIGEN', kleur: '#dcdcdc', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 0 },
   { code: 'eigen_leder', naam: 'Eigen leder van de klant (COL)', soort: 'leder', groep: 'EIGEN', kleur: '#8a6a4f', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 10 },

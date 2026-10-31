@@ -6,9 +6,9 @@ import type { Ontwerp, OntwerpCatalogus, OptieGroep } from '../src/index.js';
 
 const g = (a: number, b: number, c: number, eigen: number) => ({ A: a, B: b, C: c, EIGEN: eigen });
 
-const GESTOFFEERD = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'arm', 'poef'];
-const ZITTEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'poef'];
-const MET_RUG = ['zit', 'hoek'];
+const GESTOFFEERD = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'arm', 'poef', 'rond_einde'];
+const ZITTEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'poef', 'rond_einde'];
+const MET_RUG = ['zit', 'hoek', 'rond_einde'];
 
 /**
  * Aanpassingen, gebaseerd op wat zetelmerken gangbaar aanbieden:
@@ -25,6 +25,7 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'slede', label: 'Metalen slede (U-frame)', prijs: 95, teken: { vorm: 'slede', metaal: true }, kost: 45 },
       { code: 'haarspeld', label: 'Haarspeldpoot (metaal)', prijs: 35, teken: { vorm: 'haarspeld', metaal: true }, kost: 18 },
       { code: 'messing', label: 'Messing cilinderpoot', prijs: 60, teken: { vorm: 'cilinder', metaal: true, kleur: '#b8963e' }, kost: 32 },
+      { code: 'metaal_staaf', label: 'Slanke metalen poot', prijs: 25, teken: { vorm: 'cilinder', metaal: true }, kost: 14 },
       {
         code: 'plint', label: 'Houten plint (sokkel)', uitleg: 'Doorlopende lage sokkel', prijsPerM: 140, teken: { vorm: 'plint' }, kostPerM: 55,
         alleenMet: { poothoogte: ['laag'] }, reden: 'een plint is altijd laag',
@@ -80,7 +81,7 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
-    code: 'zitting', label: 'Zitting', niveau: 'ontwerp', voorTypen: ['zit', 'hoek', 'chaise', 'zit_zonder_rug'], standaard: 'losse_kussens',
+    code: 'zitting', label: 'Zitting', niveau: 'ontwerp', voorTypen: ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond_einde'], standaard: 'losse_kussens',
     keuzes: [
       { code: 'losse_kussens', label: 'Losse zitkussens' },
       { code: 'vaste_zitting', label: 'Vaste zitting (strak gestoffeerd)', pct: -3 },
@@ -150,6 +151,13 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
+    code: 'ronde_kant', label: 'Ronde kant', niveau: 'element', voorTypen: ['rond_einde'], standaard: 'links',
+    keuzes: [
+      { code: 'links', label: 'Rond aan de linkerkant', teken: { kant: 'links' } },
+      { code: 'rechts', label: 'Rond aan de rechterkant', teken: { kant: 'rechts' } },
+    ],
+  },
+  {
     code: 'poef_uitvoering', label: 'Uitvoering poef', niveau: 'element', voorTypen: ['poef'], standaard: 'standaard',
     keuzes: [
       { code: 'standaard', label: 'Standaard' },
@@ -161,6 +169,7 @@ export const zetelOpties: OptieGroep[] = [
     code: 'console_uitvoering', label: 'Uitvoering tussenstuk', niveau: 'element', voorTypen: ['console'], standaard: 'open',
     keuzes: [
       { code: 'open', label: 'Met open vak', teken: { vorm: 'open' } },
+      { code: 'bank', label: 'Lage houten bank (zitbank/legplank)', prijs: -60, teken: { vorm: 'bank' } },
       { code: 'blad', label: 'Alleen blad (tafeltje)', prijs: -30, teken: { vorm: 'blad' } },
       { code: 'lade', label: 'Met lade', prijs: 120, kost: 40, teken: { vorm: 'lade' } },
       { code: 'klep', label: 'Opbergvak met klep', prijs: 90, kost: 30, teken: { vorm: 'klep' } },
@@ -177,6 +186,7 @@ export const zetelCatalogus: OntwerpCatalogus = {
   btwProcent: 21,
   leveringWaarschuwingVanaf: 340,
   opties: zetelOpties,
+  vormgevingPrijzen: { extraKussen: 45, hellendeRugPct: 5, rondeRugPct: 7, dikkereRugPerCmPerM: 6, houtframeZijkant: 120, houtframeRondomPerM: 90 },
   typen: [
     {
       code: 'zit', label: 'Zitelement', tekenstijl: 'zit',
@@ -204,9 +214,15 @@ export const zetelCatalogus: OntwerpCatalogus = {
     },
     {
       code: 'arm', label: 'Armleuning', tekenstijl: 'arm',
-      breedte: { min: 12, max: 40, standaard: 20 }, diepte: { min: 60, max: 130, standaard: 95 },
+      breedte: { min: 12, max: 40, standaard: 20 }, diepte: { min: 60, max: 200, standaard: 95 },
       prijs: g(190, 220, 260, 170), per10cm: g(20, 24, 28, 16),
       stofVast: 0.7, stofPerM: 1.5, kostVast: 45, kostPerM: 60, uren: 1.5, urenPerM: 1,
+    },
+    {
+      code: 'rond_einde', label: 'Afgerond eindelement', tekenstijl: 'rond',
+      breedte: { min: 80, max: 200, standaard: 130 }, diepte: { min: 80, max: 120, standaard: 100 },
+      prijs: g(890, 990, 1140, 800), per10cm: g(30, 34, 40, 26),
+      stofVast: 1.4, stofPerM: 3.0, kostVast: 200, kostPerM: 190, uren: 5, urenPerM: 2.5,
     },
     {
       code: 'console', label: 'Houten tussenstuk', tekenstijl: 'console',

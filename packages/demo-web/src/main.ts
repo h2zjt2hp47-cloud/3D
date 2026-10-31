@@ -4,10 +4,11 @@
  */
 import { kiesProduct, startConfigurator } from './configurator.js';
 import { startMaterialen } from './materialen-ui.js';
-import { startOntwerper } from './ontwerper.js';
+import { modelOntwerp, startModellen } from './modellen-ui.js';
+import { kiesWeergave, laadInOntwerper, startOntwerper } from './ontwerper.js';
 import { $, getKorting, setKorting } from './staat.js';
 
-const weergaven = ['sofa', 'ontwerp', 'kast', 'materialen'] as const;
+const weergaven = ['modellen', 'sofa', 'ontwerp', 'kast', 'materialen'] as const;
 type Weergave = (typeof weergaven)[number];
 
 function toon(w: Weergave) {
@@ -15,6 +16,8 @@ function toon(w: Weergave) {
   $('#view-config').hidden = !(w === 'sofa' || w === 'kast');
   $('#view-ontwerp').hidden = w !== 'ontwerp';
   $('#view-materialen').hidden = w !== 'materialen';
+  $('#view-modellen').hidden = w !== 'modellen';
+  if (w === 'modellen') $('#productnaam').textContent = 'Modellen';
   if (w === 'sofa' || w === 'kast') kiesProduct(w, true);
   if (w === 'ontwerp') $('#productnaam').textContent = 'Zetel vrij ontwerpen';
   if (w === 'materialen') $('#productnaam').textContent = 'Materialen';
@@ -37,9 +40,16 @@ startKlant();
 startConfigurator();
 startOntwerper();
 startMaterialen();
+startModellen((code) => {
+  const o = modelOntwerp(code);
+  if (!o) return;
+  toon('ontwerp');
+  laadInOntwerper(o);
+  kiesWeergave('3d');
+});
 document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) => b.addEventListener('click', () => toon(b.dataset.weergave as Weergave)));
 const start = location.hash.slice(1) as Weergave;
-toon(weergaven.includes(start) ? start : 'sofa');
+toon(weergaven.includes(start) ? start : 'modellen');
 window.addEventListener('hashchange', () => {
   const w = location.hash.slice(1) as Weergave;
   if (weergaven.includes(w)) toon(w);
