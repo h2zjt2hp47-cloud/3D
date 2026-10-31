@@ -29,6 +29,7 @@ export function controleerModel(model: ProductModel): ModelProbleem[] {
   dubbel(model.afgeleid.map((a) => a.code), 'afgeleid');
   dubbel(model.regels.map((r) => r.code), 'regels');
   dubbel(model.stuklijst.map((s) => s.code), 'stuklijst');
+  dubbel((model.tekening?.vormen ?? []).map((v) => v.code), 'tekening');
 
   const stappen = new Set(model.stappen.map((s) => s.code));
   for (const k of model.kenmerken) {
@@ -84,6 +85,20 @@ export function controleerModel(model: ProductModel): ModelProbleem[] {
   for (const s of model.stuklijst) {
     for (const veld of ['artikel', 'aantal', 'lengte', 'breedte', 'als'] as const)
       check(`stuklijst ${s.code} (${veld})`, s[veld]);
+  }
+  if (model.tekening) {
+    for (const m of model.tekening.maatlijnen)
+      for (const veld of ['x1', 'y1', 'x2', 'y2', 'afstand', 'tekst', 'als'] as const)
+        check(`maatlijn ${m.code} (${veld})`, m[veld]);
+    for (const v of model.tekening.vormen) {
+      check(`vorm ${v.code} (herhaal)`, v.herhaal);
+      check(`vorm ${v.code} (als)`, v.als);
+    }
+    // Binnen een vorm mag ook het volgnummer `i` gebruikt worden.
+    bekend.add('i');
+    for (const v of model.tekening.vormen)
+      for (const veld of ['x', 'y', 'breedte', 'hoogte', 'vulling', 'afronding', 'label'] as const)
+        check(`vorm ${v.code} (${veld})`, v[veld]);
   }
   return problemen;
 }

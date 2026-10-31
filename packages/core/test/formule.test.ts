@@ -29,6 +29,7 @@ describe('formules', () => {
     expect(r('naarboven(0.1 + 0.2; 0.1)')).toBeCloseTo(0.3);
     expect(r('afronden(2.345; 2)')).toBe(2.35);
     expect(r('afronden(2.5)')).toBe(3);
+    expect(r('rest(7; 3)')).toBe(1);
     expect(r('in(kleur; "wit"; "zwart")', { kleur: 'zwart' })).toBe(true);
     expect(r('in(kleur; "wit"; "zwart")', { kleur: 'rood' })).toBe(false);
   });

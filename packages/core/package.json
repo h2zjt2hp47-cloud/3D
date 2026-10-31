@@ -7,7 +7,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "demo": "tsx voorbeelden/demo.ts"
+    "demo": "tsx voorbeelden/demo.ts",
+    "galerij": "tsx voorbeelden/galerij.ts"
   },
   "dependencies": {
     "json-logic-js": "^2.0.5"

@@ -10,6 +10,7 @@ import type {
   Prijslijst,
   ProductModel,
   StuklijstResultaat,
+  TekeningResultaat,
   Waarde,
 } from './types.js';
 
@@ -163,13 +164,14 @@ export function berekenConfiguratie(
       meldingen.push({ code: `stuklijst.${s.code}.artikel`, ernst: 'fout', melding: `Artikel "${artikel}" (${s.omschrijving}) staat niet in de prijslijst.` });
       continue;
     }
+    const perMeter = model.maateenheid === 'cm' ? 100 : 1000;
     let netto: number;
     switch (s.eenheid) {
       case 'm2':
-        netto = (aantal * (lengte ?? 0) * (breedte ?? 0)) / 1_000_000;
+        netto = (aantal * (lengte ?? 0) * (breedte ?? 0)) / (perMeter * perMeter);
         break;
       case 'lm':
-        netto = (aantal * (lengte ?? 0)) / 1000;
+        netto = (aantal * (lengte ?? 0)) / perMeter;
         break;
       default:
         netto = aantal;
@@ -210,6 +212,8 @@ export function berekenConfiguratie(
   const btw = rond((excl * model.prijs.btwProcent) / 100);
   const margeProcent = excl > 0 ? rond(((excl - kostprijs) / excl) * 100, 1) : null;
 
+  const tekening = model.tekening ? bouwTekening(model, g) : undefined;
+
   const samenvatting = kenmerken.filter((k) => k.zichtbaar).map((k) => `${k.label}: ${k.weergave}`);
 
   return {
@@ -231,5 +235,46 @@ export function berekenConfiguratie(
       verkoopprijsIncl: rond(excl + btw),
     },
     samenvatting,
+    tekening,
   };
+}
+
+/** Rekent de vormen en maatlijnen van de tekening uit (geen SVG; dat doet tekenSvg). */
+function bouwTekening(model: ProductModel, g: Gegevens): TekeningResultaat {
+  const t = model.tekening!;
+  const vormen: TekeningResultaat['vormen'] = [];
+  for (const v of t.vormen) {
+    if (!evalueerWaar(v.als, g)) continue;
+    const aantal = v.herhaal === undefined ? 1 : Math.min(200, Math.max(0, Math.floor(evalueerGetal(v.herhaal, g))));
+    for (let i = 0; i < aantal; i++) {
+      const gi = { ...g, i };
+      const breedte = evalueerGetal(v.breedte, gi);
+      const hoogte = evalueerGetal(v.hoogte, gi);
+      if (breedte <= 0 || hoogte <= 0) continue;
+      vormen.push({
+        code: aantal > 1 ? `${v.code}.${i + 1}` : v.code,
+        x: rond(evalueerGetal(v.x, gi), 2),
+        y: rond(evalueerGetal(v.y, gi), 2),
+        breedte: rond(breedte, 2),
+        hoogte: rond(hoogte, 2),
+        vulling: v.vulling === undefined ? undefined : String(evalueer(v.vulling, gi) ?? ''),
+        afronding: v.afronding === undefined ? undefined : evalueerGetal(v.afronding, gi),
+        label: v.label === undefined ? undefined : String(evalueer(v.label, gi) ?? ''),
+      });
+    }
+  }
+  const maatlijnen: TekeningResultaat['maatlijnen'] = [];
+  for (const m of t.maatlijnen) {
+    if (!evalueerWaar(m.als, g)) continue;
+    const [x1, y1, x2, y2] = [m.x1, m.y1, m.x2, m.y2].map((f) => rond(evalueerGetal(f, g), 2)) as [number, number, number, number];
+    const lengte = rond(Math.hypot(x2 - x1, y2 - y1), 1);
+    if (lengte <= 0) continue;
+    maatlijnen.push({
+      code: m.code,
+      x1, y1, x2, y2,
+      afstand: evalueerGetal(m.afstand, g),
+      tekst: m.tekst === undefined ? `${lengte}` : String(evalueer(m.tekst, g) ?? ''),
+    });
+  }
+  return { titel: t.titel, eenheid: t.eenheid, vormen, maatlijnen };
 }

@@ -38,10 +38,10 @@ export const maatkast: ProductModel = {
     {
       code: 'materiaal', label: 'Materiaal', stap: 'afwerking', type: 'keuze', standaard: 'melamine_wit',
       keuzes: [
-        { code: 'melamine_wit', label: 'Melamine wit', eigenschappen: { plaat: 'MEL-WIT-18', kant: 'ABS-WIT-1', dikte: 18 } },
-        { code: 'melamine_eik', label: 'Melamine eikdecor', eigenschappen: { plaat: 'MEL-EIK-18', kant: 'ABS-EIK-1', dikte: 18 } },
-        { code: 'mdf_gelakt', label: 'MDF gelakt (RAL naar keuze)', eigenschappen: { plaat: 'MDF-LAK-19', kant: '', dikte: 19 } },
-        { code: 'fineer_eik', label: 'Eikfineer', eigenschappen: { plaat: 'FIN-EIK-19', kant: 'FIN-KANT-EIK', dikte: 19 } },
+        { code: 'melamine_wit', label: 'Melamine wit', eigenschappen: { plaat: 'MEL-WIT-18', kleur: '#f4f2ee', kant: 'ABS-WIT-1', dikte: 18 } },
+        { code: 'melamine_eik', label: 'Melamine eikdecor', eigenschappen: { plaat: 'MEL-EIK-18', kleur: '#c8a27a', kant: 'ABS-EIK-1', dikte: 18 } },
+        { code: 'mdf_gelakt', label: 'MDF gelakt (RAL naar keuze)', eigenschappen: { plaat: 'MDF-LAK-19', kleur: '#e3e0d8', kant: '', dikte: 19 } },
+        { code: 'fineer_eik', label: 'Eikfineer', eigenschappen: { plaat: 'FIN-EIK-19', kleur: '#b88a5a', kant: 'FIN-KANT-EIK', dikte: 19 } },
       ],
     },
     {
@@ -123,6 +123,39 @@ export const maatkast: ProductModel = {
       aantal: 'naarboven(1 + breedte / 1000 + aantal_deuren * 0.25; 0.5)', als: 'montage',
     },
   ],
+  tekening: {
+    titel: 'Vooraanzicht (mm)',
+    eenheid: 'mm',
+    vormen: [
+      { code: 'zijpaneel_links', x: '0', y: '0', breedte: 't', hoogte: 'hoogte', vulling: 'materiaal_kleur' },
+      { code: 'zijpaneel_rechts', x: 'breedte - t', y: '0', breedte: 't', hoogte: 'hoogte', vulling: 'materiaal_kleur' },
+      { code: 'bovenplaat', x: 't', y: '0', breedte: 'binnenbreedte', hoogte: 't', vulling: 'materiaal_kleur' },
+      { code: 'onderplaat', x: 't', y: 'hoogte - plinthoogte - t', breedte: 'binnenbreedte', hoogte: 't', vulling: 'materiaal_kleur' },
+      { code: 'plint', als: 'plint', x: 't', y: 'hoogte - plinthoogte', breedte: 'binnenbreedte', hoogte: 'plinthoogte', vulling: '"#8c8a84"' },
+      { code: 'tussenschot', herhaal: 'vakken - 1', x: 't + (i + 1) * vakbreedte + i * t', y: 't', breedte: 't', hoogte: 'binnenhoogte', vulling: 'materiaal_kleur' },
+      {
+        code: 'legplank', herhaal: 'aantal_legplanken',
+        x: 't + naarbeneden(i / legplanken; 1) * (vakbreedte + t)',
+        y: 't + (rest(i; legplanken) + 1) * binnenhoogte / (legplanken + 1) - t / 2',
+        breedte: 'vakbreedte', hoogte: 't', vulling: 'materiaal_kleur',
+      },
+      {
+        code: 'deur', herhaal: 'aantal_deuren',
+        x: 'als(deurtype = "schuifdeuren"; i * (breedte - deurbreedte) / (aantal_deuren - 1); i * breedte / aantal_deuren + 1.5)',
+        y: '1.5', breedte: 'deurbreedte', hoogte: 'deurhoogte', vulling: '"rgba(255,255,255,0.45)"',
+      },
+      {
+        code: 'greep', herhaal: 'aantal_deuren', als: 'deurtype <> "geen" en greep <> "greeploos"',
+        x: 'als(deurtype = "schuifdeuren"; i * (breedte - deurbreedte) / (aantal_deuren - 1); i * breedte / aantal_deuren) + als(rest(i; 2) = 0; deurbreedte - 60; 40)',
+        y: 'deurhoogte / 2 - als(greep = "knop"; 12; 90)',
+        breedte: 'als(greep = "knop"; 24; 14)', hoogte: 'als(greep = "knop"; 24; 180)', vulling: '"#2b2a26"', afronding: '6',
+      },
+    ],
+    maatlijnen: [
+      { code: 'breedte', x1: '0', y1: '0', x2: 'breedte', y2: '0', afstand: '70' },
+      { code: 'hoogte', x1: 'breedte', y1: '0', x2: 'breedte', y2: 'hoogte', afstand: '70' },
+    ],
+  },
   prijs: { opslagProcent: 40, minimumPrijs: 250, btwProcent: 21 },
 };
 

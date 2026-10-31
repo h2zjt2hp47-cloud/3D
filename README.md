@@ -21,10 +21,13 @@ packages/
       logica.ts         Evaluatie (JsonLogic + eigen functies)
       motor.ts          berekenConfiguratie(): zichtbaarheid, fouten, stuklijst, prijs
       modelcontrole.ts  controleerModel(): fouten in een productmodel vinden
+      svg.ts            tekenSvg(): 2D-tekening (bovenaanzicht, vooraanzicht) met maatlijnen
     voorbeelden/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
-      sofa.ts           Sofa op maat (prijs = prijstabel breedte × stofgroep + toeslagen)
+      sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
+                        eigen stof/leder, contraststof, stofverbruik, bovenaanzicht
       demo.ts           Commandoregel-demo
+      galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
 ```
 
@@ -41,14 +44,20 @@ npm test
 ```
 
 ```bash
-npm run demo -- sofa opstelling=hoek_links breedte=2800 stof=boucle_belize korting=20
+npm run demo -- sofa opstelling=hoek_links breedte=283 zijlengte=215 stof=jacquard_ruit contrast=ja contraststof=linnen_brume korting=20
 ```
 
 ```bash
 npm run demo -- kast breedte=2400 deurtype=schuifdeuren materiaal=fineer_eik
 ```
 
+```bash
+npm run galerij
+```
+
 > De voorbeeldmodellen en alle prijzen zijn **verzonnen** en dienen alleen om de motor te testen.
+
+![Galerij met voorbeeldtekeningen](docs/afbeeldingen/galerij.png)
 
 ## Formules
 
@@ -64,4 +73,9 @@ Beheerders schrijven formules zoals in Excel; argumenten scheiden met `;`.
 | Min/max | `min(a; b)`, `max(a; b; c)` |
 | In lijst | `in(kleur; "wit"; "zwart")` |
 | Prijstabel | `tabel("basisprijs"; breedte; stof_groep)`; tussenmaten gaan naar de volgende maatklasse |
+| Rest na deling | `rest(i; 2)` |
 | Eigenschap van een keuze | `materiaal_dikte`, `stof_groep` (= `<kenmerk>_<eigenschap>`) |
+
+## Tekening
+
+Een productmodel kan een `tekening` hebben: rechthoeken en maatlijnen waarvan alle maten formules zijn. `herhaal` tekent een vorm meerdere keren (met volgnummer `i`), bv. zitkussens of legplanken. `vulling` kan de kleur van de gekozen stof zijn (`stof_kleur`). `tekenSvg()` maakt er een SVG van, bruikbaar op scherm en in de offerte-PDF.

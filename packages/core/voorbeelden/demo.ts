@@ -3,11 +3,14 @@
  *
  *   npm run demo                                   kast op maat, standaardkeuzes
  *   npm run demo -- kast breedte=2400 deurtype=schuifdeuren materiaal=fineer_eik
- *   npm run demo -- sofa opstelling=hoek_links breedte=2800 stof=boucle_belize korting=20
+ *   npm run demo -- sofa opstelling=hoek_links breedte=283 zijlengte=215 stof=boucle_belize korting=20
+ *
+ * De tekening wordt bewaard als kast.svg of sofa.svg.
  *
  * `korting=` is de klantkorting in procent (bv. voor interieurinrichters).
  */
-import { berekenConfiguratie, controleerModel, type Prijslijst, type ProductModel } from '../src/index.js';
+import { writeFileSync } from 'node:fs';
+import { berekenConfiguratie, controleerModel, tekenSvg, type Prijslijst, type ProductModel } from '../src/index.js';
 import { demoPrijslijst, maatkast } from './maatkast.js';
 import { sofa, sofaPrijslijst } from './sofa.js';
 
@@ -60,3 +63,12 @@ console.log(`Brutoprijs excl.:   ${eur(r.prijs.brutoprijsExcl)}`);
 if (r.prijs.kortingProcent) console.log(`Korting:            ${r.prijs.kortingProcent}%`);
 console.log(`Verkoopprijs excl.: ${eur(r.prijs.verkoopprijsExcl)}   (marge ${r.prijs.margeProcent ?? '—'}%)`);
 console.log(`Verkoopprijs incl.: ${eur(r.prijs.verkoopprijsIncl)}\n`);
+
+if (r.afgeleid.stofverbruik !== undefined) {
+  console.log(`Stofverbruik:       ${r.afgeleid.stofverbruik} m${r.afgeleid.stofverbruik_contrast ? ` + ${r.afgeleid.stofverbruik_contrast} m contraststof` : ''}`);
+}
+if (r.tekening) {
+  const bestand = `${keuze}.svg`;
+  writeFileSync(bestand, tekenSvg(r.tekening, { achtergrond: '#ffffff' }));
+  console.log(`Tekening:           ${bestand}\n`);
+}

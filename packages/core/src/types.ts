@@ -90,8 +90,8 @@ export type Hoeveelheidseenheid = 'stuk' | 'm2' | 'lm' | 'uur';
 /**
  * Een regel van de stuklijst. De hoeveelheid volgt uit de eenheid:
  * - stuk/uur: aantal
- * - m2: aantal × lengte × breedte (mm → m²)
- * - lm: aantal × lengte (mm → m)
+ * - m2: aantal × lengte × breedte (maateenheid van het model → m²)
+ * - lm: aantal × lengte (maateenheid van het model → m)
  */
 export interface StuklijstRegel {
   code: string;
@@ -148,6 +148,8 @@ export interface ProductModel {
   naam: string;
   /** Verhoog bij elke wijziging; een opgeslagen configuratie onthoudt de versie. */
   versie: number;
+  /** Eenheid van alle maten in het model (standaard mm). Bepaalt de omrekening naar m² en lm. */
+  maateenheid?: 'mm' | 'cm';
   /** Optioneel: id/nummer van het hoofdartikel in het ERP (bv. Missing Link). */
   erpArtikel?: string;
   stappen: Stap[];
@@ -156,7 +158,56 @@ export interface ProductModel {
   regels: Regel[];
   stuklijst: StuklijstRegel[];
   tabellen?: Prijstabel[];
+  tekening?: Tekening;
   prijs: PrijsInstellingen;
+}
+
+// ---------- Tekening (2D, parametrisch) ----------
+
+/**
+ * Een rechthoek in de tekening. Alle velden zijn formules.
+ * Coördinaten in de eenheid van het model (bv. cm), x naar rechts, y naar onder.
+ */
+export interface Vorm {
+  code: string;
+  x: Formule;
+  y: Formule;
+  breedte: Formule;
+  hoogte: Formule;
+  /** Alleen tekenen als deze formule waar is. */
+  als?: Formule;
+  /**
+   * Herhaal de vorm dit aantal keer. In de formules is `i` het volgnummer (0, 1, 2 …).
+   * Bv. zitkussens: herhaal `zitkussens`, x = `zit_x + i * kussenbreedte`.
+   */
+  herhaal?: Formule;
+  /** Vulkleur, bv. `stof_kleur` of `"#d9d4c7"`. */
+  vulling?: Formule;
+  /** Afgeronde hoeken (straal). */
+  afronding?: Formule;
+  /** Tekst in het midden van de vorm. */
+  label?: Formule;
+}
+
+/** Een maatlijn van punt 1 naar punt 2, verschoven over `afstand` (links van de richting 1 → 2). */
+export interface Maatlijn {
+  code: string;
+  x1: Formule;
+  y1: Formule;
+  x2: Formule;
+  y2: Formule;
+  afstand: Formule;
+  /** Tekst; standaard de gemeten lengte. */
+  tekst?: Formule;
+  als?: Formule;
+}
+
+export interface Tekening {
+  /** Bv. "bovenaanzicht" of "vooraanzicht". */
+  titel: string;
+  eenheid: string;
+  vormen: Vorm[];
+  maatlijnen: Maatlijn[];
 }
 
 /** Instellingen per berekening, bv. afhankelijk van de klant. */
@@ -246,4 +297,34 @@ export interface ConfiguratieResultaat {
   };
   /** Korte omschrijving voor offerte of orderregel. */
   samenvatting: string[];
+  /** Uitgerekende tekening (alleen als het model een tekening heeft). */
+  tekening?: TekeningResultaat;
+}
+
+export interface VormResultaat {
+  code: string;
+  x: number;
+  y: number;
+  breedte: number;
+  hoogte: number;
+  vulling?: string;
+  afronding?: number;
+  label?: string;
+}
+
+export interface MaatlijnResultaat {
+  code: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  afstand: number;
+  tekst: string;
+}
+
+export interface TekeningResultaat {
+  titel: string;
+  eenheid: string;
+  vormen: VormResultaat[];
+  maatlijnen: MaatlijnResultaat[];
 }

@@ -14,6 +14,7 @@
  *                   naarboven(x; stap)  naarbeneden(x; stap)  afronden(x; decimalen)
  *                   in(x; "a"; "b"; ...)
  *                   tabel("naam"; rij; kolom)   opzoeking in een prijstabel van het model
+ *                   rest(a; b)                  rest na deling (zoals REST/MOD in Excel)
  *
  * Argumenten scheid je met `;` (zoals in Nederlandstalige Excel) of `,`.
  */
@@ -102,6 +103,7 @@ const FUNCTIES: Record<string, [string, number, number]> = {
   afronden: ['afronden', 1, 2],
   in: ['in_lijst', 2, Infinity],
   tabel: ['tabel', 3, 3],
+  rest: ['%', 2, 2],
 };
 
 /** Sleutel in het gegevensobject waaronder de prijstabellen van het model zitten. */

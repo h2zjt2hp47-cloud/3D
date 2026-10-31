@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { berekenConfiguratie, controleerModel, standaardKeuzes, type ConfiguratieResultaat, type ProductModel } from '../src/index.js';
+import { berekenConfiguratie, controleerModel, standaardKeuzes, tekenSvg, type ConfiguratieResultaat, type ProductModel } from '../src/index.js';
 import { demoPrijslijst, maatkast } from '../voorbeelden/maatkast.js';
 import { sofa, sofaPrijslijst } from '../voorbeelden/sofa.js';
 
@@ -83,64 +83,148 @@ describe('kast op maat (kostprijs + opslag)', () => {
   });
 });
 
-describe('sofa op maat (lijstprijs uit prijstabel)', () => {
+describe('sofa op maat per cm (lijstprijs uit prijstabel)', () => {
   it('standaardprijs = tabel + sierkussens', () => {
     const r = bank();
     expect(r.geldig).toBe(true);
     expect(r.prijs.methode).toBe('lijstprijs');
-    // 3zits 2200 mm, linnen (groep B): 2450 + 2 × 75 = 2600
-    expect(r.prijs.brutoprijsExcl).toBe(2600);
-    expect(r.prijs.verkoopprijsExcl).toBe(2600);
+    // recht 230 cm, linnen (groep B): 1790 + 9 × 60 = 2330, + 2 × 75 = 2480
+    expect(r.prijs.brutoprijsExcl).toBe(2480);
     expect(r.prijs.margeProcent).not.toBeNull();
   });
 
-  it('rondt een maat naar boven af naar de volgende maatklasse', () => {
-    // 2300 → rij 2400 (groep B 2570) + 2 × 75
-    expect(bank({ breedte: 2300 }).prijs.brutoprijsExcl).toBe(2720);
+  it('maat per cm, prijs per 10 cm-klasse (naar boven)', () => {
+    expect(bank({ breedte: 223 }).geldig).toBe(true);
+    expect(bank({ breedte: 223 }).prijs.brutoprijsExcl).toBe(2480);
+    expect(bank({ breedte: 231 }).prijs.brutoprijsExcl).toBe(2540);
   });
 
-  it('telt hoektoeslag, factoren en toeslagen op', () => {
-    const r = bank({ opstelling: 'hoek_links', breedte: 2800, hoekdiepte: 2000, stof: 'boucle_belize', model: 'rond', comfort: 'dons', sierkussens: 0 });
-    // (3230 + 1270) × 1.06 + 390 = 5160
-    expect(r.prijs.brutoprijsExcl).toBe(5160);
-    expect(r.kenmerken.find((k) => k.code === 'hoekdiepte')?.zichtbaar).toBe(true);
+  it('hoeksofa: basis + hoekzijde, factoren en toeslagen', () => {
+    const r = bank({ opstelling: 'hoek_links', breedte: 280, zijlengte: 220, stof: 'boucle_belize', model: 'rond', comfort: 'dons', sierkussens: 0 });
+    // (C 280: 2050 + 14 × 72 = 3058) + (hoekzijde C 220: 1240 + 4 × 58 = 1472) = 4530 × 1.06 + 390 = 5191.8
+    expect(r.prijs.brutoprijsExcl).toBe(5191.8);
+    expect(r.geldig).toBe(true);
+  });
+
+  it('chaise longue: meerprijs volgens lengte', () => {
+    // B 260: 1790 + 12 × 60 = 2510; chaise B 170: 760 + 2 × 34 = 828; + 2 × 75
+    expect(bank({ opstelling: 'chaise_rechts', breedte: 260, zijlengte: 170 }).prijs.brutoprijsExcl).toBe(3488);
+  });
+
+  it('lengte chaise/hoekzijde alleen zichtbaar en gecontroleerd waar nodig', () => {
+    expect(bank().kenmerken.find((k) => k.code === 'zijlengte')?.zichtbaar).toBe(false);
+    const chaise = bank({ opstelling: 'chaise_links', breedte: 240, zijlengte: 200 });
+    expect(chaise.kenmerken.find((k) => k.code === 'zijlengte')?.max).toBe(190);
+    expect(codes(chaise)).toContain('zijlengte.max');
   });
 
   it('past klantkorting toe (interieurinrichter)', () => {
     const r = bank({}, 25);
-    expect(r.prijs.kortingProcent).toBe(25);
-    expect(r.prijs.verkoopprijsExcl).toBe(1950);
-    expect(r.prijs.verkoopprijsIncl).toBe(2359.5);
+    expect(r.prijs.verkoopprijsExcl).toBe(1860);
+    expect(r.prijs.verkoopprijsIncl).toBe(2250.6);
   });
 
   it('breedtegrenzen hangen af van de opstelling', () => {
-    expect(codes(bank({ opstelling: '2zits', breedte: 2200 }))).toContain('breedte.max');
-    expect(bank({ opstelling: '4zits', breedte: 3200 }).geldig).toBe(true);
+    expect(codes(bank({ opstelling: 'recht', breedte: 350 }))).toContain('breedte.max');
+    expect(codes(bank({ opstelling: 'hoek_rechts', breedte: 200 }))).toContain('breedte.min');
+    expect(bank({ opstelling: 'hoek_rechts', breedte: 360, zijlengte: 300 }).geldig).toBe(true);
   });
 
   it('messing poten alleen bij strakke arm', () => {
     expect(codes(bank({ model: 'rond', poten: 'messing' }))).toContain('poten.niet_beschikbaar');
   });
 
-  it('eigen stof: geen stof op de stuklijst, wel waarschuwing', () => {
-    const r = bank({ stof: 'eigen_stof' });
-    expect(regel(r, 'stof')).toBeUndefined();
-    expect(codes(r)).toContain('eigen_stof_levering');
-    expect(r.prijs.brutoprijsExcl).toBe(1930 + 2 * 45);
+  it('eigen stof (COM) en eigen leder (COL = COM + 10 %)', () => {
+    const com = bank({ stof: 'eigen_stof' });
+    expect(regel(com, 'stof')).toBeUndefined();
+    expect(codes(com)).toContain('eigen_materiaal');
+    // EIGEN 230: 1450 + 9 × 40 = 1810, + 2 × 45
+    expect(com.prijs.brutoprijsExcl).toBe(1900);
+    expect(bank({ stof: 'eigen_leder' }).prijs.brutoprijsExcl).toBe(1991 + 90);
+    expect(codes(bank({ stof: 'eigen_stof', afneembare_hoezen: true }))).toContain('stof.niet_beschikbaar');
   });
 
-  it('elke toegelaten breedte van elke opstelling heeft een prijs', () => {
+  it('contraststof: hoogste stofgroep + 5 %', () => {
+    const r = bank({ stof: 'katoen_naturel', contrast: true, contraststof: 'boucle_belize' });
+    expect(r.afgeleid.prijsgroep).toBe('C');
+    // C 230: 2050 + 9 × 72 = 2698 × 1.05 = 2832.9, + 2 × 95
+    expect(r.prijs.brutoprijsExcl).toBe(3022.9);
+    expect(regel(r, 'contraststof')).toMatchObject({ artikel: 'STOF-BOU' });
+    // Omgekeerd: hoofdstof is de duurste groep
+    expect(bank({ stof: 'boucle_belize', contrast: true, contraststof: 'katoen_naturel' }).afgeleid.prijsgroep).toBe('C');
+  });
+
+  it('stofverbruik = basis × patroonfactor', () => {
+    expect(bank().afgeleid.stofverbruik).toBe(7.9); // 230/100 × 3 + 2 × 0.5
+    expect(bank({ stof: 'jacquard_ruit' }).afgeleid.stofverbruik).toBe(8.7); // × 1.10 (rapport 32 cm)
+    const c = bank({ contrast: true });
+    expect(c.afgeleid.stofverbruik).toBe(5.1); // 7.9 × 0.65
+    expect(c.afgeleid.stofverbruik_contrast).toBe(2.8); // 7.9 × 0.35
+    expect(regel(bank(), 'stof')).toMatchObject({ artikel: 'STOF-LIN', lengte: 790, hoeveelheid: 8.295 });
+  });
+
+  it('elke toegelaten breedte en zijlengte heeft een prijs', () => {
     const opstellingen = sofa.kenmerken.find((k) => k.code === 'opstelling');
     if (opstellingen?.type !== 'keuze') throw new Error('opstelling ontbreekt');
     for (const o of opstellingen.keuzes) {
-      const { min, max } = o.eigenschappen as { min: number; max: number };
-      for (let b = min; b <= max; b += 100) {
-        for (const stof of ['katoen_naturel', 'linnen_brume', 'boucle_belize', 'eigen_stof']) {
-          const r = bank({ opstelling: o.code, breedte: b, hoekdiepte: 1600, stof });
-          expect(codes(r), `${o.code} ${b} ${stof}`).not.toContain('prijs.niet_gevonden');
+      const { min, max, soort } = o.eigenschappen as { min: number; max: number; soort: string };
+      const zijden = soort === 'chaise' ? [150, 190] : soort === 'hoek' ? [180, 300] : [180];
+      for (let b = min; b <= max; b += 7) {
+        for (const zijlengte of zijden) {
+          for (const stof of ['katoen_naturel', 'linnen_brume', 'boucle_belize', 'eigen_stof']) {
+            const r = bank({ opstelling: o.code, breedte: b, zijlengte, stof });
+            expect(codes(r), `${o.code} ${b} ${zijlengte} ${stof}`).not.toContain('prijs.niet_gevonden');
+          }
         }
       }
     }
+  });
+});
+
+describe('tekening', () => {
+  const vorm = (r: ConfiguratieResultaat, code: string) => r.tekening!.vormen.find((v) => v.code === code);
+
+  it('rechte sofa: rug, twee armen en zitkussens van gelijke breedte', () => {
+    const t = bank().tekening!;
+    expect(t.vormen.map((v) => v.code)).toEqual(['rug', 'arm_links', 'arm_rechts', 'zitkussen.1', 'zitkussen.2', 'zitkussen.3']);
+    const kussens = t.vormen.filter((v) => v.code.startsWith('zitkussen'));
+    expect(kussens[0]!.x).toBe(18);
+    expect(kussens[2]!.x + kussens[2]!.breedte).toBeCloseTo(230 - 18);
+    expect(kussens.every((k) => k.vulling === '#c9b48f')).toBe(true); // linnen Ficelle
+    expect(t.maatlijnen.map((m) => [m.code, m.tekst])).toEqual([['breedte', '230'], ['diepte_rechts', '95']]);
+  });
+
+  it('hoeksofa links: zijrug, eindarm, hoekzit en maat van de zijde', () => {
+    const r = bank({ opstelling: 'hoek_links', breedte: 283, zijlengte: 215, contrast: true, contraststof: 'linnen_brume' });
+    expect(vorm(r, 'arm_links')).toBeUndefined();
+    expect(vorm(r, 'eindarm_links')).toMatchObject({ x: 0, y: 197, breedte: 95, hoogte: 18 });
+    expect(vorm(r, 'hoekzit_links')).toMatchObject({ x: 20, y: 20, vulling: '#a9b3a6' });
+    expect(vorm(r, 'rug')?.vulling).toBe('#c9b48f');
+    expect(r.tekening!.maatlijnen.find((m) => m.code === 'zijlengte_links')?.tekst).toBe('215');
+  });
+
+  it('kast: tussenschotten, legplanken en deuren volgen de keuzes', () => {
+    const r = kast({ breedte: 1800, vakken: 3, legplanken: 2, deurtype: 'geen' });
+    const codesT = r.tekening!.vormen.map((v) => v.code);
+    expect(codesT.filter((c) => c.startsWith('tussenschot'))).toHaveLength(2);
+    expect(codesT.filter((c) => c.startsWith('legplank'))).toHaveLength(6);
+    expect(codesT.some((c) => c.startsWith('deur'))).toBe(false);
+    expect(kast().tekening!.vormen.filter((v) => v.code.startsWith('greep'))).toHaveLength(2);
+  });
+
+  it('tekenSvg maakt geldige SVG en ontsnapt tekst en onveilige kleuren', () => {
+    const svg = tekenSvg(bank({ opstelling: 'chaise_links', breedte: 250, zijlengte: 160 }).tekening!);
+    expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
+    expect(svg).toContain('chaise longue');
+    expect(svg.match(/<rect /g)!.length).toBeGreaterThan(4);
+    const vreemd = tekenSvg({
+      titel: '<script>', eenheid: 'cm',
+      vormen: [{ code: 'x', x: 0, y: 0, breedte: 10, hoogte: 10, vulling: 'red" onload="alert(1)', label: '<b>' }],
+      maatlijnen: [],
+    });
+    expect(vreemd).not.toContain('<script>');
+    expect(vreemd).not.toContain('onload');
+    expect(vreemd).toContain('&lt;b&gt;');
   });
 });
 
