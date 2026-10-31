@@ -29,11 +29,23 @@ packages/
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
+  demo-web/             Klikbare demo: formulier opgebouwd uit het productmodel, live prijs,
+                        meldingen, stuklijst en tekening; gebundeld tot één HTML-bestand
 ```
 
-Later volgen: `apps/web` (configurator en beheerscherm), `apps/server` (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.
+Later volgen: het echte configuratiescherm met beheer, een server (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.
 
 ## Uitproberen
+
+**Klikbare demo in de browser** (sofa per cm en kast, prijs en tekening live):
+
+```bash
+npm run build -w @configurator/demo-web
+```
+
+Open daarna `packages/demo-web/dist/configurator-demo.html` in een browser.
+
+**Commandoregel:**
 
 ```bash
 npm install

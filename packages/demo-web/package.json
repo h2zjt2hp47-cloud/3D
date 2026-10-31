@@ -1,0 +1,12 @@
+{
+  "name": "@configurator/demo-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Klikbare demo van de configurator (één HTML-bestand).",
+  "scripts": {
+    "build": "node bouw.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "echo geen tests"
+  }
+}
