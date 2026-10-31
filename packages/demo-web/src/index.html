@@ -98,19 +98,19 @@ fieldset.keuzes legend { width: 100%; }
 .status.ok { color: var(--goed); background: color-mix(in srgb, var(--goed) 14%, transparent); }
 .status.fout { color: var(--fout); background: color-mix(in srgb, var(--fout) 14%, transparent); }
 .prijs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
-#prijs-excl { font-family: var(--display); font-size: 2.2rem; font-variant-numeric: tabular-nums; }
+.grote-prijs { font-family: var(--display); font-size: 2.2rem; font-variant-numeric: tabular-nums; }
 #prijs-incl { color: var(--zacht); }
 .klant { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 12px 0; font-size: .9rem; }
 .klant label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .klant input[type="radio"] { accent-color: var(--accent); }
 #korting { width: 64px; padding: 4px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); text-align: right; }
-dl#prijsdetail { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 12px 0 0; font-size: .9rem; }
-dl#prijsdetail dt { color: var(--zacht); }
-dl#prijsdetail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-#meldingen { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-#meldingen li { padding: 8px 10px 8px 12px; border-left: 3px solid; border-radius: 4px; font-size: .9rem; }
-#meldingen li.fout { border-color: var(--fout); background: color-mix(in srgb, var(--fout) 10%, transparent); }
-#meldingen li.waarschuwing { border-color: var(--let-op); background: color-mix(in srgb, var(--let-op) 12%, transparent); }
+dl.prijsdetail { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 12px 0 0; font-size: .9rem; }
+dl.prijsdetail dt { color: var(--zacht); }
+dl.prijsdetail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.meldingen { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.meldingen li { padding: 8px 10px 8px 12px; border-left: 3px solid; border-radius: 4px; font-size: .9rem; }
+.meldingen li.fout, .foutlijst li { border-color: var(--fout); background: color-mix(in srgb, var(--fout) 10%, transparent); }
+.meldingen li.waarschuwing { border-color: var(--let-op); background: color-mix(in srgb, var(--let-op) 12%, transparent); }
 .acties { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
 .acties button { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; }
 .acties button.tweede { background: transparent; color: var(--accent); }
@@ -122,18 +122,92 @@ th { font-weight: 600; color: var(--zacht); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.code { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--zacht); }
 footer { text-align: center; color: var(--zacht); font-size: .8rem; padding: 0 16px 32px; }
+
+/* Header */
+.klant { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: .9rem; }
+.producten { flex-wrap: wrap; }
+/* Knoppen algemeen */
+button.tweede, .knoppenrij button, .knoppenlijst button { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.knoppenrij button:not(.tweede):not(.gevaar), #m-opslaan { background: var(--accent); color: var(--vlak); }
+button.gevaar { border: 1px solid var(--fout); color: var(--fout); background: transparent; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+button.bevestig { background: var(--fout) !important; color: var(--vlak) !important; }
+button:disabled { opacity: .45; cursor: default; }
+.knoppenrij { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.knoppenlijst { display: grid; gap: 6px; margin-bottom: 10px; }
+.knoppenlijst button { text-align: left; }
+.knoppenlijst button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
+.klein-knop { padding: 3px 9px !important; font-size: .8rem; }
+/* Vrij ontwerp */
+main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); }
+@media (max-width: 1150px) { main.ontwerp { grid-template-columns: 200px minmax(0, 1fr); } main.ontwerp > .resultaat { grid-column: 1 / -1; position: static; } }
+@media (max-width: 760px) { main.ontwerp { grid-template-columns: 1fr; } }
+.gereedschap { align-self: start; display: grid; gap: 4px; }
+.gereedschap h2 { font-size: 1.05rem; margin: 4px 0 6px; }
+.tekenvlak { display: grid; gap: 10px; align-content: start; }
+#o-canvas { width: 100%; height: auto; aspect-ratio: 4 / 3; max-height: 70vh; background: var(--papier); border-radius: 6px; touch-action: none; user-select: none; cursor: default; }
+#o-canvas.tekenmodus { cursor: crosshair; }
+#o-canvas .raster-klein { stroke: #e7eae6; stroke-width: .4; }
+#o-canvas .raster-groot { stroke: #d2d8d3; stroke-width: .8; }
+#o-canvas .vorm { stroke: #2b2b28; stroke-width: .7; pointer-events: none; }
+#o-canvas .raak { fill: transparent; stroke: transparent; stroke-width: 2; cursor: move; }
+#o-canvas.tekenmodus .raak { cursor: crosshair; }
+#o-canvas .raak.fout { stroke: #c0392b; stroke-dasharray: 4 3; }
+#o-canvas .raak.let-op { stroke: #c98a12; stroke-dasharray: 2 3; }
+#o-canvas .raak.geselecteerd { stroke: #2f6fb0; stroke-width: 2.4; stroke-dasharray: none; }
+#o-canvas .nummer { font: 600 11px var(--tekst); fill: #2b2b28; opacity: .55; pointer-events: none; }
+#o-canvas .greep { fill: #fff; stroke: #2f6fb0; stroke-width: 2; cursor: nwse-resize; }
+#o-canvas .elementmaat { font: 600 10px var(--tekst); fill: #2f6fb0; pointer-events: none; }
+#o-canvas .tekenkader { fill: rgba(47,111,176,.12); stroke: #2f6fb0; stroke-width: 1.5; stroke-dasharray: 5 3; pointer-events: none; }
+#o-canvas .maatlijn line { stroke: #3f5a52; stroke-width: .8; }
+#o-canvas .maatlijn text { font: 11px var(--tekst); fill: #3f5a52; }
+#o-canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eigenschappen { border-top: 1px solid var(--lijn); padding-top: 10px; }
+.eigenschappen h3 { font-size: 1.05rem; }
+.maatrij { display: flex; flex-wrap: wrap; gap: 12px; }
+.maatveld { display: grid; gap: 3px; font-size: .85rem; border: 0; padding: 0; margin: 0 0 8px; }
+.maatveld > span:first-child, .maatveld legend { font-weight: 600; }
+.maatveld input, .maatveld select, textarea { padding: 6px 8px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); color: var(--inkt); font: inherit; }
+.maatveld input[type="number"] { width: 110px; text-align: right; font-variant-numeric: tabular-nums; }
+.maatveld.breed, .maatveld.breed select, .maatveld.breed input { width: 100%; }
+.sneltoetsen { margin-top: 8px; }
+.sneltoetsen ul { padding-left: 18px; margin: 6px 0 0; }
+#o-elementen tr { cursor: pointer; }
+#o-elementen tr.actief td { background: var(--accent-zacht); }
+/* Materialen */
+main.materialen { grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); }
+@media (max-width: 900px) { main.materialen { grid-template-columns: 1fr; } }
+main.materialen h3 { font-size: 1.05rem; margin: 18px 0 4px; }
+textarea { width: 100%; font: .85rem ui-monospace, monospace; }
+.formraster { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 14px; }
+.formraster .breed { grid-column: 1 / -1; }
+.inline { display: inline-flex; gap: 6px; align-items: center; margin-right: 12px; font-weight: 400; }
+.kleurrij { display: flex; gap: 8px; align-items: center; }
+.kleurrij input[type="color"] { width: 44px; height: 34px; padding: 2px; }
+.kleurrij input[type="text"] { width: 100px; font-family: ui-monospace, monospace; }
+.staal.groot { width: 34px; height: 34px; border-radius: 6px; }
+.label { font-size: .7rem; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent-zacht); color: var(--accent); vertical-align: middle; }
+td .staal { display: inline-block; vertical-align: -3px; }
+.acties-cel { display: flex; gap: 6px; justify-content: flex-end; }
+[hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 <header>
   <h1><span id="productnaam">Sofa op maat</span><span class="demo">demoprijzen</span></h1>
-  <div class="producten" role="group" aria-label="Product kiezen">
-    <button type="button" data-product="sofa" aria-pressed="true">Sofa op maat</button>
-    <button type="button" data-product="kast" aria-pressed="false">Kast op maat</button>
+  <nav class="producten" aria-label="Weergave">
+    <button type="button" data-weergave="sofa" aria-pressed="true">Sofa op maat</button>
+    <button type="button" data-weergave="ontwerp" aria-pressed="false">Vrij ontwerp</button>
+    <button type="button" data-weergave="kast" aria-pressed="false">Kast op maat</button>
+    <button type="button" data-weergave="materialen" aria-pressed="false">Materialen</button>
+  </nav>
+  <div class="klant" role="radiogroup" aria-label="Klant">
+    <label><input type="radio" name="klant" value="particulier" id="klant-particulier" checked> Particulier</label>
+    <label><input type="radio" name="klant" value="inrichter" id="klant-inrichter"> Interieurinrichter</label>
+    <label for="korting">korting <input type="number" id="korting" value="20" min="0" max="100" step="1" disabled> %</label>
   </div>
 </header>
-<main>
+<main id="view-config">
   <form id="formulier" aria-label="Configuratie" onsubmit="return false"></form>
   <aside class="resultaat" aria-label="Resultaat">
     <section class="kaart">
@@ -142,14 +216,9 @@ footer { text-align: center; color: var(--zacht); font-size: .8rem; padding: 0 1
     </section>
     <section class="kaart" aria-live="polite">
       <div class="kaartkop"><h2>Prijs</h2><span id="status" class="status ok">Klaar voor offerte</span></div>
-      <div class="prijs"><span id="prijs-excl">€ 0,00</span><span id="prijs-incl"></span></div>
-      <div class="klant" role="radiogroup" aria-label="Klant">
-        <label><input type="radio" name="klant" value="particulier" id="klant-particulier" checked> Particulier</label>
-        <label><input type="radio" name="klant" value="inrichter" id="klant-inrichter"> Interieurinrichter</label>
-        <label for="korting">korting <input type="number" id="korting" value="20" min="0" max="100" step="1" disabled> %</label>
-      </div>
-      <dl id="prijsdetail"></dl>
-      <ul id="meldingen" hidden></ul>
+      <div class="prijs"><span id="prijs-excl" class="grote-prijs">€ 0,00</span><span id="prijs-incl"></span></div>
+      <dl id="prijsdetail" class="prijsdetail"></dl>
+      <ul id="meldingen" class="meldingen" hidden></ul>
       <div class="acties">
         <button type="button" id="kopieer">Kopieer offertetekst</button>
         <button type="button" id="herstel" class="tweede">Standaardkeuzes</button>
@@ -171,7 +240,91 @@ footer { text-align: center; color: var(--zacht); font-size: .8rem; padding: 0 1
     </section>
   </aside>
 </main>
-<footer>Demo van de configurator-motor. Modellen, maten en prijzen zijn verzonnen.</footer>
+
+<main id="view-ontwerp" class="ontwerp" hidden>
+  <aside class="kaart gereedschap" aria-label="Gereedschap">
+    <h2>Teken</h2>
+    <div id="o-gereedschap" class="knoppenlijst" role="group" aria-label="Gereedschap"></div>
+    <p id="o-hint" class="klein"></p>
+    <h2>Start van</h2>
+    <div id="o-start" class="knoppenlijst"></div>
+    <label for="o-hoofdmateriaal" class="maatveld breed"><span>Hoofdmateriaal</span><select id="o-hoofdmateriaal"></select></label>
+    <div class="knoppenrij">
+      <button type="button" id="o-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button>
+      <button type="button" id="o-wis" class="gevaar">Alles wissen</button>
+    </div>
+    <details class="sneltoetsen"><summary>Sneltoetsen</summary>
+      <ul class="klein"><li>Pijltjes: 1 cm verplaatsen (Shift: 10 cm)</li><li>R / Shift+R: draaien</li><li>D: dupliceren</li><li>Delete: verwijderen</li><li>Alt tijdens slepen: zonder magneet</li><li>Ctrl+Z: ongedaan maken</li><li>Esc: stoppen met tekenen</li></ul>
+    </details>
+  </aside>
+  <section class="kaart tekenvlak">
+    <div class="kaartkop"><h2>Bovenaanzicht</h2><span class="klein">raster 10 cm · maten in cm</span></div>
+    <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="o-eigenschappen" class="eigenschappen"></div>
+  </section>
+  <aside class="resultaat" aria-label="Resultaat vrij ontwerp">
+    <section class="kaart" aria-live="polite">
+      <div class="kaartkop"><h2>Prijs</h2><span id="o-status" class="status ok"></span></div>
+      <div class="prijs"><span id="o-prijs-excl" class="grote-prijs">€ 0,00</span><span id="o-prijs-incl" class="klein"></span></div>
+      <dl id="o-prijsdetail" class="prijsdetail"></dl>
+      <ul id="o-meldingen" class="meldingen" hidden></ul>
+      <div class="acties">
+        <button type="button" id="o-kopieer">Kopieer offertetekst</button>
+        <span id="o-kopieer-melding" class="klein" role="status"></span>
+      </div>
+    </section>
+    <section class="kaart">
+      <div class="kaartkop"><h2>Elementen</h2></div>
+      <div class="tabelhouder">
+        <table id="o-elementen"><thead><tr><th class="num">#</th><th>Element</th><th class="num">Maat (cm)</th><th>Materiaal</th><th class="num">Prijs</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<main id="view-materialen" class="materialen" hidden>
+  <section class="kaart">
+    <div class="kaartkop"><h2>Materialen</h2><span id="m-aantal" class="klein"></span></div>
+    <div class="tabelhouder">
+      <table id="m-lijst"><thead><tr><th>Naam</th><th>Soort</th><th>Groep</th><th class="num">Patroon</th><th class="num">Rolbreedte</th><th class="num">Kost/m</th><th class="num">Toeslag</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+    <h3>Lijst delen of inlezen</h3>
+    <p class="klein">Kopieer de lijst om ze te bewaren of in een andere browser te plakken. Je kunt ook een lijst plakken (bv. van een leverancier, omgezet naar hetzelfde formaat).</p>
+    <textarea id="m-plak" rows="4" placeholder='[{"naam": "Velours Oker", "soort": "stof", "groep": "C", "kleur": "#c08a2e", "rapport": 0, "rolbreedte": 140, "kostprijsPerM": 49, "toeslagPct": 0}]' aria-label="Lijst materialen plakken (JSON)"></textarea>
+    <div class="knoppenrij">
+      <button type="button" id="m-inlezen" class="tweede">Lijst inlezen</button>
+      <button type="button" id="m-kopieer" class="tweede">Kopieer lijst</button>
+      <button type="button" id="m-herstel" class="gevaar">Standaardmaterialen herstellen</button>
+      <span id="m-lijstmelding" class="klein" role="status"></span>
+    </div>
+  </section>
+  <section class="kaart">
+    <form id="m-formulier" novalidate>
+      <div class="kaartkop"><h2 id="m-titel">Materiaal toevoegen</h2><span id="m-staal" class="staal groot" aria-hidden="true"></span></div>
+      <div class="formraster">
+        <label class="maatveld breed" for="m-naam"><span>Naam</span><input id="m-naam" type="text" maxlength="60" placeholder="bv. Velours Oker" autocomplete="off"></label>
+        <fieldset class="maatveld"><legend>Soort</legend>
+          <label class="inline"><input type="radio" name="m-soort" id="m-soort-stof" checked> Stof</label>
+          <label class="inline"><input type="radio" name="m-soort" id="m-soort-leder"> Leder</label>
+        </fieldset>
+        <label class="maatveld" for="m-groep"><span>Prijsgroep</span><select id="m-groep"></select></label>
+        <label class="maatveld" for="m-kleur"><span>Kleur</span><span class="kleurrij"><input id="m-kleur" type="color" value="#b8a88a"><input id="m-kleurcode" type="text" maxlength="7" aria-label="Kleurcode"></span></label>
+        <label class="maatveld" for="m-rapport"><span>Patroonrapport (cm, 0 = effen)</span><input id="m-rapport" type="number" min="0" max="300" step="1"></label>
+        <label class="maatveld" for="m-rolbreedte"><span>Rolbreedte (cm)</span><input id="m-rolbreedte" type="number" min="50" max="330" step="1"></label>
+        <label class="maatveld" for="m-kostprijs"><span>Kostprijs per meter (€)</span><input id="m-kostprijs" type="number" min="0" step="0.01"></label>
+        <label class="maatveld" for="m-toeslag"><span>Toeslag op verkoopprijs (%)</span><input id="m-toeslag" type="number" min="0" max="200" step="1"></label>
+      </div>
+      <p id="m-voorbeeld" class="klein"></p>
+      <ul id="m-fouten" class="meldingen foutlijst"></ul>
+      <div class="knoppenrij">
+        <button type="submit" id="m-opslaan">Materiaal toevoegen</button>
+        <button type="button" id="m-annuleer" class="tweede" hidden>Annuleren</button>
+        <span id="m-bevestiging" class="klein" role="status"></span>
+      </div>
+    </form>
+  </section>
+</main>
+<footer>Demo van de configurator-motor. Modellen, maten en prijzen zijn verzonnen. Eigen materialen en je laatste ontwerp worden alleen in deze browser bewaard.</footer>
 <script>/*BUNDEL*/</script>
 </body>
 </html>

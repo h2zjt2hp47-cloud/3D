@@ -12,31 +12,39 @@
  * - stofverbruik = basisverbruik × factor patroonrapport × factor rolbreedte;
  * - een 2D-bovenaanzicht met maatlijnen in de stofkleur.
  */
-import type { Keuzewaarde, Prijslijst, Prijstabel, ProductModel } from '../src/index.js';
+import { materiaalArtikel, type Keuzewaarde, type Materiaal, type Prijslijst, type Prijstabel, type ProductModel } from '../src/index.js';
 
-const STOFGROEPEN = ['A', 'B', 'C', 'EIGEN'];
+export const STOFGROEPEN = ['A', 'B', 'C', 'EIGEN'];
 
-/** Stoffen: groep (prijs), groepnr (rangorde), kleur (tekening), rapport (cm), rolbreedte (cm), artikel (stuklijst). */
-const stoffen: Keuzewaarde[] = [
-  { code: 'katoen_naturel', label: 'Katoen Naturel', eigenschappen: { groep: 'A', groepnr: 1, kleur: '#e9e2d3', rapport: 0, rolbreedte: 140, artikel: 'STOF-KAT', toeslag_pct: 0 } },
-  { code: 'linnen_ficelle', label: 'Linnen Ficelle', eigenschappen: { groep: 'B', groepnr: 2, kleur: '#c9b48f', rapport: 0, rolbreedte: 140, artikel: 'STOF-LIN', toeslag_pct: 0 } },
-  { code: 'linnen_travertin', label: 'Linnen Travertin', eigenschappen: { groep: 'B', groepnr: 2, kleur: '#d8d2c6', rapport: 0, rolbreedte: 140, artikel: 'STOF-LIN', toeslag_pct: 0 } },
-  { code: 'linnen_brume', label: 'Linnen Brume', eigenschappen: { groep: 'B', groepnr: 2, kleur: '#a9b3a6', rapport: 0, rolbreedte: 140, artikel: 'STOF-LIN', toeslag_pct: 0 } },
-  { code: 'boucle_belize', label: 'Bouclé Belize', eigenschappen: { groep: 'C', groepnr: 3, kleur: '#ece6da', rapport: 0, rolbreedte: 140, artikel: 'STOF-BOU', toeslag_pct: 0 } },
-  { code: 'jacquard_ruit', label: 'Jacquard ruit (patroon 32 cm)', eigenschappen: { groep: 'C', groepnr: 3, kleur: '#b9a58a', rapport: 32, rolbreedte: 140, artikel: 'STOF-JAC', toeslag_pct: 0 } },
+/** Standaardmaterialen (demo). De gebruiker kan er zelf bij maken. */
+export const standaardMaterialen: Materiaal[] = [
+  { code: 'katoen_naturel', naam: 'Katoen Naturel', soort: 'stof', groep: 'A', kleur: '#e9e2d3', rapport: 0, rolbreedte: 140, kostprijsPerM: 26, toeslagPct: 0 },
+  { code: 'linnen_ficelle', naam: 'Linnen Ficelle', soort: 'stof', groep: 'B', kleur: '#c9b48f', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
+  { code: 'linnen_travertin', naam: 'Linnen Travertin', soort: 'stof', groep: 'B', kleur: '#d8d2c6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
+  { code: 'linnen_brume', naam: 'Linnen Brume', soort: 'stof', groep: 'B', kleur: '#a9b3a6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
+  { code: 'boucle_belize', naam: 'Bouclé Belize', soort: 'stof', groep: 'C', kleur: '#ece6da', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
+  { code: 'jacquard_ruit', naam: 'Jacquard ruit (patroon 32 cm)', soort: 'stof', groep: 'C', kleur: '#b9a58a', rapport: 32, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
+  { code: 'eigen_stof', naam: 'Eigen stof van de klant (COM)', soort: 'stof', groep: 'EIGEN', kleur: '#dcdcdc', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 0 },
+  { code: 'eigen_leder', naam: 'Eigen leder van de klant (COL)', soort: 'leder', groep: 'EIGEN', kleur: '#8a6a4f', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 10 },
 ];
-const eigenMateriaal: Keuzewaarde[] = [
-  {
-    code: 'eigen_stof', label: 'Eigen stof van de klant (COM)',
-    eigenschappen: { groep: 'EIGEN', groepnr: 9, kleur: '#dcdcdc', rapport: 0, rolbreedte: 140, artikel: '', toeslag_pct: 0 },
-    beschikbaarAls: 'niet afneembare_hoezen', nietBeschikbaarReden: 'niet combineerbaar met afneembare hoezen',
-  },
-  {
-    code: 'eigen_leder', label: 'Eigen leder van de klant (COL)',
-    eigenschappen: { groep: 'EIGEN', groepnr: 9, kleur: '#8a6a4f', rapport: 0, rolbreedte: 140, artikel: '', toeslag_pct: 10 },
-    beschikbaarAls: 'niet afneembare_hoezen', nietBeschikbaarReden: 'niet combineerbaar met afneembare hoezen',
-  },
-];
+
+const groepnr = (g: string) => (g === 'EIGEN' ? 9 : STOFGROEPEN.indexOf(g) + 1);
+
+function naarKeuze(m: Materiaal): Keuzewaarde {
+  const k: Keuzewaarde = {
+    code: m.code,
+    label: m.naam,
+    eigenschappen: {
+      groep: m.groep, groepnr: groepnr(m.groep), kleur: m.kleur, rapport: m.rapport,
+      rolbreedte: m.rolbreedte, artikel: materiaalArtikel(m), toeslag_pct: m.toeslagPct,
+    },
+  };
+  if (m.groep === 'EIGEN') {
+    k.beschikbaarAls = 'niet afneembare_hoezen';
+    k.nietBeschikbaarReden = 'niet combineerbaar met afneembare hoezen';
+  }
+  return k;
+}
 
 /** Bouwt een prijstabel per 10 cm: startprijs per stofgroep + meerprijs per 10 cm. */
 function tabelPer10cm(code: string, label: string, van: number, tot: number, start: number[], per10: number[]): Prijstabel {
@@ -48,7 +56,13 @@ function tabelPer10cm(code: string, label: string, van: number, tot: number, sta
   };
 }
 
-export const sofa: ProductModel = {
+/** Bouwt het sofamodel met de opgegeven materialen (standaard + eigen toegevoegde). */
+export function maakSofa(materialen: Materiaal[] = standaardMaterialen): ProductModel {
+  const stoffen = materialen.filter((m) => STOFGROEPEN.includes(m.groep));
+  const gewoon = stoffen.filter((m) => m.groep !== 'EIGEN');
+  const standaardStof = stoffen.find((m) => m.code === 'linnen_ficelle')?.code ?? stoffen[0]?.code ?? '';
+  const standaardContrast = gewoon.find((m) => m.code === 'linnen_brume')?.code ?? gewoon[0]?.code ?? '';
+  return {
   code: 'SOFA',
   naam: 'Sofa op maat',
   versie: 2,
@@ -95,11 +109,11 @@ export const sofa: ProductModel = {
         { code: 'diep', label: 'Diep (totale diepte 105 cm)', eigenschappen: { diepte: 105, factor: 1.08 } },
       ],
     },
-    { code: 'stof', label: 'Stof', stap: 'stof', type: 'keuze', standaard: 'linnen_ficelle', keuzes: [...stoffen, ...eigenMateriaal] },
+    { code: 'stof', label: 'Stof', stap: 'stof', type: 'keuze', standaard: standaardStof, keuzes: stoffen.map(naarKeuze) },
     { code: 'contrast', label: 'Zitkussens in een andere stof', stap: 'stof', type: 'janee', standaard: false },
     {
-      code: 'contraststof', label: 'Stof zitkussens', stap: 'stof', type: 'keuze', standaard: 'linnen_brume',
-      zichtbaarAls: 'contrast', keuzes: stoffen,
+      code: 'contraststof', label: 'Stof zitkussens', stap: 'stof', type: 'keuze', standaard: standaardContrast,
+      zichtbaarAls: 'contrast', keuzes: gewoon.map(naarKeuze),
     },
     {
       code: 'comfort', label: 'Zitcomfort', stap: 'afwerking', type: 'keuze', standaard: 'veren',
@@ -225,19 +239,28 @@ export const sofa: ProductModel = {
       ' + sierkussens * tabel("sierkussen"; "stuk"; prijsgroep)',
     btwProcent: 21,
   },
-};
+  };
+}
 
-export const sofaPrijslijst: Prijslijst = Object.fromEntries(
+export const sofa: ProductModel = maakSofa();
+
+/** Prijslijst (kostprijzen) voor de sofa, inclusief een artikel per materiaal. */
+export function maakSofaPrijslijst(materialen: Materiaal[] = standaardMaterialen): Prijslijst {
+  const lijst: Prijslijst = { ...basisPrijslijst };
+  for (const m of materialen) {
+    const artikel = materiaalArtikel(m);
+    if (artikel) lijst[artikel] = { code: artikel, omschrijving: m.naam, eenheid: 'lm', kostprijs: m.kostprijsPerM, verliesProcent: 5 };
+  }
+  return lijst;
+}
+
+const basisPrijslijst: Prijslijst = Object.fromEntries(
   (
     [
       ['FRAME', 'Frame per lm', 'lm', 145, 0],
       ['VUL-SCHUIM', 'Koudschuim per lm', 'lm', 70, 0],
       ['VUL-VEREN', 'Pocketveren + schuim per lm', 'lm', 95, 0],
       ['VUL-DONS', 'Dons-mix per lm', 'lm', 150, 0],
-      ['STOF-KAT', 'Katoen', 'lm', 26, 5],
-      ['STOF-LIN', 'Linnen', 'lm', 38, 5],
-      ['STOF-BOU', 'Bouclé', 'lm', 55, 5],
-      ['STOF-JAC', 'Jacquard', 'lm', 62, 5],
       ['POOT-EIK', 'Poot eik', 'stuk', 9, 0],
       ['POOT-MES', 'Poot messing', 'stuk', 32, 0],
       ['ARB-ATELIER', 'Atelieruur', 'uur', 48, 0],
@@ -247,3 +270,5 @@ export const sofaPrijslijst: Prijslijst = Object.fromEntries(
     { code, omschrijving, eenheid, kostprijs, verliesProcent },
   ]),
 );
+
+export const sofaPrijslijst: Prijslijst = maakSofaPrijslijst();

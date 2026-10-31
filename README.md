@@ -22,15 +22,21 @@ packages/
       motor.ts          berekenConfiguratie(): zichtbaarheid, fouten, stuklijst, prijs
       modelcontrole.ts  controleerModel(): fouten in een productmodel vinden
       svg.ts            tekenSvg(): 2D-tekening (bovenaanzicht, vooraanzicht) met maatlijnen
+      materialen.ts     Materialen (stof/leder): controle, unieke codes, patroonfactor, inlezen uit JSON
+      ontwerp.ts        berekenOntwerp(): vrij zetelontwerp uit elementen (prijs, stof, overlap, tekening)
     voorbeelden/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
       sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
                         eigen stof/leder, contraststof, stofverbruik, bovenaanzicht
+      vrij-ontwerp.ts   Catalogus van zetelelementen en startopstellingen voor de vrije ontwerper
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
-  demo-web/             Klikbare demo: formulier opgebouwd uit het productmodel, live prijs,
-                        meldingen, stuklijst en tekening; gebundeld tot één HTML-bestand
+  demo-web/             Klikbare demo, gebundeld tot één HTML-bestand:
+                        - Sofa/Kast op maat: formulier uit het productmodel, live prijs en tekening
+                        - Vrij ontwerp: elementen tekenen, slepen (magneet), vergroten, draaien,
+                          materiaal per element, ongedaan maken
+                        - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
 ```
 
 Later volgen: het echte configuratiescherm met beheer, een server (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.

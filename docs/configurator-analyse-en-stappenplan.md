@@ -30,6 +30,7 @@ Doel: een configurator in de stijl van Hive CPQ (configureren → prijzen → of
 | 0.4 Architectuur en regelformaat | Beslist: aparte app, TypeScript, JsonLogic |
 | 1 Productmodel en regels | **Motor gebouwd** (`packages/core`): formules, regels, stuklijst, prijstabellen, korting, modelcontrole. Twee voorbeeldmodellen met verzonnen prijzen: kast op maat en sofa op maat. Wacht op het echte model van de pilootklant (0.2). |
 | 1+ Zetels per cm (31/10) | Sofa per cm met opstellingen (recht, chaise longue L/R, hoeksofa L/R), eigen stof/leder (COM/COL), contraststof (hoogste groep + 5 %), stofverbruik × patroonfactor, maateenheid cm. 37 tests. |
+| Demo (31/10) | Klikbare webdemo: sofa, kast, **vrij zetelontwerp** (tekenen op bovenaanzicht, elementen per cm, magneet, draaien, materiaal per element) en **materialenbeheer** (toevoegen, bewerken, lijst inlezen). 52 tests. |
 | 4.1 2D-tekening (vervroegd) | **Parametrische tekening** in de motor: bovenaanzicht sofa, vooraanzicht kast, maatlijnen, stofkleur. SVG voor scherm en PDF. |
 
 ---

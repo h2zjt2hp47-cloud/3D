@@ -149,7 +149,7 @@ describe('sofa op maat per cm (lijstprijs uit prijstabel)', () => {
     expect(r.afgeleid.prijsgroep).toBe('C');
     // C 230: 2050 + 9 × 72 = 2698 × 1.05 = 2832.9, + 2 × 95
     expect(r.prijs.brutoprijsExcl).toBe(3022.9);
-    expect(regel(r, 'contraststof')).toMatchObject({ artikel: 'STOF-BOU' });
+    expect(regel(r, 'contraststof')).toMatchObject({ artikel: 'MAT-BOUCLE_BELIZE' });
     // Omgekeerd: hoofdstof is de duurste groep
     expect(bank({ stof: 'boucle_belize', contrast: true, contraststof: 'katoen_naturel' }).afgeleid.prijsgroep).toBe('C');
   });
@@ -160,7 +160,7 @@ describe('sofa op maat per cm (lijstprijs uit prijstabel)', () => {
     const c = bank({ contrast: true });
     expect(c.afgeleid.stofverbruik).toBe(5.1); // 7.9 × 0.65
     expect(c.afgeleid.stofverbruik_contrast).toBe(2.8); // 7.9 × 0.35
-    expect(regel(bank(), 'stof')).toMatchObject({ artikel: 'STOF-LIN', lengte: 790, hoeveelheid: 8.295 });
+    expect(regel(bank(), 'stof')).toMatchObject({ artikel: 'MAT-LINNEN_FICELLE', lengte: 790, hoeveelheid: 8.295 });
   });
 
   it('elke toegelaten breedte en zijlengte heeft een prijs', () => {
