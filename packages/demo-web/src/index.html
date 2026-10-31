@@ -52,7 +52,8 @@ header h1 { font-size: 1.5rem; }
 .producten button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
 
 main { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.15fr); gap: 24px; padding: 24px clamp(16px, 3vw, 32px) 48px; max-width: 1400px; margin: 0 auto; }
-@media (max-width: 900px) { main { grid-template-columns: 1fr; } .resultaat { position: static !important; } }
+@media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } .resultaat { position: static !important; } }
+main > *, .midden > *, .resultaat > *, #formulier > *, .kaart { min-width: 0; }
 
 #formulier { display: grid; gap: 16px; align-content: start; }
 .stap { background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 16px 18px 6px; }
@@ -139,8 +140,8 @@ button:disabled { opacity: .45; cursor: default; }
 .klein-knop { padding: 3px 9px !important; font-size: .8rem; }
 /* Vrij ontwerp */
 main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); align-items: start; }
-@media (max-width: 1150px) { main.ontwerp { grid-template-columns: 200px minmax(0, 1fr); } main.ontwerp > .resultaat { grid-column: 1 / -1; position: static; } }
-@media (max-width: 760px) { main.ontwerp { grid-template-columns: 1fr; } }
+@media (max-width: 1150px) { main.ontwerp { grid-template-columns: minmax(0, 200px) minmax(0, 1fr); } main.ontwerp > .resultaat { grid-column: 1 / -1; position: static; } }
+@media (max-width: 760px) { main.ontwerp { grid-template-columns: minmax(0, 1fr); } main.ontwerp .midden { order: 1; } main.ontwerp .gereedschap { order: 2; } main.ontwerp > .resultaat { order: 3; } .knoppenlijst { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
 .gereedschap { align-self: start; display: grid; gap: 4px; }
 .gereedschap h2 { font-size: 1.05rem; margin: 4px 0 6px; }
 .tekenvlak { display: grid; gap: 10px; align-content: start; }
@@ -175,7 +176,7 @@ main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
 #o-elementen tr.actief td { background: var(--accent-zacht); }
 /* Materialen */
 main.materialen { grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr); }
-@media (max-width: 900px) { main.materialen { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { main.materialen { grid-template-columns: minmax(0, 1fr); } }
 main.materialen h3 { font-size: 1.05rem; margin: 18px 0 4px; }
 textarea { width: 100%; font: .85rem ui-monospace, monospace; }
 .formraster { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 14px; }
@@ -233,6 +234,8 @@ main.modellen { display: block; }
 .modelbeelden figure { margin: 0; position: relative; background: var(--papier); border-radius: 6px; overflow: hidden; display: grid; place-items: center; min-height: 140px; padding: 6px; }
 .modelbeelden img { max-width: 100%; max-height: 180px; object-fit: contain; display: block; }
 .modelbeelden figcaption { position: absolute; left: 6px; bottom: 4px; font-size: .68rem; color: #6b6b66; background: rgba(255,255,255,.8); padding: 0 5px; border-radius: 3px; }
+.foutmelding { margin: 16px clamp(16px, 3vw, 32px) 0; padding: 12px 16px; border-left: 4px solid var(--fout); background: color-mix(in srgb, var(--fout) 10%, var(--vlak)); border-radius: 6px; }
+.foutmelding p { margin: 6px 0 0; font-family: ui-monospace, monospace; font-size: .85rem; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -287,6 +290,8 @@ main.modellen { display: block; }
   </aside>
 </main>
 
+<div id="foutmelding" class="foutmelding" role="alert" hidden><strong>Er liep iets mis in deze pagina.</strong> Stuur deze melding door (en zeg in welke browser je ze opende):</div>
+<noscript><div class="foutmelding">Deze pagina heeft JavaScript nodig. Open het bestand in een gewone browser (Safari, Chrome, Edge of Firefox), niet in een voorbeeldweergave.</div></noscript>
 <main id="view-modellen" class="modellen" hidden>
   <p class="intro klein">Kies een model uit de collectie als vertrekpunt en pas het daarna vrij aan: elementen, maten, stof, poten, armen, hout en de vorm van elk element. Onze tekening is een benadering op basis van de productfoto; maten, opties en prijzen zijn voorbeelden.</p>
   <div id="modellen-filter" class="tabs filter" role="group" aria-label="Familie"></div>

@@ -21,7 +21,12 @@ function toon(w: Weergave) {
   if (w === 'sofa' || w === 'kast') kiesProduct(w, true);
   if (w === 'ontwerp') $('#productnaam').textContent = 'Zetel vrij ontwerpen';
   if (w === 'materialen') $('#productnaam').textContent = 'Materialen';
-  if (location.hash.slice(1) !== w) history.replaceState(null, '', `#${w}`);
+  try {
+    // Safari staat dit niet toe op een lokaal bestand (file://); dan slaan we het over.
+    if (location.hash.slice(1) !== w) history.replaceState(null, '', `#${w}`);
+  } catch {
+    /* geen probleem */
+  }
 }
 
 function startKlant() {
@@ -36,20 +41,43 @@ function startKlant() {
   korting.addEventListener('input', pas);
 }
 
-startKlant();
-startConfigurator();
-startOntwerper();
-startMaterialen();
-startModellen((code) => {
+function toonFout(waar: string, fout: unknown) {
+  const vak = document.getElementById('foutmelding');
+  if (!vak) return;
+  vak.hidden = false;
+  const regel = document.createElement('p');
+  regel.textContent = `${waar}: ${fout instanceof Error ? fout.message : String(fout)}`;
+  vak.append(regel);
+}
+window.addEventListener('error', (e) => toonFout('Fout', e.error ?? e.message));
+window.addEventListener('unhandledrejection', (e) => toonFout('Fout', e.reason));
+
+/** Start elk onderdeel apart: een fout in één onderdeel houdt de rest niet tegen. */
+function veilig(waar: string, f: () => void) {
+  try {
+    f();
+  } catch (fout) {
+    toonFout(waar, fout);
+  }
+}
+
+veilig('Klantkeuze', startKlant);
+veilig('Sofa/kast op maat', startConfigurator);
+veilig('Vrij ontwerp', startOntwerper);
+veilig('Materialen', startMaterialen);
+veilig('Modellen', () => startModellen((code) => {
   const o = modelOntwerp(code);
   if (!o) return;
   toon('ontwerp');
   laadInOntwerper(o);
   kiesWeergave('3d');
-});
-document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) => b.addEventListener('click', () => toon(b.dataset.weergave as Weergave)));
+  window.scrollTo(0, 0);
+}));
+document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) =>
+  b.addEventListener('click', () => veilig('Navigatie', () => toon(b.dataset.weergave as Weergave))),
+);
 const start = location.hash.slice(1) as Weergave;
-toon(weergaven.includes(start) ? start : 'modellen');
+veilig('Opstarten', () => toon(weergaven.includes(start) ? start : 'modellen'));
 window.addEventListener('hashchange', () => {
   const w = location.hash.slice(1) as Weergave;
   if (weergaven.includes(w)) toon(w);
