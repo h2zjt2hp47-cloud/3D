@@ -6,9 +6,9 @@ import type { Ontwerp, OntwerpCatalogus, OptieGroep } from '../src/index.js';
 
 const g = (a: number, b: number, c: number, eigen: number) => ({ A: a, B: b, C: c, EIGEN: eigen });
 
-const GESTOFFEERD = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'arm', 'poef', 'rond_einde'];
-const ZITTEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'poef', 'rond_einde'];
-const MET_RUG = ['zit', 'hoek', 'rond_einde'];
+const GESTOFFEERD = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'arm', 'poef', 'rond_einde', 'fauteuil'];
+const ZITTEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'poef', 'rond_einde', 'fauteuil'];
+const MET_RUG = ['zit', 'hoek', 'rond_einde', 'fauteuil'];
 
 /**
  * Aanpassingen, gebaseerd op wat zetelmerken gangbaar aanbieden:
@@ -26,6 +26,8 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'haarspeld', label: 'Haarspeldpoot (metaal)', prijs: 35, teken: { vorm: 'haarspeld', metaal: true }, kost: 18 },
       { code: 'messing', label: 'Messing cilinderpoot', prijs: 60, teken: { vorm: 'cilinder', metaal: true, kleur: '#b8963e' }, kost: 32 },
       { code: 'metaal_staaf', label: 'Slanke metalen poot', prijs: 25, teken: { vorm: 'cilinder', metaal: true }, kost: 14 },
+      { code: 'draaivoet', label: 'Draaivoet (zwenkvoet)', uitleg: 'Centrale voet, de zetel kan draaien', prijs: 85, teken: { vorm: 'draaivoet' }, kost: 40 },
+      { code: 'housse', label: 'Hoes tot op de grond (housse)', uitleg: 'Afneembare hoes die de poten bedekt', prijsPerM: 60, stofPct: 18, teken: { vorm: 'housse' }, kost: 10 },
       {
         code: 'plint', label: 'Houten plint (sokkel)', uitleg: 'Doorlopende lage sokkel', prijsPerM: 140, teken: { vorm: 'plint' }, kostPerM: 55,
         alleenMet: { poothoogte: ['laag'] }, reden: 'een plint is altijd laag',
@@ -81,7 +83,7 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
-    code: 'zitting', label: 'Zitting', niveau: 'ontwerp', voorTypen: ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond_einde'], standaard: 'losse_kussens',
+    code: 'zitting', label: 'Zitting', niveau: 'ontwerp', voorTypen: ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond_einde', 'fauteuil'], standaard: 'losse_kussens',
     keuzes: [
       { code: 'losse_kussens', label: 'Losse zitkussens' },
       { code: 'vaste_zitting', label: 'Vaste zitting (strak gestoffeerd)', pct: -3 },
@@ -146,6 +148,7 @@ export const zetelOpties: OptieGroep[] = [
     keuzes: [
       { code: 'geen', label: 'Geen', teken: { vorm: 'geen' } },
       { code: 'hoofdsteun', label: 'Verstelbare hoofdsteun', prijs: 140, kost: 45, teken: { vorm: 'hoofdsteun' } },
+      { code: 'slaapfunctie', label: 'Slaapfunctie (zetelbed)', uitleg: 'Uitklapbaar bed met matras', prijs: 590, kost: 230, teken: { vorm: 'slaap' } },
       { code: 'relax', label: 'Elektrische relaxfunctie', prijs: 690, kost: 260, teken: { vorm: 'relax' }, alleenMet: { zitting: ['losse_kussens'] }, reden: 'relax vraagt losse zitkussens' },
       { code: 'relax_hoofdsteun', label: 'Relax + hoofdsteun', prijs: 790, kost: 300, teken: { vorm: 'relax_hoofdsteun' }, alleenMet: { zitting: ['losse_kussens'] }, reden: 'relax vraagt losse zitkussens' },
     ],
@@ -155,6 +158,22 @@ export const zetelOpties: OptieGroep[] = [
     keuzes: [
       { code: 'links', label: 'Rond aan de linkerkant', teken: { kant: 'links' } },
       { code: 'rechts', label: 'Rond aan de rechterkant', teken: { kant: 'rechts' } },
+    ],
+  },
+  {
+    code: 'kuipvorm', label: 'Vorm fauteuil', niveau: 'element', voorTypen: ['fauteuil'], standaard: 'afgerond',
+    keuzes: [
+      { code: 'rond', label: 'Rond (kuip)', teken: { vorm: 'rond' } },
+      { code: 'afgerond', label: 'Afgerond', teken: { vorm: 'afgerond' } },
+      { code: 'hoekig', label: 'Hoekig', teken: { vorm: 'hoekig' } },
+    ],
+  },
+  {
+    code: 'poefvorm', label: 'Vorm poef', niveau: 'element', voorTypen: ['poef'], standaard: 'kiezel',
+    keuzes: [
+      { code: 'rond', label: 'Rond', teken: { vorm: 'rond' } },
+      { code: 'vierkant', label: 'Vierkant', teken: { vorm: 'vierkant' } },
+      { code: 'kiezel', label: 'Kiezel (zacht afgerond)', teken: { vorm: 'kiezel' } },
     ],
   },
   {
@@ -190,7 +209,7 @@ export const zetelCatalogus: OntwerpCatalogus = {
   typen: [
     {
       code: 'zit', label: 'Zitelement', tekenstijl: 'zit',
-      breedte: { min: 60, max: 140, standaard: 90 }, diepte: { min: 80, max: 120, standaard: 95 },
+      breedte: { min: 60, max: 240, standaard: 90 }, diepte: { min: 80, max: 120, standaard: 95 },
       prijs: g(620, 690, 790, 560), per10cm: g(28, 32, 38, 24),
       stofVast: 0.6, stofPerM: 2.6, kostVast: 120, kostPerM: 160, uren: 3, urenPerM: 2,
     },
@@ -223,6 +242,12 @@ export const zetelCatalogus: OntwerpCatalogus = {
       breedte: { min: 80, max: 200, standaard: 130 }, diepte: { min: 80, max: 120, standaard: 100 },
       prijs: g(890, 990, 1140, 800), per10cm: g(30, 34, 40, 26),
       stofVast: 1.4, stofPerM: 3.0, kostVast: 200, kostPerM: 190, uren: 5, urenPerM: 2.5,
+    },
+    {
+      code: 'fauteuil', label: 'Fauteuil', tekenstijl: 'kuip',
+      breedte: { min: 60, max: 110, standaard: 80 }, diepte: { min: 60, max: 100, standaard: 80 },
+      prijs: g(690, 760, 870, 620), per10cm: g(30, 34, 40, 26),
+      stofVast: 1.6, stofPerM: 2.6, kostVast: 140, kostPerM: 150, uren: 5, urenPerM: 2,
     },
     {
       code: 'console', label: 'Houten tussenstuk', tekenstijl: 'console',

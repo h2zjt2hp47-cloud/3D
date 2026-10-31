@@ -214,7 +214,7 @@ main.modellen { display: block; }
 .modelkaart { display: grid; gap: 6px; align-content: start; }
 .modelkaart h2 { font-size: 1.4rem; }
 .modelkaart p { margin: 0; }
-.modelbeeld { background: var(--papier); border-radius: 6px; padding: 10px; display: grid; place-items: center; min-height: 150px; }
+.modelbeeld svg { width: 100%; }
 .modelbeeld svg { max-width: 100%; height: auto; }
 .modelprijs { font-weight: 600; font-variant-numeric: tabular-nums; }
 .modelnaam { font-size: .82rem; color: var(--accent); font-weight: 600; margin: 0 0 6px; }
@@ -227,6 +227,12 @@ main.modellen { display: block; }
 .ontwerpmodus { border: 1px dashed var(--accent); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
 .ontwerpmodus summary { cursor: pointer; font-weight: 600; color: var(--accent); }
 .ontwerpmodus[open] summary { margin-bottom: 10px; }
+
+.filter { margin-bottom: 16px; }
+.modelbeelden { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.modelbeelden figure { margin: 0; position: relative; background: var(--papier); border-radius: 6px; overflow: hidden; display: grid; place-items: center; min-height: 140px; padding: 6px; }
+.modelbeelden img { max-width: 100%; max-height: 180px; object-fit: contain; display: block; }
+.modelbeelden figcaption { position: absolute; left: 6px; bottom: 4px; font-size: .68rem; color: #6b6b66; background: rgba(255,255,255,.8); padding: 0 5px; border-radius: 3px; }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -282,7 +288,8 @@ main.modellen { display: block; }
 </main>
 
 <main id="view-modellen" class="modellen" hidden>
-  <p class="intro klein">Kies een model als vertrekpunt en pas het daarna vrij aan: elementen, maten, stof, poten, armen, hout en de vorm van elk element. De modellen zijn een benadering op basis van productfoto's; maten, opties en prijzen zijn voorbeelden.</p>
+  <p class="intro klein">Kies een model uit de collectie als vertrekpunt en pas het daarna vrij aan: elementen, maten, stof, poten, armen, hout en de vorm van elk element. Onze tekening is een benadering op basis van de productfoto; maten, opties en prijzen zijn voorbeelden.</p>
+  <div id="modellen-filter" class="tabs filter" role="group" aria-label="Familie"></div>
   <div id="modellen-lijst" class="modellenraster"></div>
 </main>
 

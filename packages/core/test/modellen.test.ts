@@ -12,9 +12,9 @@ describe('modellen', () => {
     for (const m of zetelModellen) {
       const r = bereken(m.ontwerp);
       expect(r.meldingen.filter((x) => x.ernst === 'fout'), m.naam).toEqual([]);
-      expect(r.prijs.brutoprijsExcl, m.naam).toBeGreaterThan(1000);
-      expect(bouw3D(m.ontwerp, zetelCatalogus, standaardMaterialen).blokken.length, m.naam).toBeGreaterThan(5);
-      expect(tekenVooraanzicht(m.ontwerp, zetelCatalogus, standaardMaterialen).vormen.length, m.naam).toBeGreaterThan(5);
+      expect(r.prijs.brutoprijsExcl, m.naam).toBeGreaterThan(200);
+      expect(bouw3D(m.ontwerp, zetelCatalogus, standaardMaterialen).blokken.length, m.naam).toBeGreaterThan(1);
+      expect(tekenVooraanzicht(m.ontwerp, zetelCatalogus, standaardMaterialen).vormen.length, m.naam).toBeGreaterThan(1);
     }
   });
 
@@ -84,5 +84,30 @@ describe('ontwerpmodus (vormgeving)', () => {
     const kotor = zetelModellen.find((m) => m.code === 'kotor')!.ontwerp;
     const s = bouw3D(kotor, zetelCatalogus, standaardMaterialen);
     expect(s.blokken.find((b) => b.code === 'e1.bankblad')).toMatchObject({ soort: 'hout', y: 23, h: 5 });
+  });
+});
+
+describe('collectie', () => {
+  it('bevat de 42 modellen van de website, per familie', () => {
+    const tel = (f: string) => zetelModellen.filter((m) => m.familie === f).length;
+    expect(zetelModellen).toHaveLength(42);
+    expect([tel("Sofa's"), tel('Fauteuils'), tel('Zetelbedden'), tel('Poufs & hockers')]).toEqual([14, 14, 6, 8]);
+  });
+
+  it('zetelbedden hebben een slaapfunctie met meerprijs', () => {
+    for (const m of zetelModellen.filter((x) => x.familie === 'Zetelbedden')) {
+      const r = bereken(m.ontwerp);
+      expect(r.opties.find((o) => o.keuze === 'slaapfunctie')?.bedrag, m.naam).toBe(590);
+    }
+  });
+
+  it('nieuwe onderdelen verschijnen in 3D: draaivoet, housse, ronde poef, kuipfauteuil', () => {
+    const blokken = (code: string) => bouw3D(zetelModellen.find((m) => m.code === code)!.ontwerp, zetelCatalogus, standaardMaterialen).blokken;
+    expect(blokken('quin').some((b) => b.code === 'e1.draaivoet')).toBe(true);
+    expect(blokken('husk').some((b) => b.code === 'e2.housse')).toBe(true);
+    expect(blokken('husk').some((b) => b.code.includes('.poot-'))).toBe(false);
+    expect(blokken('fez').find((b) => b.code === 'e1.poef')).toMatchObject({ vorm: 'cilinder' });
+    expect(blokken('tumble').find((b) => b.code === 'e1.basis')).toMatchObject({ vorm: 'cilinder' });
+    expect(blokken('pebble').some((b) => b.code === 'e1.arm-l')).toBe(true);
   });
 });

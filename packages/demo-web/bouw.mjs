@@ -1,6 +1,6 @@
 // Bundelt de demo tot één HTML-bestand: dist/configurator-demo.html
 import { build } from 'esbuild';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const r = await build({
   entryPoints: ['src/main.ts'],
@@ -12,7 +12,15 @@ const r = await build({
   legalComments: 'none',
 });
 const js = r.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
-const html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => js);
+// Productfoto's (optioneel): packages/demo-web/fotos/<sleutel>.jpg, opgehaald met scripts/haal_fotos.py.
+const fotos = {};
+if (existsSync('fotos')) {
+  for (const f of readdirSync('fotos').filter((f) => f.endsWith('.jpg'))) {
+    fotos[f.slice(0, -4)] = `data:image/jpeg;base64,${readFileSync(`fotos/${f}`).toString('base64')}`;
+  }
+}
+const fotoScript = `window.__FOTOS = ${JSON.stringify(fotos).replace(/</g, '\\u003c')};`;
+const html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${js}`);
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/configurator-demo.html', html);
-console.log(`dist/configurator-demo.html (${Math.round(html.length / 1024)} kB)`);
+console.log(`dist/configurator-demo.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's)`);

@@ -24,6 +24,11 @@ export const standaardMaterialen: Materiaal[] = [
   { code: 'linnen_brume', naam: 'Linnen Brume', soort: 'stof', groep: 'B', kleur: '#a9b3a6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
   { code: 'boucle_belize', naam: 'Bouclé Écru', soort: 'stof', groep: 'C', kleur: '#ece6da', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
   { code: 'jacquard_ruit', naam: 'Jacquard ruit (patroon 32 cm)', soort: 'stof', groep: 'C', kleur: '#b9a58a', rapport: 32, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
+  { code: 'velours_petrol', naam: 'Velours Petrol', soort: 'stof', groep: 'C', kleur: '#1f6b75', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'velours_bosgroen', naam: 'Velours Bosgroen', soort: 'stof', groep: 'C', kleur: '#2f4a3a', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'velours_oudroze', naam: 'Velours Oudroze', soort: 'stof', groep: 'C', kleur: '#c98272', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'wol_grijs', naam: 'Wol Grijs gemêleerd', soort: 'stof', groep: 'B', kleur: '#86888a', rapport: 0, rolbreedte: 140, kostprijsPerM: 44, toeslagPct: 0 },
+  { code: 'leder_cognac', naam: 'Leder Cognac', soort: 'leder', groep: 'C', kleur: '#8f4f2c', rapport: 0, rolbreedte: 140, kostprijsPerM: 95, toeslagPct: 15 },
   { code: 'eigen_stof', naam: 'Eigen stof van de klant (COM)', soort: 'stof', groep: 'EIGEN', kleur: '#dcdcdc', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 0 },
   { code: 'eigen_leder', naam: 'Eigen leder van de klant (COL)', soort: 'leder', groep: 'EIGEN', kleur: '#8a6a4f', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 10 },
 ];

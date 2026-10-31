@@ -85,7 +85,20 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     const P = potVorm === 'plint' ? 4 : potVorm === 'verdekt' ? Math.min(Number(te('poothoogte', 'hoogte', 12)), 8) : Number(te('poothoogte', 'hoogte', 12));
     const potKleur = opt.get('poten')?.teken?.metaal ? String(opt.get('poten')?.teken?.kleur ?? metaal) : hout;
     const potSoort: BlokSoort = opt.get('poten')?.teken?.metaal ? 'metaal' : 'hout';
-    if (t.tekenstijl !== 'console') {
+    const cilinderMidden = (code: string, soort: BlokSoort, y: number, h: number, diameterB: number, diameterD: number, kleur: string, extra: Partial<Blok> = {}) => {
+      const p = voetafdruk(e);
+      blokken.push({
+        code: `${e.id}.${code}`, soort, vorm: 'cilinder', x: r2(p.x + (p.b - diameterB) / 2), y: r2(y), z: r2(p.y + (p.h - diameterD) / 2),
+        b: r2(diameterB), h: r2(h), d: r2(diameterD), kleur, ...extra,
+      });
+    };
+    if (t.tekenstijl !== 'console' && potVorm === 'draaivoet') {
+      const p = voetafdruk(e);
+      cilinderMidden('draaivoet', 'metaal', 1.5, P - 1.5, Math.min(p.b, p.h) * 0.22, Math.min(p.b, p.h) * 0.22, '#2e2c2a');
+      cilinderMidden('voetplaat', 'metaal', 0, 1.5, Math.min(p.b, p.h) * 0.55, Math.min(p.b, p.h) * 0.55, '#2e2c2a');
+    } else if (t.tekenstijl !== 'console' && potVorm === 'housse') {
+      lokaal('housse', 'stof', 0.3, 0.3, B - 0.6, D - 0.6, 0, P + 2, stof, { afronding: 1 });
+    } else if (t.tekenstijl !== 'console') {
       if (potVorm === 'plint') lokaal('plint', 'hout', 2, 2, B - 4, D - 4, 0, P, hout);
       else if (potVorm === 'verdekt' && t.tekenstijl === 'rond') {
         // Onder een rond element: voet onder het rechte deel + ronde voet onder de bocht.
@@ -201,9 +214,29 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         if (recht > 0) lokaal('rug', 'stof', rx, 0, recht, RUG, P, frameRug - P, stof, rugExtra);
         break;
       }
-      case 'poef':
-        lokaal('poef', 'kussen', 0, 0, B, D, P, zithoogte - 2 - P, stof, { afronding: 7 });
+      case 'poef': {
+        const pv = String(te('poefvorm', 'vorm', 'kiezel'));
+        const p = voetafdruk(e);
+        if (pv === 'rond') cilinderMidden('poef', 'kussen', P, zithoogte - 2 - P, p.b, p.h, stof);
+        else lokaal('poef', 'kussen', 0, 0, B, D, P, zithoogte - 2 - P, stof, { afronding: pv === 'vierkant' ? 3 : Math.min(B, D, zithoogte - P) / 2.5 });
         break;
+      }
+      case 'kuip': {
+        const kv = String(te('kuipvorm', 'vorm', 'afgerond'));
+        const p = voetafdruk(e);
+        const armB = Math.max(10, Math.min(20, B * 0.16));
+        if (kv === 'rond') {
+          cilinderMidden('basis', 'stof', P, basisH, p.b, p.h, donker);
+          if (kussenDik) cilinderMidden('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, p.b - 2 * armB + 4, p.h - 6, stof);
+        } else {
+          lokaal('basis', 'stof', 0, 0, B, D, P, basisH, donker, { afronding: kv === 'hoekig' ? 2 : 8 });
+          if (kussenDik) lokaal('zitkussen', 'kussen', armB - 2, RUG - 2, B - 2 * armB + 4, D - RUG, zithoogte - kussenDik, kussenDik, stof, { afronding: zacht });
+        }
+        lokaal('rug', 'stof', 0, 0, B, RUG, P, rugH - P, stof, { afronding: kv === 'hoekig' ? 4 : Math.min(RUG / 2 + 6, 16), ...(rugExtra.kantel ? { kantel: rugExtra.kantel } : {}) });
+        for (const [k, lx] of [['l', 0], ['r', B - armB]] as const)
+          lokaal(`arm-${k}`, 'stof', lx, RUG / 2, armB, D * (kv === 'rond' ? 0.7 : 0.85) - RUG / 2, P, zithoogte + 16 - P, stof, { afronding: armB / 2 });
+        break;
+      }
       case 'arm': {
         const armH = Number(te('armhoogte', 'hoogte', 62));
         const vorm = String(te('armstijl', 'vorm', 'strak'));

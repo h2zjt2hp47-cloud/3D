@@ -4,3 +4,4 @@ coverage/
 *.svg
 galerij.html
 dist/
+packages/demo-web/fotos/

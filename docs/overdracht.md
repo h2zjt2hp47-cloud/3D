@@ -1,4 +1,4 @@
-# Overdracht — stand van zaken (31 oktober 2026)
+# Overdracht — stand van zaken (31 oktober 2026, bijgewerkt)
 
 ## Waar staan we
 
@@ -11,7 +11,8 @@
 | Klikbare demo (`packages/demo-web`) | Tabbladen: Modellen · Sofa op maat · Vrij ontwerp (tekenen, vooraanzicht, 3D, ontwerpmodus) · Kast op maat · Materialen |
 
 **Demo online (privé artifact):** https://claude.ai/artifact/BtVKYeQKC7szR1ZwW97VB1
-- slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie `1793483812-f877`
+- slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie `1793484684-9727`
+- Productfoto's: eerst `python3 -I packages/demo-web/scripts/haal_fotos.py` (vraagt netwerktoegang tot corneille-silence.be), dan bouwen. De foto's staan in `packages/demo-web/fotos/` en worden niet in git bewaard.
 - Opnieuw publiceren: `npm run build -w @configurator/demo-web`, dan `publish_files` met `dist/configurator-demo.html` als `index.html`, met slug + base_version.
 
 ## Beslissingen
@@ -20,15 +21,23 @@
 3. **TypeScript**.
 4. Sofa's worden **per cm** gemaakt.
 
-## Modellen van de klant (uit screenshot van de pagina "Zitten")
-Kotor, Doha, Montego, Belize in `packages/core/voorbeelden/modellen.ts`. Dit is een **benadering op basis van foto's**: maten, opties en prijzen zijn te bevestigen. Op de pagina staan meer modellen (onder de vier zichtbare), maar die vielen buiten de screenshot.
+## Collectie van de klant (website gelezen op 31/10)
+De website (www.corneille-silence.be) toont per model alleen **naam + foto**: geen maten, opties of prijzen. Alle 42 modellen staan in `packages/core/voorbeelden/modellen.ts` als **benadering op basis van de foto**:
+- **Sofa's (14):** Kotor, Doha, Montego, Nestor, Belize, Pula, Fréjus, Gozo, Azar, Amusette, Attribute, Husk, Wallace, Esmee
+- **Fauteuils (14):** Pebble, Karl, Tumble, Ross, Amusette, Quin, Satie, Mabel 1-zit, Sullivan, Fraser, Milton, Manon, Mabel 2-zit, Mabel Meridienne
+- **Zetelbedden (6):** Ziggy, Aurora, Zora, Phoenix, Daizy Classic, Daizy Slim
+- **Poufs & hockers (8):** Sullivan Hocker, Tumble, Stockholm, Kanto, Fez, Pebble, Mabel Hocker, Fraser Hocker (de laatste twee hebben geen foto op de site)
 
-De demostof "Belize" heet nu **Bouclé Écru**, omdat Belize een model is. De interne code is nog `boucle_belize`.
+Citaat van de site (pagina Zitten): *"Kies éen van de zitmeubelen uit het bestaande gamma of pas ieder model aan aan uw eigen wens en interieur."* Dat sluit aan bij de ontwerpmodus.
+
+Nieuwe onderdelen voor de collectie: fauteuil-element (kuip: rond/afgerond/hoekig), poefvormen (rond/vierkant/kiezel), draaivoet, hoes tot op de grond (housse), slaapfunctie, zitelement tot 240 cm (één lang zitkussen), extra demostoffen (velours petrol/bosgroen/oudroze, wol grijs, leder cognac).
+
+De demostof "Belize" heet nu **Bouclé Écru** (Belize is een model); de interne code is nog `boucle_belize`.
+
+Niet opgenomen: Stoelen/Barstoelen, Tafels en de bedden (Bedding & Beyond).
 
 ## Open punten / volgende stappen
-1. **Website klant ophalen:** `corneille-silence.be` werd geweigerd door het netwerkbeleid (proxy 403). Toevoegen bij Network access → Allowed domains (`corneille-silence.be`, `www.corneille-silence.be`). Daarna in de nieuwe sessie:
-   - alle modellen (ook die onder de screenshot) en hun echte opties overnemen in `modellen.ts`;
-   - de stofcollecties overnemen in `standaardMaterialen` in `sofa.ts`.
+1. **Website gelezen** (netwerktoegang staat nu open). De echte maten, opties en stoffen per model moeten van de klant komen, want de site toont ze niet.
 2. **Echte gegevens van de klant** (fase 0.2): prijslijst per model × maat × stofgroep, stofgroepen, stofverbruik, toegelaten opties per model, levertermijnen.
 3. **Opties per model beperken:** een model kan nu alle opties kiezen. Volgende stap: per model een lijst met toegelaten keuzes.
 4. **Bedden ("Bedding & Beyond"):** hoofdborden, bedbodems, matrassen en linnen zijn nog niet opgenomen.

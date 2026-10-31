@@ -30,7 +30,8 @@ packages/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
       sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
                         eigen stof/leder, contraststof, stofverbruik, bovenaanzicht
-      modellen.ts       Modellen Kotor, Doha, Montego, Belize (benadering op basis van productfoto's)
+      modellen.ts       Collectie van de klant: 42 modellen (sofa's, fauteuils, zetelbedden, poefs),
+                        benadering op basis van de productfoto's van de website
       vrij-ontwerp.ts   Zetelelementen (incl. houten tussenstuk, afgerond eindelement), aanpassingen (poten, poothoogte, hout,
                         metaal, zithoogte, comfort, zitting, rug, rughoogte, naden, armstijl/-hoogte,
                         extra's) en startopstellingen

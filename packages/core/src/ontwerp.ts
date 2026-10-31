@@ -18,7 +18,7 @@ export interface Bereik {
 }
 
 /** Hoe een element getekend wordt (waar de rug zit, afgerond of niet). */
-export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug' | 'console' | 'rond';
+export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug' | 'console' | 'rond' | 'kuip';
 
 /** Eén keuze binnen een optiegroep (bv. poten: "Conische poot"). */
 export interface OptieKeuze {
@@ -129,6 +129,8 @@ export interface ModelDefinitie {
   omschrijving: string;
   /** Uitleg over hoe zeker de gegevens zijn (bv. "benadering op basis van foto"). */
   bron?: string;
+  /** Sleutel van de productfoto (de demo laadt de foto's apart). */
+  foto?: string;
   ontwerp: Ontwerp;
 }
 
@@ -373,19 +375,46 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
       }
       return vormen;
     }
-    case 'poef':
-      delen.push(['poef', 0, 0, B, D, kleur, Math.min(B, D) / 5]);
+    case 'poef': {
+      const vorm = String(t('poefvorm', 'vorm') ?? 'kiezel');
+      if (vorm === 'rond') return [ellips(e, 'poef', kleur)];
+      delen.push(['poef', 0, 0, B, D, kleur, vorm === 'vierkant' ? 4 : Math.min(B, D) / 2.5]);
       break;
+    }
+    case 'kuip': {
+      const vorm = String(t('kuipvorm', 'vorm') ?? 'afgerond');
+      const armB = Math.max(10, Math.min(20, B * 0.16));
+      const uit: VormResultaat[] = [];
+      if (vorm === 'rond') uit.push(ellips(e, 'zit', kleur));
+      else delen.push(['zit', 0, 0, B, D, kleur, vorm === 'hoekig' ? 3 : Math.min(B, D) / 3]);
+      delen.push(['rug', 0, 0, B, R, donker, R / 2]);
+      delen.push(['arm-l', 0, R / 2, armB, D * 0.65, donker, armB / 2], ['arm-r', B - armB, R / 2, armB, D * 0.65, donker, armB / 2]);
+      return [...uit, ...naarWereld()];
+    }
     case 'zit_zonder_rug':
       delen.push(['kussen', 1, 1, B - 2, D - 2, kleur, 4]);
       break;
   }
-  return delen
-    .filter(([, , , b, h]) => b > 0 && h > 0)
-    .map(([code, lx, ly, lb, lh, vulling, afronding]) => {
-      const w = lokaalNaarWereld(e, lx, ly, lb, lh);
-      return { code: `${e.id}.${code}`, x: rond(w.x), y: rond(w.y), breedte: rond(w.b), hoogte: rond(w.h), vulling, afronding: rond(afronding) };
-    });
+  return naarWereld();
+
+  function naarWereld(): VormResultaat[] {
+    return delen
+      .filter(([, , , b, h]) => b > 0 && h > 0)
+      .map(([code, lx, ly, lb, lh, vulling, afronding]) => {
+        const w = lokaalNaarWereld(e, lx, ly, lb, lh);
+        return { code: `${e.id}.${code}`, x: rond(w.x), y: rond(w.y), breedte: rond(w.b), hoogte: rond(w.h), vulling, afronding: rond(afronding) };
+      });
+  }
+}
+
+/** Ellips over de hele voetafdruk van een element (ronde poef, ronde kuipzetel). */
+function ellips(e: OntwerpElement, code: string, vulling: string): VormResultaat {
+  const p = voetafdruk(e);
+  const rx = p.b / 2, ry = p.h / 2, cx = p.x + rx, cy = p.y + ry;
+  return {
+    code: `${e.id}.${code}`, x: rond(p.x), y: rond(p.y), breedte: rond(p.b), hoogte: rond(p.h), vulling,
+    pad: `M${rond(cx - rx)} ${rond(cy)} a${rond(rx)} ${rond(ry)} 0 1 0 ${rond(2 * rx)} 0 a${rond(rx)} ${rond(ry)} 0 1 0 ${rond(-2 * rx)} 0 Z`,
+  };
 }
 
 /**
@@ -504,10 +533,10 @@ export function berekenOntwerp(
       if (!Number.isFinite(w) || w < b.min || w > b.max)
         meldingen.push({ code: `vorm.${veld}`, ernst: 'fout', elementId: e.id, melding: `${naam}: ${veld} moet tussen ${b.min} en ${b.max} liggen.` });
     }
-    if (vp && ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond'].includes(t.tekenstijl)) {
+    if (vp && ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond', 'kuip'].includes(t.tekenstijl)) {
       const vormBedrag = rond(
         Math.max(0, Math.round(v.zitkussens) - 1) * vp.extraKussen +
-          (t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' || t.tekenstijl === 'rond'
+          (t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' || t.tekenstijl === 'rond' || t.tekenstijl === 'kuip'
             ? ((v.rugvorm === 'hellend' ? vp.hellendeRugPct : v.rugvorm === 'rond' ? vp.rondeRugPct : 0) / 100) * prijs +
               Math.max(0, v.rugdikte - STANDAARD_VORMGEVING.rugdikte) * vp.dikkereRugPerCmPerM * meterBreedte
             : 0) +

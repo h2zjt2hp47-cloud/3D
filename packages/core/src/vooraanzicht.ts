@@ -69,6 +69,12 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     const x0 = p.x, x1 = p.x + p.b, inset = Math.min(5, p.b / 6);
     if (t.tekenstijl !== 'console') {
       switch (vorm) {
+        case 'draaivoet':
+          rect(`${e.id}.draaivoet`, x0 + p.b * 0.3, -P, p.b * 0.4, P - 1.5, '#2e2c2a');
+          rect(`${e.id}.voetplaat`, x0 + p.b * 0.22, -1.5, p.b * 0.56, 1.5, '#2e2c2a');
+          break;
+        case 'housse':
+          break; // de hoes wordt hieronder over de basis getekend
         case 'plint':
           rect(`${e.id}.plint`, x0 + 2, -P, p.b - 4, P, hout);
           break;
@@ -153,12 +159,26 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         maxHoogte = Math.max(maxHoogte, rugH);
         break;
       }
+      case 'kuip': {
+        const kvorm = String(te('kuipvorm', 'vorm', 'afgerond'));
+        const armB = Math.max(10, Math.min(20, p.b * 0.16));
+        const r = kvorm === 'rond' ? p.b / 2.6 : kvorm === 'afgerond' ? 14 : 4;
+        pad(`${e.id}.rug`, bovenRond(x0, top(rugH), p.b, rugH - P, r), x0, top(rugH), p.b, rugH - P, donker, lijn);
+        rect(`${e.id}.basis`, x0, top(zithoogte - kussenDik), p.b, zithoogte - kussenDik - P, donker, { afronding: kvorm === 'hoekig' ? 2 : 6, ...lijn });
+        if (kussenDik) rect(`${e.id}.zitkussen`, x0 + armB - 2, top(zithoogte), p.b - 2 * armB + 4, kussenDik, stof, { afronding: zacht, ...lijn });
+        for (const [k, xa] of [['l', x0], ['r', x1 - armB]] as const)
+          pad(`${e.id}.arm-${k}`, bovenRond(xa, top(zithoogte + 16), armB, zithoogte + 16 - P, armB / 2), xa, top(zithoogte + 16), armB, zithoogte + 16 - P, stof, lijn);
+        maxHoogte = Math.max(maxHoogte, rugH);
+        break;
+      }
       case 'chaise':
       case 'zit_zonder_rug':
       case 'poef': {
         const h = t.tekenstijl === 'poef' ? zithoogte - 2 : zithoogte;
         const dik = t.tekenstijl === 'poef' ? 0 : kussenDik;
-        rect(`${e.id}.basis`, x0, top(h - dik), p.b, h - dik - P, t.tekenstijl === 'poef' ? stof : donker, { afronding: t.tekenstijl === 'poef' ? 3 + zacht : 2, ...lijn });
+        const poefvorm = String(te('poefvorm', 'vorm', 'kiezel'));
+        const poefRond = poefvorm === 'vierkant' ? 3 : poefvorm === 'rond' ? 4 + zacht : Math.min(p.b, h - P) / 2.5;
+        rect(`${e.id}.basis`, x0, top(h - dik), p.b, h - dik - P, t.tekenstijl === 'poef' ? stof : donker, { afronding: t.tekenstijl === 'poef' ? poefRond : 2, ...lijn });
         if (dik) zitkussens(x0 + 1, p.b - 2, top(h), dik);
         if (t.tekenstijl !== 'poef') houtframe(h + 2);
         maxHoogte = Math.max(maxHoogte, h);
@@ -232,6 +252,8 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         break;
       }
     }
+    // Hoes tot op de grond (housse): bedekt de onderbouw.
+    if (vorm === 'housse' && t.tekenstijl !== 'console') rect(`${e.id}.housse`, x0 + 0.5, -P - 1, p.b - 1, P + 1, stof, { ...lijn });
     // Hoofdsteun en relax: klein symbool.
     const functie = String(te('functie', 'vorm', 'geen'));
     if ((functie === 'hoofdsteun' || functie === 'relax_hoofdsteun') && rugBoven)
