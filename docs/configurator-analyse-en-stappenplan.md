@@ -13,6 +13,25 @@ Doel: een configurator in de stijl van Hive CPQ (configureren → prijzen → of
 
 ---
 
+## 0. Beslissingen en voortgang
+
+**Beslist op 31/10/2026:**
+1. **Eerste case: meubels.** Vermoedelijke pilootklant: Corneille & Silence (zitmeubelen, bedden en bedlinnen op maat). Nog te bevestigen.
+2. **Een aparte applicatie, koppelbaar met Missing Link.** De configurator moet op zichzelf werken en apart verkocht kunnen worden. Dit vervangt het advies in §7.1 (module in Missing Link). Zie §7.5 voor de aangepaste architectuur.
+3. **Taal: TypeScript**, zowel voor browser als server.
+
+**Voortgang:**
+
+| Fase | Status |
+|---|---|
+| 0.1 Pilot kiezen | Meubels; klant te bevestigen |
+| 0.2 Productkennis uitschrijven | Sjabloon klaar: [`fase0-productkennis-meubels.md`](fase0-productkennis-meubels.md) |
+| 0.3 API-velden Missing Link bevestigen | Open |
+| 0.4 Architectuur en regelformaat | Beslist: aparte app, TypeScript, JsonLogic |
+| 1 Productmodel en regels | **Motor gebouwd** (`packages/core`): formules, regels, stuklijst, prijstabellen, korting, modelcontrole, 29 tests. Twee voorbeeldmodellen met verzonnen prijzen: kast op maat en sofa op maat. Wacht op het echte model van de pilootklant (0.2). |
+
+---
+
 ## 1. Samenvatting
 
 1. **Het is haalbaar met een klein team.** Begin wel met één productfamilie en zonder 3D. De moeilijkheid zit niet in de techniek maar in het **vastleggen van productkennis** als regels: welke combinaties mogen, welke maten kunnen, hoe de prijs ontstaat. De meeste CPQ-projecten lopen daarop vast **[bron, niet geverifieerd: Experlogix "7 traps"]**.
@@ -188,6 +207,8 @@ Dit bepaalt of het product verkoopt. Elke klant moet zijn eigen producten kunnen
 
 **Advies [inschatting]:** bouw de configurator als **module binnen Missing Link**: zelfde databank, zelfde gebruikers en rechten, zelfde artikels. Voeg later een **inbouwbare webcomponent** toe voor de website of het dealerportaal, die via de API werkt. Zo vermijd je wat Hive en Elfsquad wel moeten doen: synchroniseren tussen twee systemen.
 
+> **Gewijzigd op 31/10/2026:** beslist om de configurator als **aparte applicatie** te bouwen, die ook zonder Missing Link verkocht kan worden. Zie §7.5.
+
 ### 7.2 De flow
 
 ```
@@ -229,6 +250,32 @@ Verstuurd → Aanvaard → Order → Factuur              (bestaand)
 | `config_stuklijst` | product_id, artikel_id/onderdeel_id, hoeveelheid_formule, voorwaarde (jsonlogic), eenheid |
 | `config_prijsmatrix` | product_id, naam, as_x, as_y, cellen (CSV-import) |
 | `configuratie` | product_id, productversie, waarden (json), resultaat (stuklijst, prijs), offerteregel_id, prijsberekening_id |
+
+### 7.5 Architectuur: aparte app, koppelbaar met Missing Link (beslist 31/10/2026)
+
+```
+                ┌──────────────────────────────────────────────┐
+                │  packages/core  (TypeScript, geen afhankelijkheden van UI/ERP) │
+                │  productmodel · formules · regels · stuklijst · prijstabellen │
+                └──────────────┬───────────────────────┬───────┘
+                               │                       │
+            ┌──────────────────▼───────┐   ┌───────────▼──────────────┐
+            │ apps/web                 │   │ apps/server              │
+            │ configurator (wizard)    │   │ API, opslag, controle,   │
+            │ beheerscherm             │   │ offerte-PDF              │
+            │ inbouwbaar op website    │   └───────────┬──────────────┘
+            └──────────────────────────┘               │ interface "Koppeling"
+                                         ┌─────────────┴─────────────┐
+                                         ▼                           ▼
+                              Standalone (eigen klanten,   koppeling-missing-link
+                              prijslijsten en offertes)    (artikels, klantkorting,
+                                                           offertes via REST API)
+```
+
+- **De motor (`core`) weet niets van Missing Link.** Hij krijgt een productmodel, keuzes, een prijslijst en eventueel een klantkorting, en geeft prijs, stuklijst en meldingen terug.
+- **Koppelingen zijn uitwisselbaar** via één interface, ongeveer zo: `prijslijst ophalen`, `klant en korting ophalen`, `offerte aanmaken of bijwerken`. Standalone gebruikt een eigen databank; met Missing Link gaat alles via de API (idempotency key, etag).
+- **Website-inbouw:** de configurator kan op de website van de klant draaien (bv. "Stel uw bed samen"). Particulieren zien dan een prijsindicatie of vragen een afspraak aan; interieurinrichters loggen in en zien hun eigen prijs.
+- **Verkoopbaar als product:** per klant een eigen omgeving (multi-tenant), eigen productmodellen en eigen huisstijl.
 
 ---
 
@@ -346,10 +393,11 @@ Elke fase levert iets bruikbaars op en heeft een duidelijk **klaar-criterium**. 
 
 ## 11. Beslissingen die nog nodig zijn
 
-1. Welke **pilootklant en welk product**?
-2. Configurator **in Missing Link** (advies) of als aparte app?
-3. Wie bouwt het: eigen ontwikkelaar of extern? En in welke taal/stack draait de back-end van Missing Link? Daarvan hangt af of JsonLogic in JavaScript aan beide kanten kan draaien.
-4. Komt **verkoop via dealers/website** binnen 12 maanden? Zo ja, dan moeten dealerprijzen in het ontwerp van fase 1.
+1. ~~Welke pilootklant en welk product?~~ **Meubels**. Klant bevestigen (Corneille & Silence?) en de eerste productfamilie kiezen (sofa's of bedden).
+2. ~~In Missing Link of apart?~~ **Apart, koppelbaar** (zie §7.5).
+3. ~~Taal?~~ **TypeScript.** Nog open: wie bouwt mee aan de UI en de server?
+4. Komt **verkoop via interieurinrichters/website** er meteen bij? Voor meubels lijkt dat waarschijnlijk. Klantkorting zit al in de motor; inloggen voor inrichters hoort dan bij fase 2.
+5. **Btw:** 21% standaard. Moet 6% (renovatie van een woning ouder dan 10 jaar) mogelijk zijn? Voor losse meubels meestal niet van toepassing; laten bevestigen door de boekhouder of klant.
 
 ---
 

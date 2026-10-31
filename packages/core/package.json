@@ -1,0 +1,22 @@
+{
+  "name": "@configurator/core",
+  "version": "0.1.0",
+  "description": "Configurator-motor: productmodel, regels, stuklijst en prijs. Draait in browser en op server.",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "demo": "tsx voorbeelden/demo.ts"
+  },
+  "dependencies": {
+    "json-logic-js": "^2.0.5"
+  },
+  "devDependencies": {
+    "@types/json-logic-js": "^2.0.8",
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

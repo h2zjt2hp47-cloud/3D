@@ -1,0 +1,192 @@
+import { describe, expect, it } from 'vitest';
+import { berekenConfiguratie, controleerModel, standaardKeuzes, type ConfiguratieResultaat, type ProductModel } from '../src/index.js';
+import { demoPrijslijst, maatkast } from '../voorbeelden/maatkast.js';
+import { sofa, sofaPrijslijst } from '../voorbeelden/sofa.js';
+
+const kast = (keuzes = {}) => berekenConfiguratie(maatkast, keuzes, demoPrijslijst);
+const bank = (keuzes = {}, korting = 0) => berekenConfiguratie(sofa, keuzes, sofaPrijslijst, { kortingProcent: korting });
+const codes = (r: { meldingen: { code: string }[] }) => r.meldingen.map((m) => m.code);
+const regel = (r: ConfiguratieResultaat, code: string) => r.stuklijst.find((s) => s.code === code);
+
+describe('voorbeeldmodellen', () => {
+  it('bevatten geen modelfouten', () => {
+    expect(controleerModel(maatkast)).toEqual([]);
+    expect(controleerModel(sofa)).toEqual([]);
+  });
+});
+
+describe('kast op maat (kostprijs + opslag)', () => {
+  it('standaardconfiguratie is geldig met vaste prijs', () => {
+    const r = kast();
+    expect(r.geldig).toBe(true);
+    expect(r.meldingen).toEqual([]);
+    expect(r.prijs.methode).toBe('kostplus');
+    expect(r.prijs.kostprijs).toBe(589.69);
+    expect(r.prijs.verkoopprijsExcl).toBe(825.57);
+    expect(r.prijs.verkoopprijsIncl).toBe(998.94);
+  });
+
+  it('berekent de zaaglijst uit de maten', () => {
+    const r = kast();
+    expect(r.afgeleid.binnenbreedte).toBe(1164);
+    expect(regel(r, 'zijpanelen')).toMatchObject({ aantal: 2, lengte: 2000, breedte: 600, zaaglijst: true });
+    expect(regel(r, 'legplanken')).toMatchObject({ aantal: 8, lengte: 571, breedte: 580 });
+    expect(regel(r, 'scharnieren')).toMatchObject({ aantal: 8 }); // 2 deuren × 4 scharnieren
+  });
+
+  it('verbergt de greep en laat greep- en scharnierregels weg zonder deuren', () => {
+    const r = kast({ deurtype: 'geen' });
+    expect(r.kenmerken.find((k) => k.code === 'greep')?.zichtbaar).toBe(false);
+    expect(regel(r, 'grepen')).toBeUndefined();
+    expect(regel(r, 'scharnieren')).toBeUndefined();
+    expect(r.samenvatting.some((s) => s.startsWith('Greep'))).toBe(false);
+  });
+
+  it('maakt schuifdeuren onbeschikbaar onder 1000 mm met uitleg', () => {
+    const r = kast({ breedte: 900, deurtype: 'schuifdeuren', diepte: 500 });
+    const deur = r.kenmerken.find((k) => k.code === 'deurtype')!;
+    expect(deur.keuzes!.find((k) => k.code === 'schuifdeuren')).toMatchObject({ beschikbaar: false, reden: 'pas vanaf 1000 mm breedte' });
+    expect(codes(r)).toContain('deurtype.niet_beschikbaar');
+    expect(r.geldig).toBe(false);
+  });
+
+  it('past het minimum van een maat aan op andere keuzes', () => {
+    const r = kast({ deurtype: 'schuifdeuren', diepte: 400 });
+    expect(r.kenmerken.find((k) => k.code === 'diepte')?.min).toBe(450);
+    expect(codes(r)).toContain('diepte.min');
+  });
+
+  it('meldt te smalle vakken (fout) en lange legplanken (waarschuwing)', () => {
+    expect(codes(kast({ breedte: 600, vakken: 4 }))).toContain('vak_te_smal');
+    const breed = kast({ breedte: 2000, vakken: 1 });
+    expect(codes(breed)).toContain('legplank_doorbuiging');
+    expect(breed.geldig).toBe(true); // waarschuwing blokkeert niet
+  });
+
+  it('gebruikt eigenschappen van het gekozen materiaal', () => {
+    const r = kast({ materiaal: 'mdf_gelakt' });
+    expect(r.afgeleid.t).toBe(19);
+    expect(regel(r, 'zijpanelen')?.artikel).toBe('MDF-LAK-19');
+    expect(regel(r, 'kantenband')).toBeUndefined(); // gelakt: geen kantenband
+  });
+
+  it('aanvaardt tekst als invoer (zoals uit een formulier)', () => {
+    const r = kast({ breedte: '1500', plint: 'false' as never, montage: 'ja' });
+    expect(r.kenmerken.find((k) => k.code === 'breedte')?.waarde).toBe(1500);
+    expect(r.afgeleid.plinthoogte).toBe(0);
+    expect(regel(r, 'montage')).toBeDefined();
+  });
+
+  it('weigert maten die geen veelvoud van de stapgrootte zijn of geen getal', () => {
+    expect(codes(kast({ breedte: 'abc' }))).toContain('breedte.ongeldig');
+    expect(codes(kast({ breedte: 1200.5 }))).toContain('breedte.stap');
+  });
+});
+
+describe('sofa op maat (lijstprijs uit prijstabel)', () => {
+  it('standaardprijs = tabel + sierkussens', () => {
+    const r = bank();
+    expect(r.geldig).toBe(true);
+    expect(r.prijs.methode).toBe('lijstprijs');
+    // 3zits 2200 mm, linnen (groep B): 2450 + 2 × 75 = 2600
+    expect(r.prijs.brutoprijsExcl).toBe(2600);
+    expect(r.prijs.verkoopprijsExcl).toBe(2600);
+    expect(r.prijs.margeProcent).not.toBeNull();
+  });
+
+  it('rondt een maat naar boven af naar de volgende maatklasse', () => {
+    // 2300 → rij 2400 (groep B 2570) + 2 × 75
+    expect(bank({ breedte: 2300 }).prijs.brutoprijsExcl).toBe(2720);
+  });
+
+  it('telt hoektoeslag, factoren en toeslagen op', () => {
+    const r = bank({ opstelling: 'hoek_links', breedte: 2800, hoekdiepte: 2000, stof: 'boucle_belize', model: 'rond', comfort: 'dons', sierkussens: 0 });
+    // (3230 + 1270) × 1.06 + 390 = 5160
+    expect(r.prijs.brutoprijsExcl).toBe(5160);
+    expect(r.kenmerken.find((k) => k.code === 'hoekdiepte')?.zichtbaar).toBe(true);
+  });
+
+  it('past klantkorting toe (interieurinrichter)', () => {
+    const r = bank({}, 25);
+    expect(r.prijs.kortingProcent).toBe(25);
+    expect(r.prijs.verkoopprijsExcl).toBe(1950);
+    expect(r.prijs.verkoopprijsIncl).toBe(2359.5);
+  });
+
+  it('breedtegrenzen hangen af van de opstelling', () => {
+    expect(codes(bank({ opstelling: '2zits', breedte: 2200 }))).toContain('breedte.max');
+    expect(bank({ opstelling: '4zits', breedte: 3200 }).geldig).toBe(true);
+  });
+
+  it('messing poten alleen bij strakke arm', () => {
+    expect(codes(bank({ model: 'rond', poten: 'messing' }))).toContain('poten.niet_beschikbaar');
+  });
+
+  it('eigen stof: geen stof op de stuklijst, wel waarschuwing', () => {
+    const r = bank({ stof: 'eigen_stof' });
+    expect(regel(r, 'stof')).toBeUndefined();
+    expect(codes(r)).toContain('eigen_stof_levering');
+    expect(r.prijs.brutoprijsExcl).toBe(1930 + 2 * 45);
+  });
+
+  it('elke toegelaten breedte van elke opstelling heeft een prijs', () => {
+    const opstellingen = sofa.kenmerken.find((k) => k.code === 'opstelling');
+    if (opstellingen?.type !== 'keuze') throw new Error('opstelling ontbreekt');
+    for (const o of opstellingen.keuzes) {
+      const { min, max } = o.eigenschappen as { min: number; max: number };
+      for (let b = min; b <= max; b += 100) {
+        for (const stof of ['katoen_naturel', 'linnen_brume', 'boucle_belize', 'eigen_stof']) {
+          const r = bank({ opstelling: o.code, breedte: b, hoekdiepte: 1600, stof });
+          expect(codes(r), `${o.code} ${b} ${stof}`).not.toContain('prijs.niet_gevonden');
+        }
+      }
+    }
+  });
+});
+
+describe('algemene werking', () => {
+  const klein: ProductModel = {
+    code: 'T', naam: 'Test', versie: 1,
+    stappen: [{ code: 's', label: 'S' }],
+    kenmerken: [{ code: 'b', label: 'Breedte', stap: 's', type: 'getal', standaard: 100 }],
+    afgeleid: [],
+    regels: [],
+    stuklijst: [{ code: 'x', omschrijving: 'X', artikel: '"ONBEKEND"', eenheid: 'stuk', aantal: '1' }],
+    tabellen: [{ code: 'p', rijen: [100, 200], kolommen: ['x'], waarden: [[10], [20]] }],
+    prijs: { opslagProcent: 0, verkoopprijs: 'tabel("p"; b; "x")', btwProcent: 21, minimumPrijs: 15 },
+  };
+
+  it('standaardKeuzes geeft de standaardwaarden', () => {
+    expect(standaardKeuzes(maatkast)).toMatchObject({ breedte: 1200, materiaal: 'melamine_wit', plint: true });
+  });
+
+  it('meldt een artikel dat niet in de prijslijst staat', () => {
+    expect(codes(berekenConfiguratie(klein, {}, {}))).toContain('stuklijst.x.artikel');
+  });
+
+  it('meldt een maat buiten de prijstabel en past het minimum toe', () => {
+    expect(codes(berekenConfiguratie(klein, { b: 250 }, {}))).toContain('prijs.niet_gevonden');
+    expect(berekenConfiguratie(klein, { b: 100 }, {}).prijs.brutoprijsExcl).toBe(15);
+    expect(berekenConfiguratie(klein, { b: 150 }, {}).prijs.brutoprijsExcl).toBe(20);
+  });
+
+  it('modelcontrole vindt fouten die een beheerder kan maken', () => {
+    const fout: ProductModel = {
+      ...klein,
+      kenmerken: [
+        { code: 'b', label: 'B', stap: 'onbestaand', type: 'getal', standaard: 1 },
+        { code: 'k', label: 'K', stap: 's', type: 'keuze', standaard: 'z', keuzes: [{ code: 'y', label: 'Y' }] },
+      ],
+      afgeleid: [{ code: 'a', formule: 'b * breedte' }, { code: 'c', formule: '2 +' }],
+      tabellen: [{ code: 'p', rijen: [1, 2], kolommen: ['x'], waarden: [[1]] }],
+      prijs: { ...klein.prijs, verkoopprijs: 'tabel("q"; b; 1)' },
+    };
+    const p = controleerModel(fout).map((x) => x.probleem).join('\n');
+    expect(p).toMatch(/Stap "onbestaand" bestaat niet/);
+    expect(p).toMatch(/Standaardkeuze "z" bestaat niet/);
+    expect(p).toMatch(/Onbekende naam "breedte"/);
+    expect(p).toMatch(/onvolledig/);
+    expect(p).toMatch(/2 rijen × 1 kolommen/);
+    expect(p).toMatch(/Onbekende tabel "q"/);
+  });
+});

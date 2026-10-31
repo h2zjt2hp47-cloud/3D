@@ -1,0 +1,66 @@
+# Configurator
+
+Productconfigurator (configureren → prijzen → offerte) voor maatwerkmeubelen en andere maakbedrijven.
+
+- **Werkt op zichzelf**: kan als apart product verkocht worden.
+- **Koppelbaar met Missing Link**: artikels, prijzen en offertes via de API.
+- **TypeScript**: dezelfde motor draait in de browser (live prijs en foutmeldingen) en op de server (controle vóór de offerte).
+
+Achtergrond en stappenplan: [`docs/configurator-analyse-en-stappenplan.md`](docs/configurator-analyse-en-stappenplan.md)
+Fase 0 (productkennis van de pilootklant): [`docs/fase0-productkennis-meubels.md`](docs/fase0-productkennis-meubels.md)
+
+## Structuur
+
+```
+packages/
+  core/                 De configurator-motor (geen afhankelijkheid van UI, server of ERP)
+    src/
+      types.ts          Productmodel: kenmerken, keuzes, regels, stuklijst, prijstabellen
+      formule.ts        Excel-achtige formules → JsonLogic
+      logica.ts         Evaluatie (JsonLogic + eigen functies)
+      motor.ts          berekenConfiguratie(): zichtbaarheid, fouten, stuklijst, prijs
+      modelcontrole.ts  controleerModel(): fouten in een productmodel vinden
+    voorbeelden/
+      maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
+      sofa.ts           Sofa op maat (prijs = prijstabel breedte × stofgroep + toeslagen)
+      demo.ts           Commandoregel-demo
+    test/               Automatische tests
+```
+
+Later volgen: `apps/web` (configurator en beheerscherm), `apps/server` (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.
+
+## Uitproberen
+
+```bash
+npm install
+```
+
+```bash
+npm test
+```
+
+```bash
+npm run demo -- sofa opstelling=hoek_links breedte=2800 stof=boucle_belize korting=20
+```
+
+```bash
+npm run demo -- kast breedte=2400 deurtype=schuifdeuren materiaal=fineer_eik
+```
+
+> De voorbeeldmodellen en alle prijzen zijn **verzonnen** en dienen alleen om de motor te testen.
+
+## Formules
+
+Beheerders schrijven formules zoals in Excel; argumenten scheiden met `;`.
+
+| Wat | Voorbeeld |
+|---|---|
+| Rekenen | `breedte * hoogte / 1000000` |
+| Vergelijken | `breedte >= 1000`, `deurtype <> "geen"` |
+| Logisch | `hoek en hoekdiepte >= breedte`, `niet montage` |
+| Als | `als(plint; 80; 0)` |
+| Afronden | `naarboven(x; 100)`, `naarbeneden(x; 10)`, `afronden(x; 2)` |
+| Min/max | `min(a; b)`, `max(a; b; c)` |
+| In lijst | `in(kleur; "wit"; "zwart")` |
+| Prijstabel | `tabel("basisprijs"; breedte; stof_groep)`; tussenmaten gaan naar de volgende maatklasse |
+| Eigenschap van een keuze | `materiaal_dikte`, `stof_groep` (= `<kenmerk>_<eigenschap>`) |
