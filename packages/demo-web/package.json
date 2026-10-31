@@ -8,5 +8,8 @@
     "build": "node bouw.mjs",
     "typecheck": "tsc --noEmit",
     "test": "echo geen tests"
+  },
+  "devDependencies": {
+    "three": "^0.128.0"
   }
 }

@@ -14,7 +14,11 @@ export {
 } from './materialen.js';
 export {
   berekenOntwerp,
+  gekozenOpties,
   voetafdruk,
+  type OptieBedrag,
+  type OptieGroep,
+  type OptieKeuze,
   type Bereik,
   type ElementResultaat,
   type ElementType,
@@ -26,3 +30,5 @@ export {
   type Rotatie,
   type Tekenstijl,
 } from './ontwerp.js';
+export { tekenVooraanzicht } from './vooraanzicht.js';
+export { bouw3D, blokkenVan, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';

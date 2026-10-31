@@ -18,7 +18,44 @@ export interface Bereik {
 }
 
 /** Hoe een element getekend wordt (waar de rug zit, afgerond of niet). */
-export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug';
+export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug' | 'console';
+
+/** Eén keuze binnen een optiegroep (bv. poten: "Conische poot"). */
+export interface OptieKeuze {
+  code: string;
+  label: string;
+  uitleg?: string;
+  /** Vaste meerprijs (per element als de groep per element telt, anders per zetel). */
+  prijs?: number;
+  /** Meerprijs per meter breedte van het element. */
+  prijsPerM?: number;
+  /** Meerprijs in % op de basisprijs (van het element, of van alle elementen). */
+  pct?: number;
+  /** Kostprijs: vast en per meter breedte. */
+  kost?: number;
+  kostPerM?: number;
+  /** Extra stofverbruik in %. */
+  stofPct?: number;
+  /** Gegevens voor de tekening (kleur, vorm, hoogte …). */
+  teken?: Record<string, number | string | boolean>;
+  /** Alleen mogelijk als andere groepen één van deze keuzes hebben, bv. { poothoogte: ['laag'] }. */
+  alleenMet?: Record<string, string[]>;
+  /** Uitleg als de combinatie niet kan. */
+  reden?: string;
+}
+
+export interface OptieGroep {
+  code: string;
+  label: string;
+  /** 'ontwerp' = één keuze voor de hele zetel; 'element' = per element te kiezen. */
+  niveau: 'ontwerp' | 'element';
+  /** Bij niveau 'ontwerp': wordt de prijs per element aangerekend (bv. poten per element)? */
+  perElement?: boolean;
+  /** Alleen voor deze elementtypes (bv. armstijl alleen voor armleuningen). */
+  voorTypen?: string[];
+  standaard: string;
+  keuzes: OptieKeuze[];
+}
 
 export interface ElementType {
   code: string;
@@ -53,6 +90,8 @@ export interface OntwerpCatalogus {
   btwProcent: number;
   /** Totale breedte waarboven een waarschuwing voor levering verschijnt. */
   leveringWaarschuwingVanaf?: number;
+  /** Aanpassingen: poten, armstijl, rug, comfort, naden, hout, extra's … */
+  opties?: OptieGroep[];
 }
 
 export interface OntwerpElement {
@@ -67,11 +106,28 @@ export interface OntwerpElement {
   rotatie: Rotatie;
   /** Eigen materiaal voor dit element; anders het hoofdmateriaal. */
   materiaal?: string;
+  /** Keuzes voor optiegroepen op elementniveau (groepcode → keuzecode). */
+  opties?: Record<string, string>;
 }
 
 export interface Ontwerp {
   hoofdmateriaal: string;
   elementen: OntwerpElement[];
+  /** Keuzes voor optiegroepen op zetelniveau (groepcode → keuzecode). */
+  opties?: Record<string, string>;
+}
+
+/** De gekozen keuze per optiegroep voor een element (of voor de zetel als element ontbreekt). */
+export function gekozenOpties(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e?: OntwerpElement): Map<string, OptieKeuze> {
+  const uit = new Map<string, OptieKeuze>();
+  for (const g of catalogus.opties ?? []) {
+    if (e && g.voorTypen && !g.voorTypen.includes(e.type)) continue;
+    if (!e && g.niveau === 'element') continue;
+    const code = (g.niveau === 'element' ? e?.opties?.[g.code] : ontwerp.opties?.[g.code]) ?? g.standaard;
+    const k = g.keuzes.find((x) => x.code === code) ?? g.keuzes.find((x) => x.code === g.standaard);
+    if (k) uit.set(g.code, k);
+  }
+  return uit;
 }
 
 export interface OntwerpMelding extends Melding {
@@ -86,8 +142,19 @@ export interface ElementResultaat {
   diepte: number;
   materiaal: string;
   groep: string;
+  /** Prijs inclusief opties van dit element. */
   prijs: number;
+  /** Waarvan opties. */
+  optieBedrag: number;
   stofM: number;
+}
+
+export interface OptieBedrag {
+  groep: string;
+  groepLabel: string;
+  keuze: string;
+  keuzeLabel: string;
+  bedrag: number;
 }
 
 export interface OntwerpResultaat {
@@ -96,6 +163,8 @@ export interface OntwerpResultaat {
   elementen: ElementResultaat[];
   afmetingen: { breedte: number; diepte: number; x: number; y: number };
   stof: { materiaal: string; naam: string; meters: number }[];
+  /** Meerprijzen per optie (opgeteld over alle elementen). */
+  opties: OptieBedrag[];
   stuklijst: StuklijstResultaat[];
   prijs: {
     kostprijs: number;
@@ -143,7 +212,7 @@ function donkerder(hex: string, factor = 0.86): string {
 }
 
 /** Zet een rechthoek in lokale coördinaten (breedte × diepte, rug boven) om naar het bovenaanzicht. */
-function lokaalNaarWereld(e: OntwerpElement, lx: number, ly: number, lb: number, lh: number) {
+export function lokaalNaarWereld(e: OntwerpElement, lx: number, ly: number, lb: number, lh: number) {
   const B = e.breedte, D = e.diepte;
   switch (e.rotatie) {
     case 90: // rug rechts
@@ -159,9 +228,11 @@ function lokaalNaarWereld(e: OntwerpElement, lx: number, ly: number, lb: number,
 
 const RUG = 18;
 
-function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string): VormResultaat[] {
+function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, opties: Map<string, OptieKeuze> = new Map()): VormResultaat[] {
   const B = e.breedte, D = e.diepte;
   const donker = donkerder(kleur);
+  const t = (groep: string, veld: string) => opties.get(groep)?.teken?.[veld];
+  const hout = String(t('hout', 'kleur') ?? '#c8a27a');
   const delen: [string, number, number, number, number, string, number][] = [];
   switch (stijl) {
     case 'zit':
@@ -173,8 +244,16 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string): Vorm
     case 'chaise':
       delen.push(['kussen', 1, 1, B - 2, D - 2, kleur, 6]);
       break;
-    case 'arm':
-      delen.push(['arm', 0, 0, B, D, donker, Math.min(B, D) / 3]);
+    case 'arm': {
+      const vorm = String(t('armstijl', 'vorm') ?? 'strak');
+      const r = vorm === 'rond' || vorm === 'engels' ? Math.min(B, D) / 2 : vorm === 'schuin' ? Math.min(B, D) / 4 : 2;
+      if (vorm === 'hout') delen.push(['arm', 0, 0, B, D, hout, 2]);
+      else delen.push(['arm', 0, 0, B, D, donker, r]);
+      if (vorm === 'houtblad') delen.push(['blad', 1, 1, B - 2, D - 2, hout, 2]);
+      break;
+    }
+    case 'console':
+      delen.push(['console', 0, 0, B, D, hout, 1.5], ['blad', 3, 3, B - 6, D - 6, donkerder(hout, 0.93), 1]);
       break;
     case 'poef':
       delen.push(['poef', 0, 0, B, D, kleur, Math.min(B, D) / 5]);
@@ -218,6 +297,14 @@ export function berekenOntwerp(
   let kostprijs = 0;
   let bruto = 0;
 
+  const optieBedragen = new Map<string, OptieBedrag>();
+  const telOptie = (g: OptieGroep, k: OptieKeuze, bedrag: number) => {
+    const sleutel = `${g.code}:${k.code}`;
+    const b = optieBedragen.get(sleutel);
+    if (b) b.bedrag = rond(b.bedrag + bedrag);
+    else optieBedragen.set(sleutel, { groep: g.code, groepLabel: g.label, keuze: k.code, keuzeLabel: k.label, bedrag });
+  };
+
   const telStuk = (artikel: string, omschrijving: string, eenheid: StuklijstResultaat['eenheid'], hoeveelheid: number, kostPerEenheid: number) => {
     const b = stuk.get(artikel);
     if (b) {
@@ -260,23 +347,67 @@ export function berekenOntwerp(
       prijs = (basis + extra10 * per10) * (1 + (diepte10 * catalogus.diepteToeslagPctPer10cm) / 100) * (1 + (m?.toeslagPct ?? 0) / 100);
       prijs = rond(prijs);
     }
+    const meterBreedte = e.breedte / 100;
+
+    // Opties die voor dit element gelden: groepen op elementniveau en groepen op zetelniveau die per element tellen.
+    const gekozen = gekozenOpties(ontwerp, catalogus, e);
+    let optieBedrag = 0;
+    let stofPct = 0;
+    for (const g of catalogus.opties ?? []) {
+      const k = gekozen.get(g.code);
+      if (!k) continue;
+      const code = (g.niveau === 'element' ? e.opties?.[g.code] : ontwerp.opties?.[g.code]) ?? g.standaard;
+      if (code !== k.code)
+        meldingen.push({ code: 'optie.onbekend', ernst: 'fout', elementId: g.niveau === 'element' ? e.id : undefined, melding: `${g.label}: keuze "${code}" bestaat niet.` });
+      // Combinaties die niet kunnen.
+      for (const [andere, toegelaten] of Object.entries(k.alleenMet ?? {})) {
+        const w = gekozen.get(andere);
+        if (w && !toegelaten.includes(w.code)) {
+          const al = meldingen.some((x) => x.code === `optie.${g.code}.${k.code}` && (g.niveau === 'ontwerp' || x.elementId === e.id));
+          if (!al)
+            meldingen.push({
+              code: `optie.${g.code}.${k.code}`, ernst: 'fout', elementId: g.niveau === 'element' ? e.id : undefined,
+              melding: `${g.niveau === 'element' ? `${naam}: ` : ''}${k.label} kan niet met ${w.label.toLowerCase()}${k.reden ? ` (${k.reden})` : ''}.`,
+            });
+        }
+      }
+      if (g.niveau === 'ontwerp' && !g.perElement) continue; // eenmalig, hieronder
+      const bedrag = rond((k.prijs ?? 0) + (k.prijsPerM ?? 0) * meterBreedte + ((k.pct ?? 0) / 100) * prijs);
+      optieBedrag += bedrag;
+      stofPct += k.stofPct ?? 0;
+      kostprijs += (k.kost ?? 0) + (k.kostPerM ?? 0) * meterBreedte;
+      telOptie(g, k, bedrag);
+    }
+    prijs = rond(prijs + optieBedrag);
     bruto += prijs;
 
-    const meterBreedte = e.breedte / 100;
-    const stofM = m
-      ? (t.stofVast + t.stofPerM * meterBreedte) * (e.diepte / t.diepte.standaard) * patroonfactor(m.rapport) * (140 / m.rolbreedte)
+    const stofM = m && t.tekenstijl !== 'console'
+      ? (t.stofVast + t.stofPerM * meterBreedte) * (e.diepte / t.diepte.standaard) * patroonfactor(m.rapport) * (140 / m.rolbreedte) * (1 + stofPct / 100)
       : 0;
-    if (m) stofPerMat.set(m.code, (stofPerMat.get(m.code) ?? 0) + stofM);
+    if (m && stofM > 0) stofPerMat.set(m.code, (stofPerMat.get(m.code) ?? 0) + stofM);
 
     const frameKost = t.kostVast + t.kostPerM * meterBreedte;
     const uren = t.uren + t.urenPerM * meterBreedte;
-    telStuk(`FRAME-${t.code.toUpperCase()}`, `Frame en vulling ${t.label.toLowerCase()}`, 'stuk', 1, rond(frameKost));
+    telStuk(`FRAME-${t.code.toUpperCase()}`, `${t.tekenstijl === 'console' ? 'Houten' : 'Frame en vulling'} ${t.label.toLowerCase()}`, 'stuk', 1, rond(frameKost));
     telStuk('ARB-ATELIER', 'Atelier (stofferen, naaien)', 'uur', uren, catalogus.uurloon);
     kostprijs += frameKost + uren * catalogus.uurloon;
 
-    elementen.push({ id: e.id, type: t.code, label: t.label, breedte: e.breedte, diepte: e.diepte, materiaal: m?.code ?? '', groep, prijs, stofM: rond(stofM, 2) });
-    vormen.push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc'));
+    elementen.push({ id: e.id, type: t.code, label: t.label, breedte: e.breedte, diepte: e.diepte, materiaal: t.tekenstijl === 'console' ? '' : m?.code ?? '', groep, prijs, optieBedrag: rond(optieBedrag), stofM: rond(stofM, 2) });
+    vormen.push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc', gekozen));
   });
+
+  // Opties op zetelniveau die eenmalig tellen (bv. houtafwerking).
+  const basisTotaal = bruto;
+  const zetelOpties = gekozenOpties(ontwerp, catalogus);
+  for (const g of catalogus.opties ?? []) {
+    if (g.niveau !== 'ontwerp' || g.perElement) continue;
+    const k = zetelOpties.get(g.code);
+    if (!k || ontwerp.elementen.length === 0) continue;
+    const bedrag = rond((k.prijs ?? 0) + ((k.pct ?? 0) / 100) * basisTotaal);
+    bruto += bedrag;
+    kostprijs += k.kost ?? 0;
+    telOptie(g, k, bedrag);
+  }
 
   // Stof per materiaal (afgerond op 0,1 m) in de stuklijst.
   const stof = [...stofPerMat].map(([code, meters]) => {
@@ -336,6 +467,7 @@ export function berekenOntwerp(
     elementen,
     afmetingen,
     stof,
+    opties: [...optieBedragen.values()],
     stuklijst: [...stuk.values()],
     prijs: {
       kostprijs,

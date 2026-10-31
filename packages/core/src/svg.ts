@@ -69,10 +69,17 @@ export function tekenSvg(t: TekeningResultaat, opties: SvgOpties = {}): string {
   if (opties.achtergrond) delen.push(`<rect x="${n(minX)}" y="${n(minY)}" width="${n(w)}" height="${n(h)}" fill="${kleurVeilig(opties.achtergrond, 'white')}"/>`);
 
   for (const v of t.vormen) {
-    const r = v.afronding ? ` rx="${n(v.afronding)}"` : '';
-    delen.push(
-      `<rect data-code="${esc(v.code)}" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}"${r} fill="${kleurVeilig(v.vulling, 'none')}" stroke="${lijn}" stroke-width="${n(sw)}"/>`,
-    );
+    const stroke = kleurVeilig(v.lijn, lijn);
+    const dikte = n(sw * (v.lijndikte ?? 1));
+    if (v.pad !== undefined) {
+      const d = /^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]*$/.test(v.pad) ? v.pad : '';
+      delen.push(`<path data-code="${esc(v.code)}" d="${d}" fill="${kleurVeilig(v.vulling, 'none')}" stroke="${stroke}" stroke-width="${dikte}" stroke-linejoin="round"/>`);
+    } else {
+      const r = v.afronding ? ` rx="${n(v.afronding)}"` : '';
+      delen.push(
+        `<rect data-code="${esc(v.code)}" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}"${r} fill="${kleurVeilig(v.vulling, 'none')}" stroke="${stroke}" stroke-width="${dikte}"/>`,
+      );
+    }
     if (v.label) {
       delen.push(
         `<text x="${n(v.x + v.breedte / 2)}" y="${n(v.y + v.hoogte / 2)}" font-size="${n(fs * 0.8)}" text-anchor="middle" dominant-baseline="central" fill="${lijn}">${esc(v.label)}</text>`,

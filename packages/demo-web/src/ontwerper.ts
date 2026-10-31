@@ -4,14 +4,20 @@
  */
 import {
   berekenOntwerp,
+  bouw3D,
+  tekenSvg,
+  tekenVooraanzicht,
   voetafdruk,
   type ElementType,
+  type OptieGroep,
+  type OptieKeuze,
   type Ontwerp,
   type OntwerpElement,
   type OntwerpResultaat,
   type Rotatie,
 } from '../../core/src/index.js';
 import { startOntwerpen, zetelCatalogus } from '../../core/voorbeelden/vrij-ontwerp.js';
+import { maak3D, type Viewer3D } from './drie-d.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getKorting, getMaterialen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
@@ -22,6 +28,8 @@ let ontwerp: Ontwerp = laadOntwerp();
 let geselecteerd: string | null = null;
 let gereedschap: string = 'selecteren'; // of een elementtype
 let resultaat: OntwerpResultaat;
+let weergave: 'boven' | 'voor' | '3d' = 'boven';
+let viewer: Viewer3D | null | undefined;
 const geschiedenis: string[] = [];
 let volgendeId = 1;
 
@@ -328,6 +336,7 @@ function ongedaan() {
   if (!vorige) return;
   ontwerp = JSON.parse(vorige) as Ontwerp;
   if (!elementVan(geselecteerd)) geselecteerd = null;
+  toonAanpassingen();
   $<HTMLButtonElement>('#o-ongedaan').disabled = geschiedenis.length === 0;
   vulHoofdmateriaal();
   toonEigenschappen();
@@ -341,6 +350,89 @@ function kiesGereedschap(code: string) {
   $('#o-hint').textContent = t
     ? `Sleep op het tekenvlak om een ${t.label.toLowerCase()} te tekenen (${t.breedte.min}–${t.breedte.max} × ${t.diepte.min}–${t.diepte.max} cm), of klik voor de standaardmaat. Esc stopt.`
     : 'Sleep elementen om ze te verplaatsen; ze klikken vast aan elkaar (Alt = zonder magneet). Sleep het hoekje rechtsonder om te vergroten.';
+}
+
+// ---------- aanpassingen (opties) ----------
+function meerprijs(g: OptieGroep, k: OptieKeuze): string {
+  const delen: string[] = [];
+  const teken = (x: number) => (x < 0 ? '−' : '+');
+  if (k.prijs) delen.push(`${teken(k.prijs)}€${getal(Math.abs(k.prijs), 0)}${g.perElement || g.niveau === 'element' ? '' : ''}`);
+  if (k.prijsPerM) delen.push(`${teken(k.prijsPerM)}€${getal(Math.abs(k.prijsPerM), 0)}/m`);
+  if (k.pct) delen.push(`${teken(k.pct)}${getal(Math.abs(k.pct), 0)}%`);
+  return delen.join(' ');
+}
+
+function optieGroepVeld(g: OptieGroep, huidig: string, idVoorvoegsel: string, kies: (code: string) => void): HTMLElement {
+  const fs = el('fieldset', { class: 'optiegroep', 'data-groep': g.code });
+  const legende = el('legend', {}, g.label + (g.perElement ? ' (per element)' : ''));
+  fs.append(legende);
+  const chips = el('div', { class: 'chips' });
+  for (const k of g.keuzes) {
+    const id = `${idVoorvoegsel}-${g.code}-${k.code}`;
+    const chip = el('label', { class: 'chip', for: id, title: k.uitleg ?? '' });
+    const r = el('input', { type: 'radio', name: `${idVoorvoegsel}-${g.code}`, id, value: k.code }) as HTMLInputElement;
+    r.checked = k.code === huidig;
+    r.addEventListener('change', () => kies(k.code));
+    chip.append(r);
+    const kleur = k.teken?.kleur;
+    if (typeof kleur === 'string') {
+      const bol = el('span', { class: 'bol', 'aria-hidden': 'true' });
+      bol.style.background = kleur;
+      chip.append(bol);
+    }
+    chip.append(el('span', {}, k.label));
+    const mp = meerprijs(g, k);
+    if (mp) chip.append(el('span', { class: 'meer' }, mp));
+    chips.append(chip);
+  }
+  fs.append(chips);
+  return fs;
+}
+
+function toonAanpassingen() {
+  const vak = $('#o-aanpassingen');
+  vak.replaceChildren(
+    ...(zetelCatalogus.opties ?? [])
+      .filter((g) => g.niveau === 'ontwerp')
+      .map((g) =>
+        optieGroepVeld(g, ontwerp.opties?.[g.code] ?? g.standaard, 'oz', (code) => {
+          onthoud();
+          ontwerp.opties = { ...(ontwerp.opties ?? {}), [g.code]: code };
+          gewijzigd();
+        }),
+      ),
+  );
+}
+
+/** Markeer optiegroepen met een foutieve combinatie. */
+function markeerOptieFouten() {
+  const fout = new Set(resultaat.meldingen.filter((m) => m.code.startsWith('optie.')).map((m) => m.code.split('.')[1]));
+  document.querySelectorAll<HTMLElement>('.optiegroep').forEach((f) => f.classList.toggle('fout', fout.has(f.dataset.groep ?? '')));
+}
+
+// ---------- weergave: bovenaanzicht, vooraanzicht, 3D ----------
+function kiesWeergave(w: typeof weergave) {
+  weergave = w;
+  document.querySelectorAll<HTMLButtonElement>('[data-o-weergave]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.oWeergave === w)));
+  svg().toggleAttribute('hidden', w !== 'boven');
+  $('#o-voor').hidden = w !== 'voor';
+  $('#o-3d').hidden = w !== '3d';
+  $('#o-3d-knoppen').hidden = w !== '3d';
+  $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'poten, zithoogte, rug en armen · maten in cm' : 'draai en zoom met muis of vinger';
+  if (w === '3d' && viewer === undefined) viewer = maak3D($('#o-3d'));
+  toonWeergave();
+}
+
+function toonWeergave() {
+  if (weergave === 'voor') {
+    $('#o-voor').innerHTML = ontwerp.elementen.length
+      ? tekenSvg(tekenVooraanzicht(ontwerp, zetelCatalogus, getMaterialen()), { breedtePx: 720, lijnkleur: '#2b2b28', maatkleur: '#3f5a52' })
+      : '<p class="klein">Nog geen elementen.</p>';
+  }
+  if (weergave === '3d' && viewer) {
+    viewer.formaat();
+    viewer.toon(bouw3D(ontwerp, zetelCatalogus, getMaterialen()));
+  }
 }
 
 // ---------- panelen ----------
@@ -408,7 +500,22 @@ function toonEigenschappen() {
   maak('Dupliceer', 'Kopie ernaast plaatsen (D)', () => dupliceer(e.id));
   maak('Verwijder', 'Verwijderen (Delete)', () => verwijder(e.id), 'gevaar');
   const rugTekst = ['boven', 'rechts', 'onder', 'links'][e.rotatie / 90]!;
-  vak.replaceChildren(kop, rij, matLabel, el('p', { class: 'klein' }, t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' ? `Rug aan de ${rugTekst}kant.` : ''), knoppen);
+  const elementOpties = el('div', { class: 'aanpassingen' });
+  for (const g of (zetelCatalogus.opties ?? []).filter((g) => g.niveau === 'element' && (!g.voorTypen || g.voorTypen.includes(e.type)))) {
+    elementOpties.append(
+      optieGroepVeld(g, e.opties?.[g.code] ?? g.standaard, `oe-${e.id}`, (code) => {
+        onthoud();
+        e.opties = { ...(e.opties ?? {}), [g.code]: code };
+        gewijzigd();
+      }),
+    );
+  }
+  const delen: HTMLElement[] = [kop, rij];
+  if (t.tekenstijl !== 'console') delen.push(matLabel);
+  delen.push(el('p', { class: 'klein' }, t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' ? `Rug aan de ${rugTekst}kant.` : t.tekenstijl === 'console' ? 'Houten tussenstuk in de gekozen houtafwerking.' : ''));
+  if (elementOpties.childElementCount) delen.push(elementOpties);
+  delen.push(knoppen);
+  vak.replaceChildren(...delen);
 }
 
 function herbereken(alles = true) {
@@ -426,6 +533,12 @@ function herbereken(alles = true) {
   if (r.prijs.kortingProcent) {
     regels.push(['Brutoprijs', eur(r.prijs.brutoprijsExcl)]);
     regels.push([`Korting ${getal(r.prijs.kortingProcent)}%`, `− ${eur(r.prijs.brutoprijsExcl - r.prijs.verkoopprijsExcl)}`]);
+  }
+  const optiesTotaal = r.opties.reduce((t, o) => t + o.bedrag, 0);
+  if (optiesTotaal) {
+    regels.push(['Waarvan aanpassingen', eur(optiesTotaal)]);
+    for (const o of r.opties.filter((o) => o.bedrag).sort((a, b) => Math.abs(b.bedrag) - Math.abs(a.bedrag)).slice(0, 6))
+      regels.push([`  ${o.groepLabel}: ${o.keuzeLabel}`, `${o.bedrag < 0 ? '−' : '+'} ${eur(Math.abs(o.bedrag))}`]);
   }
   regels.push(['Kostprijs', eur(r.prijs.kostprijs)], ['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)}%`]);
   regels.push(['Totale maat', `${getal(r.afmetingen.breedte, 1)} × ${getal(r.afmetingen.diepte, 1)} cm`]);
@@ -454,6 +567,8 @@ function herbereken(alles = true) {
       return tr;
     }),
   );
+  markeerOptieFouten();
+  toonWeergave();
   if (geselecteerd) {
     const er = r.elementen.find((x) => x.id === geselecteerd);
     const prijsVak = document.querySelector('#o-eigenschappen .kaartkop .klein');
@@ -481,12 +596,20 @@ export function startOntwerper() {
       ontwerp = structuredClone(s.ontwerp);
       geselecteerd = null;
       vulHoofdmateriaal();
+      toonAanpassingen();
       toonEigenschappen();
       kiesGereedschap(code === 'leeg' ? 'zit' : 'selecteren');
       gewijzigd();
     });
     start.append(b);
   }
+
+  document.querySelectorAll<HTMLButtonElement>('[data-o-weergave]').forEach((b) =>
+    b.addEventListener('click', () => kiesWeergave(b.dataset.oWeergave as typeof weergave)),
+  );
+  document.querySelectorAll<HTMLButtonElement>('[data-standpunt]').forEach((b) =>
+    b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as 'schuin' | 'voor' | 'boven' | 'zij')),
+  );
 
   const hoofd = $<HTMLSelectElement>('#o-hoofdmateriaal');
   hoofd.addEventListener('change', () => {
@@ -507,7 +630,10 @@ export function startOntwerper() {
     const r = resultaat;
     const tekst = [
       `Zetel op maat (vrij ontwerp), totaal ${getal(r.afmetingen.breedte, 1)} × ${getal(r.afmetingen.diepte, 1)} cm`,
-      ...r.elementen.map((x, n) => `- ${n + 1}. ${x.label} ${getal(x.breedte, 1)} × ${getal(x.diepte, 1)} cm, ${mats.get(x.materiaal)?.naam ?? ''}`),
+      ...r.elementen.map((x, n) => `- ${n + 1}. ${x.label} ${getal(x.breedte, 1)} × ${getal(x.diepte, 1)} cm${x.materiaal ? `, ${mats.get(x.materiaal)?.naam ?? ''}` : ''}`),
+      ...(zetelCatalogus.opties ?? [])
+        .filter((g) => g.niveau === 'ontwerp')
+        .map((g) => `- ${g.label}: ${g.keuzes.find((k) => k.code === (ontwerp.opties?.[g.code] ?? g.standaard))?.label ?? ''}`),
       `Prijs: ${eur(r.prijs.verkoopprijsExcl)} excl. btw (${eur(r.prijs.verkoopprijsIncl)} incl. btw)`,
     ].join('\n');
     void kopieer(tekst, $('#o-kopieer-melding'));
@@ -528,6 +654,7 @@ export function startOntwerper() {
   opWijziging('korting', () => herbereken());
 
   vulHoofdmateriaal();
+  toonAanpassingen();
   kiesGereedschap('selecteren');
   $<HTMLButtonElement>('#o-ongedaan').disabled = true;
   herbereken();

@@ -310,6 +310,12 @@ export interface VormResultaat {
   vulling?: string;
   afronding?: number;
   label?: string;
+  /** Vrije vorm als SVG-pad (in dezelfde coördinaten); x/y/breedte/hoogte zijn dan het omsluitende kader. */
+  pad?: string;
+  /** Lijnkleur (standaard de lijnkleur van de tekening). */
+  lijn?: string;
+  /** Lijndikte als factor van de standaarddikte (bv. 2 voor een bies). */
+  lijndikte?: number;
 }
 
 export interface MaatlijnResultaat {

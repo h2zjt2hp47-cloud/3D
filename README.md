@@ -23,19 +23,24 @@ packages/
       modelcontrole.ts  controleerModel(): fouten in een productmodel vinden
       svg.ts            tekenSvg(): 2D-tekening (bovenaanzicht, vooraanzicht) met maatlijnen
       materialen.ts     Materialen (stof/leder): controle, unieke codes, patroonfactor, inlezen uit JSON
-      ontwerp.ts        berekenOntwerp(): vrij zetelontwerp uit elementen (prijs, stof, overlap, tekening)
+      ontwerp.ts        berekenOntwerp(): vrij zetelontwerp uit elementen (prijs, stof, overlap, opties, tekening)
+      vooraanzicht.ts   tekenVooraanzicht(): poten, zithoogte, rug, armvormen, bies, houten delen
+      ruimtelijk.ts     bouw3D(): 3D-blokken van het ontwerp (gerenderd met three.js in de demo)
     voorbeelden/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
       sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
                         eigen stof/leder, contraststof, stofverbruik, bovenaanzicht
-      vrij-ontwerp.ts   Catalogus van zetelelementen en startopstellingen voor de vrije ontwerper
+      vrij-ontwerp.ts   Zetelelementen (incl. houten tussenstuk), aanpassingen (poten, poothoogte, hout,
+                        metaal, zithoogte, comfort, zitting, rug, rughoogte, naden, armstijl/-hoogte,
+                        extra's) en startopstellingen
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
   demo-web/             Klikbare demo, gebundeld tot één HTML-bestand:
                         - Sofa/Kast op maat: formulier uit het productmodel, live prijs en tekening
                         - Vrij ontwerp: elementen tekenen, slepen (magneet), vergroten, draaien,
-                          materiaal per element, ongedaan maken
+                          materiaal en opties per element, aanpassingen voor de hele zetel,
+                          vooraanzicht en 3D (three.js r128 via cdnjs), ongedaan maken
                         - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
 ```
 

@@ -138,7 +138,7 @@ button:disabled { opacity: .45; cursor: default; }
 .knoppenlijst button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
 .klein-knop { padding: 3px 9px !important; font-size: .8rem; }
 /* Vrij ontwerp */
-main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); }
+main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); align-items: start; }
 @media (max-width: 1150px) { main.ontwerp { grid-template-columns: 200px minmax(0, 1fr); } main.ontwerp > .resultaat { grid-column: 1 / -1; position: static; } }
 @media (max-width: 760px) { main.ontwerp { grid-template-columns: 1fr; } }
 .gereedschap { align-self: start; display: grid; gap: 4px; }
@@ -188,6 +188,25 @@ textarea { width: 100%; font: .85rem ui-monospace, monospace; }
 .label { font-size: .7rem; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent-zacht); color: var(--accent); vertical-align: middle; }
 td .staal { display: inline-block; vertical-align: -3px; }
 .acties-cel { display: flex; gap: 6px; justify-content: flex-end; }
+
+.midden { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabs button { border: 1px solid var(--lijn); background: transparent; border-radius: 6px; padding: 5px 11px; cursor: pointer; font-size: .9rem; }
+.tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+.drie-d { border-radius: 6px; overflow: hidden; background: #f2f1ed; min-height: 240px; }
+.drie-d canvas { display: block; width: 100% !important; height: auto !important; cursor: grab; }
+.drie-d canvas:active { cursor: grabbing; }
+.aanpassingen { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 4px 18px; }
+.optiegroep { border: 0; margin: 0 0 10px; padding: 0; }
+.optiegroep legend { font-weight: 600; font-size: .88rem; margin-bottom: 6px; padding: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: baseline; gap: 6px; border: 1px solid var(--lijn); border-radius: 999px; padding: 4px 11px; cursor: pointer; font-size: .85rem; background: var(--vlak); }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip:has(input:checked) { border-color: var(--accent); background: var(--accent-zacht); box-shadow: inset 0 0 0 1px var(--accent); }
+.chip:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip .meer { color: var(--zacht); font-size: .75rem; font-variant-numeric: tabular-nums; }
+.chip .bol { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); align-self: center; }
+.optiegroep.fout .chip:has(input:checked) { border-color: var(--fout); box-shadow: inset 0 0 0 1px var(--fout); }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -257,11 +276,34 @@ td .staal { display: inline-block; vertical-align: -3px; }
       <ul class="klein"><li>Pijltjes: 1 cm verplaatsen (Shift: 10 cm)</li><li>R / Shift+R: draaien</li><li>D: dupliceren</li><li>Delete: verwijderen</li><li>Alt tijdens slepen: zonder magneet</li><li>Ctrl+Z: ongedaan maken</li><li>Esc: stoppen met tekenen</li></ul>
     </details>
   </aside>
+  <div class="midden">
   <section class="kaart tekenvlak">
-    <div class="kaartkop"><h2>Bovenaanzicht</h2><span class="klein">raster 10 cm · maten in cm</span></div>
+    <div class="kaartkop">
+      <div class="tabs" role="group" aria-label="Weergave van het ontwerp">
+        <button type="button" data-o-weergave="boven" aria-pressed="true">Tekenen (bovenaanzicht)</button>
+        <button type="button" data-o-weergave="voor" aria-pressed="false">Vooraanzicht</button>
+        <button type="button" data-o-weergave="3d" aria-pressed="false">3D</button>
+      </div>
+      <span class="klein" id="o-weergave-uitleg">raster 10 cm · maten in cm</span>
+    </div>
     <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="o-voor" class="tekening" hidden></div>
+    <div id="o-3d" class="drie-d" hidden></div>
+    <div id="o-3d-knoppen" class="knoppenrij" hidden>
+      <span class="klein">Standpunt:</span>
+      <button type="button" class="tweede" data-standpunt="schuin">Schuin</button>
+      <button type="button" class="tweede" data-standpunt="voor">Voor</button>
+      <button type="button" class="tweede" data-standpunt="zij">Zij</button>
+      <button type="button" class="tweede" data-standpunt="boven">Boven</button>
+      <span class="klein">Sleep om te draaien, scroll om te zoomen.</span>
+    </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>
   </section>
+  <section class="kaart">
+    <div class="kaartkop"><h2>Aanpassingen voor de hele zetel</h2><span class="klein">poten, hout, comfort, rug, naden …</span></div>
+    <div id="o-aanpassingen" class="aanpassingen"></div>
+  </section>
+  </div>
   <aside class="resultaat" aria-label="Resultaat vrij ontwerp">
     <section class="kaart" aria-live="polite">
       <div class="kaartkop"><h2>Prijs</h2><span id="o-status" class="status ok"></span></div>
@@ -325,6 +367,7 @@ td .staal { display: inline-block; vertical-align: -3px; }
   </section>
 </main>
 <footer>Demo van de configurator-motor. Modellen, maten en prijzen zijn verzonnen. Eigen materialen en je laatste ontwerp worden alleen in deze browser bewaard.</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>/*BUNDEL*/</script>
 </body>
 </html>

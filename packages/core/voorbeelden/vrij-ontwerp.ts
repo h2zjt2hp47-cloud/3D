@@ -2,9 +2,172 @@
  * Catalogus voor vrije zetelontwerpen (DEMO: alle prijzen en verbruiken zijn verzonnen).
  * Elk elementtype heeft maten per cm, een prijs per prijsgroep en een meerprijs per 10 cm.
  */
-import type { Ontwerp, OntwerpCatalogus } from '../src/index.js';
+import type { Ontwerp, OntwerpCatalogus, OptieGroep } from '../src/index.js';
 
 const g = (a: number, b: number, c: number, eigen: number) => ({ A: a, B: b, C: c, EIGEN: eigen });
+
+const GESTOFFEERD = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'arm', 'poef'];
+const ZITTEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'poef'];
+const MET_RUG = ['zit', 'hoek'];
+
+/**
+ * Aanpassingen, gebaseerd op wat zetelmerken gangbaar aanbieden:
+ * poten en onderbouw, poothoogte, houtafwerking, metaalafwerking, zithoogte, zitcomfort,
+ * zitting, rug, rughoogte, naden/bies, armstijl, armhoogte, extra's en houten tussenstukken.
+ */
+export const zetelOpties: OptieGroep[] = [
+  {
+    code: 'poten', label: 'Poten en onderbouw', niveau: 'ontwerp', perElement: true, voorTypen: GESTOFFEERD, standaard: 'conisch',
+    keuzes: [
+      { code: 'conisch', label: 'Conische houten poot', uitleg: 'Taps toelopend, Scandinavisch', teken: { vorm: 'conisch' }, kost: 12 },
+      { code: 'blok', label: 'Houten blokpoot', prijs: 12, teken: { vorm: 'blok' }, kost: 14 },
+      { code: 'cilinder', label: 'Houten cilinderpoot', prijs: 8, teken: { vorm: 'cilinder' }, kost: 12 },
+      { code: 'slede', label: 'Metalen slede (U-frame)', prijs: 95, teken: { vorm: 'slede', metaal: true }, kost: 45 },
+      { code: 'haarspeld', label: 'Haarspeldpoot (metaal)', prijs: 35, teken: { vorm: 'haarspeld', metaal: true }, kost: 18 },
+      { code: 'messing', label: 'Messing cilinderpoot', prijs: 60, teken: { vorm: 'cilinder', metaal: true, kleur: '#b8963e' }, kost: 32 },
+      {
+        code: 'plint', label: 'Houten plint (sokkel)', uitleg: 'Doorlopende lage sokkel', prijsPerM: 140, teken: { vorm: 'plint' }, kostPerM: 55,
+        alleenMet: { poothoogte: ['laag'] }, reden: 'een plint is altijd laag',
+      },
+      {
+        code: 'verdekt', label: 'Verdekte poten (zwevend)', uitleg: 'Poten ver naar binnen, zetel lijkt te zweven', prijs: 20, teken: { vorm: 'verdekt' }, kost: 10,
+        alleenMet: { poothoogte: ['laag', 'standaard'] }, reden: 'verdekte poten zijn hoogstens 8 cm',
+      },
+    ],
+  },
+  {
+    code: 'poothoogte', label: 'Poothoogte', niveau: 'ontwerp', voorTypen: GESTOFFEERD, standaard: 'standaard',
+    keuzes: [
+      { code: 'laag', label: 'Laag (4 cm)', teken: { hoogte: 4 } },
+      { code: 'standaard', label: 'Standaard (12 cm)', teken: { hoogte: 12 } },
+      { code: 'hoog', label: 'Hoog (18 cm)', prijs: 40, teken: { hoogte: 18 }, uitleg: 'Makkelijker poetsen eronder' },
+    ],
+  },
+  {
+    code: 'hout', label: 'Houtafwerking', niveau: 'ontwerp', standaard: 'eik_naturel',
+    keuzes: [
+      { code: 'eik_naturel', label: 'Eik naturel geolied', teken: { kleur: '#c8a27a' } },
+      { code: 'eik_zwart', label: 'Eik zwart gebeitst', teken: { kleur: '#2f2a26' } },
+      { code: 'eik_gerookt', label: 'Gerookte eik', prijs: 60, teken: { kleur: '#7a5a3f' } },
+      { code: 'notelaar', label: 'Amerikaanse notelaar', prijs: 120, teken: { kleur: '#5e4030' }, kost: 50 },
+      { code: 'essen_wit', label: 'Essen wit gepigmenteerd', prijs: 40, teken: { kleur: '#e3d6bf' } },
+    ],
+  },
+  {
+    code: 'metaal', label: 'Metaalafwerking', niveau: 'ontwerp', standaard: 'zwart',
+    keuzes: [
+      { code: 'zwart', label: 'Mat zwart', teken: { kleur: '#2b2b2b' } },
+      { code: 'brons', label: 'Brons', prijs: 40, teken: { kleur: '#7c5b3a' } },
+      { code: 'rvs', label: 'Geborsteld rvs', prijs: 30, teken: { kleur: '#a7a9ac' } },
+      { code: 'chroom', label: 'Chroom', prijs: 30, teken: { kleur: '#c9ccd0' } },
+    ],
+  },
+  {
+    code: 'zithoogte', label: 'Zithoogte', niveau: 'ontwerp', standaard: 'standaard',
+    keuzes: [
+      { code: 'laag', label: 'Laag (42 cm)', teken: { hoogte: 42 } },
+      { code: 'standaard', label: 'Standaard (45 cm)', teken: { hoogte: 45 } },
+      { code: 'hoog', label: 'Hoog (48 cm)', prijs: 60, teken: { hoogte: 48 }, uitleg: 'Makkelijker opstaan' },
+    ],
+  },
+  {
+    code: 'comfort', label: 'Zitcomfort', niveau: 'ontwerp', perElement: true, voorTypen: ZITTEN, standaard: 'veren',
+    keuzes: [
+      { code: 'schuim', label: 'Koudschuim (stevig)', pct: -4 },
+      { code: 'veren', label: 'Pocketveren + schuim' },
+      { code: 'traagschuim', label: 'Met traagschuim', pct: 6, kost: 18 },
+      { code: 'dons', label: 'Dons-mix (zacht, losser)', pct: 12, kost: 40 },
+    ],
+  },
+  {
+    code: 'zitting', label: 'Zitting', niveau: 'ontwerp', voorTypen: ['zit', 'hoek', 'chaise', 'zit_zonder_rug'], standaard: 'losse_kussens',
+    keuzes: [
+      { code: 'losse_kussens', label: 'Losse zitkussens' },
+      { code: 'vaste_zitting', label: 'Vaste zitting (strak gestoffeerd)', pct: -3 },
+    ],
+  },
+  {
+    code: 'rug', label: 'Rug', niveau: 'ontwerp', perElement: true, voorTypen: MET_RUG, standaard: 'vast',
+    keuzes: [
+      { code: 'vast', label: 'Vaste rug (strak)' },
+      { code: 'los', label: 'Losse rugkussens', pct: 5, stofPct: 8, teken: { los: true } },
+      { code: 'los_dons', label: 'Losse rugkussens met dons', pct: 10, stofPct: 8, kost: 30, teken: { los: true } },
+      { code: 'capitonne', label: 'Capitonnage (knopen)', pct: 14, stofPct: 10, teken: { capitonne: true }, alleenMet: { naad: ['gewoon', 'stiksel'] }, reden: 'capitonnage combineren we niet met een bies' },
+    ],
+  },
+  {
+    code: 'rughoogte', label: 'Rughoogte', niveau: 'ontwerp', perElement: true, voorTypen: MET_RUG, standaard: 'standaard',
+    keuzes: [
+      { code: 'laag', label: 'Laag (70 cm)', pct: -3, stofPct: -5, teken: { hoogte: 70 } },
+      { code: 'standaard', label: 'Standaard (80 cm)', teken: { hoogte: 80 } },
+      { code: 'hoog', label: 'Hoog (92 cm)', pct: 6, stofPct: 8, teken: { hoogte: 92 } },
+    ],
+  },
+  {
+    code: 'naad', label: 'Naden', niveau: 'ontwerp', perElement: true, voorTypen: GESTOFFEERD, standaard: 'gewoon',
+    keuzes: [
+      { code: 'gewoon', label: 'Gewone naad' },
+      { code: 'plat', label: 'Platte naad (french seam)', pct: 3 },
+      { code: 'bies', label: 'Bies in dezelfde stof', pct: 4, stofPct: 4, teken: { bies: true } },
+      { code: 'contrastbies', label: 'Contrastbies (donker)', pct: 6, stofPct: 3, teken: { bies: true, contrast: true } },
+      { code: 'stiksel', label: 'Dubbele sierstiksel', pct: 5, teken: { stiksel: true } },
+    ],
+  },
+  {
+    code: 'armstijl', label: 'Armstijl', niveau: 'element', voorTypen: ['arm'], standaard: 'strak',
+    keuzes: [
+      { code: 'strak', label: 'Strak (track arm)', teken: { vorm: 'strak' } },
+      { code: 'rond', label: 'Rolarm', prijs: 30, teken: { vorm: 'rond' } },
+      { code: 'engels', label: 'Lage Engelse rolarm', prijs: 40, teken: { vorm: 'engels' } },
+      { code: 'schuin', label: 'Schuin aflopend', prijs: 20, teken: { vorm: 'schuin' } },
+      { code: 'houtblad', label: 'Gestoffeerd met houten blad', prijs: 95, teken: { vorm: 'houtblad' }, kost: 35 },
+      { code: 'hout', label: 'Massief houten arm', prijs: 180, teken: { vorm: 'hout' }, kost: 80 },
+    ],
+  },
+  {
+    code: 'armhoogte', label: 'Armhoogte', niveau: 'element', voorTypen: ['arm'], standaard: 'standaard',
+    keuzes: [
+      { code: 'laag', label: 'Laag (55 cm)', teken: { hoogte: 55 } },
+      { code: 'standaard', label: 'Standaard (62 cm)', teken: { hoogte: 62 } },
+      { code: 'hoog', label: 'Hoog (70 cm)', prijs: 15, teken: { hoogte: 70 } },
+    ],
+  },
+  {
+    code: 'arm_extra', label: 'Extra in de arm', niveau: 'element', voorTypen: ['arm'], standaard: 'geen',
+    keuzes: [
+      { code: 'geen', label: 'Geen' },
+      { code: 'usb', label: 'USB-A/C-lader', prijs: 75, kost: 28 },
+      { code: 'opberg', label: 'Opbergvak met klep', prijs: 60, kost: 20, alleenMet: { armstijl: ['strak', 'houtblad'] }, reden: 'past alleen in een strakke arm' },
+    ],
+  },
+  {
+    code: 'functie', label: 'Functie', niveau: 'element', voorTypen: ['zit'], standaard: 'geen',
+    keuzes: [
+      { code: 'geen', label: 'Geen', teken: { vorm: 'geen' } },
+      { code: 'hoofdsteun', label: 'Verstelbare hoofdsteun', prijs: 140, kost: 45, teken: { vorm: 'hoofdsteun' } },
+      { code: 'relax', label: 'Elektrische relaxfunctie', prijs: 690, kost: 260, teken: { vorm: 'relax' }, alleenMet: { zitting: ['losse_kussens'] }, reden: 'relax vraagt losse zitkussens' },
+      { code: 'relax_hoofdsteun', label: 'Relax + hoofdsteun', prijs: 790, kost: 300, teken: { vorm: 'relax_hoofdsteun' }, alleenMet: { zitting: ['losse_kussens'] }, reden: 'relax vraagt losse zitkussens' },
+    ],
+  },
+  {
+    code: 'poef_uitvoering', label: 'Uitvoering poef', niveau: 'element', voorTypen: ['poef'], standaard: 'standaard',
+    keuzes: [
+      { code: 'standaard', label: 'Standaard' },
+      { code: 'opberg', label: 'Opbergpoef met deksel', prijs: 90, kost: 30 },
+      { code: 'wieltjes', label: 'Op verdekte wieltjes', prijs: 45, kost: 15 },
+    ],
+  },
+  {
+    code: 'console_uitvoering', label: 'Uitvoering tussenstuk', niveau: 'element', voorTypen: ['console'], standaard: 'open',
+    keuzes: [
+      { code: 'open', label: 'Met open vak', teken: { vorm: 'open' } },
+      { code: 'blad', label: 'Alleen blad (tafeltje)', prijs: -30, teken: { vorm: 'blad' } },
+      { code: 'lade', label: 'Met lade', prijs: 120, kost: 40, teken: { vorm: 'lade' } },
+      { code: 'klep', label: 'Opbergvak met klep', prijs: 90, kost: 30, teken: { vorm: 'klep' } },
+      { code: 'lader', label: 'Met draadloze lader + USB', prijs: 160, kost: 55, teken: { vorm: 'lader' } },
+    ],
+  },
+];
 
 export const zetelCatalogus: OntwerpCatalogus = {
   naam: 'Zetelelementen (demo)',
@@ -13,6 +176,7 @@ export const zetelCatalogus: OntwerpCatalogus = {
   uurloon: 48,
   btwProcent: 21,
   leveringWaarschuwingVanaf: 340,
+  opties: zetelOpties,
   typen: [
     {
       code: 'zit', label: 'Zitelement', tekenstijl: 'zit',
@@ -43,6 +207,12 @@ export const zetelCatalogus: OntwerpCatalogus = {
       breedte: { min: 12, max: 40, standaard: 20 }, diepte: { min: 60, max: 130, standaard: 95 },
       prijs: g(190, 220, 260, 170), per10cm: g(20, 24, 28, 16),
       stofVast: 0.7, stofPerM: 1.5, kostVast: 45, kostPerM: 60, uren: 1.5, urenPerM: 1,
+    },
+    {
+      code: 'console', label: 'Houten tussenstuk', tekenstijl: 'console',
+      breedte: { min: 25, max: 80, standaard: 40 }, diepte: { min: 60, max: 120, standaard: 95 },
+      prijs: g(260, 260, 260, 260), per10cm: g(30, 30, 30, 30),
+      stofVast: 0, stofPerM: 0, kostVast: 90, kostPerM: 120, uren: 2, urenPerM: 1,
     },
     {
       code: 'poef', label: 'Poef', tekenstijl: 'poef',
@@ -91,6 +261,20 @@ export const startOntwerpen: Record<string, { label: string; ontwerp: Ontwerp }>
         { id: 'e3', type: 'zit', x: 120, y: 0, breedte: 100, diepte: 95, rotatie: 0 },
         { id: 'e4', type: 'chaise', x: 220, y: 0, breedte: 90, diepte: 170, rotatie: 0, materiaal: 'linnen_brume' },
         { id: 'e5', type: 'poef', x: 70, y: 115, breedte: 80, diepte: 60, rotatie: 0 },
+      ],
+    },
+  },
+  console: {
+    label: 'Sofa met houten tussenstuk',
+    ontwerp: {
+      hoofdmateriaal: 'linnen_travertin',
+      opties: { poten: 'plint', poothoogte: 'laag', hout: 'eik_gerookt', rug: 'los', naad: 'bies' },
+      elementen: [
+        { id: 'e1', type: 'arm', x: 0, y: 0, breedte: 22, diepte: 95, rotatie: 0, opties: { armstijl: 'houtblad' } },
+        { id: 'e2', type: 'zit', x: 22, y: 0, breedte: 95, diepte: 95, rotatie: 0 },
+        { id: 'e3', type: 'console', x: 117, y: 0, breedte: 40, diepte: 95, rotatie: 0, opties: { console_uitvoering: 'lade' } },
+        { id: 'e4', type: 'zit', x: 157, y: 0, breedte: 95, diepte: 95, rotatie: 0 },
+        { id: 'e5', type: 'arm', x: 252, y: 0, breedte: 22, diepte: 95, rotatie: 0, opties: { armstijl: 'houtblad' } },
       ],
     },
   },
