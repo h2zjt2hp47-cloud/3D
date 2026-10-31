@@ -22,6 +22,7 @@ NOTITIES = {
     'docs/onderzoek-zetelconfigurators.md': ('Onderzoek zetelconfigurators', ['configurator', 'onderzoek']),
     'docs/fase0-productkennis-meubels.md': ('Fase 0 - productkennis meubels', ['configurator', 'klant', 'sjabloon']),
     'README.md': ('Technische opbouw (README)', ['configurator', 'techniek']),
+    '.claude/skills/zetel-3d/SKILL.md': ('Skill - 3D-logica zetels', ['configurator', 'skill', '3d']),
 }
 TITEL_VAN = {os.path.basename(k): v[0] for k, v in NOTITIES.items()}
 
@@ -40,13 +41,22 @@ def frontmatter(titel, tags):
     return f'---\ntitle: "{titel}"\ntags: [{", ".join(tags)}]\nklant: Corneille & Silence\nbijgewerkt: {VANDAAG}\n---\n\n'
 
 
+def zonder_frontmatter(tekst: str) -> str:
+    # Een skill heeft al YAML-frontmatter; die tonen we als codeblok zodat Obsidian één frontmatter heeft.
+    if tekst.startswith('---\n'):
+        einde = tekst.find('\n---\n', 4)
+        if einde > 0:
+            return '```yaml\n' + tekst[4:einde] + '\n```\n' + tekst[einde + 5:]
+    return tekst
+
+
 def main():
     if os.path.exists(UIT):
         shutil.rmtree(UIT)
     os.makedirs(os.path.join(UIT, 'afbeeldingen'))
     for bron, (titel, tags) in NOTITIES.items():
         with open(os.path.join(ROOT, bron), encoding='utf-8') as f:
-            tekst = omzetten(f.read())
+            tekst = omzetten(zonder_frontmatter(f.read()))
         with open(os.path.join(UIT, f'{titel}.md'), 'w', encoding='utf-8') as f:
             f.write(frontmatter(titel, tags) + tekst)
     for b in os.listdir(os.path.join(ROOT, 'docs', 'afbeeldingen')):
@@ -85,6 +95,7 @@ Productconfigurator (configureren → prijzen → offerte) voor zitmeubelen op m
 - [[Onderzoek zetelconfigurators]]: prijsopbouw, stofverbruik, tekenen
 - [[Fase 0 - productkennis meubels]]: invulsjabloon voor het gesprek met de klant
 - [[Technische opbouw (README)]]: voor de ontwikkelaar
+- [[Skill - 3D-logica zetels]]: hoe de 3D-weergave werkt en hoe je nieuwe vormen toevoegt (skill voor Claude)
 
 ## Volgende acties
 - [ ] Pilot formeel bevestigen met Corneille & Silence
@@ -95,6 +106,8 @@ Productconfigurator (configureren → prijzen → offerte) voor zitmeubelen op m
 
 ![[modellen-3d.png]]
 """)
+    # De skill ook apart als zip (om te installeren in Claude).
+    shutil.make_archive(os.path.join(ROOT, 'obsidian-export', 'zetel-3d-skill'), 'zip', os.path.join(ROOT, '.claude', 'skills'), 'zetel-3d')
     zip_pad = shutil.make_archive(os.path.join(ROOT, 'obsidian-export', 'Configurator'), 'zip', os.path.join(ROOT, 'obsidian-export'), 'Configurator')
     print(zip_pad)
 

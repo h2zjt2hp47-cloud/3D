@@ -1,0 +1,42 @@
+/* Huisstijl Corneille & Silence: wit, petrol #003241, grijs #484848, Montserrat met gespatieerde kapitalen. Altijd licht. */
+:root[data-huisstijl="cs"] {
+  --achtergrond: #ffffff;
+  --vlak: #ffffff;
+  --inkt: #484848;
+  --zacht: #8e8e8e;
+  --lijn: #e2e2e2;
+  --accent: #003241;
+  --accent-zacht: #f6f6f6;
+  --papier: #ffffff;
+  --goed: #2f6b47;
+  --let-op: #8a5d12;
+  --fout: #a1342b;
+  --display: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  --tekst: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+:root[data-huisstijl="cs"] body { font-weight: 400; letter-spacing: .01em; }
+:root[data-huisstijl="cs"] h1, :root[data-huisstijl="cs"] h2 { font-weight: 400; text-transform: uppercase; letter-spacing: .22em; }
+:root[data-huisstijl="cs"] h1 { font-size: 1rem; }
+:root[data-huisstijl="cs"] h2 { font-size: .95rem; }
+:root[data-huisstijl="cs"] h3, :root[data-huisstijl="cs"] h4 { font-weight: 500; letter-spacing: .04em; }
+:root[data-huisstijl="cs"] header { flex-direction: column; justify-content: center; text-align: center; border-bottom: 0; padding-top: 28px; padding-bottom: 8px; }
+:root[data-huisstijl="cs"] .merk { font-family: "Montserrat", sans-serif; color: #003241; font-size: clamp(1.25rem, 3vw, 1.75rem); letter-spacing: .14em; font-variant: small-caps; font-weight: 500; padding-bottom: 12px; border-bottom: 2px solid #003241; margin: 0 auto 4px; }
+:root[data-huisstijl="cs"] header h1 { color: var(--zacht); }
+:root[data-huisstijl="cs"] .demo { display: none; }
+:root[data-huisstijl="cs"] .producten { justify-content: center; gap: 2px; position: relative; padding: 0 clamp(0px, 8vw, 140px); }
+:root[data-huisstijl="cs"] .producten::before, :root[data-huisstijl="cs"] .producten::after { content: ""; position: absolute; top: 50%; width: clamp(0px, 7vw, 120px); border-top: 1px solid #c8c8c8; }
+:root[data-huisstijl="cs"] .producten::before { left: 0; }
+:root[data-huisstijl="cs"] .producten::after { right: 0; }
+:root[data-huisstijl="cs"] .producten button { font-family: "Raleway", sans-serif; text-transform: uppercase; font-size: .8rem; letter-spacing: .06em; border: 0; border-radius: 0; color: #707070; padding: 9px 14px; }
+:root[data-huisstijl="cs"] .producten button[aria-pressed="true"] { background: #f6f6f6; color: #484848; }
+:root[data-huisstijl="cs"] main { padding-top: 12px; }
+:root[data-huisstijl="cs"] .kaart, :root[data-huisstijl="cs"] .stap { border-radius: 0; border-color: #ececec; box-shadow: none; }
+:root[data-huisstijl="cs"] .stapnr { background: #003241; color: #fff; }
+:root[data-huisstijl="cs"] .modelkaart h2 { display: inline-block; background: #484848; color: #fff; padding: 7px 18px; letter-spacing: .08em; text-transform: none; font-size: .9rem; }
+:root[data-huisstijl="cs"] .modelbeelden figure { border-radius: 0; }
+:root[data-huisstijl="cs"] button, :root[data-huisstijl="cs"] .tegel, :root[data-huisstijl="cs"] .chip, :root[data-huisstijl="cs"] .tabs button { border-radius: 0 !important; }
+:root[data-huisstijl="cs"] .knoppenrij button:not(.tweede):not(.gevaar), :root[data-huisstijl="cs"] .acties button:not(.tweede), :root[data-huisstijl="cs"] #m-opslaan { background: #484848; border-color: #484848; color: #fff; text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; }
+:root[data-huisstijl="cs"] .grote-prijs { font-family: "Montserrat", sans-serif; font-weight: 300; letter-spacing: .02em; }
+:root[data-huisstijl="cs"] .tabs button[aria-pressed="true"], :root[data-huisstijl="cs"] .knoppenlijst button[aria-pressed="true"] { background: #003241; border-color: #003241; }
+:root[data-huisstijl="cs"] footer { border-top: 1px solid #ececec; padding-top: 18px; color: #8e8e8e; }

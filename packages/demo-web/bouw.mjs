@@ -20,7 +20,16 @@ if (existsSync('fotos')) {
   }
 }
 const fotoScript = `window.__FOTOS = ${JSON.stringify(fotos).replace(/</g, '\\u003c')};`;
-const html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${js}`);
+let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${js}`);
 mkdirSync('dist', { recursive: true });
-writeFileSync('dist/configurator-demo.html', html);
-console.log(`dist/configurator-demo.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's)`);
+writeFileSync('dist/configurator-demo.html', html.replace('<!--MERK-->', '').replace('/*HUISSTIJL*/', ''));
+
+// Variant in de huisstijl van de klant (alleen als bestand, niet om publiek te publiceren).
+html = html
+  .replace('<html lang="nl">', '<html lang="nl" data-huisstijl="cs">')
+  .replace('<title>Configurator demo</title>', '<title>Corneille &amp; Silence · Configurator</title>')
+  .replace('<!--MERK-->', '<div class="merk">Corneille &amp; Silence</div>')
+  .replace('/*HUISSTIJL*/', () => readFileSync('src/huisstijl-cs.css', 'utf8'))
+  .replace('family=Figtree:wght@400;500;600', 'family=Figtree:wght@400;500;600&family=Montserrat:wght@300;400;500;600&family=Raleway:wght@400;500');
+writeFileSync('dist/configurator-corneille-silence.html', html);
+console.log(`dist/configurator-demo.html en dist/configurator-corneille-silence.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's)`);
