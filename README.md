@@ -8,6 +8,7 @@ Productconfigurator (configureren → prijzen → offerte) voor maatwerkmeubelen
 
 Achtergrond en stappenplan: [`docs/configurator-analyse-en-stappenplan.md`](docs/configurator-analyse-en-stappenplan.md)
 Fase 0 (productkennis van de pilootklant): [`docs/fase0-productkennis-meubels.md`](docs/fase0-productkennis-meubels.md)
+Onderzoek andere zetelconfigurators (prijsopbouw, stofverbruik, tekenen): [`docs/onderzoek-zetelconfigurators.md`](docs/onderzoek-zetelconfigurators.md)
 
 ## Structuur
 
