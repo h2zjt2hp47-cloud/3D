@@ -5,10 +5,11 @@
 import { kiesProduct, startConfigurator } from './configurator.js';
 import { startMaterialen } from './materialen-ui.js';
 import { modelOntwerp, startModellen } from './modellen-ui.js';
-import { kiesWeergave, laadInOntwerper, startOntwerper } from './ontwerper.js';
+import { startCatalogusEditor } from './catalogus-ui.js';
+import { huidigOntwerp, kiesWeergave, laadInOntwerper, startOntwerper } from './ontwerper.js';
 import { $, getKorting, setKorting } from './staat.js';
 
-const weergaven = ['modellen', 'sofa', 'ontwerp', 'kast', 'materialen'] as const;
+const weergaven = ['modellen', 'sofa', 'ontwerp', 'kast', 'materialen', 'catalogus'] as const;
 type Weergave = (typeof weergaven)[number];
 
 function toon(w: Weergave) {
@@ -17,6 +18,8 @@ function toon(w: Weergave) {
   $('#view-ontwerp').hidden = w !== 'ontwerp';
   $('#view-materialen').hidden = w !== 'materialen';
   $('#view-modellen').hidden = w !== 'modellen';
+  $('#view-catalogus').hidden = w !== 'catalogus';
+  if (w === 'catalogus') $('#productnaam').textContent = 'Catalogus';
   if (w === 'modellen') $('#productnaam').textContent = 'Modellen';
   if (w === 'sofa' || w === 'kast') kiesProduct(w, true);
   if (w === 'ontwerp') $('#productnaam').textContent = 'Zetel vrij ontwerpen';
@@ -65,14 +68,16 @@ veilig('Klantkeuze', startKlant);
 veilig('Sofa/kast op maat', startConfigurator);
 veilig('Vrij ontwerp', startOntwerper);
 veilig('Materialen', startMaterialen);
-veilig('Modellen', () => startModellen((code) => {
+function openModel(code: string) {
   const o = modelOntwerp(code);
   if (!o) return;
   toon('ontwerp');
   laadInOntwerper(o);
   kiesWeergave('3d');
   window.scrollTo(0, 0);
-}));
+}
+veilig('Modellen', () => startModellen(openModel));
+veilig('Catalogus', () => startCatalogusEditor({ huidigOntwerp, openModel }));
 document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) =>
   b.addEventListener('click', () => veilig('Navigatie', () => toon(b.dataset.weergave as Weergave))),
 );

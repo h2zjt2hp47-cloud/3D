@@ -3,10 +3,14 @@
  * Materialen en het laatste ontwerp worden in deze browser bewaard (localStorage),
  * zodat ze een herlaadbeurt overleven. Werkt de opslag niet, dan werkt alles gewoon zonder.
  */
-import { leesMaterialen, type Materiaal } from '../../core/src/index.js';
+import { controleerCatalogus, leesMaterialen, type Materiaal, type ModelDefinitie, type OntwerpCatalogus } from '../../core/src/index.js';
+import { zetelModellen } from '../../core/voorbeelden/modellen.js';
 import { standaardMaterialen, STOFGROEPEN } from '../../core/voorbeelden/sofa.js';
+import { zetelCatalogus } from '../../core/voorbeelden/vrij-ontwerp.js';
 
 const SLEUTEL_MATERIALEN = 'configurator-demo.materialen.v1';
+const SLEUTEL_CATALOGUS = 'configurator-demo.catalogus.v1';
+const SLEUTEL_MODELLEN = 'configurator-demo.eigen-modellen.v1';
 
 function lees(sleutel: string): string | null {
   try {
@@ -40,7 +44,40 @@ function startMaterialen(): Materiaal[] {
 
 let materialen: Materiaal[] = startMaterialen();
 let korting = 0;
-const luisteraars = { materialen: new Set<() => void>(), korting: new Set<() => void>() };
+const luisteraars = { materialen: new Set<() => void>(), korting: new Set<() => void>(), catalogus: new Set<() => void>() };
+
+// ---------- catalogus (elementen, opties) en eigen modellen ----------
+function startCatalogus(): { catalogus: OntwerpCatalogus; modellen: ModelDefinitie[] } {
+  try {
+    const c = JSON.parse(lees(SLEUTEL_CATALOGUS) ?? 'null') as OntwerpCatalogus | null;
+    const m = JSON.parse(lees(SLEUTEL_MODELLEN) ?? '[]') as ModelDefinitie[];
+    const catalogus = c && Array.isArray(c.typen) ? c : structuredClone(zetelCatalogus);
+    const modellen = Array.isArray(m) ? m : [];
+    if (controleerCatalogus(catalogus, [...zetelModellen, ...modellen]).length === 0) return { catalogus, modellen };
+  } catch {
+    /* ongeldige opslag: standaard gebruiken */
+  }
+  return { catalogus: structuredClone(zetelCatalogus), modellen: [] };
+}
+const start = startCatalogus();
+let catalogus: OntwerpCatalogus = start.catalogus;
+let eigenModellen: ModelDefinitie[] = start.modellen;
+
+export const getCatalogus = () => catalogus;
+export const getEigenModellen = () => eigenModellen;
+/** Alle modellen: de collectie plus de zelf bewaarde modellen. */
+export const getModellen = () => [...zetelModellen, ...eigenModellen];
+export function setCatalogus(nieuw: OntwerpCatalogus, modellen: ModelDefinitie[] = eigenModellen) {
+  catalogus = nieuw;
+  eigenModellen = modellen;
+  bewaar(SLEUTEL_CATALOGUS, JSON.stringify(nieuw));
+  bewaar(SLEUTEL_MODELLEN, JSON.stringify(modellen));
+  luisteraars.catalogus.forEach((f) => f());
+}
+export function herstelCatalogus() {
+  bewaar(SLEUTEL_CATALOGUS, null);
+  setCatalogus(structuredClone(zetelCatalogus), eigenModellen);
+}
 
 export const groepen = STOFGROEPEN;
 export const getMaterialen = () => materialen;

@@ -238,6 +238,26 @@ main.modellen { display: block; }
 .foutmelding p { margin: 6px 0 0; font-family: ui-monospace, monospace; font-size: .85rem; }
 .toevoegen { border-top: 1px solid var(--lijn); padding-top: 8px; margin: 8px 0; }
 .toevoegen .knoppenrij { margin-top: 6px; }
+
+main.catalogus { display: block; }
+.catraster { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .catraster { grid-template-columns: minmax(0, 1fr); } }
+.catlijst { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.catlijst li { display: grid; gap: 4px; padding: 8px 10px; border: 1px solid var(--lijn); border-radius: 6px; }
+.catlijst li.actief { border-color: var(--accent); background: var(--accent-zacht); }
+.catlijst .knoppenrij { margin-top: 2px; }
+.catform h3 { font-size: 1.2rem; margin-bottom: 8px; }
+.catform h4 { font-size: .95rem; margin: 14px 0 6px; font-family: var(--tekst); font-weight: 600; }
+.formraster.drie { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.prijstabel input, .keuzetabel input[type="number"] { width: 90px; padding: 4px 6px; border: 1px solid var(--lijn); border-radius: 5px; background: var(--achtergrond); color: var(--inkt); text-align: right; }
+.keuzetabel input[type="text"] { width: 150px; padding: 4px 6px; border: 1px solid var(--lijn); border-radius: 5px; background: var(--achtergrond); color: var(--inkt); }
+.keuzetabel td, .keuzetabel th { padding: 4px 5px; }
+.kleurcel { white-space: nowrap; }
+.kleurcel input[type="color"] { width: 34px; height: 26px; padding: 1px; vertical-align: middle; }
+.catvoorbeeld { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.catvoorbeeld h4, .catvoorbeeld p { grid-column: 1 / -1; margin: 0; }
+.catvoorbeeld .tekening { min-height: 120px; }
+.meldingen li.ok { border-color: var(--goed); background: color-mix(in srgb, var(--goed) 10%, transparent); }
 [hidden] { display: none !important; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -251,6 +271,7 @@ main.modellen { display: block; }
     <button type="button" data-weergave="ontwerp" aria-pressed="false">Vrij ontwerp</button>
     <button type="button" data-weergave="kast" aria-pressed="false">Kast op maat</button>
     <button type="button" data-weergave="materialen" aria-pressed="false">Materialen</button>
+    <button type="button" data-weergave="catalogus" aria-pressed="false">Catalogus</button>
   </nav>
   <div class="klant" role="radiogroup" aria-label="Klant">
     <label><input type="radio" name="klant" value="particulier" id="klant-particulier" checked> Particulier</label>
@@ -411,6 +432,60 @@ main.modellen { display: block; }
     </form>
   </section>
 </main>
+<main id="view-catalogus" class="catalogus" hidden>
+  <p class="intro klein">Ontwerp hier zelf nieuwe elementen, opties en modellen. Alles wordt gecontroleerd voor het bewaard wordt, en is daarna meteen bruikbaar in "Vrij ontwerp" en bij "Modellen". De catalogus wordt in deze browser bewaard; via "Delen" kopieer je hem naar een andere computer.</p>
+  <div class="tabs filter" role="group" aria-label="Onderdeel">
+    <button type="button" data-cat="elementen" aria-pressed="true">Elementen</button>
+    <button type="button" data-cat="opties" aria-pressed="false">Opties</button>
+    <button type="button" data-cat="modellen" aria-pressed="false">Modellen</button>
+    <button type="button" data-cat="delen" aria-pressed="false">Delen</button>
+  </div>
+  <section id="cat-elementen" class="catraster">
+    <div class="kaart">
+      <div class="kaartkop"><h2>Elementen</h2><button type="button" id="cat-nieuw-type">+ Nieuw element</button></div>
+      <ul id="cat-typen" class="catlijst"></ul>
+    </div>
+    <form id="cat-type-form" class="kaart catform" novalidate hidden></form>
+  </section>
+  <section id="cat-opties" class="catraster" hidden>
+    <div class="kaart">
+      <div class="kaartkop"><h2>Optiegroepen</h2><button type="button" id="cat-nieuwe-groep">+ Nieuwe optiegroep</button></div>
+      <ul id="cat-groepen" class="catlijst"></ul>
+      <ul id="cat-groep-meldingen" class="meldingen"></ul>
+    </div>
+    <form id="cat-groep-form" class="kaart catform breed-form" novalidate hidden></form>
+  </section>
+  <section id="cat-modellen" class="catraster" hidden>
+    <form id="cm-form" class="kaart" novalidate>
+      <div class="kaartkop"><h2>Huidig ontwerp bewaren als model</h2></div>
+      <p class="klein">Ontwerp eerst een zetel in "Vrij ontwerp" (of vertrek van een bestaand model) en bewaar hem hier als nieuw model.</p>
+      <div class="formraster">
+        <label class="maatveld breed" for="cm-naam"><span>Naam</span><input id="cm-naam" type="text" maxlength="50" placeholder="bv. Kotor XL"></label>
+        <label class="maatveld" for="cm-familie"><span>Familie</span><select id="cm-familie"></select></label>
+        <label class="maatveld" for="cm-nieuwefamilie" id="cm-nieuwefamilie-veld" hidden><span>Nieuwe familie</span><input id="cm-nieuwefamilie" type="text" maxlength="40"></label>
+        <label class="maatveld breed" for="cm-omschrijving"><span>Omschrijving</span><textarea id="cm-omschrijving" rows="2"></textarea></label>
+      </div>
+      <ul id="cm-meldingen" class="meldingen"></ul>
+      <div class="knoppenrij"><button type="submit">Bewaren als model</button></div>
+    </form>
+    <div class="kaart">
+      <div class="kaartkop"><h2>Eigen modellen</h2></div>
+      <ul id="cm-lijst" class="catlijst"></ul>
+    </div>
+  </section>
+  <section id="cat-delen" class="kaart" hidden>
+    <div class="kaartkop"><h2>Catalogus delen of inlezen</h2></div>
+    <p class="klein">Kopieer de catalogus (elementen, opties en eigen modellen) om hem te bewaren of in een andere browser te plakken.</p>
+    <textarea id="cd-plak" rows="6" aria-label="Catalogus plakken (JSON)" placeholder='{"catalogus": { … }, "modellen": [ … ]}'></textarea>
+    <div class="knoppenrij">
+      <button type="button" id="cd-kopieer" class="tweede">Kopieer catalogus</button>
+      <button type="button" id="cd-inlezen" class="tweede">Catalogus inlezen</button>
+      <button type="button" id="cd-herstel" class="gevaar">Standaardcatalogus herstellen</button>
+      <span id="cd-melding" class="klein" role="status"></span>
+    </div>
+  </section>
+</main>
+
 <footer>Demo van de configurator-motor. Modellen, maten en prijzen zijn verzonnen. Eigen materialen en je laatste ontwerp worden alleen in deze browser bewaard.</footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>/*BUNDEL*/</script>

@@ -20,14 +20,14 @@ import {
   type OntwerpResultaat,
   type Rotatie,
 } from '../../core/src/index.js';
-import { zetelModellen } from '../../core/voorbeelden/modellen.js';
-import { startOntwerpen, zetelCatalogus } from '../../core/voorbeelden/vrij-ontwerp.js';
+import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
 import { maak3D, type Viewer3D } from './drie-d.js';
-import { $, bevestigKnop, bewaar, el, eur, getal, getKorting, getMaterialen, kopieer, laad, opWijziging, svgEl } from './staat.js';
+import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
 const MAGNEET = 6; // cm
-const typen = new Map(zetelCatalogus.typen.map((t) => [t.code, t]));
+/** Elementtypes uit de actuele (aanpasbare) catalogus. */
+const typen = { get: (code: string) => getCatalogus().typen.find((t) => t.code === code) };
 
 let ontwerp: Ontwerp = laadOntwerp();
 let geselecteerd: string | null = null;
@@ -475,6 +475,9 @@ function toonModelVormgeving() {
   );
 }
 
+/** Het huidige ontwerp (kopie), bv. om als model te bewaren. */
+export const huidigOntwerp = () => structuredClone(ontwerp);
+
 /** Laadt een ontwerp (bv. een model uit de collectie) in de ontwerper. */
 export function laadInOntwerper(nieuw: Ontwerp) {
   onthoud();
@@ -490,14 +493,14 @@ export function laadInOntwerper(nieuw: Ontwerp) {
 }
 
 function toonModelNaam() {
-  const m = zetelModellen.find((x) => x.code === ontwerp.model);
+  const m = getModellen().find((x) => x.code === ontwerp.model);
   $('#o-model').textContent = m ? `Vertrokken van model ${m.naam}` : 'Eigen ontwerp';
 }
 
 function toonAanpassingen() {
   const vak = $('#o-aanpassingen');
   vak.replaceChildren(
-    ...(zetelCatalogus.opties ?? [])
+    ...(getCatalogus().opties ?? [])
       .filter((g) => g.niveau === 'ontwerp')
       .map((g) =>
         optieGroepVeld(g, ontwerp.opties?.[g.code] ?? g.standaard, 'oz', (code) => {
@@ -531,12 +534,12 @@ export function kiesWeergave(w: typeof weergave) {
 function toonWeergave() {
   if (weergave === 'voor') {
     $('#o-voor').innerHTML = ontwerp.elementen.length
-      ? tekenSvg(tekenVooraanzicht(ontwerp, zetelCatalogus, getMaterialen()), { breedtePx: 720, lijnkleur: '#2b2b28', maatkleur: '#3f5a52' })
+      ? tekenSvg(tekenVooraanzicht(ontwerp, getCatalogus(), getMaterialen()), { breedtePx: 720, lijnkleur: '#2b2b28', maatkleur: '#3f5a52' })
       : '<p class="klein">Nog geen elementen.</p>';
   }
   if (weergave === '3d' && viewer) {
     viewer.formaat();
-    viewer.toon(bouw3D(ontwerp, zetelCatalogus, getMaterialen()));
+    viewer.toon(bouw3D(ontwerp, getCatalogus(), getMaterialen()));
   }
 }
 
@@ -651,7 +654,7 @@ function toonEigenschappen() {
   maak('Verwijder', 'Verwijderen (Delete)', () => verwijder(e.id), 'gevaar');
   const rugTekst = ['boven', 'rechts', 'onder', 'links'][e.rotatie / 90]!;
   const elementOpties = el('div', { class: 'aanpassingen' });
-  for (const g of (zetelCatalogus.opties ?? []).filter((g) => g.niveau === 'element' && (!g.voorTypen || g.voorTypen.includes(e.type)))) {
+  for (const g of (getCatalogus().opties ?? []).filter((g) => g.niveau === 'element' && (!g.voorTypen || g.voorTypen.includes(e.type)))) {
     elementOpties.append(
       optieGroepVeld(g, e.opties?.[g.code] ?? g.standaard, `oe-${e.id}`, (code) => {
         onthoud();
@@ -713,7 +716,7 @@ function toonEigenschappen() {
 }
 
 function herbereken(alles = true) {
-  resultaat = berekenOntwerp(ontwerp, zetelCatalogus, getMaterialen(), { kortingProcent: getKorting() });
+  resultaat = berekenOntwerp(ontwerp, getCatalogus(), getMaterialen(), { kortingProcent: getKorting() });
   tekenCanvas();
   if (!alles) return;
   const r = resultaat;
@@ -722,7 +725,7 @@ function herbereken(alles = true) {
   status.textContent = r.geldig ? 'Klaar voor offerte' : `${fouten} ${fouten === 1 ? 'fout' : 'fouten'} op te lossen`;
   status.className = `status ${r.geldig ? 'ok' : 'fout'}`;
   $('#o-prijs-excl').textContent = eur(r.prijs.verkoopprijsExcl);
-  $('#o-prijs-incl').textContent = `${eur(r.prijs.verkoopprijsIncl)} incl. ${zetelCatalogus.btwProcent}% btw`;
+  $('#o-prijs-incl').textContent = `${eur(r.prijs.verkoopprijsIncl)} incl. ${getCatalogus().btwProcent}% btw`;
   const regels: [string, string][] = [];
   if (r.prijs.kortingProcent) {
     regels.push(['Brutoprijs', eur(r.prijs.brutoprijsExcl)]);
@@ -772,14 +775,25 @@ function herbereken(alles = true) {
 
 export function startOntwerper() {
   // Gereedschap
-  const balk = $('#o-gereedschap');
-  const knop = (code: string, tekst: string) => {
-    const b = el('button', { type: 'button', 'data-gereedschap': code, 'aria-pressed': 'false' }, tekst) as HTMLButtonElement;
-    b.addEventListener('click', () => kiesGereedschap(code));
-    balk.append(b);
+  const bouwGereedschap = () => {
+    const balk = $('#o-gereedschap');
+    balk.replaceChildren();
+    const knop = (code: string, tekst: string) => {
+      const b = el('button', { type: 'button', 'data-gereedschap': code, 'aria-pressed': String(code === gereedschap) }, tekst) as HTMLButtonElement;
+      b.addEventListener('click', () => kiesGereedschap(code));
+      balk.append(b);
+    };
+    knop('selecteren', 'Selecteren en verplaatsen');
+    for (const t of getCatalogus().typen) knop(t.code, `+ ${t.label}`);
   };
-  knop('selecteren', 'Selecteren en verplaatsen');
-  for (const t of zetelCatalogus.typen) knop(t.code, `+ ${t.label}`);
+  bouwGereedschap();
+  opWijziging('catalogus', () => {
+    if (!typen.get(gereedschap)) gereedschap = 'selecteren';
+    bouwGereedschap();
+    toonAanpassingen();
+    toonEigenschappen();
+    herbereken();
+  });
 
   // Startopstellingen
   const start = $('#o-start');
@@ -827,7 +841,7 @@ export function startOntwerper() {
     const tekst = [
       `Zetel op maat (vrij ontwerp), totaal ${getal(r.afmetingen.breedte, 1)} × ${getal(r.afmetingen.diepte, 1)} cm`,
       ...r.elementen.map((x, n) => `- ${n + 1}. ${x.label} ${getal(x.breedte, 1)} × ${getal(x.diepte, 1)} cm${x.materiaal ? `, ${mats.get(x.materiaal)?.naam ?? ''}` : ''}`),
-      ...(zetelCatalogus.opties ?? [])
+      ...(getCatalogus().opties ?? [])
         .filter((g) => g.niveau === 'ontwerp')
         .map((g) => `- ${g.label}: ${g.keuzes.find((k) => k.code === (ontwerp.opties?.[g.code] ?? g.standaard))?.label ?? ''}`),
       `Prijs: ${eur(r.prijs.verkoopprijsExcl)} excl. btw (${eur(r.prijs.verkoopprijsIncl)} incl. btw)`,
