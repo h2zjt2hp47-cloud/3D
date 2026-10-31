@@ -11,7 +11,7 @@
 | Klikbare demo (`packages/demo-web`) | Tabbladen: Modellen · Sofa op maat · Vrij ontwerp (tekenen, vooraanzicht, 3D, ontwerpmodus) · Kast op maat · Materialen |
 
 **Demo online (privé artifact):** https://claude.ai/artifact/BtVKYeQKC7szR1ZwW97VB1
-- slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie `1793484684-9727`
+- slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie `1793485274-d613`
 - Productfoto's: eerst `python3 -I packages/demo-web/scripts/haal_fotos.py` (vraagt netwerktoegang tot corneille-silence.be), dan bouwen. De foto's staan in `packages/demo-web/fotos/` en worden niet in git bewaard.
 - Opnieuw publiceren: `npm run build -w @configurator/demo-web`, dan `publish_files` met `dist/configurator-demo.html` als `index.html`, met slug + base_version.
 
