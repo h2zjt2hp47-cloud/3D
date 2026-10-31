@@ -18,7 +18,7 @@ export interface Bereik {
 }
 
 /** Hoe een element getekend wordt (waar de rug zit, afgerond of niet). */
-export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug' | 'console' | 'rond' | 'kuip';
+export type Tekenstijl = 'zit' | 'hoek' | 'chaise' | 'arm' | 'poef' | 'zit_zonder_rug' | 'console' | 'rond' | 'kuip' | 'rugleuning' | 'kussen' | 'rolkussen';
 
 /** Eén keuze binnen een optiegroep (bv. poten: "Conische poot"). */
 export interface OptieKeuze {
@@ -64,6 +64,13 @@ export interface ElementType {
   breedte: Bereik;
   diepte: Bereik;
   tekenstijl: Tekenstijl;
+  /**
+   * Opzet-element: ligt bovenop een ander element (rugleuning, rugkussen, sierkussen, rolkussen).
+   * Mag overlappen met het element eronder, maar moet er wel op liggen.
+   */
+  opzet?: boolean;
+  /** Staande hoogte (cm) van een kussen; standaard 0,9 × de breedte. */
+  hoogte?: number;
   /** Verkoopprijs bij minimale breedte en standaarddiepte, per prijsgroep. */
   prijs: Record<string, number>;
   /** Meerprijs per begonnen 10 cm boven de minimale breedte, per prijsgroep. */
@@ -177,6 +184,40 @@ export interface Ontwerp {
   vormgeving?: Partial<Vormgeving>;
   /** Code van het model waarvan dit ontwerp vertrok (informatief). */
   model?: string;
+}
+
+/** Oppervlak (cm²) waarmee twee elementen elkaar overlappen. */
+export function overlapOppervlak(a: OntwerpElement, b: OntwerpElement): number {
+  const p = voetafdruk(a), q = voetafdruk(b);
+  const ox = Math.min(p.x + p.b, q.x + q.b) - Math.max(p.x, q.x);
+  const oy = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
+  return ox > 0 && oy > 0 ? ox * oy : 0;
+}
+
+/** Het element waarop een opzet-element (rugleuning, kussen) ligt: het basiselement met de grootste overlap. */
+export function dragerVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): OntwerpElement | undefined {
+  const opzet = new Set(catalogus.typen.filter((t) => t.opzet).map((t) => t.code));
+  let beste: OntwerpElement | undefined;
+  let max = 0;
+  for (const o of ontwerp.elementen) {
+    if (o === e || opzet.has(o.type)) continue;
+    const opp = overlapOppervlak(e, o);
+    if (opp > max) { max = opp; beste = o; }
+  }
+  return beste;
+}
+
+/**
+ * Materiaalcode van een element: eigen keuze, anders (voor rugleuning/kussen) die van het element eronder,
+ * anders het hoofdmateriaal.
+ */
+export function materiaalVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): string {
+  if (e.materiaal) return e.materiaal;
+  if (catalogus.typen.find((t) => t.code === e.type)?.opzet) {
+    const d = dragerVan(ontwerp, catalogus, e);
+    if (d?.materiaal) return d.materiaal;
+  }
+  return ontwerp.hoofdmateriaal;
 }
 
 /** De vormgeving van een element: standaard ← model ← element. */
@@ -391,6 +432,15 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
       delen.push(['arm-l', 0, R / 2, armB, D * 0.65, donker, armB / 2], ['arm-r', B - armB, R / 2, armB, D * 0.65, donker, armB / 2]);
       return [...uit, ...naarWereld()];
     }
+    case 'rugleuning':
+      delen.push(['rugleuning', 0, 0, B, D, donker, Math.min(D / 2, 2 + v.zachtheid)]);
+      break;
+    case 'kussen':
+      delen.push(['kussen', 0, 0, B, D, kleur, Math.min(B, D) / 2.5]);
+      break;
+    case 'rolkussen':
+      delen.push(['rol', 0, 0, B, D, kleur, D / 2]);
+      break;
     case 'zit_zonder_rug':
       delen.push(['kussen', 1, 1, B - 2, D - 2, kleur, 4]);
       break;
@@ -439,6 +489,7 @@ export function berekenOntwerp(
 
   const elementen: ElementResultaat[] = [];
   const vormen: VormResultaat[] = [];
+  const opzetVormen: VormResultaat[] = [];
   const stofPerMat = new Map<string, number>();
   const stuk = new Map<string, StuklijstResultaat>();
   let kostprijs = 0;
@@ -473,7 +524,7 @@ export function berekenOntwerp(
       meldingen.push({ code: 'element.type', ernst: 'fout', elementId: e.id, melding: `${naam}: onbekend elementtype.` });
       return;
     }
-    const m = (e.materiaal && mats.get(e.materiaal)) || hoofd;
+    const m = mats.get(materiaalVan(ontwerp, catalogus, e)) || hoofd;
     if (e.materiaal && !mats.has(e.materiaal))
       meldingen.push({ code: 'element.materiaal', ernst: 'fout', elementId: e.id, melding: `${naam}: het gekozen materiaal bestaat niet meer.` });
     for (const [veld, bereik, label] of [['breedte', t.breedte, 'breedte'], ['diepte', t.diepte, 'diepte']] as const) {
@@ -562,7 +613,7 @@ export function berekenOntwerp(
     kostprijs += frameKost + uren * catalogus.uurloon;
 
     elementen.push({ id: e.id, type: t.code, label: t.label, breedte: e.breedte, diepte: e.diepte, materiaal: t.tekenstijl === 'console' ? '' : m?.code ?? '', groep, prijs, optieBedrag: rond(optieBedrag), stofM: rond(stofM, 2) });
-    vormen.push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc', gekozen, v));
+    (t.opzet ? opzetVormen : vormen).push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc', gekozen, v));
   });
 
   // Opties op zetelniveau die eenmalig tellen (bv. houtafwerking).
@@ -590,24 +641,35 @@ export function berekenOntwerp(
   if ([...stofPerMat.keys()].some((c) => mats.get(c)?.groep === 'EIGEN'))
     meldingen.push({ code: 'materiaal.eigen', ernst: 'waarschuwing', melding: 'Eigen materiaal van de klant: lever minstens het berekende verbruik aan.' });
 
-  // Overlap en losse elementen.
+  vormen.push(...opzetVormen);
+
+  // Overlap en losse elementen. Opzet-elementen (rugleuning, kussens) mogen op een ander element liggen.
   const el = ontwerp.elementen;
+  const isOpzet = (e: OntwerpElement) => typen.get(e.type)?.opzet === true;
   for (let a = 0; a < el.length; a++) {
     for (let b = a + 1; b < el.length; b++) {
+      if (isOpzet(el[a]!) || isOpzet(el[b]!)) continue;
       if (overlappen(el[a]!, el[b]!))
         meldingen.push({ code: 'ontwerp.overlap', ernst: 'fout', elementId: el[b]!.id, melding: `Element ${a + 1} en element ${b + 1} overlappen. Schuif ze uit elkaar.` });
     }
   }
   if (el.length > 1) {
     el.forEach((e, n) => {
-      // Een poef mag los staan.
-      if (typen.get(e.type)?.tekenstijl === 'poef') return;
+      // Een poef mag los staan; opzet-elementen worden apart gecontroleerd.
+      if (typen.get(e.type)?.tekenstijl === 'poef' || isOpzet(e)) return;
       if (!el.some((o) => o !== e && raken(e, o)))
         meldingen.push({ code: 'ontwerp.los', ernst: 'waarschuwing', elementId: e.id, melding: `Element ${n + 1} raakt geen ander element.` });
     });
   }
 
-  // Afmetingen en maatlijnen.
+  el.forEach((e, n) => {
+    if (!isOpzet(e)) return;
+    const drager = dragerVan(ontwerp, catalogus, e);
+    if (!drager)
+      meldingen.push({ code: 'opzet.los', ernst: 'fout', elementId: e.id, melding: `Element ${n + 1} (${typen.get(e.type)?.label.toLowerCase()}) ligt niet op een zitting. Sleep het op een element.` });
+  });
+
+  // Afmetingen en maatlijnen (opzet-elementen tellen mee als ze buiten de zitting uitsteken).
   const afdrukken = el.map(voetafdruk);
   const x0 = afdrukken.length ? Math.min(...afdrukken.map((p) => p.x)) : 0;
   const y0 = afdrukken.length ? Math.min(...afdrukken.map((p) => p.y)) : 0;

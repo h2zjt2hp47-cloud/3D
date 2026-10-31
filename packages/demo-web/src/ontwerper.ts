@@ -5,6 +5,7 @@
 import {
   berekenOntwerp,
   bouw3D,
+  lokaalNaarWereld,
   VORMGEVING_BEREIK,
   vormgevingVan,
   type Vormgeving,
@@ -134,7 +135,9 @@ function tekenCanvas() {
   const foutIds = new Set(resultaat.meldingen.filter((m) => m.elementId && m.ernst === 'fout').map((m) => m.elementId));
   const letOpIds = new Set(resultaat.meldingen.filter((m) => m.elementId && m.ernst === 'waarschuwing').map((m) => m.elementId));
 
-  ontwerp.elementen.forEach((e, n) => {
+  // Opzet-elementen (rugleuning, kussens) bovenop tekenen, zodat ze aanklikbaar blijven.
+  const volgorde = ontwerp.elementen.map((e, n) => ({ e, n })).sort((a, b) => Number(typen.get(a.e.type)?.opzet ?? false) - Number(typen.get(b.e.type)?.opzet ?? false));
+  volgorde.forEach(({ e, n }) => {
     const g = svgEl('g', { class: 'element', 'data-id': e.id });
     for (const v of resultaat.tekening.vormen.filter((v) => v.code.startsWith(`${e.id}.`))) {
       g.append(
@@ -537,6 +540,51 @@ function toonWeergave() {
   }
 }
 
+// ---------- rugleuningen en kussens toevoegen op een element ----------
+const DRAGERS = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond', 'kuip', 'poef'];
+
+/** Plaatst een opzet-element op een rechthoek in de lokale coördinaten van de drager. */
+function plaatsOp(drager: OntwerpElement, type: string, lx: number, ly: number, lb: number, ld: number, extraRotatie: 0 | 90 | 270): OntwerpElement {
+  const w = lokaalNaarWereld(drager, lx, ly, lb, ld);
+  const r = ((drager.rotatie + extraRotatie) % 360) as Rotatie;
+  const liggend = r === 0 || r === 180;
+  return { id: nieuwId(), type, x: Math.round(w.x), y: Math.round(w.y), breedte: Math.round(liggend ? w.b : w.h), diepte: Math.round(liggend ? w.h : w.b), rotatie: r };
+}
+
+function voegOpzetToe(drager: OntwerpElement, wat: 'rug-achter' | 'rug-links' | 'rug-rechts' | 'rugkussen' | 'sierkussen' | 'rolkussen') {
+  const B = drager.breedte, D = drager.diepte;
+  const t = (code: string) => typen.get(code)!;
+  const opDrager = ontwerp.elementen.filter((o) => o !== drager && typen.get(o.type)?.opzet && voetafdrukOverlapt(o, drager));
+  const heeftRug = ['zit', 'hoek', 'rond', 'kuip'].includes(typen.get(drager.type)?.tekenstijl ?? '');
+  const rugAchter = opDrager.some((o) => o.type === 'rugleuning' && o.rotatie === drager.rotatie);
+  const voor = heeftRug ? vormgevingVan(ontwerp, drager).rugdikte : rugAchter ? t('rugleuning').diepte.standaard : 0;
+  let nieuw: OntwerpElement;
+  const dik = t('rugleuning').diepte.standaard;
+  if (wat === 'rug-achter') nieuw = plaatsOp(drager, 'rugleuning', 0, 0, B, dik, 0);
+  else if (wat === 'rug-links') nieuw = plaatsOp(drager, 'rugleuning', 0, voor, dik, D - voor, 270);
+  else if (wat === 'rug-rechts') nieuw = plaatsOp(drager, 'rugleuning', B - dik, voor, dik, D - voor, 90);
+  else if (wat === 'rolkussen') {
+    const rk = t('rolkussen');
+    nieuw = plaatsOp(drager, 'rolkussen', 2, voor + 4, rk.diepte.standaard, Math.min(rk.breedte.standaard, D - voor - 8), 270);
+  } else {
+    const k = t(wat);
+    const zelfde = opDrager.filter((o) => o.type === wat).length;
+    const b = Math.min(k.breedte.standaard, B - 4);
+    const lx = Math.min(B - b - 2, 2 + zelfde * (b + 2));
+    nieuw = plaatsOp(drager, wat, Math.max(0, lx), voor + (wat === 'sierkussen' ? k.diepte.standaard + 2 : 0), b, k.diepte.standaard, 0);
+  }
+  onthoud();
+  ontwerp.elementen.push(nieuw);
+  geselecteerd = nieuw.id;
+  toonEigenschappen();
+  gewijzigd();
+}
+
+function voetafdrukOverlapt(a: OntwerpElement, b: OntwerpElement) {
+  const p = voetafdruk(a), q = voetafdruk(b);
+  return Math.min(p.x + p.b, q.x + q.b) - Math.max(p.x, q.x) > 0 && Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y) > 0;
+}
+
 // ---------- panelen ----------
 function materiaalOpties(select: HTMLSelectElement, gekozen: string | undefined, metHoofd: boolean) {
   select.replaceChildren();
@@ -643,6 +691,21 @@ function toonEigenschappen() {
   }
   if (t.tekenstijl !== 'console') delen.push(matLabel);
   delen.push(el('p', { class: 'klein' }, t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' ? `Rug aan de ${rugTekst}kant.` : t.tekenstijl === 'console' ? 'Houten tussenstuk in de gekozen houtafwerking.' : ''));
+  if (DRAGERS.includes(t.tekenstijl)) {
+    const vak = el('div', { class: 'toevoegen' });
+    vak.append(el('span', { class: 'klein' }, 'Toevoegen op dit element:'));
+    const rij2 = el('div', { class: 'knoppenrij' });
+    for (const [wat, tekst] of [
+      ['rug-achter', '+ Rugleuning achter'], ['rug-links', '+ Rugleuning links'], ['rug-rechts', '+ Rugleuning rechts'],
+      ['rugkussen', '+ Rugkussen'], ['sierkussen', '+ Sierkussen'], ['rolkussen', '+ Rolkussen'],
+    ] as const) {
+      const b = el('button', { type: 'button', class: 'tweede klein-knop' }, tekst) as HTMLButtonElement;
+      b.addEventListener('click', () => voegOpzetToe(e, wat));
+      rij2.append(b);
+    }
+    vak.append(rij2);
+    delen.push(vak);
+  }
   if (elementOpties.childElementCount) delen.push(elementOpties);
   if (ontwerpVak) delen.push(ontwerpVak);
   delen.push(knoppen);

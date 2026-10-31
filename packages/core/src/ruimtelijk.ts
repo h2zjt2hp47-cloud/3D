@@ -6,7 +6,7 @@
  * zoals y in het bovenaanzicht), y = hoogte vanaf de vloer.
  */
 import type { Materiaal } from './materialen.js';
-import { gekozenOpties, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
+import { dragerVan, gekozenOpties, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort = 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker';
 
@@ -63,7 +63,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     if (!t) continue;
     const opt = gekozenOpties(ontwerp, catalogus, e);
     const te = (g: string, v: string, s: number | string | boolean) => opt.get(g)?.teken?.[v] ?? s;
-    const m = (e.materiaal && mats.get(e.materiaal)) || mats.get(ontwerp.hoofdmateriaal);
+    const m = mats.get(materiaalVan(ontwerp, catalogus, e)) || mats.get(ontwerp.hoofdmateriaal);
     const stof = m?.kleur ?? '#cccccc';
     const B = e.breedte, D = e.diepte;
 
@@ -92,7 +92,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         b: r2(diameterB), h: r2(h), d: r2(diameterD), kleur, ...extra,
       });
     };
-    if (t.tekenstijl !== 'console' && potVorm === 'draaivoet') {
+    if (t.opzet) {
+      // geen poten: ligt op een ander element
+    } else if (t.tekenstijl !== 'console' && potVorm === 'draaivoet') {
       const p = voetafdruk(e);
       cilinderMidden('draaivoet', 'metaal', 1.5, P - 1.5, Math.min(p.b, p.h) * 0.22, Math.min(p.b, p.h) * 0.22, '#2e2c2a');
       cilinderMidden('voetplaat', 'metaal', 0, 1.5, Math.min(p.b, p.h) * 0.55, Math.min(p.b, p.h) * 0.55, '#2e2c2a');
@@ -219,6 +221,27 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const p = voetafdruk(e);
         if (pv === 'rond') cilinderMidden('poef', 'kussen', P, zithoogte - 2 - P, p.b, p.h, stof);
         else lokaal('poef', 'kussen', 0, 0, B, D, P, zithoogte - 2 - P, stof, { afronding: pv === 'vierkant' ? 3 : Math.min(B, D, zithoogte - P) / 2.5 });
+        break;
+      }
+      case 'rugleuning':
+      case 'kussen':
+      case 'rolkussen': {
+        const d = dragerVan(ontwerp, catalogus, e);
+        const dt = d ? typen.get(d.type) : undefined;
+        const vaste = d ? gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting' : false;
+        const basis = !d ? P : dt?.tekenstijl === 'poef' ? zithoogte - 2 : zithoogte - (vaste ? 0 : vormgevingVan(ontwerp, d).kussendikte);
+        const kantelAchter = { graden: t.tekenstijl === 'rugleuning' ? 9 : 14, richting };
+        if (t.tekenstijl === 'rugleuning') {
+          const rugTop = Math.max(rugH, basis + 20);
+          lokaal('rugleuning', 'stof', 0, 0, B, D, basis, rugTop - basis, stof, { afronding: Math.min(D / 2, 3 + v.zachtheid), ...(v.rugvorm === 'hellend' ? { kantel: kantelAchter } : {}) });
+        } else if (t.tekenstijl === 'kussen') {
+          const h = t.hoogte ?? Math.round(B * 0.9);
+          lokaal('kussen', 'kussen', 0, 0, B, D, zithoogte - 2, h, stof, { afronding: Math.min(D / 2, 2 + v.zachtheid), kantel: kantelAchter });
+        } else {
+          const w = lokaalNaarWereld(e, 0, 0, B, D);
+          const langsX = e.rotatie === 0 || e.rotatie === 180;
+          blokken.push({ code: `${e.id}.rol`, soort: 'kussen', vorm: 'cilinder', as: langsX ? 'x' : 'z', x: r2(w.x), y: r2(zithoogte - 2), z: r2(w.y), b: r2(w.b), h: r2(D), d: r2(w.h), kleur: stof });
+        }
         break;
       }
       case 'kuip': {

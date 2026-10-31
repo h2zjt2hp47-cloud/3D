@@ -9,6 +9,8 @@ const g = (a: number, b: number, c: number, eigen: number) => ({ A: a, B: b, C: 
 const GESTOFFEERD = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'arm', 'poef', 'rond_einde', 'fauteuil'];
 const ZITTEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'poef', 'rond_einde', 'fauteuil'];
 const MET_RUG = ['zit', 'hoek', 'rond_einde', 'fauteuil'];
+/** Opzet-elementen: liggen bovenop een ander element. */
+const OPZET = ['rugleuning', 'rugkussen', 'sierkussen', 'rolkussen'];
 
 /**
  * Aanpassingen, gebaseerd op wat zetelmerken gangbaar aanbieden:
@@ -99,7 +101,7 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
-    code: 'rughoogte', label: 'Rughoogte', niveau: 'ontwerp', perElement: true, voorTypen: MET_RUG, standaard: 'standaard',
+    code: 'rughoogte', label: 'Rughoogte', niveau: 'ontwerp', perElement: true, voorTypen: [...MET_RUG, 'rugleuning'], standaard: 'standaard',
     keuzes: [
       { code: 'laag', label: 'Laag (70 cm)', pct: -3, stofPct: -5, teken: { hoogte: 70 } },
       { code: 'standaard', label: 'Standaard (80 cm)', teken: { hoogte: 80 } },
@@ -107,7 +109,7 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
-    code: 'naad', label: 'Naden', niveau: 'ontwerp', perElement: true, voorTypen: GESTOFFEERD, standaard: 'gewoon',
+    code: 'naad', label: 'Naden', niveau: 'ontwerp', perElement: true, voorTypen: [...GESTOFFEERD, ...OPZET], standaard: 'gewoon',
     keuzes: [
       { code: 'gewoon', label: 'Gewone naad' },
       { code: 'plat', label: 'Platte naad (french seam)', pct: 3 },
@@ -158,6 +160,14 @@ export const zetelOpties: OptieGroep[] = [
     keuzes: [
       { code: 'links', label: 'Rond aan de linkerkant', teken: { kant: 'links' } },
       { code: 'rechts', label: 'Rond aan de rechterkant', teken: { kant: 'rechts' } },
+    ],
+  },
+  {
+    code: 'kussenvulling', label: 'Vulling kussen', niveau: 'element', voorTypen: ['rugkussen', 'sierkussen', 'rolkussen'], standaard: 'vezel',
+    keuzes: [
+      { code: 'vezel', label: 'Holle vezel' },
+      { code: 'veren_dons', label: 'Veren en dons', pct: 12, kost: 6 },
+      { code: 'dons', label: 'Dons', pct: 20, kost: 10 },
     ],
   },
   {
@@ -248,6 +258,30 @@ export const zetelCatalogus: OntwerpCatalogus = {
       breedte: { min: 60, max: 110, standaard: 80 }, diepte: { min: 60, max: 100, standaard: 80 },
       prijs: g(690, 760, 870, 620), per10cm: g(30, 34, 40, 26),
       stofVast: 1.6, stofPerM: 2.6, kostVast: 140, kostPerM: 150, uren: 5, urenPerM: 2,
+    },
+    {
+      code: 'rugleuning', label: 'Losse rugleuning', tekenstijl: 'rugleuning', opzet: true,
+      breedte: { min: 30, max: 240, standaard: 90 }, diepte: { min: 10, max: 35, standaard: 18 },
+      prijs: g(240, 270, 310, 210), per10cm: g(14, 16, 19, 12),
+      stofVast: 0.4, stofPerM: 1.4, kostVast: 40, kostPerM: 50, uren: 1, urenPerM: 0.8,
+    },
+    {
+      code: 'rugkussen', label: 'Rugkussen', tekenstijl: 'kussen', opzet: true, hoogte: 48,
+      breedte: { min: 40, max: 120, standaard: 70 }, diepte: { min: 12, max: 25, standaard: 18 },
+      prijs: g(95, 110, 130, 80), per10cm: g(6, 7, 9, 5),
+      stofVast: 0.6, stofPerM: 0.9, kostVast: 18, kostPerM: 15, uren: 0.5, urenPerM: 0.3,
+    },
+    {
+      code: 'sierkussen', label: 'Sierkussen', tekenstijl: 'kussen', opzet: true,
+      breedte: { min: 30, max: 65, standaard: 45 }, diepte: { min: 10, max: 18, standaard: 14 },
+      prijs: g(55, 65, 85, 40), per10cm: g(5, 6, 7, 4),
+      stofVast: 0.35, stofPerM: 0.4, kostVast: 8, kostPerM: 6, uren: 0.3, urenPerM: 0.1,
+    },
+    {
+      code: 'rolkussen', label: 'Rolkussen (nekrol)', tekenstijl: 'rolkussen', opzet: true,
+      breedte: { min: 40, max: 110, standaard: 60 }, diepte: { min: 15, max: 25, standaard: 20 },
+      prijs: g(60, 70, 90, 45), per10cm: g(5, 6, 7, 4),
+      stofVast: 0.3, stofPerM: 0.5, kostVast: 10, kostPerM: 6, uren: 0.4, urenPerM: 0.2,
     },
     {
       code: 'console', label: 'Houten tussenstuk', tekenstijl: 'console',

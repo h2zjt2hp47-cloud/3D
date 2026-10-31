@@ -14,7 +14,11 @@ export {
 } from './materialen.js';
 export {
   berekenOntwerp,
+  dragerVan,
   gekozenOpties,
+  lokaalNaarWereld,
+  materiaalVan,
+  overlapOppervlak,
   voetafdruk,
   vormgevingVan,
   STANDAARD_VORMGEVING,

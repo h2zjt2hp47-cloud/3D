@@ -5,7 +5,7 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { gekozenOpties, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { dragerVan, gekozenOpties, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
@@ -48,13 +48,22 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   });
 
   let maxHoogte = 0;
+  /** Hoogte waarop een rugleuning of kussen rust: de bovenkant van de basis van het element eronder. */
+  const draagHoogte = (e: (typeof ontwerp.elementen)[number]) => {
+    const d = dragerVan(ontwerp, catalogus, e);
+    if (!d) return Number(zetel.get('poothoogte')?.teken?.hoogte ?? 12);
+    const dt = typen.get(d.type);
+    const vaste = gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting';
+    if (dt?.tekenstijl === 'poef') return zithoogte - 2;
+    return zithoogte - (vaste ? 0 : vormgevingVan(ontwerp, d).kussendikte);
+  };
   for (const e of volgorde) {
     const t = typen.get(e.type);
     if (!t) continue;
     const p = voetafdruk(e);
     const opt = gekozenOpties(ontwerp, catalogus, e);
     const te = (groep: string, veld: string, standaard: number | string | boolean) => opt.get(groep)?.teken?.[veld] ?? standaard;
-    const m = (e.materiaal && mats.get(e.materiaal)) || mats.get(ontwerp.hoofdmateriaal);
+    const m = mats.get(materiaalVan(ontwerp, catalogus, e)) || mats.get(ontwerp.hoofdmateriaal);
     const stof = m?.kleur ?? '#cccccc';
     const donker = donkerder(stof);
     const naad = opt.get('naad');
@@ -67,7 +76,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     const P = vorm === 'plint' ? 4 : vorm === 'verdekt' ? Math.min(Number(te('poothoogte', 'hoogte', 12)), 8) : Number(te('poothoogte', 'hoogte', 12));
     const potKleur = potenKeuze?.teken?.metaal ? (potenKeuze.teken.kleur ? String(potenKeuze.teken.kleur) : metaal) : hout;
     const x0 = p.x, x1 = p.x + p.b, inset = Math.min(5, p.b / 6);
-    if (t.tekenstijl !== 'console') {
+    if (t.tekenstijl !== 'console' && !t.opzet) {
       switch (vorm) {
         case 'draaivoet':
           rect(`${e.id}.draaivoet`, x0 + p.b * 0.3, -P, p.b * 0.4, P - 1.5, '#2e2c2a');
@@ -157,6 +166,23 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         if (kussenDik) zitkussens(x0 + 1, p.b - 2, top(zithoogte), kussenDik);
         houtframe(zithoogte + 2);
         maxHoogte = Math.max(maxHoogte, rugH);
+        break;
+      }
+      case 'rugleuning':
+      case 'kussen':
+      case 'rolkussen': {
+        const basis = draagHoogte(e);
+        if (t.tekenstijl === 'rugleuning') {
+          const rugTop = Math.max(rugH, basis + 20);
+          rect(`${e.id}.rugleuning`, x0, top(rugTop), p.b, rugTop - basis, donker, { afronding: 2 + zacht, ...lijn });
+          maxHoogte = Math.max(maxHoogte, rugTop);
+        } else if (t.tekenstijl === 'kussen') {
+          const h = t.hoogte ?? Math.round(e.breedte * 0.9);
+          rect(`${e.id}.kussen`, x0 + 1, top(zithoogte + h), p.b - 2, h, stof, { afronding: Math.min(p.b, h) / 3, ...lijn });
+          maxHoogte = Math.max(maxHoogte, zithoogte + h);
+        } else {
+          rect(`${e.id}.rol`, x0, top(zithoogte + e.diepte), p.b, e.diepte, stof, { afronding: e.diepte / 2, ...lijn });
+        }
         break;
       }
       case 'kuip': {
@@ -253,7 +279,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       }
     }
     // Hoes tot op de grond (housse): bedekt de onderbouw.
-    if (vorm === 'housse' && t.tekenstijl !== 'console') rect(`${e.id}.housse`, x0 + 0.5, -P - 1, p.b - 1, P + 1, stof, { ...lijn });
+    if (vorm === 'housse' && t.tekenstijl !== 'console' && !t.opzet) rect(`${e.id}.housse`, x0 + 0.5, -P - 1, p.b - 1, P + 1, stof, { ...lijn });
     // Hoofdsteun en relax: klein symbool.
     const functie = String(te('functie', 'vorm', 'geen'));
     if ((functie === 'hoofdsteun' || functie === 'relax_hoofdsteun') && rugBoven)
