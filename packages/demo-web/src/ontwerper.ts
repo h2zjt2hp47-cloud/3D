@@ -1201,11 +1201,13 @@ export function startOntwerper() {
   const vv = voorvlak();
   zoomVoor = new Zoom({
     doel: vv, svg: voorvlak, passend: passendVoor, opnieuw: tekenVoorvlak, minBreedte: 40,
+    wielZoomt: () => document.body.classList.contains('heeft-groot-scherm'),
     opKnijpen: () => { voorActie = null; pannen = undefined; },
   });
   const sb = svg();
   zoomBoven = new Zoom({
     doel: sb, svg, passend: passendBoven, opnieuw: tekenCanvas, minBreedte: 40,
+    wielZoomt: () => document.body.classList.contains('heeft-groot-scherm'),
     opKnijpen: () => { actie = null; pannen = undefined; },
   });
   for (const [vlak, z, sel] of [[sb, zoomBoven, true], [vv, zoomVoor, false]] as const) {

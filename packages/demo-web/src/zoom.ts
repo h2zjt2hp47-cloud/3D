@@ -24,6 +24,12 @@ export interface ZoomOpties {
   maxUit?: number;
   /** Wordt opgeroepen als een tweede vinger het tekenvlak raakt (de editor stopt dan zijn eigen actie). */
   opKnijpen?: () => void;
+  /**
+   * Zoomt het gewone muiswiel (zonder Ctrl)? Standaard niet: dan scrolt de pagina gewoon door en zoom je met
+   * Ctrl/⌘ + wiel, knijpen of de knoppen. Zo blijft de pagina scrolbaar boven de tekening (geen "scrolval").
+   * In het groot scherm (een eigen tekenomgeving) zoomt het wiel wel.
+   */
+  wielZoomt?: () => boolean;
 }
 
 export class Zoom {
@@ -38,9 +44,11 @@ export class Zoom {
     const doel = o.doel;
     doel.addEventListener('wheel', (ev) => {
       const e = ev as WheelEvent;
+      const zoomt = e.ctrlKey || e.metaKey || (this.o.wielZoomt?.() ?? false);
+      if (!zoomt) { this.toonWielHint(); return; } // de pagina scrolt gewoon door
       e.preventDefault();
       // Horizontaal vegen op een trackpad verschuift; verticaal (of knijpen = ctrl) zoomt.
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.ctrlKey) { this.verschuifPx(-e.deltaX, 0); return; }
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.ctrlKey && !e.metaKey) { this.verschuifPx(-e.deltaX, 0); return; }
       const stap = e.ctrlKey ? 0.01 : e.deltaMode === 1 ? 0.05 : e.deltaMode === 2 ? 0.5 : 0.0015;
       const f = Math.min(2, Math.max(0.5, Math.exp(-e.deltaY * stap)));
       this.zoomOp(f, e.clientX, e.clientY);
@@ -87,6 +95,10 @@ export class Zoom {
     };
     doel.addEventListener('pointerup', los, true);
     doel.addEventListener('pointercancel', los, true);
+  }
+
+  private toonWielHint() {
+    wielHint(this.o.doel.parentElement, 'Zoomen: houd {sleutel} ingedrukt en scrol, of knijp, of gebruik + en −');
   }
 
   /** Het beeld dat getekend moet worden. */
@@ -235,24 +247,53 @@ export class Zoom {
   }
 }
 
+const hints = new WeakMap<HTMLElement, { el: HTMLElement; timer?: number; laatst: number }>();
+/**
+ * Korte uitleg onder in een tekenvlak of 3D-weergave: de pagina scrolde gewoon door, en zo zoom je wel.
+ * `{sleutel}` wordt Ctrl (of ⌘ op een Mac). Hoogstens eens per 4 seconden, verdwijnt vanzelf.
+ */
+export function wielHint(ouder: HTMLElement | null, tekst: string) {
+  if (!ouder) return;
+  const nu = Date.now();
+  let h = hints.get(ouder);
+  if (h && nu - h.laatst < 4000) return;
+  if (!h || !h.el.isConnected) {
+    const el = document.createElement('div');
+    el.className = 'zoomhint';
+    el.setAttribute('role', 'status');
+    ouder.append(el);
+    h = { el, laatst: nu };
+    hints.set(ouder, h);
+  }
+  h.laatst = nu;
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  h.el.textContent = tekst.replace('{sleutel}', mac ? '⌘' : 'Ctrl');
+  h.el.classList.add('aan');
+  window.clearTimeout(h.timer);
+  h.timer = window.setTimeout(() => h!.el.classList.remove('aan'), 2200);
+}
+
 /**
  * Knop om een onderdeel (bv. het hele tekenscherm met gereedschap en eigenschappen) op het volledige
  * scherm te tonen. Gebruikt het echte volledig scherm waar de browser dat kan; anders (bv. iPhone)
  * een laag over de hele pagina. Esc of de knop zet het terug.
  */
+const grootTeksten: (() => void)[] = [];
 export function grootSchermKnop(doel: HTMLElement, opnieuw: () => void): HTMLButtonElement {
   const b = document.createElement('button');
   b.type = 'button';
+  // Er kunnen meer knoppen voor hetzelfde scherm zijn (tekenvlak, gevels, 3D): alle labels blijven gelijk.
   const tekst = () => {
     const aan = doel.classList.contains('groot-scherm');
     b.textContent = aan ? 'Klein scherm' : 'Groot scherm';
-    b.title = aan ? 'Terug naar het gewone scherm (Esc)' : 'Tekenen op het volledige scherm';
+    b.title = aan ? 'Terug naar het gewone scherm (Esc)' : 'Werken op het volledige scherm';
     b.setAttribute('aria-pressed', String(aan));
   };
+  grootTeksten.push(tekst);
   const zet = (aan: boolean) => {
     doel.classList.toggle('groot-scherm', aan);
     document.body.classList.toggle('heeft-groot-scherm', aan);
-    tekst();
+    for (const t of grootTeksten) t();
     // Na het wisselen van grootte opnieuw tekenen (passend beeld volgt de nieuwe maat).
     requestAnimationFrame(() => { opnieuw(); window.dispatchEvent(new Event('resize')); });
   };

@@ -246,13 +246,27 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 .groot-scherm:fullscreen { background: var(--achtergrond); }
 body.heeft-groot-scherm { overflow: hidden; }
 
-.groot-scherm .planraster { grid-template-columns: 180px minmax(0, 1fr) 290px; gap: 12px; }
+main.view.groot-scherm { display: flex; flex-direction: column; }
+.groot-scherm .planraster { grid-template-columns: 180px minmax(0, 1fr) 290px; gap: 12px; flex: 1 1 auto; min-height: 0; align-items: stretch; }
+/* Ook op een tablet in landschap (< 1200 px) drie kolommen naast elkaar, anders blijft er te weinig hoogte over. */
+.groot-scherm .planraster > .rechts { grid-column: auto; }
+@media (max-width: 1200px) { .groot-scherm .planraster { grid-template-columns: 170px minmax(0, 1fr) 250px; } }
+/* De kolommen scrollen zelf: zo past het groot scherm op het scherm en blijft alles bereikbaar. */
+.groot-scherm .planraster > .links, .groot-scherm .planraster > .rechts, .groot-scherm .planraster > .kaart { min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
 .groot-scherm .gereedschap button { padding: 5px 8px; font-size: .82rem; }
 .groot-scherm .gereedschap kbd, .groot-scherm .links .klein { display: none; }
 .groot-scherm .kaart { padding: 10px 12px; }
-.groot-scherm #pl-canvas svg { width: 100%; height: calc(100vh - 175px); max-height: none; }
+.groot-scherm #pl-canvas svg { width: 100%; height: calc(100vh - 175px); height: calc(100dvh - 175px); max-height: none; }
 .groot-scherm #pl-hint, .groot-scherm #pl-zoomhint { display: none; }
-@media (max-width: 900px) { .groot-scherm .planraster { grid-template-columns: minmax(0, 1fr); } .groot-scherm #pl-canvas svg { max-height: calc(100vh - 120px); } }
+@media (max-width: 900px) {
+  main.view.groot-scherm { display: block; }
+  .groot-scherm .planraster { grid-template-columns: minmax(0, 1fr); }
+  .groot-scherm .planraster > .links, .groot-scherm .planraster > .rechts, .groot-scherm .planraster > .kaart { overflow-y: visible; }
+  /* Eén kolom (smal scherm): de tekening laat onderaan ruimte over, want een vinger op de tekening tekent of verschuift en scrolt dus niet. */
+  .groot-scherm #pl-canvas svg { height: min(70vh, calc(100vh - 175px)); height: min(70dvh, calc(100dvh - 175px)); }
+  .groot-scherm #gv-canvas svg { height: min(65vh, calc(100vh - 230px)); height: min(65dvh, calc(100dvh - 230px)); }
+  .groot-scherm .planraster > .rechts { grid-column: auto; }
+}
 /* ---------- enkel ramen (project zonder woning) ---------- */
 body.zonder-woning .alleen-woning, body.zonder-woning [data-weergave="plan"], body:not(.zonder-woning) .alleen-ramen { display: none !important; }
 /* In de navigatie: "Ramenlijst" en "Offerte" tonen hetzelfde scherm (de nummering zet main.ts). */
@@ -277,7 +291,8 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 #gv-editor[hidden] { display: none; }
 #gv-canvas { touch-action: none; user-select: none; -webkit-user-select: none; }
 #gv-canvas svg { display: block; width: 100%; height: auto; max-height: 64vh; background: var(--papier); border: 1px solid var(--lijn); border-radius: 8px; }
-.groot-scherm #gv-canvas svg { height: calc(100vh - 230px); max-height: none; }
+.groot-scherm #gv-canvas svg { height: calc(100vh - 230px); height: calc(100dvh - 230px); max-height: none; }
+.groot-scherm #pl-3d { max-width: none; }
 #gv-canvas[data-gereedschap="verf"] svg { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cpath d='M3 23l5-1 13-13-4-4L4 18z' fill='%23f2c14e' stroke='%23222' stroke-width='1.5'/%3E%3Cpath d='M17 5l2-2 4 4-2 2' fill='%23888' stroke='%23222' stroke-width='1.5'/%3E%3C/svg%3E") 2 24, crosshair; }
 #gv-canvas[data-gereedschap="pipet"] svg { cursor: copy; }
 #gv-canvas[data-gereedschap="raam"] svg { cursor: cell; }
@@ -319,6 +334,8 @@ body.klantmodus [data-weergave="werf"] { display: none; }
 }
 /* ---------- zoomen ---------- */
 .zoomvlak { position: relative; }
+.zoomhint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; max-width: 92%; text-align: center; background: rgba(34, 38, 42, .9); color: #fff; padding: 7px 14px; border-radius: 999px; font-size: .84rem; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.zoomhint.aan { opacity: 1; }
 .zoomvlak { display: grid; gap: 6px; }
 .zoomknoppen { order: -1; justify-self: end; display: flex; gap: 4px; align-items: center; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 3px; }
 .zoomknoppen button { min-width: 34px; height: 32px; border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; cursor: pointer; font-size: .95rem; padding: 0 8px; color: var(--inkt); }
@@ -547,7 +564,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label><input type="checkbox" id="pl-laag"> Muren laag (binnenkijken)</label>
           <label><input type="checkbox" id="pl-toon-meubels" checked> Meubels tonen</label>
           <label><input type="checkbox" id="pl-alle-niveaus" checked> Alle verdiepingen</label>
-          <span class="klein">slepen = draaien · scrollen of knijpen = zoomen</span>
+          <span class="klein">slepen = draaien · zoomen met Ctrl (⌘) + scrollen of knijpen</span>
         </div>
       </div>
     </section>

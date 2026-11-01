@@ -155,6 +155,8 @@ body.heeft-groot-scherm { overflow: hidden; }
 .groot-scherm #o-voor { max-height: calc(100vh - 130px); }
 /* Zoomen in de tekenvlakken */
 .zoomvlak { position: relative; }
+.zoomhint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; max-width: 92%; text-align: center; background: rgba(34, 38, 42, .9); color: #fff; padding: 7px 14px; border-radius: 999px; font-size: .84rem; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.zoomhint.aan { opacity: 1; }
 .zoomvlak:has(> svg[hidden]) { display: none; }
 .zoomvlak { display: grid; gap: 6px; }
 .zoomknoppen { order: -1; justify-self: end; display: flex; gap: 4px; align-items: center; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 3px; }
@@ -390,7 +392,7 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" data-standpunt="voor">Voor</button>
       <button type="button" class="tweede" data-standpunt="zij">Zij</button>
       <button type="button" class="tweede" data-standpunt="boven">Boven</button>
-      <span class="klein">Sleep om te draaien, scroll om te zoomen.</span>
+      <span class="klein">Sleep om te draaien; zoomen met Ctrl (⌘) + scrollen of knijpen.</span>
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>
   </section>

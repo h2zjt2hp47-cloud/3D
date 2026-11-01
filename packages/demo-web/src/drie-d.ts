@@ -4,6 +4,7 @@
  * Bediening: slepen = draaien, scrollen/knijpen = zoomen, knoppen = vaste standpunten.
  */
 import type { Blok, Scene3D } from '../../core/src/index.js';
+import { wielHint } from './zoom.js';
 
 // three.js wordt als globale variabele geladen (zie index.html).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -425,6 +426,11 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   renderer.domElement.addEventListener('pointerup', los);
   renderer.domElement.addEventListener('pointercancel', los);
   renderer.domElement.addEventListener('wheel', (ev: WheelEvent) => {
+    // Gewoon scrollen laat de pagina doorscrollen; zoomen met Ctrl/⌘ + wiel (of knijpen), en in het groot scherm met het wiel.
+    if (!(ev.ctrlKey || ev.metaKey || document.body.classList.contains('heeft-groot-scherm'))) {
+      wielHint(houder, 'Zoomen: houd {sleutel} ingedrukt en scrol, of knijp');
+      return;
+    }
     ev.preventDefault();
     afstand = Math.min(2500, Math.max(120, afstand * (1 + Math.sign(ev.deltaY) * 0.1)));
     plaatsCamera();
@@ -472,7 +478,9 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     formaat() {
       const b = houder.clientWidth || 600;
       laatsteBreedte = b;
-      const h = Math.round(b * 0.62);
+      // In het groot scherm de beschikbare hoogte benutten (naast de knoppen eronder), anders 62 % van de breedte.
+      const groot = document.body.classList.contains('heeft-groot-scherm');
+      const h = groot ? Math.max(320, Math.min(Math.round(b * 1.1), window.innerHeight - 200)) : Math.round(b * 0.62);
       renderer.setSize(b, h);
       camera.aspect = b / h;
       camera.updateProjectionMatrix();

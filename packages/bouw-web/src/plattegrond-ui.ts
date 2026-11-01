@@ -33,7 +33,7 @@ import {
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { raamBlokken } from '../../core/voorbeelden/raam3d.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
-import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
+import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
@@ -180,7 +180,7 @@ export function render() {
   houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu() });
   zoom?.bijwerken();
   const zi = document.getElementById('pl-zoomhint');
-  if (zi) zi.textContent = `Zoomen: muiswiel, knijpen of + − · verschuiven: sleep op een leeg stuk (of met het muiswiel ingedrukt) · raster ${rasterStap()} cm`;
+  if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
   houder.dataset.gereedschap = gereedschap;
   toonNiveaus();
   if (weergave === '3d') plan3D();
@@ -925,6 +925,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     passend: passendKader,
     opnieuw: render,
     minBreedte: 60,
+    wielZoomt: () => document.body.classList.contains('heeft-groot-scherm'),
     opKnijpen: () => {
       // Tweede vinger: de lopende actie annuleren (en een begonnen verplaatsing terugdraaien).
       if (sleep?.bewogen && sleep.soort !== 'teken' && sleep.soort !== 'wand') ongedaan();
@@ -947,6 +948,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => { laag = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
+  $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
   $('#pl-ongedaan').addEventListener('click', () => ongedaan());
   $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());
   const wis = $<HTMLButtonElement>('#pl-leeg');

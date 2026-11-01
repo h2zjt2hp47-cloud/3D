@@ -533,6 +533,7 @@ export function startGevels(nav: NonNullable<typeof terug>) {
     passend: () => passend,
     opnieuw: toonGevelEditor,
     minBreedte: 80,
+    wielZoomt: () => document.body.classList.contains('heeft-groot-scherm'),
     opKnijpen: () => {
       // Tweede vinger: de klaargezette klik vervalt, een begonnen verplaatsing wordt teruggedraaid.
       if (sleep?.bewogen) ongedaan();
