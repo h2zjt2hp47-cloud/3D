@@ -6,6 +6,7 @@ import {
   controleerPlan,
   dichtsteMuur,
   meubelIn3D,
+  niveauPlan,
   muurVanOpening,
   murenVan,
   plaatsBlokken,
@@ -99,7 +100,7 @@ describe('plattegrond', () => {
   const { plan, posities } = voorbeeldWoning();
 
   it('muren volgen uit de ruimtes: buitenmuren en binnenmuren', () => {
-    const twee: Plattegrond = { ...plan, openingen: [], meubels: [], ruimtes: [plan.ruimtes[0]!, { ...plan.ruimtes[0]!, id: 'b', x: 260 }] };
+    const twee: Plattegrond = { ...niveauPlan(plan, 0), openingen: [], meubels: [], ruimtes: [plan.ruimtes[0]!, { ...plan.ruimtes[0]!, id: 'b', x: 260 }] };
     const muren = murenVan(twee);
     expect(muren.filter((m) => m.soort === 'binnen')).toHaveLength(1);
     expect(muren.filter((m) => m.soort === 'buiten')).toHaveLength(6);
@@ -108,13 +109,14 @@ describe('plattegrond', () => {
 
   it('voorbeeldwoning zonder fouten; alle openingen op een muur', () => {
     expect(controleerPlan(plan).filter((m) => m.ernst === 'fout')).toEqual([]);
-    const muren = murenVan(plan);
-    for (const o of plan.openingen) expect(muurVanOpening(o, muren), o.id).toBeDefined();
-    expect(posities).toHaveLength(10);
+    for (const o of plan.openingen) expect(muurVanOpening(o, murenVan(niveauPlan(plan, o.niveau ?? 0))), o.id).toBeDefined();
+    expect(posities).toHaveLength(14);
+    expect(posities.filter((p) => p.keuzes.verdieping === 1)).toHaveLength(4);
   });
 
   it('controles: raam in een binnenmuur, niet bereikbare ruimte, geen daglicht', () => {
     const fout: Plattegrond = structuredClone(plan);
+    fout.openingen.find((o) => o.id === 'o3')!.niveau = 0;
     fout.openingen.find((o) => o.id === 'o3')!.lijn = 380; // keukenraam naar de binnenmuur
     fout.openingen = fout.openingen.filter((o) => o.id !== 'd6'); // deur slaapkamer 1 weg
     const meldingen = controleerPlan(fout).map((m) => m.melding);
@@ -133,7 +135,7 @@ describe('plattegrond', () => {
   });
 
   it('dichtste muur bij een klik', () => {
-    const d = dichtsteMuur(murenVan(plan), 300, 895);
+    const d = dichtsteMuur(murenVan(niveauPlan(plan, 0)), 300, 895);
     expect(d?.muur.soort).toBe('buiten');
     expect(d?.midden).toBe(300);
   });
@@ -151,7 +153,7 @@ describe('plattegrond', () => {
     expect(s.kader.b).toBeGreaterThan(1400);
     expect(s.blokken.some((b) => b.zijden && Object.values(b.zijden).some((z) => z?.soort === 'steen'))).toBe(true);
     expect(s.blokken.filter((b) => b.soort === 'glas').length).toBeGreaterThan(10);
-    const laag = plattegrond3D(plan, planCatalogus, { laag: 110, meubels: false });
+    const laag = plattegrond3D(plan, planCatalogus, { laag: 110, meubels: false, totNiveau: 0 });
     expect(Math.max(...laag.blokken.map((b) => b.y + b.h))).toBeLessThanOrEqual(110);
   });
 
@@ -179,7 +181,7 @@ describe('offerte', () => {
   it('regels uit de plattegrond: vloeren, wanden, deuren', () => {
     const regels = planNaarRegels(plan, { vloeren: true, wanden: true, binnendeuren: true, ruwbouw: false, inrichting: false });
     expect(new Set(regels.map((r) => r.groep))).toEqual(new Set(['Vloeren', 'Wanden', 'Binnendeuren']));
-    expect(regels.find((r) => r.code === 'deur:schilder')?.hoeveelheid).toBe(4);
+    expect(regels.find((r) => r.code === 'deur:schilder')?.hoeveelheid).toBe(5);
     const parket = regels.find((r) => r.code === 'vloer:parket_eik')!;
     expect(parket.hoeveelheid).toBeGreaterThan(80);
   });

@@ -1,5 +1,5 @@
 /**
- * Voorbeeldwoning (gelijkvloers, 14 × 9 m) met ruimtes, ramen en deuren als offerteposities,
+ * Voorbeeldwoning (gelijkvloers 14 × 9 m en een verdieping erboven, met trap) met ruimtes, ramen en deuren als offerteposities,
  * binnendeuren en inrichting. Volledig verzonnen; dient om de demo meteen iets te laten tonen.
  */
 import { standaardKeuzes, type Keuzes, type Opening, type Plattegrond, type Ruimte, type RuimteType } from '../src/index.js';
@@ -31,6 +31,10 @@ export function voorbeeldWoning(): { plan: Plattegrond; posities: DemoPositie[] 
     ruimte('slk1', 'Slaapkamer 1', 'slaapkamer', 960, 0, 440, 420, 'parket_eik', 'salie'),
     ruimte('bad', 'Badkamer', 'badkamer', 960, 420, 440, 200, 'tegel_wit', 'tegels_wit'),
     ruimte('slk2', 'Slaapkamer 2', 'slaapkamer', 960, 620, 440, 280, 'parket_eik', 'blauwgrijs'),
+    // Verdieping 1 boven inkom, wc, berging en keuken.
+    { ...ruimte('overloop', 'Overloop', 'hal', 0, 0, 260, 380, 'parket_eik', 'wit'), niveau: 1 },
+    { ...ruimte('slk3', 'Slaapkamer 3', 'slaapkamer', 260, 0, 320, 380, 'parket_eik', 'terracotta'), niveau: 1 },
+    { ...ruimte('bad2', 'Badkamer 2', 'badkamer', 580, 0, 240, 380, 'tegel_wit', 'tegels_wit'), niveau: 1 },
   ];
 
   const posities: DemoPositie[] = [];
@@ -39,11 +43,11 @@ export function voorbeeldWoning(): { plan: Plattegrond; posities: DemoPositie[] 
   const raam = (naam: string, soort: Opening['soort'], as: 'h' | 'v', lijn: number, midden: number, b: number, h: number, borst: number, keuzes: Keuzes, deur: Partial<Opening> = {}) => {
     nr++;
     const id = `p${nr}`;
-    posities.push({ id, code: `P${nr}`, naam, model: 'RAAM', aantal: 1, keuzes: raamKeuzes({ ...keuzes, breedte: b * 10, hoogte: h * 10, borstwering: borst * 10 }) });
+    posities.push({ id, code: `P${nr}`, naam, model: 'RAAM', aantal: 1, keuzes: raamKeuzes({ ...keuzes, breedte: b * 10, hoogte: h * 10, borstwering: borst * 10, verdieping: deur.niveau ?? 0 }) });
     openingen.push({ id: `o${nr}`, soort, as, lijn, midden, breedte: b, hoogte: h, borstwering: borst, scharnier: 'begin', naarPlus: true, positie: id, ...deur });
   };
   const alu = { profiel: 'alu_hi', kleur_buiten: 'antraciet', kleur_binnen: 'wit' };
-  raam('Voordeur inkom', 'buitendeur', 'h', 0, 130, 100, 230, 0,
+  raam('Voordeur inkom', 'buitendeur', 'h', 0, 190, 100, 230, 0,
     { ...alu, type: 'voordeur', ruimte: 'hal', deur_draai: 'links', paneel: 'glasstrook', greep: 'vingerscan', glas: 'dubbel_gelaagd', rc2: true }, { naarPlus: true });
   raam('Raampje wc', 'raam', 'h', 0, 340, 60, 70, 150, { ...alu, ruimte: 'wc', vak1: 'kip', glas: 'mat_gelaagd', vensterbank: 'composiet' });
   raam('Raam keuken', 'raam', 'h', 0, 620, 200, 120, 105, { ...alu, ruimte: 'keuken', vakken: 'v2', vak1: 'vast', vak2: 'draaikip_r', vensterbank: 'geen' });
@@ -57,6 +61,13 @@ export function voorbeeldWoning(): { plan: Plattegrond; posities: DemoPositie[] 
   raam('Schuifraam leefruimte', 'schuifraam', 'h', 900, 420, 400, 240, 0,
     { ...alu, kleur_buiten: 'zwart', type: 'schuif', ruimte: 'leefruimte', schuif_richting: 'beide', glas: 'triple_gelaagd', rooster: true, zonwering: 'screen', bediening: 'domotica', drempel: 'drempelloos' });
   raam('Raam leefruimte zijgevel', 'raam', 'v', 0, 480, 140, 160, 70, { ...alu, ruimte: 'leefruimte', vak1: 'draaikip_r', glas: 'dubbel_gelaagd', rooster: true, vensterbank: 'eik' });
+  // Verdieping 1.
+  const op1 = { niveau: 1 };
+  raam('Raam overloop voorgevel', 'raam', 'h', 0, 150, 100, 120, 100, { ...alu, ruimte: 'hal', vak1: 'draaikip_l' }, op1);
+  raam('Raam slaapkamer 3', 'raam', 'h', 0, 420, 180, 150, 90,
+    { ...alu, ruimte: 'slaapkamer', vakken: 'v2', vak1: 'draaikip_l', vak2: 'draaikip_r', rooster: true, zonwering: 'screen', bediening: 'motor' }, op1);
+  raam('Raam badkamer 2', 'raam', 'h', 0, 700, 80, 80, 150, { ...alu, ruimte: 'badkamer', vak1: 'kip', glas: 'mat_gelaagd', vensterbank: 'composiet' }, op1);
+  raam('Raam overloop naar dakterras', 'raam', 'h', 380, 130, 120, 180, 40, { ...alu, ruimte: 'hal', vak1: 'draai_l', glas: 'dubbel_gelaagd', vensterbank: 'geen' }, op1);
 
   const deur = (id: string, soort: 'binnendeur' | 'doorgang', as: 'h' | 'v', lijn: number, midden: number, b: number, deurtype: string, naarPlus: boolean, scharnier: 'begin' | 'einde'): Opening =>
     ({ id, soort, as, lijn, midden, breedte: b, hoogte: soort === 'doorgang' ? 220 : 211, borstwering: 0, scharnier, naarPlus, deurtype });
@@ -69,10 +80,12 @@ export function voorbeeldWoning(): { plan: Plattegrond; posities: DemoPositie[] 
     deur('d6', 'binnendeur', 'v', 960, 330, 90, 'schilder', true, 'einde'),
     deur('d7', 'binnendeur', 'v', 960, 520, 80, 'schuif', true, 'begin'),
     deur('d8', 'binnendeur', 'v', 960, 700, 90, 'schilder', true, 'begin'),
+    { ...deur('d9', 'binnendeur', 'v', 260, 300, 80, 'schilder', true, 'einde'), niveau: 1 },
+    { ...deur('d10', 'binnendeur', 'v', 580, 200, 80, 'schuif', true, 'begin'), niveau: 1 },
   );
 
   let m = 0;
-  const meubel = (type: string, x: number, y: number, b: number, d: number, rotatie: 0 | 90 | 180 | 270 = 0) => ({ id: `m${++m}`, type, x, y, b, d, rotatie });
+  const meubel = (type: string, x: number, y: number, b: number, d: number, rotatie: 0 | 90 | 180 | 270 = 0, niveau = 0) => ({ id: `m${++m}`, type, x, y, b, d, rotatie, niveau });
   const meubels = [
     meubel('tapijt', 125, 620, 240, 170, 90),
     meubel('bank3', 300, 625, 230, 95, 90),
@@ -86,7 +99,7 @@ export function voorbeeldWoning(): { plan: Plattegrond; posities: DemoPositie[] 
     meubel('keuken', 753, 15, 360, 62, 90),
     meubel('eiland', 520, 80, 240, 100, 90),
     meubel('koelkast', 430, 15, 60, 62),
-    meubel('kleerkast', 15, 140, 120, 50, 270),
+    meubel('trap', 15, 60, 100, 300),
     meubel('wc', 360, 110, 40, 55, 90),
     meubel('bed2', 1100, 200, 165, 215, 180),
     meubel('nachtkast', 1050, 375, 45, 40, 180), meubel('nachtkast', 1270, 375, 45, 40, 180),
@@ -98,12 +111,20 @@ export function voorbeeldWoning(): { plan: Plattegrond; posities: DemoPositie[] 
     meubel('bed1', 1175, 700, 95, 210, 90),
     meubel('bureau', 1055, 625, 120, 60),
     meubel('kleerkast', 1230, 625, 150, 60),
+    // Verdieping 1.
+    meubel('bed2', 330, 20, 165, 215, 0, 1),
+    meubel('nachtkast', 280, 20, 45, 40, 0, 1), meubel('nachtkast', 500, 20, 45, 40, 0, 1),
+    meubel('kleerkast', 360, 315, 200, 60, 180, 1),
+    meubel('douche', 725, 15, 90, 90, 0, 1),
+    meubel('lavabo', 600, 325, 120, 50, 180, 1),
+    meubel('wc', 760, 200, 40, 55, 90, 1),
+    meubel('plant', 180, 300, 50, 50, 0, 1),
   ];
-  // Kleiner model kleerkast in inkom en slaapkamer 2: andere breedte dan de catalogus.
   return {
     plan: {
       ruimtes, openingen, meubels,
       muurhoogte: 270, buitenmuur: 30, binnenmuur: 10,
+      verdiepingen: [{ naam: 'Gelijkvloers' }, { naam: 'Verdieping 1' }],
       gevel: { soort: 'steen', kleur: '#9c4a34' },
     },
     posities,

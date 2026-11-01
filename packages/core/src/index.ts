@@ -48,3 +48,5 @@ export { controleerCatalogus, maakCode, tekenstijlen } from './catalogus.js';
 export * from './plattegrond.js';
 export * from './plattegrondsvg.js';
 export * from './offerte.js';
+export * from './gevels.js';
+export * from './werf.js';

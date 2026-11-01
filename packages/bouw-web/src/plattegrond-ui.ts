@@ -4,7 +4,15 @@
  */
 import {
   controleerPlan,
+  delenVan,
   dichtsteMuur,
+  gevelAanzichten,
+  niveauPlan,
+  niveauVan,
+  splitsRuimtes,
+  tekenRuimteIn,
+  tekenSvg,
+  verdiepingenVan,
   meubelVoetafdruk,
   murenVan,
   muurVanOpening,
@@ -42,12 +50,13 @@ import {
   wijzig,
 } from './staat.js';
 
-type Gereedschap = 'kies' | 'ruimte' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'meubel';
+type Gereedschap = 'kies' | 'ruimte' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'meubel';
 type Selectie = { soort: 'ruimte' | 'opening' | 'meubel'; id: string } | undefined;
 
 const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
   { code: 'kies', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
-  { code: 'ruimte', label: 'Ruimte tekenen', toets: 'T', hint: 'Sleep een rechthoek. Hij kleeft aan bestaande muren. De muren volgen automatisch.' },
+  { code: 'ruimte', label: 'Ruimte tekenen', toets: 'T', hint: 'Sleep een rechthoek, ook binnen een bestaande ruimte ("ruimte in ruimte"): wat overlapt wordt uit de oude ruimte gesneden. Muren volgen automatisch.' },
+  { code: 'wand', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld.' },
   { code: 'wand_v', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
   { code: 'wand_h', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
   { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een positie in de offerte bij.' },
@@ -71,7 +80,10 @@ let selectie: Selectie;
 let viewBox: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeldOpening: Opening | undefined;
-let weergave: 'plan' | '3d' = 'plan';
+let weergave: 'plan' | 'gevels' | '3d' = 'plan';
+let niveau = 0;
+let alleNiveaus = true;
+let voorbeeldWand: { x1: number; y1: number; x2: number; y2: number } | undefined;
 let viewer: Viewer3D | null | undefined;
 let laag = false;
 let toonMeubels = true;
@@ -80,7 +92,7 @@ let naarPositie: (id: string) => void = () => {};
 let naarOfferte: () => void = () => {};
 
 interface Sleep {
-  soort: 'teken' | 'ruimte' | 'greep' | 'opening' | 'meubel';
+  soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'opening' | 'meubel';
   start: { x: number; y: number };
   id?: string;
   kant?: 'n' | 's' | 'w' | 'o';
@@ -89,7 +101,8 @@ interface Sleep {
 }
 let sleep: Sleep | undefined;
 
-const plan = () => toestand().plan;
+/** De actieve verdieping (alleen-lezen kopie); wijzigen gebeurt via wijzig() op id. */
+const plan = () => niveauPlan(toestand().plan, niveau);
 const snap = (v: number, s = 10) => Math.round(v / s) * s;
 
 // ---------- tekenen ----------
@@ -104,7 +117,7 @@ function raamInfo(o: Opening) {
 
 function fouten(): Set<string> {
   const s = new Set<string>();
-  for (const m of controleerPlan(plan())) if (m.ernst === 'fout') { if (m.ruimte) s.add(m.ruimte); if (m.opening) s.add(m.opening); }
+  for (const m of controleerPlan(toestand().plan)) if (m.ernst === 'fout') { if (m.ruimte) s.add(m.ruimte); if (m.opening) s.add(m.opening); }
   for (const o of plan().openingen) {
     const p = positieVan(o);
     if (p && !resultaat(p).geldig) s.add(o.id);
@@ -115,9 +128,107 @@ function fouten(): Set<string> {
 export function render() {
   const houder = $('#pl-canvas');
   if (!sleep) viewBox = planKader(plan(), 140);
-  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, raamInfo, fouten: fouten(), viewBox });
+  const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
+  if (!sleep && onderlegger?.ruimtes.length) {
+    // Kader ook rond de verdieping eronder, zodat je erop kan tekenen.
+    const a = planKader(plan(), 140), b = planKader(onderlegger, 140);
+    if (plan().ruimtes.length) {
+      const x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y);
+      viewBox = { x: x0, y: y0, b: Math.max(a.x + a.b, b.x + b.b) - x0, d: Math.max(a.y + a.d, b.y + b.d) - y0 };
+    } else viewBox = b;
+  }
+  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox });
   houder.dataset.gereedschap = gereedschap;
+  toonNiveaus();
   if (weergave === '3d') plan3D();
+  if (weergave === 'gevels') toonGevels();
+}
+
+/** Info per opening voor de gevelaanzichten (kleur, vakken, zonweringskast). */
+function gevelInfo(o: Opening) {
+  const p = positieVan(o);
+  if (!p || p.model !== 'RAAM') return undefined;
+  const r = resultaat(p);
+  const a = r.afgeleid;
+  const n = Math.max(1, Number(a.n) || 1);
+  return {
+    label: p.code,
+    kleur: String(a.kb ?? '#383e42'),
+    vakken: [a.op1, a.op2, a.op3].slice(0, n).map(String),
+    kast: (Number(a.zon_kast) || 0) / 10,
+    paneel: p.keuzes.type === 'voordeur' && p.keuzes.paneel !== 'glasstrook',
+    voordeur: p.keuzes.type === 'voordeur',
+  };
+}
+
+export function toonGevels() {
+  const vak = $('#pl-gevels');
+  const gevels = gevelAanzichten(toestand().plan, gevelInfo);
+  if (!gevels.length) { vak.replaceChildren(el('p', { class: 'klein' }, 'Teken eerst ruimtes; de gevels volgen vanzelf.')); return; }
+  vak.replaceChildren(...gevels.map((g) => {
+    const f = el('figure', { class: 'gevel' });
+    const d = el('div', { class: 'tekening' });
+    d.innerHTML = tekenSvg(g.tekening, { breedtePx: 720, lijnkleur: '#2b2b28', maatkleur: '#34505f' });
+    f.append(el('figcaption', {}, g.naam), d);
+    return f;
+  }));
+}
+
+export function gevelSvgs(breedtePx = 600): { naam: string; svg: string }[] {
+  return gevelAanzichten(toestand().plan, gevelInfo).map((g) => ({ naam: g.naam, svg: tekenSvg(g.tekening, { breedtePx, lijnkleur: '#222', maatkleur: '#34505f' }) }));
+}
+
+function toonNiveaus() {
+  const lijst = verdiepingenVan(toestand().plan);
+  const vak = $('#pl-niveaus');
+  vak.replaceChildren(...lijst.map((v, i) => {
+    const b = el('button', { type: 'button', 'aria-pressed': String(i === niveau) }, v.naam);
+    b.addEventListener('click', () => { niveau = i; selectie = undefined; render(); toonEigenschappen(); });
+    return b;
+  }));
+  const plus = el('button', { type: 'button', class: 'tweede' }, '+ Verdieping');
+  plus.addEventListener('click', nieuweVerdieping);
+  vak.append(plus);
+  if (lijst.length > 1 && niveau === lijst.length - 1) {
+    const weg = el('button', { type: 'button', class: 'gevaar' }, 'Verdieping verwijderen');
+    weg.addEventListener('click', () => {
+      if (weg.dataset.zeker !== '1') { weg.dataset.zeker = '1'; weg.textContent = 'Zeker? Alles op deze verdieping verdwijnt'; return; }
+      const n = niveau;
+      wijzig('plan', (t) => {
+        const weg = new Set(t.plan.openingen.filter((o) => niveauVan(o) === n).map((o) => o.positie).filter(Boolean));
+        t.posities = t.posities.filter((p) => !weg.has(p.id));
+        t.plan.ruimtes = t.plan.ruimtes.filter((r) => niveauVan(r) !== n);
+        t.plan.openingen = t.plan.openingen.filter((o) => niveauVan(o) !== n);
+        t.plan.meubels = t.plan.meubels.filter((m) => niveauVan(m) !== n);
+        t.plan.verdiepingen = verdiepingenVan(t.plan).slice(0, n);
+      });
+      niveau = n - 1;
+      selectie = undefined;
+      render();
+      toonEigenschappen();
+    });
+    vak.append(weg);
+  }
+}
+
+/** Nieuwe verdieping: één ruimte boven de hele verdieping eronder, om daarna in te delen. */
+function nieuweVerdieping() {
+  const t = toestand();
+  const lijst = verdiepingenVan(t.plan);
+  const n = lijst.length;
+  const onder = niveauPlan(t.plan, n - 1).ruimtes.flatMap(delenVan);
+  wijzig('plan', (tt) => {
+    tt.plan.verdiepingen = [...lijst, { naam: `Verdieping ${n}` }];
+    if (onder.length) {
+      const x0 = Math.min(...onder.map((p) => p.x)), y0 = Math.min(...onder.map((p) => p.y));
+      const x1 = Math.max(...onder.map((p) => p.x + p.b)), y1 = Math.max(...onder.map((p) => p.y + p.d));
+      tt.plan.ruimtes.push({ id: nieuweId('r'), naam: 'Nieuwe verdieping', type: 'hal', x: x0, y: y0, b: x1 - x0, d: y1 - y0, vloer: 'parket_eik', wand: 'wit', niveau: n });
+    }
+  });
+  niveau = n;
+  selectie = undefined;
+  melding = 'Nieuwe verdieping: deel ze in met "Wand tekenen" of teken ruimtes erin. Plaats beneden een trap (Meubel → Trappen).';
+  kiesGereedschap('wand');
 }
 
 let wachtend3D = false;
@@ -126,9 +237,10 @@ function plan3D() {
   wachtend3D = true;
   requestAnimationFrame(() => {
     wachtend3D = false;
-    viewer?.toon(plattegrond3D(plan(), cat, {
+    viewer?.toon(plattegrond3D(toestand().plan, cat, {
       laag: laag ? 110 : undefined,
       meubels: toonMeubels,
+      totNiveau: alleNiveaus && !laag ? undefined : niveau,
       inhoud: (o) => {
         const p = positieVan(o);
         if (!p || p.model !== 'RAAM') return undefined;
@@ -154,10 +266,13 @@ function punt(ev: PointerEvent | MouseEvent): { x: number; y: number } {
 /** Kleef een waarde aan de dichtste bestaande lijn (randen van ruimtes) binnen een marge. */
 function kleef(v: number, as: 'x' | 'y', marge = 18, behalve?: string): number {
   let beste = snap(v), afstand = marge;
-  for (const r of plan().ruimtes) {
+  const onder = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1).ruimtes : [];
+  for (const r of [...plan().ruimtes, ...onder]) {
     if (r.id === behalve) continue;
-    for (const l of as === 'x' ? [r.x, r.x + r.b] : [r.y, r.y + r.d]) {
-      if (Math.abs(l - v) < afstand) { afstand = Math.abs(l - v); beste = l; }
+    for (const p of delenVan(r)) {
+      for (const l of as === 'x' ? [p.x, p.x + p.b] : [p.y, p.y + p.d]) {
+        if (Math.abs(l - v) < afstand) { afstand = Math.abs(l - v); beste = l; }
+      }
     }
   }
   return beste;
@@ -204,6 +319,7 @@ function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Openin
   const midden = Math.min(m.tot - breedte / 2 - 10, Math.max(m.van + breedte / 2 + 10, snap(d.midden, 5)));
   const binnenPlus = m.soort === 'buiten' ? !!m.plus : (m.as === 'h' ? y > m.lijn : x > m.lijn);
   const opening: Opening = {
+    niveau,
     id: nieuweId('o'), soort, as: m.as, lijn: m.lijn, midden, breedte, hoogte: std.h, borstwering: std.borst,
     scharnier: 'begin', naarPlus: binnenPlus, deurtype: soort === 'binnendeur' ? 'schilder' : undefined,
   };
@@ -242,21 +358,22 @@ function splits(x: number, y: number, staand: boolean) {
   const r = ruimteOp(plan(), x, y);
   if (!r) return;
   const lijn = staand ? kleef(x, 'x', 10, r.id) : kleef(y, 'y', 10, r.id);
-  const min = 60;
-  if (staand ? lijn - r.x < min || r.x + r.b - lijn < min : lijn - r.y < min || r.y + r.d - lijn < min) {
-    melding = 'Te dicht bij de rand: elke ruimte moet minstens 60 cm breed blijven.';
+  deelMetWand(staand ? 'v' : 'h', lijn, staand ? y : x, staand ? y : x);
+}
+
+/** Deelt alle ruimtes die een wand kruist; minstens 60 cm aan elke kant. */
+function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number) {
+  let nieuw: Ruimte[] = [];
+  wijzig('plan', (t) => {
+    nieuw = splitsRuimtes(t.plan, niveau, as, lijn, Math.min(van, tot), Math.max(van, tot), (oud) => ({ ...oud, id: nieuweId('r'), naam: nieuweRuimteNaam(), delen: undefined }), 60);
+  });
+  if (!nieuw.length) {
+    melding = 'Geen ruimte gedeeld: de wand moet door een ruimte lopen, minstens 60 cm van de rand.';
     toonEigenschappen();
     return;
   }
-  const nieuw: Ruimte = { ...r, id: nieuweId('r'), naam: nieuweRuimteNaam() };
-  wijzig('plan', (t) => {
-    const oud = t.plan.ruimtes.find((x) => x.id === r.id)!;
-    if (staand) { nieuw.x = lijn; nieuw.b = oud.x + oud.b - lijn; oud.b = lijn - oud.x; }
-    else { nieuw.y = lijn; nieuw.d = oud.y + oud.d - lijn; oud.d = lijn - oud.y; }
-    t.plan.ruimtes.push(nieuw);
-  });
-  selectie = { soort: 'ruimte', id: nieuw.id };
-  melding = 'Ruimte ingedeeld. Vergeet geen deur of doorgang naar de nieuwe ruimte.';
+  selectie = { soort: 'ruimte', id: nieuw[0]!.id };
+  melding = `${nieuw.length === 1 ? 'Ruimte' : `${nieuw.length} ruimtes`} ingedeeld. Vergeet geen deur of doorgang naar de nieuwe ruimte.`;
   kiesGereedschap('kies');
 }
 
@@ -272,10 +389,15 @@ function naPointerDown(ev: PointerEvent) {
     return;
   }
   if (gereedschap === 'wand_v' || gereedschap === 'wand_h') { splits(p.x, p.y, gereedschap === 'wand_v'); return; }
+  if (gereedschap === 'wand') {
+    sleep = { soort: 'wand', start: { x: kleef(p.x, 'x', 12), y: kleef(p.y, 'y', 12) }, bewogen: false };
+    houder.setPointerCapture(ev.pointerId);
+    return;
+  }
   if (gereedschap === 'meubel') {
     const t = cat.meubels[meubelType];
     if (!t) return;
-    const m: Meubel = { id: nieuweId('m'), type: meubelType, x: snap(p.x - t.b / 2, 5), y: snap(p.y - t.d / 2, 5), b: t.b, d: t.d, rotatie: 0 };
+    const m: Meubel = { niveau, id: nieuweId('m'), type: meubelType, x: snap(p.x - t.b / 2, 5), y: snap(p.y - t.d / 2, 5), b: t.b, d: t.d, rotatie: 0 };
     wijzig('plan', (tt) => { tt.plan.meubels.push(m); });
     selectie = { soort: 'meubel', id: m.id };
     kiesGereedschap('kies');
@@ -319,6 +441,15 @@ function naPointerMove(ev: PointerEvent) {
   if (!sleep.bewogen && Math.hypot(dx, dy) < 4) return;
   if (!sleep.bewogen && sleep.soort !== 'teken') momentopname();
   sleep.bewogen = true;
+  if (sleep.soort === 'wand') {
+    // Recht: horizontaal of verticaal, volgens de grootste beweging.
+    const staand = Math.abs(dy) > Math.abs(dx);
+    voorbeeldWand = staand
+      ? { x1: sleep.start.x, y1: sleep.start.y, x2: sleep.start.x, y2: snap(p.y) }
+      : { x1: sleep.start.x, y1: sleep.start.y, x2: snap(p.x), y2: sleep.start.y };
+    render();
+    return;
+  }
   if (sleep.soort === 'teken') {
     const x2 = kleef(p.x, 'x'), y2 = kleef(p.y, 'y');
     voorbeeld = { x: Math.min(sleep.start.x, x2), y: Math.min(sleep.start.y, y2), b: Math.abs(x2 - sleep.start.x), d: Math.abs(y2 - sleep.start.y) };
@@ -345,19 +476,21 @@ function naPointerMove(ev: PointerEvent) {
       const nx = kleef(r0.x + dx, 'x', 18, id), ny = kleef(r0.y + dy, 'y', 18, id);
       const ddx = nx - r0.x, ddy = ny - r0.y;
       r.x = nx; r.y = ny;
+      if (r0.delen) r.delen = r0.delen.map((q) => ({ ...q, x: q.x + ddx, y: q.y + ddy }));
+      const binnenR0 = (x: number, y: number) => delenVan(r0).some((q) => x > q.x && x < q.x + q.b && y > q.y && y < q.y + q.d);
       // Meubels in de ruimte en openingen op de randen gaan mee.
       for (const m0 of oud.meubels) {
         const v = meubelVoetafdruk(m0);
         const cx = v.x + v.b / 2, cy = v.y + v.d / 2;
-        if (cx > r0.x && cx < r0.x + r0.b && cy > r0.y && cy < r0.y + r0.d) {
+        if (binnenR0(cx, cy)) {
           const m = pl.meubels.find((x) => x.id === m0.id)!;
           m.x = m0.x + ddx; m.y = m0.y + ddy;
         }
       }
       for (const o0 of oud.openingen) {
-        const opRand = o0.as === 'h'
-          ? (Math.abs(o0.lijn - r0.y) < 0.5 || Math.abs(o0.lijn - (r0.y + r0.d)) < 0.5) && o0.midden > r0.x && o0.midden < r0.x + r0.b
-          : (Math.abs(o0.lijn - r0.x) < 0.5 || Math.abs(o0.lijn - (r0.x + r0.b)) < 0.5) && o0.midden > r0.y && o0.midden < r0.y + r0.d;
+        const opRand = delenVan(r0).some((q) => (o0.as === 'h'
+          ? (Math.abs(o0.lijn - q.y) < 0.5 || Math.abs(o0.lijn - (q.y + q.d)) < 0.5) && o0.midden > q.x && o0.midden < q.x + q.b
+          : (Math.abs(o0.lijn - q.x) < 0.5 || Math.abs(o0.lijn - (q.x + q.b)) < 0.5) && o0.midden > q.y && o0.midden < q.y + q.d));
         if (!opRand) continue;
         const o = pl.openingen.find((x) => x.id === o0.id)!;
         o.lijn = o0.lijn + (o0.as === 'h' ? ddy : ddx);
@@ -368,30 +501,34 @@ function naPointerMove(ev: PointerEvent) {
   }, { zonderOngedaan: true });
 }
 
-/** Verschuift één rand van een ruimte; aangrenzende ruimtes en openingen op die rand schuiven mee. */
+/** Verschuift één rand van een ruimte; aangrenzende ruimtes(delen) en openingen op die rand schuiven mee. */
 function verschuifWand(oud: Plattegrond, pl: Plattegrond, id: string, kant: 'n' | 's' | 'w' | 'o', p: { x: number; y: number }) {
   const r0 = oud.ruimtes.find((r) => r.id === id)!;
   const staand = kant === 'w' || kant === 'o';
   const lijn0 = kant === 'w' ? r0.x : kant === 'o' ? r0.x + r0.b : kant === 'n' ? r0.y : r0.y + r0.d;
   const [van, tot] = staand ? [r0.y, r0.y + r0.d] : [r0.x, r0.x + r0.b];
   let lijn = kleef(staand ? p.x : p.y, staand ? 'x' : 'y', 12, id);
-  // Alle ruimtes met een rand op dezelfde lijn binnen hetzelfde stuk schuiven mee (min. 60 cm).
-  const betrokken = oud.ruimtes.filter((r) => {
-    const [a, b] = staand ? [r.y, r.y + r.d] : [r.x, r.x + r.b];
-    const overlap = Math.min(b, tot) - Math.max(a, van) > 1;
-    const opLijn = staand ? Math.abs(r.x - lijn0) < 0.5 || Math.abs(r.x + r.b - lijn0) < 0.5 : Math.abs(r.y - lijn0) < 0.5 || Math.abs(r.y + r.d - lijn0) < 0.5;
-    return overlap && opLijn;
-  });
-  for (const r of betrokken) {
-    const begin = staand ? r.x : r.y, einde = staand ? r.x + r.b : r.y + r.d;
+  // Alle delen met een rand op dezelfde lijn binnen hetzelfde stuk schuiven mee (min. 60 cm).
+  const betrokken: { ruimte: string; deel: number; q: { x: number; y: number; b: number; d: number } }[] = [];
+  for (const r of oud.ruimtes) {
+    delenVan(r).forEach((q, deel) => {
+      const [a, b] = staand ? [q.y, q.y + q.d] : [q.x, q.x + q.b];
+      const overlap = Math.min(b, tot) - Math.max(a, van) > 1;
+      const opLijn = staand ? Math.abs(q.x - lijn0) < 0.5 || Math.abs(q.x + q.b - lijn0) < 0.5 : Math.abs(q.y - lijn0) < 0.5 || Math.abs(q.y + q.d - lijn0) < 0.5;
+      if (overlap && opLijn) betrokken.push({ ruimte: r.id, deel, q });
+    });
+  }
+  for (const { q } of betrokken) {
+    const begin = staand ? q.x : q.y, einde = staand ? q.x + q.b : q.y + q.d;
     if (Math.abs(begin - lijn0) < 0.5) lijn = Math.min(lijn, einde - 60);
     else lijn = Math.max(lijn, begin + 60);
   }
-  for (const r0b of betrokken) {
-    const r = pl.ruimtes.find((x) => x.id === r0b.id)!;
+  for (const { ruimte, deel, q } of betrokken) {
+    const r = pl.ruimtes.find((x) => x.id === ruimte)!;
+    const doel = deel === 0 ? r : r.delen![deel - 1]!;
     if (staand) {
-      if (Math.abs(r0b.x - lijn0) < 0.5) { r.x = lijn; r.b = r0b.x + r0b.b - lijn; } else { r.b = lijn - r0b.x; }
-    } else if (Math.abs(r0b.y - lijn0) < 0.5) { r.y = lijn; r.d = r0b.y + r0b.d - lijn; } else { r.d = lijn - r0b.y; }
+      if (Math.abs(q.x - lijn0) < 0.5) { doel.x = lijn; doel.b = q.x + q.b - lijn; } else { doel.b = lijn - q.x; }
+    } else if (Math.abs(q.y - lijn0) < 0.5) { doel.y = lijn; doel.d = q.y + q.d - lijn; } else { doel.d = lijn - q.y; }
   }
   for (const o0 of oud.openingen) {
     if ((o0.as === 'v') !== staand || Math.abs(o0.lijn - lijn0) > 0.5 || o0.midden < van || o0.midden > tot) continue;
@@ -403,14 +540,27 @@ function naPointerUp(ev: PointerEvent) {
   const s = sleep;
   sleep = undefined;
   $('#pl-canvas').releasePointerCapture?.(ev.pointerId);
+  if (s?.soort === 'wand') {
+    const w = voorbeeldWand;
+    voorbeeldWand = undefined;
+    if (w && Math.hypot(w.x2 - w.x1, w.y2 - w.y1) >= 30) {
+      const staand = w.x1 === w.x2;
+      deelMetWand(staand ? 'v' : 'h', staand ? w.x1 : w.y1, staand ? w.y1 : w.x1, staand ? w.y2 : w.x2);
+      return;
+    }
+    render();
+    return;
+  }
   if (s?.soort === 'teken') {
     const v = voorbeeld;
     voorbeeld = undefined;
     if (v && v.b >= 80 && v.d >= 80) {
-      const r: Ruimte = { id: nieuweId('r'), naam: nieuweRuimteNaam(), type: 'leefruimte', ...v, vloer: 'parket_eik', wand: 'wit' };
-      wijzig('plan', (t) => { t.plan.ruimtes.push(r); });
+      // Binnen een bestaande ruimte: zelfde vloer en wanden overnemen.
+      const ouder = ruimteOp(plan(), v.x + v.b / 2, v.y + v.d / 2);
+      const r: Ruimte = { id: nieuweId('r'), naam: nieuweRuimteNaam(), type: ouder ? 'berging' : 'leefruimte', ...v, vloer: ouder?.vloer ?? 'parket_eik', wand: ouder?.wand ?? 'wit', niveau };
+      wijzig('plan', (t) => { tekenRuimteIn(t.plan, r); });
       selectie = { soort: 'ruimte', id: r.id };
-      melding = '';
+      melding = ouder ? `Ruimte getekend in ${ouder.naam}; die ruimte is aangepast. Voeg een deur of doorgang toe.` : '';
       kiesGereedschap('kies');
       return;
     }
@@ -485,12 +635,16 @@ function toonEigenschappen() {
       rij('Vloer', keuzelijst('pl-vloer', Object.entries(cat.vloeren).map(([k, v]) => [k, v.label]), r.vloer, (w) => zet((x) => { x.vloer = w; }))),
       rij('Wanden', keuzelijst('pl-wand', Object.entries(cat.wanden).map(([k, v]) => [k, v.label]), r.wand, (w) => zet((x) => { x.wand = w; }))),
     );
-    const maten = el('div', { class: 'maten' });
-    maten.append(
-      getalVeld('Breedte', r.b, (w) => zet((x) => { x.b = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
-      getalVeld('Diepte', r.d, (w) => zet((x) => { x.d = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
-    );
-    vak.append(maten);
+    if (r.delen?.length) {
+      vak.append(el('p', { class: 'klein' }, `Samengestelde ruimte (${r.delen.length + 1} delen, L- of U-vorm). Verplaatsen kan; maten wijzig je door een wand te tekenen of een ruimte erin te tekenen.`));
+    } else {
+      const maten = el('div', { class: 'maten' });
+      maten.append(
+        getalVeld('Breedte', r.b, (w) => zet((x) => { x.b = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
+        getalVeld('Diepte', r.d, (w) => zet((x) => { x.d = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
+      );
+      vak.append(maten);
+    }
     const dl = el('dl', { class: 'detail' });
     const daglicht = m.netto ? (m.glas / m.netto) * 100 : 0;
     for (const [a, b] of [
@@ -597,9 +751,12 @@ function toonOverzicht() {
     tr.addEventListener('click', () => { selectie = { soort: 'ruimte', id: r.id }; render(); toonEigenschappen(); });
     return tr;
   }));
-  $('#pl-totaal').textContent = `${getal(netto, 1)} m² netto · ${getal(bruto, 1)} m² bruto · ${pl.openingen.filter((o) => o.positie).length} ramen en buitendeuren`;
-  const meldingen = controleerPlan(pl);
-  for (const o of pl.openingen) {
+  const alles = toestand().plan;
+  const totaal = alles.ruimtes.reduce((t, r) => t + ruimteMaten(alles, r).netto, 0);
+  const n = verdiepingenVan(alles).length;
+  $('#pl-totaal').textContent = `${verdiepingenVan(alles)[niveau]?.naam}: ${getal(netto, 1)} m² netto · ${getal(bruto, 1)} m² bruto${n > 1 ? ` · woning ${getal(totaal, 1)} m² netto` : ''} · ${alles.openingen.filter((o) => o.positie).length} ramen en buitendeuren`;
+  const meldingen = controleerPlan(alles);
+  for (const o of alles.openingen) {
     const p = positieVan(o);
     if (p) for (const m of resultaat(p).meldingen) meldingen.push({ ernst: m.ernst, melding: `${p.code}: ${m.melding}`, opening: o.id });
   }
@@ -609,7 +766,13 @@ function toonOverzicht() {
     const id = m.opening ?? m.ruimte;
     if (id) {
       li.style.cursor = 'pointer';
-      li.addEventListener('click', () => { selectie = { soort: m.opening ? 'opening' : 'ruimte', id }; render(); toonEigenschappen(); });
+      li.addEventListener('click', () => {
+        const item = m.opening ? alles.openingen.find((o) => o.id === id) : alles.ruimtes.find((r) => r.id === id);
+        if (item) niveau = niveauVan(item);
+        selectie = { soort: m.opening ? 'opening' : 'ruimte', id };
+        render();
+        toonEigenschappen();
+      });
     }
     return li;
   }));
@@ -633,10 +796,12 @@ function kiesGereedschap(g: Gereedschap) {
   toonEigenschappen();
 }
 
-function toonWeergave(w: 'plan' | '3d') {
+function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   weergave = w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.plWeergave === w));
   $('#pl-canvas').hidden = w !== 'plan';
+  $('#pl-gevels').hidden = w !== 'gevels';
+  if (w === 'gevels') toonGevels();
   $('#pl-3d').hidden = w !== '3d';
   $('#pl-3d-knoppen').hidden = w !== '3d';
   $('#pl-hint').hidden = w !== 'plan';
@@ -648,7 +813,11 @@ function toonWeergave(w: 'plan' | '3d') {
 }
 
 export function toonPlan(openingId?: string) {
-  if (openingId) selectie = { soort: 'opening', id: openingId };
+  if (openingId) {
+    selectie = { soort: 'opening', id: openingId };
+    const o = toestand().plan.openingen.find((x) => x.id === openingId);
+    if (o) niveau = niveauVan(o);
+  }
   render();
   toonEigenschappen();
 }
@@ -686,13 +855,14 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   houder.addEventListener('pointermove', naPointerMove);
   houder.addEventListener('pointerup', naPointerUp);
   houder.addEventListener('pointerleave', () => { if (voorbeeldOpening) { voorbeeldOpening = undefined; render(); } });
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | '3d'));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | 'gevels' | '3d'));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.plStandpunt as 'schuin'));
   $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => { laag = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
+  $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
   $('#pl-ongedaan').addEventListener('click', () => ongedaan());
-  $('#pl-voorbeeld').addEventListener('click', () => { selectie = undefined; vervang(voorbeeldToestand()); });
-  $('#pl-leeg').addEventListener('click', () => { selectie = undefined; vervang(legeToestand()); kiesGereedschap('ruimte'); });
+  $('#pl-voorbeeld').addEventListener('click', () => { selectie = undefined; niveau = 0; vervang(voorbeeldToestand()); });
+  $('#pl-leeg').addEventListener('click', () => { selectie = undefined; niveau = 0; vervang(legeToestand()); kiesGereedschap('ruimte'); });
   $('#pl-naarofferte').addEventListener('click', () => naarOfferte());
 
   document.addEventListener('keydown', (ev) => {

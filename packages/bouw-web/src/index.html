@@ -237,6 +237,56 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 .tegel.onbeschikbaar { opacity: .55; }
 .symbool { width: 16px; height: 21px; flex: none; color: var(--accent); }
 
+
+/* ---------- verdiepingen en gevels ---------- */
+.niveaus button { font-size: .85rem; }
+.gevels { display: grid; gap: 16px; }
+.gevel { margin: 0; }
+.gevel figcaption { font-weight: 600; margin-bottom: 6px; }
+.gevel .tekening svg { max-height: 360px; }
+
+/* ---------- werf (tabletvriendelijk) ---------- */
+.werfkop { margin-bottom: 16px; }
+.metingen { display: grid; gap: 16px; }
+.meting { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; }
+@media (max-width: 700px) { .meting { grid-template-columns: minmax(0, 1fr); } }
+.meting.overgenomen { border-left: 4px solid var(--goed); }
+.meting.gemeten { border-left: 4px solid var(--let-op); }
+.meting .mini { background: var(--papier); border-radius: 6px; padding: 4px; }
+.meting .mini svg { max-width: 100%; height: auto; }
+.meetinhoud { display: grid; gap: 10px; }
+.meetinhoud p { margin: 0; }
+.meetvelden { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px 10px; align-items: end; }
+.meetkop { grid-column: 1 / -1; font-weight: 600; font-size: .85rem; color: var(--zacht); margin-top: 4px !important; }
+.meetveld { display: grid; gap: 3px; font-size: .85rem; color: var(--zacht); min-width: 0; }
+.meetveld input { width: 100%; min-width: 0; font-size: 1.15rem; padding: 10px 10px; text-align: right; border: 1px solid var(--lijn); border-radius: 8px; background: var(--achtergrond); font-variant-numeric: tabular-nums; min-height: 46px; }
+.uitkomst { font-size: 1rem; }
+.meetextra { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.meetextra textarea { flex: 1 1 260px; font: inherit; padding: 8px; border: 1px solid var(--lijn); border-radius: 8px; background: var(--achtergrond); }
+.fotoknop { display: inline-flex; align-items: center; border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+.fotoknop input { display: none; }
+.meetfoto { max-width: 160px; max-height: 120px; border-radius: 6px; object-fit: cover; }
+.meting .positieacties button { min-height: 42px; }
+.meerwerktabel ul { margin: 4px 0 0; padding-left: 18px; font-size: .85rem; color: var(--zacht); }
+.meerwerktabel td { white-space: normal; vertical-align: top; }
+.meerwerktabel tr.meer td.num { color: var(--let-op); }
+.meerwerktabel tr.min td.num { color: var(--goed); }
+.meerwerkform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 16px; }
+.meerwerkform input[type="text"] { flex: 1 1 260px; }
+.meerwerkform input[type="number"] { width: 90px; padding: 6px 8px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); }
+.klein-knop { font-size: .8rem !important; padding: 2px 8px !important; margin-top: 4px; }
+.handtekening { display: grid; gap: 8px; max-width: 620px; }
+.tekenvlak { width: 100%; height: auto; aspect-ratio: 600 / 170; border: 1px dashed var(--accent); border-radius: 8px; background: #fff; touch-action: none; cursor: crosshair; }
+.handtekening-beeld { max-width: 320px; background: #fff; border: 1px solid var(--lijn); border-radius: 6px; }
+@media print {
+  .a-gevels { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .a-gevels figure { margin: 0; break-inside: avoid; }
+  .a-gevels svg { width: 100%; height: auto; }
+  .a-gevels figcaption { font-size: 9pt; font-weight: 600; }
+  .a-meet { width: 100%; }
+  .a-meet td { border: 1px solid #999 !important; height: 9mm; width: 25%; }
+}
+
 /* ---------- afdruk ---------- */
 #afdruk { display: none; }
 @media print {
@@ -274,6 +324,7 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
     <button type="button" data-weergave="plan" aria-pressed="true">1 · Plattegrond</button>
     <button type="button" data-weergave="positie" aria-pressed="false">2 · Configurator</button>
     <button type="button" data-weergave="offerte" aria-pressed="false">3 · Offerte <span class="teller" id="nav-aantal">0</span></button>
+    <button type="button" data-weergave="werf" aria-pressed="false">4 · Werf</button>
   </nav>
 </header>
 <noscript><p class="foutmelding">Deze pagina heeft JavaScript nodig. Open het bestand in een browser (Safari, Chrome, Edge), niet in een voorbeeldweergave.</p></noscript>
@@ -298,12 +349,14 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
     </aside>
     <section class="kaart">
       <div class="kaartkop">
-        <h2>Plattegrond</h2>
+        <div id="pl-niveaus" class="tabs niveaus" role="group" aria-label="Verdieping"></div>
         <div class="tabs" role="group" aria-label="Weergave">
           <button type="button" data-pl-weergave="plan" aria-pressed="true">Plattegrond</button>
+          <button type="button" data-pl-weergave="gevels" aria-pressed="false">Gevels</button>
           <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
         </div>
       </div>
+      <div id="pl-gevels" class="gevels" hidden></div>
       <div id="pl-canvas" role="application" aria-label="Plattegrond: teken ruimtes, plaats ramen, deuren en meubels"></div>
       <p id="pl-hint" class="hint"></p>
       <div class="drie-d" id="pl-3d" hidden></div>
@@ -318,6 +371,7 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
         <div class="schakelaars" style="margin-top:8px">
           <label><input type="checkbox" id="pl-laag"> Muren laag (binnenkijken)</label>
           <label><input type="checkbox" id="pl-toon-meubels" checked> Meubels tonen</label>
+          <label><input type="checkbox" id="pl-alle-niveaus" checked> Alle verdiepingen</label>
           <span class="klein">slepen = draaien · scrollen of knijpen = zoomen</span>
         </div>
       </div>
@@ -468,12 +522,30 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
         <dl id="o-intern" class="detail"></dl>
       </section>
       <section class="kaart">
+        <div class="kaartkop"><h2>Akkoord klant</h2></div>
+        <div id="o-akkoord"></div>
+      </section>
+      <section class="kaart">
         <div class="kaartkop"><h2>Controles</h2></div>
         <ul id="o-meldingen" class="meldingen scroll"></ul>
         <p id="o-meldingen-leeg" class="klein">Geen opmerkingen.</p>
       </section>
     </div>
   </div>
+</main>
+<main id="view-werf" class="view" hidden>
+  <section class="kaart werfkop">
+    <div class="kaartkop">
+      <h2>Werf</h2>
+      <div class="tabs" role="group" aria-label="Werf">
+        <button type="button" data-werf="inmeting" aria-pressed="true">Inmeting</button>
+        <button type="button" data-werf="meerwerk" id="w-meerwerk-tab" aria-pressed="false">Meerwerk</button>
+      </div>
+    </div>
+    <div class="positieacties"><span id="w-samenvatting" class="klein"></span><button type="button" id="w-werfbon" class="tweede">Lege werfbon afdrukken</button></div>
+  </section>
+  <div id="w-inmeting"><div id="w-metingen" class="metingen"></div></div>
+  <div id="w-meerwerk" hidden></div>
 </main>
 <div id="afdruk"></div>
 <footer>Demo. Prijzen, gewichten, U-waarden en systeemgrenzen zijn voorbeelden. De controles op veiligheidsglas, EPB, daglicht en vergunning zijn signalen voor de verkoper en vervangen het advies van architect, EPB-verslaggever of stabiliteitsingenieur niet.</footer>

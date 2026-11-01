@@ -58,8 +58,8 @@ function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
     const veilig = eigenschap(p, 'glas', 'veilig') === true;
     uit.push({ titel: 'Veiligheidsglas (deur of glas lager dan 85 cm)', toestand: veilig ? 'ok' : 'fout', waarde: veilig ? 'gelaagd' : 'niet gelaagd', uitleg: 'NBN S 23-002 (te bevestigen per project).' });
   }
-  if (type !== 'schuif' && type !== 'voordeur' && num(a.beweeg) > 0 && num(a.borst) < 850) {
-    uit.push({ titel: 'Valbeveiliging', toestand: 'let-op', waarde: `borstwering ${getal(num(a.borst) / 10)} cm`, uitleg: 'Op de verdieping: balustrade of vast onderdeel nodig.' });
+  if (num(p.keuzes.verdieping) > 0 && (num(a.borst) < 850 || a.type_deur === true || type !== 'raam')) {
+    uit.push({ titel: 'Valbeveiliging (verdieping)', toestand: 'let-op', waarde: `borstwering ${getal(num(a.borst) / 10)} cm`, uitleg: 'Balustrade of vast onderdeel nodig (te bevestigen).' });
   }
   uit.push({ titel: 'Isolatie (EPB)', toestand: uw <= 1.5 ? 'ok' : 'let-op', waarde: `Uw ${getal(uw, 2)} W/m²K`, uitleg: 'Richtwaarde Uw ≤ 1,5 (te verifiëren met de EPB-verslaggever).' });
   if (eigenschap(p, 'ruimte', 'droog') === true && type !== 'voordeur') {

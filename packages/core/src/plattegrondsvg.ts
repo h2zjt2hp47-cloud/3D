@@ -3,6 +3,7 @@
  * Elementen dragen data-soort en data-id, zodat een editor erop kan klikken.
  */
 import {
+  delenVan,
   meubelVoetafdruk,
   muurVanOpening,
   muurVlak,
@@ -28,6 +29,10 @@ export interface PlanSvgOpties {
   fouten?: Set<string>;
   /** Raster en grepen weglaten (voor de afdruk). */
   afdruk?: boolean;
+  /** Verdieping eronder, licht getekend als onderlegger (met trapgaten). */
+  onderlegger?: Plattegrond;
+  /** Lijn die getekend wordt (nieuwe wand). */
+  voorbeeldWand?: { x1: number; y1: number; x2: number; y2: number };
   /** Vaste viewBox (cm); anders passend rond de plattegrond. */
   viewBox?: { x: number; y: number; b: number; d: number };
   breedtePx?: number;
@@ -39,9 +44,10 @@ const m2 = (x: number) => `${x.toFixed(1).replace('.', ',')} m²`;
 
 /** Passende viewBox rond de plattegrond (met ruimte voor maatlijnen). */
 export function planKader(plan: Plattegrond, marge = 130): { x: number; y: number; b: number; d: number } {
-  if (!plan.ruimtes.length) return { x: -marge, y: -marge, b: 1200 + 2 * marge, d: 800 + 2 * marge };
-  const x0 = Math.min(...plan.ruimtes.map((r) => r.x)), y0 = Math.min(...plan.ruimtes.map((r) => r.y));
-  const x1 = Math.max(...plan.ruimtes.map((r) => r.x + r.b)), y1 = Math.max(...plan.ruimtes.map((r) => r.y + r.d));
+  const delen = plan.ruimtes.flatMap(delenVan);
+  if (!delen.length) return { x: -marge, y: -marge, b: 1200 + 2 * marge, d: 800 + 2 * marge };
+  const x0 = Math.min(...delen.map((r) => r.x)), y0 = Math.min(...delen.map((r) => r.y));
+  const x1 = Math.max(...delen.map((r) => r.x + r.b)), y1 = Math.max(...delen.map((r) => r.y + r.d));
   return { x: x0 - marge, y: y0 - marge, b: x1 - x0 + 2 * marge, d: y1 - y0 + 2 * marge };
 }
 
@@ -62,10 +68,29 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     uit.push(`<rect x="${n(vb.x - 2000)}" y="${n(vb.y - 2000)}" width="${n(vb.b + 4000)}" height="${n(vb.d + 4000)}" fill="url(#raster1m)" pointer-events="none"/>`);
   }
 
-  // Vloeren.
+  // Onderlegger: muren en trapgaten van de verdieping eronder.
+  if (opties.onderlegger) {
+    const ol = opties.onderlegger;
+    const mo = murenVan(ol);
+    uit.push('<g pointer-events="none" opacity="0.35">');
+    for (const m of mo) {
+      const v = muurVlak(m, mo);
+      uit.push(`<rect x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="none" stroke="#6b7a85" stroke-width="1.5" stroke-dasharray="8 6"/>`);
+    }
+    uit.push('</g>');
+  }
+
+  // Vloeren (alle delen van een ruimte).
   for (const r of plan.ruimtes) {
     const v = cat.vloeren[r.vloer];
-    uit.push(`<rect data-soort="ruimte" data-id="${esc(r.id)}" x="${n(r.x)}" y="${n(r.y)}" width="${n(r.b)}" height="${n(r.d)}" fill="${v?.kleur ?? '#e7e4dc'}" fill-opacity="0.32"/>`);
+    for (const p of delenVan(r)) uit.push(`<rect data-soort="ruimte" data-id="${esc(r.id)}" x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="${v?.kleur ?? '#e7e4dc'}" fill-opacity="0.32"/>`);
+  }
+  // Trapgat boven een trap van de verdieping eronder.
+  for (const t of opties.onderlegger?.meubels.filter((m) => m.type === 'trap') ?? []) {
+    const v = meubelVoetafdruk(t);
+    uit.push(`<g pointer-events="none"><rect x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="#fff" fill-opacity="0.7" stroke="#2b2b29" stroke-width="2" stroke-dasharray="10 6"/>`
+      + `<line x1="${n(v.x)}" y1="${n(v.y)}" x2="${n(v.x + v.b)}" y2="${n(v.y + v.d)}" stroke="#2b2b29" stroke-width="1"/><line x1="${n(v.x + v.b)}" y1="${n(v.y)}" x2="${n(v.x)}" y2="${n(v.y + v.d)}" stroke="#2b2b29" stroke-width="1"/>`
+      + `<text x="${n(v.x + v.b / 2)}" y="${n(v.y + v.d / 2)}" font-size="14" text-anchor="middle" dominant-baseline="central" fill="#2b2b29" transform="rotate(${v.d > v.b ? -90 : 0} ${n(v.x + v.b / 2)} ${n(v.y + v.d / 2)})">trapgat</text></g>`);
   }
 
   // Meubels.
@@ -87,7 +112,7 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   // Namen en oppervlaktes.
   for (const r of plan.ruimtes) {
     const mt = ruimteMaten(plan, r, muren);
-    const cx = r.x + r.b / 2, cy = r.y + r.d / 2;
+    const cx = r.x + r.b / 2, cy = r.y + r.d / 2; // hoofddeel = grootste deel
     const fs = Math.max(12, Math.min(22, r.b / 8, r.d / 4));
     uit.push(`<g pointer-events="none" text-anchor="middle"><text x="${n(cx)}" y="${n(cy - fs * 0.15)}" font-size="${n(fs)}" font-weight="600" fill="#2c2f2d">${esc(r.naam)}</text>`
       + `<text x="${n(cx)}" y="${n(cy + fs * 1.05)}" font-size="${n(fs * 0.8)}" fill="#5f6763">${m2(mt.netto)}</text></g>`);
@@ -97,9 +122,9 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   for (const r of plan.ruimtes) {
     const gekozen = sel?.soort === 'ruimte' && sel.id === r.id;
     if (fouten.has(r.id) || gekozen) {
-      uit.push(`<rect x="${n(r.x + 4)}" y="${n(r.y + 4)}" width="${n(r.b - 8)}" height="${n(r.d - 8)}" fill="none" stroke="${gekozen ? '#2f6fd0' : '#c0392b'}" stroke-width="3" stroke-dasharray="${gekozen ? '0' : '10 6'}" pointer-events="none"/>`);
+      for (const p of delenVan(r)) uit.push(`<rect x="${n(p.x + 4)}" y="${n(p.y + 4)}" width="${n(p.b - 8)}" height="${n(p.d - 8)}" fill="${gekozen ? '#2f6fd0' : 'none'}" fill-opacity="0.06" stroke="${gekozen ? '#2f6fd0' : '#c0392b'}" stroke-width="3" stroke-dasharray="${gekozen ? '0' : '10 6'}" pointer-events="none"/>`);
     }
-    if (gekozen && !opties.afdruk) {
+    if (gekozen && !opties.afdruk && !r.delen?.length) {
       uit.push(maatlijn(r.x, r.y, r.x + r.b, r.y, -28, `${Math.round(r.b)}`, '#2f6fd0'));
       uit.push(maatlijn(r.x, r.y + r.d, r.x, r.y, -28, `${Math.round(r.d)}`, '#2f6fd0'));
       for (const [greep, gx, gy] of [['n', r.x + r.b / 2, r.y], ['s', r.x + r.b / 2, r.y + r.d], ['w', r.x, r.y + r.d / 2], ['o', r.x + r.b, r.y + r.d / 2]] as const) {
@@ -110,13 +135,19 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
 
   // Totale maten.
   if (plan.ruimtes.length) {
-    const x0 = Math.min(...plan.ruimtes.map((r) => r.x)), y0 = Math.min(...plan.ruimtes.map((r) => r.y));
-    const x1 = Math.max(...plan.ruimtes.map((r) => r.x + r.b)), y1 = Math.max(...plan.ruimtes.map((r) => r.y + r.d));
+    const delen = plan.ruimtes.flatMap(delenVan);
+    const x0 = Math.min(...delen.map((r) => r.x)), y0 = Math.min(...delen.map((r) => r.y));
+    const x1 = Math.max(...delen.map((r) => r.x + r.b)), y1 = Math.max(...delen.map((r) => r.y + r.d));
     const t = plan.buitenmuur / 2;
     uit.push(maatlijn(x1 + t, y1 + t, x0 - t, y1 + t, 70, `${Math.round(x1 - x0 + 2 * t)}`, '#4b5753'));
     uit.push(maatlijn(x1 + t, y0 - t, x1 + t, y1 + t, 70, `${Math.round(y1 - y0 + 2 * t)}`, '#4b5753'));
   }
 
+  if (opties.voorbeeldWand) {
+    const w = opties.voorbeeldWand;
+    uit.push(`<line x1="${n(w.x1)}" y1="${n(w.y1)}" x2="${n(w.x2)}" y2="${n(w.y2)}" stroke="#2f6fd0" stroke-width="10" stroke-opacity="0.45" stroke-linecap="round" pointer-events="none"/>`);
+    uit.push(`<text x="${n((w.x1 + w.x2) / 2 + 14)}" y="${n((w.y1 + w.y2) / 2 - 14)}" font-size="18" fill="#2f6fd0" pointer-events="none">${Math.round(Math.hypot(w.x2 - w.x1, w.y2 - w.y1))}</text>`);
+  }
   if (opties.voorbeeld) {
     const p = opties.voorbeeld;
     uit.push(`<rect x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="#2f6fd0" fill-opacity="0.12" stroke="#2f6fd0" stroke-width="3" stroke-dasharray="12 8" pointer-events="none"/>`);
@@ -273,6 +304,12 @@ function meubelSvg(m: Meubel, t: MeubelType, gekozen: boolean): string {
       d.length = 0;
       d.push(`<circle cx="${n(B / 2)}" cy="${n(D / 2)}" r="${n(Math.min(B, D) / 2)}" fill="${kleur}" fill-opacity="0.55" ${lijn}/>`);
       break;
+    case 'trap': {
+      const k = Math.max(8, Math.round(D / 22));
+      for (let i = 1; i < k; i++) d.push(`<line x1="0" y1="${n((i * D) / k)}" x2="${n(B)}" y2="${n((i * D) / k)}" ${lijn}/>`);
+      d.push(`<path d="M ${n(B / 2)} ${n(D - 10)} L ${n(B / 2)} 12 M ${n(B / 2 - 10)} 26 L ${n(B / 2)} 12 L ${n(B / 2 + 10)} 26" fill="none" stroke="#2b2b29" stroke-width="2"/>`);
+      break;
+    }
     case 'tapijt':
       d.length = 0;
       d.push(`<rect x="0" y="0" width="${n(B)}" height="${n(D)}" fill="${kleur}" fill-opacity="0.25" stroke="#55524c" stroke-width="1" stroke-dasharray="6 5"/>`);

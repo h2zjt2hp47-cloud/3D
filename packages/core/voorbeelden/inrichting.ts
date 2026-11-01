@@ -3,7 +3,7 @@
  * met demoprijzen (verkoop en kost per eenheid, excl. btw, plaatsing inbegrepen).
  * En de omzetting van een plattegrond naar offerteregels (vloeren, wanden, deuren, ruwbouw, inrichting).
  */
-import { murenVan, ruimteMaten, type OfferteRegel, type PlanCatalogus, type Plattegrond } from '../src/index.js';
+import { murenVan, niveauPlan, niveauVan, ruimteMaten, verdiepingenVan, type Muur, type OfferteRegel, type PlanCatalogus, type Plattegrond } from '../src/index.js';
 
 export const planCatalogus: PlanCatalogus = {
   vloeren: {
@@ -56,6 +56,7 @@ export const planCatalogus: PlanCatalogus = {
     wc: { label: 'Hangtoilet', vorm: 'wc', b: 40, d: 55, h: 80, kleur: '#f4f4f1', prijs: 690, groep: 'Badkamer' },
     plant: { label: 'Plant', vorm: 'plant', b: 50, d: 50, h: 120, kleur: '#5f7f55', prijs: 85, groep: 'Decoratie' },
     tapijt: { label: 'Tapijt', vorm: 'tapijt', b: 240, d: 170, h: 1, kleur: '#b8ad9c', prijs: 390, groep: 'Decoratie' },
+    trap: { label: 'Trap (recht, naar de verdieping)', vorm: 'trap', b: 100, d: 300, h: 300, kleur: '#b48a5a', prijs: 3900, groep: 'Trappen' },
   },
 };
 
@@ -80,12 +81,14 @@ export interface PlanRegelOpties {
 /** Zet de plattegrond om naar offerteregels (vloeren, wandafwerking, binnendeuren, ruwbouw, inrichting). */
 export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: PlanCatalogus = planCatalogus): OfferteRegel[] {
   const regels: OfferteRegel[] = [];
-  const muren = murenVan(plan);
+  // Muren per verdieping (een muur hoort altijd bij één verdieping).
+  const murenPerNiveau = verdiepingenVan(plan).map((_, n) => murenVan(niveauPlan(plan, n)));
+  const muren: (Muur & { niveau: number })[] = murenPerNiveau.flatMap((ms, n) => ms.map((m) => ({ ...m, niveau: n })));
   const prijs = (sleutel: string) => PRIJZEN[sleutel] ?? [0, 0];
   const som = new Map<string, number>();
   const tel = (k: string, x: number) => som.set(k, (som.get(k) ?? 0) + x);
   for (const r of plan.ruimtes) {
-    const m = ruimteMaten(plan, r, muren);
+    const m = ruimteMaten(plan, r, murenPerNiveau[niveauVan(r)]);
     tel(`vloer:${r.vloer}`, m.netto);
     tel(`wand:${r.wand}`, m.wand);
   }
@@ -117,7 +120,7 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
   if (opties.ruwbouw) {
     for (const soort of ['buiten', 'binnen'] as const) {
       const lengte = muren.filter((m) => m.soort === soort).reduce((t, m) => t + (m.tot - m.van), 0) / 100;
-      const open = plan.openingen.filter((o) => muren.find((m) => m.soort === soort && m.as === o.as && Math.abs(m.lijn - o.lijn) < 0.5 && m.van <= o.midden && m.tot >= o.midden))
+      const open = plan.openingen.filter((o) => muren.find((m) => m.niveau === niveauVan(o) && m.soort === soort && m.as === o.as && Math.abs(m.lijn - o.lijn) < 0.5 && m.van <= o.midden && m.tot >= o.midden))
         .reduce((t, o) => t + (o.breedte * o.hoogte) / 10000, 0);
       const m2 = rond1(lengte * (plan.muurhoogte / 100) - open);
       const k = `${soort}muur`;

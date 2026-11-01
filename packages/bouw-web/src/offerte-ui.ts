@@ -3,14 +3,17 @@
  * wanden, binnendeuren, ruwbouw, inrichting). Korting en btw voor de hele offerte, controles,
  * bestellijst per leverancier, planning, afdruk (PDF) en export.
  */
-import { berekenOfferte, controleerPlan, tekenPlattegrond, tekenSvg, type Keuzes, type OfferteResultaat, type StuklijstResultaat } from '../../core/src/index.js';
+import { berekenOfferte, controleerPlan, niveauPlan, tekenPlattegrond, tekenSvg, verdiepingenVan, type Keuzes, type OfferteResultaat, type StuklijstResultaat } from '../../core/src/index.js';
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
+import { gevelSvgs } from './plattegrond-ui.js';
 import { controles, inbegrepen } from './positie-ui.js';
+import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { klantKorting, MODELLEN, nieuwePositie, openingVan, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
 
 let naarPositie: (id: string) => void = () => {};
 let naarPlan: (openingId?: string) => void = () => {};
+let naarWerf: () => void = () => {};
 
 export function berekenHuidigeOfferte(): OfferteResultaat {
   const t = toestand();
@@ -170,6 +173,26 @@ export function toonOfferte() {
   status.textContent = nFout ? `${nFout} positie${nFout === 1 ? '' : 's'} met fouten` : 'Klaar om te versturen';
   status.className = `status ${nFout ? 'fout' : 'ok'}`;
 
+  // Akkoord van de klant (basis voor meerwerk).
+  const ak = $('#o-akkoord');
+  ak.replaceChildren();
+  if (!m.akkoord) {
+    const naam = el('input', { type: 'text', id: 'o-akkoord-naam', 'aria-label': 'Naam klant' }) as HTMLInputElement;
+    naam.value = m.klant;
+    const b = el('button', { type: 'button' }, 'Klant gaat akkoord: offerte vastleggen');
+    b.addEventListener('click', () => legAkkoordVast(naam.value || m.klant));
+    const rij = el('div', { class: 'positieacties' });
+    rij.append(naam, b);
+    ak.append(el('p', { class: 'klein' }, 'Na het akkoord komt elke wijziging (inmeting, ander glas, extra raam …) automatisch op een meerwerkbon.'), rij);
+  } else {
+    const mw = meerwerk();
+    ak.append(el('p', {}, `Akkoord op ${m.akkoord.datum} door ${m.akkoord.naam}: ${eur(m.akkoord.excl)} excl. btw.`));
+    if (mw) ak.append(el('p', { class: mw.excl ? 'melding' : 'klein' }, mw.excl ? `Sindsdien ${mw.excl > 0 ? 'meerwerk' : 'minwerk'}: ${eur(Math.abs(mw.excl))} excl. btw (${mw.lijnen.length + mw.vrij.length} wijziging(en)).` : 'Geen wijzigingen sinds het akkoord.'));
+    const b = el('button', { type: 'button' }, 'Naar werf: inmeting en meerwerkbon');
+    b.addEventListener('click', () => naarWerf());
+    ak.append(b);
+  }
+
   // Controles over de hele offerte.
   const meldingen: { ernst: string; tekst: string; positie?: string }[] = [];
   for (const p of t.posities) {
@@ -268,13 +291,19 @@ export function drukAf() {
       <div class="a-prijs">${pos.aantal} × ${eur(pos.stukprijs)}<br><strong>${eur(pos.totaal)}</strong></div></section>`;
   }).join('');
   const regels = o.regels.length ? `<h2>Afwerking</h2><table><tbody>${o.regels.map((r) => `<tr><td>${esc(r.groep)}</td><td>${esc(r.omschrijving)}</td><td class="num">${getal(r.hoeveelheid, 1)} ${r.eenheid}</td><td class="num">${eur(r.eenheidsprijs)}</td><td class="num">${eur(r.totaal)}</td></tr>`).join('')}</tbody></table>` : '';
-  const plan = t.plan.ruimtes.length ? `<h2>Plattegrond</h2><div class="a-plan">${tekenPlattegrond(t.plan, planCatalogus, { afdruk: true, raamInfo: (op) => {
-    const p = t.posities.find((x) => x.id === op.positie);
-    return p ? { label: p.code } : undefined;
-  } })}</div>` : '';
+  const plan = verdiepingenVan(t.plan).map((v, n) => {
+    const pl = niveauPlan(t.plan, n);
+    if (!pl.ruimtes.length) return '';
+    return `<h2>Plattegrond ${esc(v.naam.toLowerCase())}</h2><div class="a-plan">${tekenPlattegrond(pl, planCatalogus, {
+      afdruk: true, onderlegger: n > 0 ? niveauPlan(t.plan, n - 1) : undefined,
+      raamInfo: (op) => { const p = t.posities.find((x) => x.id === op.positie); return p ? { label: p.code } : undefined; },
+    })}</div>`;
+  }).join('');
+  const gevelLijst = gevelSvgs(560);
+  const gevels = gevelLijst.length ? `<h2>Gevels</h2><div class="a-gevels">${gevelLijst.map((g) => `<figure><figcaption>${esc(g.naam)}</figcaption>${g.svg}</figure>`).join('')}</div>` : '';
   blad.innerHTML = `<header class="a-kop"><div><div class="a-firma">Uw bedrijf · Ramen, deuren en renovatie</div><h1>Offerte ${esc(t.meta.nummer)}</h1><p>${esc(t.meta.datum)}</p></div>
     <div class="a-klant"><strong>${esc(t.meta.klant)}</strong><br>${esc(t.meta.adres)}<br>Project: ${esc(t.meta.project)}</div></header>
-    ${plan}<h2>Posities</h2>${posities}${regels}
+    ${plan}${gevels}<h2>Posities</h2>${posities}${regels}
     <table class="a-totaal"><tbody>
       <tr><td>Totaal excl. btw</td><td class="num">${eur(o.excl + o.korting)}</td></tr>
       ${o.korting ? `<tr><td>Korting ${getal(o.kortingProcent)} %</td><td class="num">− ${eur(o.korting)}</td></tr>` : ''}
@@ -287,9 +316,10 @@ export function drukAf() {
   window.print();
 }
 
-export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan: (openingId?: string) => void }) {
+export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan: (openingId?: string) => void; naarWerf: () => void }) {
   naarPositie = nav.naarPositie;
   naarPlan = nav.naarPlan;
+  naarWerf = nav.naarWerf;
   for (const [id, veld] of [['o-klant', 'klant'], ['o-adres', 'adres'], ['o-project', 'project'], ['o-nummer', 'nummer'], ['o-datum', 'datum']] as const) {
     $<HTMLInputElement>(`#${id}`).addEventListener('change', (e) => wijzig('meta', (t) => { t.meta[veld] = (e.target as HTMLInputElement).value; }));
   }

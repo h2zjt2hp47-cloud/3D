@@ -1,6 +1,6 @@
 # Analyse: van raamconfigurator naar woningconfigurator (bouwsector)
 
-*1 november 2026. Vervolg op `docs/onderzoek-bouw-ramen-deuren.md`. Demo: `packages/bouw-web` → `dist/bouw-configurator.html`.*
+*1 november 2026, bijgewerkt dezelfde dag (tweede ronde). Vervolg op `docs/onderzoek-bouw-ramen-deuren.md`. Demo: `packages/bouw-web` → `dist/bouw-configurator.html`.*
 
 ## 1. De vraag
 
@@ -16,7 +16,20 @@ En: "ga maar helemaal los".
 
 ## 2. Wat er nu in de demo zit
 
-De demo werkt in drie stappen, met de knoppen bovenaan: **Plattegrond → Configurator → Offerte**.
+De demo werkt in vier stappen, met de knoppen bovenaan: **Plattegrond → Configurator → Offerte → Werf**.
+
+### Nieuw in de tweede ronde
+| Functie | Hoe het werkt |
+|---|---|
+| **Verdiepingen** | Knoppen boven de plattegrond: Gelijkvloers, Verdieping 1 … en "+ Verdieping". Een nieuwe verdieping start als één ruimte boven de verdieping eronder; die deel je daarna in. De verdieping eronder staat er gestippeld onder (onderlegger), met het trapgat. |
+| **Trap** | Meubel → Trappen. De trap verbindt de ruimte beneden met de ruimte erboven; de controle "niet bereikbaar" houdt daar rekening mee. In 3D loopt de trap tot de vloer erboven en zit er een gat in de vloerplaat. |
+| **Wand tekenen** | Sleep een rechte wand door een of meer ruimtes: elke ruimte die de wand echt kruist, wordt in twee gedeeld (minstens 60 cm aan elke kant). |
+| **Ruimte in ruimte** | Teken een ruimte binnen een bestaande ruimte (bv. een berging in de garage): het stuk wordt uit de grote ruimte gesneden, die zo een L- of U-vorm krijgt. Tussen de delen van één ruimte staat geen muur. Teken je over meerdere ruimtes, dan wordt het stuk uit elk ervan gesneden. |
+| **Gevelaanzichten** | Tabblad "Gevels": de 4 gevels automatisch uit de plattegrond, met alle verdiepingen, dakranden, ramen en deuren **gezien van buiten** (symbolen gespiegeld), zonweringskasten, P-labels en **kettingmaten** (maten tussen de ramen) per verdieping, de totale breedte en de hoogtes. Ook in de offerte-afdruk. |
+| **3D met verdiepingen** | Verdiepingen op elkaar, vloerplaten, plat dak op de delen zonder verdieping erboven. Optie "Alle verdiepingen" of alleen tot de gekozen verdieping. |
+| **Valbeveiliging** | Alleen nog op een verdieping (het raam weet op welke verdieping het zit). |
+| **Inmeting (Werf)** | Per raam of deur grote invoervelden voor tablet: 3 breedtes, 2 hoogtes, 2 diagonalen en de speling. De demo berekent:<br>• de bestelmaat (kleinste maat min de speling);<br>• het verschil met de offerte;<br>• of de opening haaks en recht is.<br>Je kunt ook een foto nemen (wordt verkleind) en een opmerking noteren. Met **"Bestelmaat overnemen"** gaat de maat naar de positie en naar de plattegrond. Er is ook een **lege werfbon** om op papier te meten. |
+| **Akkoord en meerwerkbon** | In de offerte: "Klant gaat akkoord" legt de offerte vast. Daarna toont het tabblad Meerwerk automatisch alles wat veranderde: een andere maat na de inmeting, ander glas, een extra of vervallen raam, meer of minder m² vloer. Telkens zie je wat er precies veranderde en het bedrag. Je kunt vrije regels toevoegen (bv. 3 uur extra uitbraak). De klant **tekent op het scherm** (vinger of muis). De bon kun je afdrukken en daarna afsluiten, waarna een volgende bon start. |
 
 ### Plattegrond
 | Functie | Hoe het werkt |
@@ -88,10 +101,12 @@ Telkens met het nut voor de klant en een ruwe inschatting van het werk: **S** = 
 ### A. Plattegrond en woning
 | Idee | Nut | Werk |
 |---|---|---|
-| Verdiepingen (meerdere niveaus en een trap) | De meeste woningen hebben een verdieping; de valbeveiliging wordt dan echt nuttig | M |
-| L-vormige en schuine ruimtes | Nu kan alleen een rechthoek; een L kan je wel maken met twee ruimtes en een doorgang | M |
-| Kettingmaten langs elke gevel (maten tussen de ramen) | Plaatsers en architecten werken zo | S |
-| **Gevelaanzichten** (4 gevels automatisch, met de ramen erin) | Klanten beslissen op het zicht van de gevel | S–M |
+| ~~Verdiepingen (meerdere niveaus en een trap)~~ | **Gedaan** (ronde 2) | – |
+| ~~L-vormige ruimtes~~ | **Gedaan** via "ruimte in ruimte" (samengestelde ruimtes) | – |
+| Schuine muren en ronde vormen | Nu alleen rechte hoeken | M–L |
+| ~~Kettingmaten langs elke gevel~~ en ~~gevelaanzichten~~ | **Gedaan** (ronde 2) | – |
+| Kettingmaten ook in de plattegrond (binnenmaten per ruimte, maten tussen ramen) | Uitvoeringsplan | S |
+| Trap met kwartdraai of spiltrap | Nu alleen een rechte trap | S |
 | Plan als onderlegger (foto of PDF van de architect) en daarop natekenen | Sneller dan opnieuw tekenen | M |
 | Dak: plat, zadeldak of lessenaarsdak, met dakramen | Nu alleen muren | M |
 | Buitenaanleg: terras, oprit, tuin | Mooier beeld; tegels per m² | S |
@@ -103,7 +118,7 @@ Telkens met het nut voor de klant en een ruwe inschatting van het werk: **S** = 
 | Screen op de plattegrond als lijn met bedieningskant; screens in de 3D op en neer zetten | Verkoopargument | S |
 | Echte systeemdata per leverancier (maximale maten, gewichten, Uf, prijzen): Reynaers, Schüco, Aluprof, Deceuninck … | Nu zijn het voorbeeldwaarden | M per leverancier |
 | **Zaaglijst per staaf** en **glasbestelling per ruit** (met etiketten) | Rechtstreeks naar productie of leverancier | M |
-| Inmeetmodule op tablet per positie (3 breedtes, 2 hoogtes, foto, schets), terug in dezelfde configuratie | Minder meetfouten (pijnpunt 3 uit het onderzoek) | M |
+| ~~Inmeetmodule op tablet~~ | **Gedaan** (ronde 2): metingen, foto, bestelmaat overnemen. Nog toe te voegen: schets op de foto, synchroniseren tussen toestellen (vraagt een server) | S–M |
 | Laserafstandsmeter via Bluetooth (bv. Leica Disto) | Maten zonder overtypen | M |
 
 ### C. Inrichting en afwerking
@@ -119,9 +134,9 @@ Telkens met het nut voor de klant en een ruwe inschatting van het werk: **S** = 
 ### D. Proces en verkoop
 | Idee | Nut | Werk |
 |---|---|---|
-| Offerteversies (v1, v2 …) en verschillen tonen | "Wat is er veranderd?" | S |
-| **Meerwerkbon**: wijziging na akkoord als aparte regel, ondertekend | Minder discussie (pijnpunt 7) | S |
-| Digitale handtekening en voorschotfactuur | Sneller akkoord | M |
+| Offerteversies (v1, v2 …) en verschillen tonen | Deels gedaan: het akkoord is een vaste versie en het meerwerk toont de verschillen | S |
+| ~~Meerwerkbon~~ | **Gedaan** (ronde 2), met handtekening op het scherm | – |
+| Handtekening ook op de offerte zelf, voorschotfactuur | Sneller akkoord | S–M |
 | Klantportaal: de klant kiest zelf kleur, glas en screen binnen de grenzen die de verkoper zet | Minder heen-en-weer | M |
 | Planning: plaatsingsdagen in de agenda, levertermijnen per leverancier | Planning (pijnpunt 9) | M |
 | **Koppeling met Missing Link**: offerte, order, bestelbon per leverancier, planning, factuur | De kern van het verhaal | L |
@@ -134,24 +149,27 @@ Telkens met het nut voor de klant en een ruwe inschatting van het werk: **S** = 
 | BIM/IFC-export | Architecten | L |
 | AR: raam via de smartphone op de echte gevel tonen | Wow-effect bij de klant | L |
 
-**Voorstel voor de volgende stap:**
-1. Gevelaanzichten en kettingmaten (snel, groot effect).
-2. Inmeetmodule en meerwerkbon (lost echte pijnpunten op).
-3. Verdiepingen.
-4. Koppeling met Missing Link.
+**Voorstel voor de volgende stap (na ronde 2):**
+1. **Koppeling met Missing Link**: offerte, akkoord, meerwerk als aparte order, bestelbon per leverancier.
+2. Een server, zodat werf (tablet) en kantoor dezelfde gegevens zien.
+3. Echte systeemdata van één leverancier, om de controles en prijzen te ijken.
+4. Keukenconfigurator of elektriciteitsplan, afhankelijk van de eerste klant.
 
 ## 4. Te verifiëren (niet blind gebruiken)
 
 - **Daglicht ≥ 1/10 van de vloer:** dit is een richtwaarde. De echte normen (Vlaamse Wooncode, gemeentelijke stedenbouwkundige verordening) moeten nagekeken worden.
 - **Veiligheidsglas onder 85 cm** en in deuren: afgeleid van NBN S 23-002, te bevestigen in de norm.
 - **Ventilatierooster in droge ruimtes** (systeem C): EPB-ventilatie-eisen nakijken, ook de debieten.
-- **Valbeveiliging bij een lage borstwering:** geldt op de verdieping. De demo kent nog geen verdiepingen en geeft dus altijd een waarschuwing.
+- **Valbeveiliging bij een lage borstwering:** de demo waarschuwt alleen op een verdieping, bij een borstwering lager dan 85 cm of bij een deur. De juiste hoogtes en regels moeten nog nagekeken worden.
 - **Maximale maten en gewichten per beslag:** voorbeeldwaarden.
 - **Btw 6 %:** voorwaarden bij FOD Financiën.
 
 ## 5. Bekende beperkingen van de demo
 
-- Alleen rechthoekige ruimtes en één verdieping.
+- Ruimtes zijn rechthoeken of samenstellingen van rechthoeken (L, U); geen schuine muren.
+- Een getekende wand deelt altijd de hele ruimte; een losse muur die halverwege stopt, kan nog niet.
+- Alleen platte daken en rechte trappen.
+- De inmeting en de handtekening worden alleen in de browser van het toestel bewaard.
 - Buitendeuren staan in 3D dicht; binnendeuren tonen we open (90°).
 - De 3D is schematisch (blokken), geen fotorealistische weergave.
 - Alle prijzen, gewichten en U-waarden zijn **verzonnen**.

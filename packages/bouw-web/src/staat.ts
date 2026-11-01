@@ -8,6 +8,8 @@ import {
   berekenConfiguratie,
   murenVan,
   muurVanOpening,
+  niveauPlan,
+  niveauVan,
   standaardKeuzes,
   type ConfiguratieResultaat,
   type Keuzes,
@@ -28,6 +30,19 @@ export const MODELLEN: Record<ModelCode, { model: ProductModel; prijslijst: Prij
   AANBOUW: { model: aanbouw, prijslijst: aanbouwPrijslijst, label: 'Aanbouw met schuifraam' },
 };
 
+export interface Inmeting {
+  breedtes: (number | null)[];
+  hoogtes: (number | null)[];
+  diagonalen: (number | null)[];
+  speling: number;
+  opmerking: string;
+  /** Kleine foto (JPEG als data-URL). */
+  foto?: string;
+  status: 'open' | 'gemeten' | 'overgenomen';
+  door?: string;
+  datum?: string;
+}
+
 export interface Positie {
   id: string;
   code: string;
@@ -35,7 +50,19 @@ export interface Positie {
   model: ModelCode;
   keuzes: Keuzes;
   aantal: number;
+  inmeting?: Inmeting;
 }
+
+/** Vastgelegde offerte op het moment van akkoord (basis voor meerwerk). */
+export interface Akkoord {
+  datum: string;
+  naam: string;
+  excl: number;
+  posities: { id: string; code: string; naam: string; aantal: number; stukprijs: number; details: string[] }[];
+  regels: { code: string; omschrijving: string; eenheid: string; hoeveelheid: number; eenheidsprijs: number }[];
+}
+
+export interface MeerwerkRegel { id: string; omschrijving: string; eenheid: string; hoeveelheid: number; eenheidsprijs: number }
 
 export interface OfferteMeta {
   klant: string;
@@ -47,6 +74,9 @@ export interface OfferteMeta {
   klanttype: 'particulier' | 'aannemer';
   korting: number;
   regels: PlanRegelOpties;
+  akkoord?: Akkoord;
+  meerwerk: MeerwerkRegel[];
+  meerwerkbon?: { nummer: number; naam: string; datum: string; handtekening?: string; getekend: boolean };
 }
 
 export interface Toestand {
@@ -62,13 +92,14 @@ function standaardMeta(): OfferteMeta {
   return {
     klant: 'Familie Peeters',
     adres: 'Voorbeeldstraat 12, 8500 Kortrijk',
-    project: 'Nieuwbouw gelijkvloerse woning',
+    project: 'Nieuwbouw woning met verdieping',
     nummer: `OF-${d.getFullYear()}-0042`,
     datum: d.toISOString().slice(0, 10),
     btw: 21,
     klanttype: 'particulier',
     korting: 0,
     regels: { vloeren: true, wanden: true, binnendeuren: true, ruwbouw: false, inrichting: false },
+    meerwerk: [],
   };
 }
 
@@ -79,7 +110,7 @@ export function voorbeeldToestand(): Toestand {
 
 export function legeToestand(): Toestand {
   const v = voorbeeldToestand();
-  return { plan: { ...v.plan, ruimtes: [], openingen: [], meubels: [] }, posities: [], meta: v.meta };
+  return { plan: { ...v.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] }, posities: [], meta: v.meta };
 }
 
 function laad(): Toestand {
@@ -195,7 +226,7 @@ const RUIMTE_NAAR_RAAM: Record<RuimteType, string> = {
  * Dan is "links van binnen" het einde van de opening op de tekening.
  */
 export function lokaalTegenPlan(o: Opening): { tegen: boolean; binnenPlus: boolean } {
-  const m = muurVanOpening(o, murenVan(t.plan));
+  const m = muurVanOpening(o, murenVan(niveauPlan(t.plan, niveauVan(o))));
   const binnenPlus = m ? (m.soort === 'buiten' ? !!m.plus : o.naarPlus) : o.naarPlus;
   return { tegen: o.as === 'h' ? !binnenPlus : binnenPlus, binnenPlus };
 }
@@ -206,7 +237,8 @@ export function openingNaarPositie(o: Opening, p: Positie) {
   p.keuzes.breedte = Math.round(o.breedte * 10);
   p.keuzes.hoogte = Math.round(o.hoogte * 10);
   if (o.soort === 'raam') p.keuzes.borstwering = Math.round(o.borstwering * 10);
-  const muren = murenVan(t.plan);
+  p.keuzes.verdieping = niveauVan(o);
+  const muren = murenVan(niveauPlan(t.plan, niveauVan(o)));
   const m = muurVanOpening(o, muren);
   const binnen = m ? (m.soort === 'buiten' ? (m.plus ?? m.min) : undefined) : undefined;
   const r = t.plan.ruimtes.find((x) => x.id === binnen);

@@ -34,7 +34,13 @@ export interface Ruimte {
   /** Code van de vloer en de wandafwerking (zie de plancatalogus). */
   vloer: string;
   wand: string;
+  /** Verdieping (0 = gelijkvloers). */
+  niveau?: number;
+  /** Extra rechthoeken van dezelfde ruimte (L- of U-vorm); tussen de delen staat geen muur. */
+  delen?: Rechthoek[];
 }
+
+export interface Rechthoek { x: number; y: number; b: number; d: number }
 
 export type OpeningSoort = 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang';
 
@@ -58,6 +64,7 @@ export interface Opening {
   positie?: string;
   /** Type binnendeur (zie de plancatalogus). */
   deurtype?: string;
+  niveau?: number;
 }
 
 export interface Meubel {
@@ -71,6 +78,7 @@ export interface Meubel {
   d: number;
   rotatie: 0 | 90 | 180 | 270;
   kleur?: string;
+  niveau?: number;
 }
 
 export interface Plattegrond {
@@ -82,7 +90,12 @@ export interface Plattegrond {
   binnenmuur: number;
   /** Gevelafwerking buiten. */
   gevel: { soort: BlokSoort; kleur: string };
+  /** Namen van de verdiepingen (index = niveau). Leeg = alleen gelijkvloers. */
+  verdiepingen?: { naam: string }[];
 }
+
+/** Dikte van de vloerplaat tussen twee verdiepingen (cm). */
+export const VLOERDIKTE = 30;
 
 export interface Muur {
   id: string;
@@ -107,7 +120,7 @@ export interface PlanCatalogus {
 
 export type MeubelVorm =
   | 'bank' | 'fauteuil' | 'tafel' | 'stoel' | 'bed' | 'nachtkast' | 'kast' | 'keuken' | 'eiland' | 'koelkast'
-  | 'bad' | 'douche' | 'wc' | 'lavabo' | 'tv' | 'plant' | 'tapijt';
+  | 'bad' | 'douche' | 'wc' | 'lavabo' | 'tv' | 'plant' | 'tapijt' | 'trap';
 
 export interface MeubelType {
   label: string;
@@ -124,6 +137,107 @@ export interface MeubelType {
 const r2 = (x: number) => Math.round(x * 100) / 100;
 const gelijk = (a: number, b: number) => Math.abs(a - b) < 0.5;
 
+// ---------- verdiepingen en samengestelde ruimtes ----------
+
+export const niveauVan = (x: { niveau?: number }) => x.niveau ?? 0;
+
+/** Namen van alle verdiepingen (minstens het gelijkvloers). */
+export function verdiepingenVan(plan: Plattegrond): { naam: string }[] {
+  const n = Math.max(1, plan.verdiepingen?.length ?? 0, ...plan.ruimtes.map((r) => niveauVan(r) + 1));
+  return Array.from({ length: n }, (_, i) => plan.verdiepingen?.[i] ?? { naam: i === 0 ? 'Gelijkvloers' : `Verdieping ${i}` });
+}
+
+/** Alleen de ruimtes, openingen en meubels van één verdieping. */
+export function niveauPlan(plan: Plattegrond, niveau: number): Plattegrond {
+  return {
+    ...plan,
+    ruimtes: plan.ruimtes.filter((r) => niveauVan(r) === niveau),
+    openingen: plan.openingen.filter((o) => niveauVan(o) === niveau),
+    meubels: plan.meubels.filter((m) => niveauVan(m) === niveau),
+  };
+}
+
+/** Hoogte van de vloer van een verdieping boven het maaiveld (cm). */
+export const vloerHoogte = (plan: Plattegrond, niveau: number) => niveau * (plan.muurhoogte + VLOERDIKTE);
+
+/** Alle rechthoeken van een ruimte (hoofddeel eerst). */
+export function delenVan(r: Ruimte): Rechthoek[] {
+  return [{ x: r.x, y: r.y, b: r.b, d: r.d }, ...(r.delen ?? [])];
+}
+
+const binnen = (p: Rechthoek, x: number, y: number) => x > p.x && x < p.x + p.b && y > p.y && y < p.y + p.d;
+
+/** Rechthoek a min rechthoek r: hoogstens 4 stukken (boven, onder, links, rechts). */
+export function trekAf(a: Rechthoek, r: Rechthoek): Rechthoek[] {
+  const x0 = Math.max(a.x, r.x), x1 = Math.min(a.x + a.b, r.x + r.b);
+  const y0 = Math.max(a.y, r.y), y1 = Math.min(a.y + a.d, r.y + r.d);
+  if (x1 - x0 < 0.5 || y1 - y0 < 0.5) return [a];
+  const uit: Rechthoek[] = [];
+  if (y0 > a.y + 0.5) uit.push({ x: a.x, y: a.y, b: a.b, d: y0 - a.y });
+  if (y1 < a.y + a.d - 0.5) uit.push({ x: a.x, y: y1, b: a.b, d: a.y + a.d - y1 });
+  if (x0 > a.x + 0.5) uit.push({ x: a.x, y: y0, b: x0 - a.x, d: y1 - y0 });
+  if (x1 < a.x + a.b - 0.5) uit.push({ x: x1, y: y0, b: a.x + a.b - x1, d: y1 - y0 });
+  return uit;
+}
+
+/** Zet de delen van een ruimte: het grootste deel wordt het hoofddeel. */
+function zetDelen(r: Ruimte, delen: Rechthoek[]) {
+  const s = [...delen].sort((a, b) => b.b * b.d - a.b * a.d);
+  const [hoofd, ...rest] = s;
+  Object.assign(r, { x: hoofd!.x, y: hoofd!.y, b: hoofd!.b, d: hoofd!.d });
+  if (rest.length) r.delen = rest; else delete r.delen;
+}
+
+/**
+ * Tekent een nieuwe ruimte, ook bovenop bestaande ruimtes: wat overlapt, wordt uit die ruimtes
+ * weggesneden ("ruimte in ruimte"). De rest van een ruimte kan zo een L- of U-vorm krijgen.
+ */
+export function tekenRuimteIn(plan: Plattegrond, nieuw: Ruimte): void {
+  const n = niveauVan(nieuw);
+  for (const r of [...plan.ruimtes]) {
+    if (niveauVan(r) !== n) continue;
+    const oud = delenVan(r);
+    const rest = oud.flatMap((p) => trekAf(p, nieuw)).filter((p) => p.b >= 1 && p.d >= 1);
+    if (rest.length === oud.length && rest.every((p, i) => p === oud[i])) continue;
+    if (!rest.length) plan.ruimtes.splice(plan.ruimtes.indexOf(r), 1);
+    else zetDelen(r, rest);
+  }
+  plan.ruimtes.push(nieuw);
+}
+
+/**
+ * Deelt ruimtes met een wand: een staande (as 'v', op x = lijn) of liggende (as 'h', op y = lijn) wand
+ * van `van` tot `tot`. Elke ruimte(deel) dat de wand kruist, wordt gesplitst; de stukken aan de
+ * grote kant (rechts of onder) worden een nieuwe ruimte. Geeft de nieuwe ruimtes terug.
+ */
+export function splitsRuimtes(
+  plan: Plattegrond, niveau: number, as: 'h' | 'v', lijn: number, van: number, tot: number,
+  nieuweRuimte: (oud: Ruimte) => Ruimte, minimum = 30,
+): Ruimte[] {
+  const nieuw: Ruimte[] = [];
+  for (const r of [...plan.ruimtes]) {
+    if (niveauVan(r) !== niveau) continue;
+    const blijft: Rechthoek[] = [], gaat: Rechthoek[] = [];
+    for (const p of delenVan(r)) {
+      const [a0, a1, d0, d1] = as === 'v' ? [p.x, p.x + p.b, p.y, p.y + p.d] : [p.y, p.y + p.d, p.x, p.x + p.b];
+      // Een klik (van = tot) moet in het deel liggen; een getekende wand moet het deel echt overlappen.
+      const raakt = van === tot ? van > d0 && van < d1 : Math.min(tot, d1) - Math.max(van, d0) > 1;
+      const kruist = lijn > a0 + minimum && lijn < a1 - minimum && raakt;
+      if (!kruist) { blijft.push(p); continue; }
+      if (as === 'v') { blijft.push({ ...p, b: lijn - p.x }); gaat.push({ ...p, x: lijn, b: p.x + p.b - lijn }); }
+      else { blijft.push({ ...p, d: lijn - p.y }); gaat.push({ ...p, y: lijn, d: p.y + p.d - lijn }); }
+    }
+    if (!gaat.length) continue;
+    zetDelen(r, blijft);
+    const b = nieuweRuimte(r);
+    b.niveau = niveau;
+    zetDelen(b, gaat);
+    plan.ruimtes.push(b);
+    nieuw.push(b);
+  }
+  return nieuw;
+}
+
 // ---------- muren afleiden ----------
 
 /** Alle muren van de plattegrond, afgeleid uit de randen van de ruimtes. */
@@ -131,10 +245,12 @@ export function murenVan(plan: Plattegrond): Muur[] {
   interface Rand { as: 'h' | 'v'; lijn: number; van: number; tot: number; kant: '+' | '-'; ruimte: string }
   const randen: Rand[] = [];
   for (const r of plan.ruimtes) {
-    randen.push({ as: 'h', lijn: r.y, van: r.x, tot: r.x + r.b, kant: '+', ruimte: r.id });
-    randen.push({ as: 'h', lijn: r.y + r.d, van: r.x, tot: r.x + r.b, kant: '-', ruimte: r.id });
-    randen.push({ as: 'v', lijn: r.x, van: r.y, tot: r.y + r.d, kant: '+', ruimte: r.id });
-    randen.push({ as: 'v', lijn: r.x + r.b, van: r.y, tot: r.y + r.d, kant: '-', ruimte: r.id });
+    for (const p of delenVan(r)) {
+      randen.push({ as: 'h', lijn: p.y, van: p.x, tot: p.x + p.b, kant: '+', ruimte: r.id });
+      randen.push({ as: 'h', lijn: p.y + p.d, van: p.x, tot: p.x + p.b, kant: '-', ruimte: r.id });
+      randen.push({ as: 'v', lijn: p.x, van: p.y, tot: p.y + p.d, kant: '+', ruimte: r.id });
+      randen.push({ as: 'v', lijn: p.x + p.b, van: p.y, tot: p.y + p.d, kant: '-', ruimte: r.id });
+    }
   }
   const groepen = new Map<string, Rand[]>();
   for (const r of randen) {
@@ -151,7 +267,8 @@ export function murenVan(plan: Plattegrond): Muur[] {
       if (b - a < 0.5) continue;
       const dekt = (kant: '+' | '-') => groep.find((r) => r.kant === kant && r.van <= a + 0.01 && r.tot >= b - 0.01)?.ruimte;
       const plus = dekt('+'), min = dekt('-');
-      if (!plus && !min) {
+      // Geen muur tussen twee delen van dezelfde ruimte.
+      if ((!plus && !min) || plus === min) {
         huidig = undefined;
         continue;
       }
@@ -234,22 +351,35 @@ export interface RuimteMaten {
   glas: number;
 }
 
-export function ruimteMaten(plan: Plattegrond, r: Ruimte, muren = murenVan(plan)): RuimteMaten {
-  const dikte = (as: 'h' | 'v', lijn: number, van: number, tot: number) => {
-    const op = muren.filter((m) => m.as === as && gelijk(m.lijn, lijn) && m.tot > van + 0.5 && m.van < tot - 0.5);
-    return op.length ? Math.max(...op.map((m) => m.dikte)) : 0;
-  };
-  const tb = dikte('h', r.y, r.x, r.x + r.b), to = dikte('h', r.y + r.d, r.x, r.x + r.b);
-  const tl = dikte('v', r.x, r.y, r.y + r.d), tr = dikte('v', r.x + r.b, r.y, r.y + r.d);
-  const nb = Math.max(0, r.b - (tl + tr) / 2), nd = Math.max(0, r.d - (tb + to) / 2);
-  const openingen = openingenVanRuimte(plan, r);
+export function ruimteMaten(plan: Plattegrond, r: Ruimte, muren = murenVan(niveauPlan(plan, niveauVan(r)))): RuimteMaten {
+  const eigen = muren.filter((m) => m.plus === r.id || m.min === r.id);
+  const openingen = openingenVanRuimte(plan, r, muren);
   const openingM2 = openingen.reduce((t, o) => t + (o.breedte * o.hoogte) / 10000, 0);
   // Daglicht telt alleen via ramen en deuren in een buitenmuur.
   const glas = openingen.filter((o) => ['raam', 'buitendeur', 'schuifraam'].includes(o.soort) && muurVanOpening(o, muren)?.soort === 'buiten').reduce((t, o) => t + (o.breedte * o.hoogte * (o.soort === 'buitendeur' ? 0.3 : 0.7)) / 10000, 0);
-  const omtrek = (2 * (nb + nd)) / 100;
+  const delen = delenVan(r);
+  const bruto = delen.reduce((t, p) => t + p.b * p.d, 0);
+  let netto: number, nb: number, nd: number;
+  if (delen.length === 1) {
+    const dikte = (as: 'h' | 'v', lijn: number, van: number, tot: number) => {
+      const op = muren.filter((m) => m.as === as && gelijk(m.lijn, lijn) && m.tot > van + 0.5 && m.van < tot - 0.5);
+      return op.length ? Math.max(...op.map((m) => m.dikte)) : 0;
+    };
+    const tb = dikte('h', r.y, r.x, r.x + r.b), to = dikte('h', r.y + r.d, r.x, r.x + r.b);
+    const tl = dikte('v', r.x, r.y, r.y + r.d), tr = dikte('v', r.x + r.b, r.y, r.y + r.d);
+    nb = Math.max(0, r.b - (tl + tr) / 2);
+    nd = Math.max(0, r.d - (tb + to) / 2);
+    netto = nb * nd;
+  } else {
+    // Samengestelde ruimte: bruto min een halve muurdikte langs elke muur (benadering).
+    netto = Math.max(0, bruto - eigen.reduce((t, m) => t + (m.tot - m.van) * (m.dikte / 2), 0));
+    nb = r.b;
+    nd = r.d;
+  }
+  const omtrek = delen.length === 1 ? (2 * (nb + nd)) / 100 : eigen.reduce((t, m) => t + (m.tot - m.van), 0) / 100;
   return {
-    bruto: r2((r.b * r.d) / 10000),
-    netto: r2((nb * nd) / 10000),
+    bruto: r2(bruto / 10000),
+    netto: r2(netto / 10000),
     nb: r2(nb),
     nd: r2(nd),
     omtrek: r2(omtrek),
@@ -258,24 +388,25 @@ export function ruimteMaten(plan: Plattegrond, r: Ruimte, muren = murenVan(plan)
   };
 }
 
-/** Openingen in de randen van een ruimte. */
-export function openingenVanRuimte(plan: Plattegrond, r: Ruimte): Opening[] {
+/** Openingen in de muren rond een ruimte. */
+export function openingenVanRuimte(plan: Plattegrond, r: Ruimte, muren = murenVan(niveauPlan(plan, niveauVan(r)))): Opening[] {
   return plan.openingen.filter((o) => {
-    if (o.as === 'h') return (gelijk(o.lijn, r.y) || gelijk(o.lijn, r.y + r.d)) && o.midden > r.x && o.midden < r.x + r.b;
-    return (gelijk(o.lijn, r.x) || gelijk(o.lijn, r.x + r.b)) && o.midden > r.y && o.midden < r.y + r.d;
+    if (niveauVan(o) !== niveauVan(r)) return false;
+    const m = muurVanOpening(o, muren);
+    return !!m && (m.plus === r.id || m.min === r.id);
   });
 }
 
 /** De ruimte aan de binnenkant van een opening in een buitenmuur (of de ruimtes aan beide kanten). */
-export function ruimtesBijOpening(plan: Plattegrond, o: Opening, muren = murenVan(plan)): Ruimte[] {
+export function ruimtesBijOpening(plan: Plattegrond, o: Opening, muren = murenVan(niveauPlan(plan, niveauVan(o)))): Ruimte[] {
   const m = muurVanOpening(o, muren);
   if (!m) return [];
   return [m.min, m.plus].filter(Boolean).map((id) => plan.ruimtes.find((r) => r.id === id)!).filter(Boolean);
 }
 
-/** Ruimte op een punt. */
-export function ruimteOp(plan: Plattegrond, x: number, y: number): Ruimte | undefined {
-  return plan.ruimtes.find((r) => x > r.x && x < r.x + r.b && y > r.y && y < r.y + r.d);
+/** Ruimte op een punt (op de gegeven verdieping, of in het hele plan als het al gefilterd is). */
+export function ruimteOp(plan: Plattegrond, x: number, y: number, niveau?: number): Ruimte | undefined {
+  return plan.ruimtes.find((r) => (niveau === undefined || niveauVan(r) === niveau) && delenVan(r).some((p) => binnen(p, x, y)));
 }
 
 // ---------- controles ----------
@@ -291,6 +422,42 @@ const BUITEN: OpeningSoort[] = ['raam', 'buitendeur', 'schuifraam'];
 
 export function controleerPlan(plan: Plattegrond): PlanMelding[] {
   const uit: PlanMelding[] = [];
+  const niveaus = verdiepingenVan(plan);
+  const ingang = new Set<string>();
+  const buren = new Map<string, Set<string>>();
+  const verbind = (a: string, b: string) => {
+    buren.set(a, new Set([...(buren.get(a) ?? []), b]));
+    buren.set(b, new Set([...(buren.get(b) ?? []), a]));
+  };
+  niveaus.forEach((nv, n) => {
+    const p = niveauPlan(plan, n);
+    const pre = niveaus.length > 1 && n > 0 ? `${nv.naam}: ` : '';
+    controleerNiveau(p, pre, uit, ingang, verbind);
+    // Trap: verbindt de ruimte met de trap met de ruimte erboven.
+    if (n + 1 < niveaus.length) {
+      for (const t of p.meubels.filter((m) => m.type === 'trap')) {
+        const v = meubelVoetafdruk(t);
+        const onder = ruimteOp(p, v.x + v.b / 2, v.y + v.d / 2);
+        const boven = ruimteOp(plan, v.x + v.b / 2, v.y + v.d / 2, n + 1);
+        if (onder && boven) verbind(onder.id, boven.id);
+        else if (onder) uit.push({ ernst: 'waarschuwing', ruimte: onder.id, melding: `De trap in ${onder.naam} komt boven niet in een ruimte uit.` });
+      }
+    }
+    if (n > 0 && p.ruimtes.length && !plan.meubels.some((m) => m.type === 'trap' && niveauVan(m) === n - 1)) {
+      uit.push({ ernst: 'waarschuwing', melding: `${nv.naam}: er is nog geen trap naar deze verdieping (plaats een trap op de verdieping eronder).` });
+    }
+  });
+  if (plan.ruimtes.length && !plan.openingen.some((o) => o.soort === 'buitendeur' && niveauVan(o) === 0)) uit.push({ ernst: 'waarschuwing', melding: 'Er is nog geen voordeur of buitendeur.' });
+  const bereikt = new Set(ingang);
+  const rij = [...ingang];
+  while (rij.length) for (const b of buren.get(rij.shift()!) ?? []) if (!bereikt.has(b)) { bereikt.add(b); rij.push(b); }
+  if (ingang.size) {
+    for (const r of plan.ruimtes) if (!bereikt.has(r.id)) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${r.naam} is niet bereikbaar: voeg een deur of doorgang toe.` });
+  }
+  return uit;
+}
+
+function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], ingang: Set<string>, verbind: (a: string, b: string) => void) {
   const muren = murenVan(plan);
   const naam = (id?: string) => plan.ruimtes.find((r) => r.id === id)?.naam ?? '?';
 
@@ -298,8 +465,11 @@ export function controleerPlan(plan: Plattegrond): PlanMelding[] {
   for (let i = 0; i < plan.ruimtes.length; i++) {
     for (let j = i + 1; j < plan.ruimtes.length; j++) {
       const a = plan.ruimtes[i]!, b = plan.ruimtes[j]!;
-      const ox = Math.min(a.x + a.b, b.x + b.b) - Math.max(a.x, b.x), oy = Math.min(a.y + a.d, b.y + b.d) - Math.max(a.y, b.y);
-      if (ox > 1 && oy > 1) uit.push({ ernst: 'fout', ruimte: a.id, melding: `${a.naam} en ${b.naam} overlappen elkaar.` });
+      const overlap = delenVan(a).some((p) => delenVan(b).some((q) => {
+        const ox = Math.min(p.x + p.b, q.x + q.b) - Math.max(p.x, q.x), oy = Math.min(p.y + p.d, q.y + q.d) - Math.max(p.y, q.y);
+        return ox > 1 && oy > 1;
+      }));
+      if (overlap) uit.push({ ernst: 'fout', ruimte: a.id, melding: `${pre}${a.naam} en ${b.naam} overlappen elkaar.` });
     }
   }
 
@@ -308,41 +478,23 @@ export function controleerPlan(plan: Plattegrond): PlanMelding[] {
     const m = muurVanOpening(o, muren);
     const wat = o.soort === 'binnendeur' ? 'Binnendeur' : o.soort === 'doorgang' ? 'Doorgang' : o.soort === 'raam' ? 'Raam' : o.soort === 'schuifraam' ? 'Schuifraam' : 'Buitendeur';
     if (!m) {
-      uit.push({ ernst: 'fout', opening: o.id, melding: `${wat} staat niet (volledig) op een muur. Verschuif of verklein de opening.` });
+      uit.push({ ernst: 'fout', opening: o.id, melding: `${pre}${wat} staat niet (volledig) op een muur. Verschuif of verklein de opening.` });
       continue;
     }
-    if (BUITEN.includes(o.soort) && m.soort === 'binnen') uit.push({ ernst: 'fout', opening: o.id, melding: `${wat} tussen ${naam(m.min)} en ${naam(m.plus)} staat in een binnenmuur.` });
-    if (!BUITEN.includes(o.soort) && m.soort === 'buiten') uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${wat} in een buitenmuur (${naam(m.min ?? m.plus)}): gebruik een buitendeur.` });
+    if (BUITEN.includes(o.soort) && m.soort === 'binnen') uit.push({ ernst: 'fout', opening: o.id, melding: `${pre}${wat} tussen ${naam(m.min)} en ${naam(m.plus)} staat in een binnenmuur.` });
+    if (!BUITEN.includes(o.soort) && m.soort === 'buiten') uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${pre}${wat} in een buitenmuur (${naam(m.min ?? m.plus)}): gebruik een buitendeur.` });
     const vrij = Math.min(o.midden - o.breedte / 2 - m.van, m.tot - o.midden - o.breedte / 2);
-    if (vrij < 10) uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${wat} staat tegen een hoek (minder dan 10 cm muur): moeilijk te plaatsen en af te werken.` });
-    if (o.borstwering + o.hoogte > plan.muurhoogte - 15) uit.push({ ernst: 'fout', opening: o.id, melding: `${wat} is te hoog voor de muur (latei nodig boven de opening).` });
+    if (vrij < 10) uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${pre}${wat} staat tegen een hoek (minder dan 10 cm muur): moeilijk te plaatsen en af te werken.` });
+    if (o.borstwering + o.hoogte > plan.muurhoogte - 15) uit.push({ ernst: 'fout', opening: o.id, melding: `${pre}${wat} is te hoog voor de muur (latei nodig boven de opening).` });
+    if ((o.soort === 'buitendeur' || o.soort === 'schuifraam') && m.soort === 'buiten') ingang.add((m.min ?? m.plus)!);
+    if ((o.soort === 'binnendeur' || o.soort === 'doorgang') && m.plus && m.min) verbind(m.plus, m.min);
   }
   for (let i = 0; i < plan.openingen.length; i++) {
     for (let j = i + 1; j < plan.openingen.length; j++) {
       const a = plan.openingen[i]!, b = plan.openingen[j]!;
       if (a.as !== b.as || !gelijk(a.lijn, b.lijn)) continue;
-      if (Math.abs(a.midden - b.midden) < (a.breedte + b.breedte) / 2 + 5) uit.push({ ernst: 'fout', opening: b.id, melding: 'Twee openingen overlappen elkaar of staan te dicht bij elkaar.' });
+      if (Math.abs(a.midden - b.midden) < (a.breedte + b.breedte) / 2 + 5) uit.push({ ernst: 'fout', opening: b.id, melding: `${pre}Twee openingen overlappen elkaar of staan te dicht bij elkaar.` });
     }
-  }
-
-  // Bereikbaarheid: vanaf een buitendeur via binnendeuren en doorgangen.
-  const ingang = new Set<string>();
-  const buren = new Map<string, Set<string>>();
-  for (const o of plan.openingen) {
-    const m = muurVanOpening(o, muren);
-    if (!m) continue;
-    if ((o.soort === 'buitendeur' || o.soort === 'schuifraam') && m.soort === 'buiten') ingang.add((m.min ?? m.plus)!);
-    if ((o.soort === 'binnendeur' || o.soort === 'doorgang') && m.plus && m.min) {
-      buren.set(m.plus, new Set([...(buren.get(m.plus) ?? []), m.min]));
-      buren.set(m.min, new Set([...(buren.get(m.min) ?? []), m.plus]));
-    }
-  }
-  if (plan.ruimtes.length && !plan.openingen.some((o) => o.soort === 'buitendeur')) uit.push({ ernst: 'waarschuwing', melding: 'Er is nog geen voordeur of buitendeur.' });
-  const bereikt = new Set(ingang);
-  const rij = [...ingang];
-  while (rij.length) for (const b of buren.get(rij.shift()!) ?? []) if (!bereikt.has(b)) { bereikt.add(b); rij.push(b); }
-  if (ingang.size) {
-    for (const r of plan.ruimtes) if (!bereikt.has(r.id)) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${r.naam} is niet bereikbaar: voeg een deur of doorgang toe.` });
   }
 
   // Daglicht en ventilatie.
@@ -350,12 +502,11 @@ export function controleerPlan(plan: Plattegrond): PlanMelding[] {
     const t = RUIMTE_TYPES[r.type];
     const maten = ruimteMaten(plan, r, muren);
     if (t.daglicht) {
-      if (maten.glas === 0) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${r.naam} heeft geen raam (daglicht).` });
-      else if (maten.glas < maten.netto / 10) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${r.naam}: weinig daglicht (glas ${maten.glas.toFixed(1)} m² is minder dan 1/10 van de vloer; richtwaarde, te verifiëren).` });
+      if (maten.glas === 0) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${pre}${r.naam} heeft geen raam (daglicht).` });
+      else if (maten.glas < maten.netto / 10) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${pre}${r.naam}: weinig daglicht (glas ${maten.glas.toFixed(1)} m² is minder dan 1/10 van de vloer; richtwaarde, te verifiëren).` });
     }
-    if ((r.type === 'badkamer' || r.type === 'wc') && maten.glas === 0) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${r.naam} zonder raam: mechanische afzuiging voorzien.` });
+    if ((r.type === 'badkamer' || r.type === 'wc') && maten.glas === 0) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${pre}${r.naam} zonder raam: mechanische afzuiging voorzien.` });
   }
-  return uit;
 }
 
 // ---------- 3D ----------
@@ -373,9 +524,43 @@ export interface Plan3DOpties {
   meubels?: boolean;
   /** Raam of buitendeur van een offertepositie. */
   inhoud?: (o: Opening) => OpeningInhoud | undefined;
+  /** Alleen de verdiepingen tot en met dit niveau tonen (de bovenste zonder dak). */
+  totNiveau?: number;
 }
 
+/** Hele woning: alle verdiepingen op elkaar, met vloerplaten, trapgaten en platte daken. */
 export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties = {}): Scene3D {
+  const blokken: Blok[] = [];
+  const niveaus = verdiepingenVan(plan).length;
+  const laatste = Math.min(niveaus - 1, opties.totNiveau ?? niveaus - 1);
+  const H = plan.muurhoogte;
+  for (let n = 0; n <= laatste; n++) {
+    const y0 = vloerHoogte(plan, n);
+    const p = niveauPlan(plan, n);
+    // Trapgaten: voetafdruk van de trappen op de verdieping eronder.
+    const gaten = n > 0 ? plan.meubels.filter((m) => m.type === 'trap' && niveauVan(m) === n - 1).map(meubelVoetafdruk) : [];
+    const zonderGaten = (r: Rechthoek) => gaten.reduce<Rechthoek[]>((stukken, g) => stukken.flatMap((s) => trekAf(s, g)), [r]);
+    if (n > 0) {
+      for (const r of p.ruimtes) for (const deel of delenVan(r)) for (const s of zonderGaten(deel)) {
+        blokken.push({ code: `plaat_${r.id}`, soort: 'gevel', vorm: 'blok', x: s.x, y: y0 - VLOERDIKTE, z: s.y, b: s.b, h: VLOERDIKTE, d: s.d, kleur: '#c9c6bf' });
+      }
+    }
+    const scene = niveau3D(p, cat, { ...opties, laag: n === laatste ? opties.laag : undefined }, zonderGaten);
+    for (const b of scene) blokken.push({ ...b, y: r2(b.y + y0) });
+    // Plat dak boven delen die niet onder een hogere (getoonde) verdieping liggen.
+    if (n < laatste) {
+      const boven = niveauPlan(plan, n + 1).ruimtes.flatMap(delenVan);
+      for (const r of p.ruimtes) for (const deel of delenVan(r)) {
+        const vrij = boven.reduce<Rechthoek[]>((stukken, q) => stukken.flatMap((s) => trekAf(s, q)), [deel]);
+        for (const s of vrij) blokken.push({ code: `dak_${r.id}`, soort: 'dak', vorm: 'blok', x: s.x, y: y0 + H, z: s.y, b: s.b, h: VLOERDIKTE, d: s.d, kleur: '#2e2e2e' });
+      }
+    }
+  }
+  return { blokken, kader: kaderVan(blokken) };
+}
+
+/** Eén verdieping (vloer op y = 0). */
+function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, zonderGaten: (r: Rechthoek) => Rechthoek[]): Blok[] {
   const blokken: Blok[] = [];
   const muren = murenVan(plan);
   const H = plan.muurhoogte;
@@ -397,10 +582,12 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     if (k && k.b > 0.05 && k.h > 0.05 && k.d > 0.05) blokken.push(k);
   };
 
-  // Vloeren.
+  // Vloeren (met trapgat).
   for (const r of plan.ruimtes) {
     const v = cat.vloeren[r.vloer];
-    voeg({ code: `vloer_${r.id}`, soort: v?.soort ?? 'gevel', vorm: 'blok', x: r.x, y: 0, z: r.y, b: r.b, h: 1.5, d: r.d, kleur: v?.kleur ?? '#cfccc4' });
+    for (const s of delenVan(r).flatMap(zonderGaten)) {
+      voeg({ code: `vloer_${r.id}`, soort: v?.soort ?? 'gevel', vorm: 'blok', x: s.x, y: 0, z: s.y, b: s.b, h: 1.5, d: s.d, kleur: v?.kleur ?? '#cfccc4' });
+    }
   }
 
   // Muren met openingen.
@@ -439,10 +626,11 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     for (const mb of plan.meubels) {
       const t = cat.meubels[mb.type];
       if (!t) continue;
-      for (const b of meubelIn3D(mb, t)) voeg({ ...b, y: b.y + 1.5 }, false);
+      // Een trap loopt altijd tot de vloer van de verdieping erboven.
+      for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, y: b.y + 1.5 }, false);
     }
   }
-  return { blokken, kader: kaderVan(blokken) };
+  return blokken;
 }
 
 /** Raam, deur of doorgang op de juiste plaats en in de juiste richting in de muur. */
@@ -640,6 +828,14 @@ export function meubelBlokken(vorm: MeubelVorm, B: number, D: number, H: number,
     case 'tapijt':
       blok('tapijt', 'stof', 0, 0, 0, B, 1, D, kleur);
       break;
+    case 'trap': {
+      // Rechte trap: loopt op van voor (z = D) naar achter (z = 0), tot de vloer erboven.
+      const n = Math.max(8, Math.round(H / 18));
+      const op = H / n, aan = D / n;
+      for (let i = 0; i < n; i++) blok(`trede${i}`, 'hout', 0, i * op, D - (i + 1) * aan, B, op, aan + 2, kleur);
+      blok('paal', 'metaal', B - 4, 0, D - 4, 4, 95, 4, '#2a2a2a');
+      break;
+    }
   }
   return uit;
 }

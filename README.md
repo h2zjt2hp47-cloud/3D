@@ -30,6 +30,8 @@ packages/
                         controles (bereikbaarheid, daglicht), 3D van de woning
       plattegrondsvg.ts Tekening van de plattegrond (deurbogen, raamvakken, maten)
       offerte.ts        Offerte met meerdere posities, vrije regels, korting en btw
+      gevels.ts         Gevelaanzichten uit de plattegrond, met kettingmaten
+      werf.ts           Inmeting (bestelmaat, haaksheid) en meerwerk t.o.v. het akkoord
     voorbeelden/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
       sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
@@ -60,7 +62,8 @@ packages/
                           rugvorm, houten frame)
                         - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
   bouw-web/             Aparte demo voor de bouwsector: plattegrond tekenen (ruimtes, ramen, deuren, meubels),
-                        positie configureren (draairichting, zonwering …) en offerte (PDF, bestellijst, export)
+                        positie configureren (draairichting, zonwering …), offerte (PDF, bestellijst, export)
+                        en werf (inmeting op tablet, meerwerkbon met handtekening); verdiepingen en gevels
 ```
 
 Later volgen: het echte configuratiescherm met beheer, een server (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.
