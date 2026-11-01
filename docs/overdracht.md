@@ -15,6 +15,8 @@
 | Skill | `.claude/skills/zetel-3d/SKILL.md`: hoe de 3D-logica werkt en hoe je een nieuwe vorm toevoegt |
 | Obsidian | `python3 -I scripts/obsidian_export.py` → `obsidian-export/Configurator.zip` (+ `zetel-3d-skill.zip`) |
 
+**Bouwdemo online (privé artifact):** https://claude.ai/artifact/FaTp1zVvy9YePyarithjyh (slug `760c021f-8602-482d-b4c1-d41a3bcaa890`). Opnieuw publiceren: `npm run build -w @configurator/bouw-web`, dan `publish_files` met `packages/bouw-web/dist/bouw-configurator.html` als `index.html`.
+
 **Demo online (privé artifact):** https://claude.ai/artifact/BtVKYeQKC7szR1ZwW97VB1
 - slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie: zie publicatie van 31/10 (catalogus-editor)
 - Productfoto's: eerst `python3 -I packages/demo-web/scripts/haal_fotos.py` (vraagt netwerktoegang tot corneille-silence.be), dan bouwen. De foto's staan in `packages/demo-web/fotos/` en worden niet in git bewaard.
