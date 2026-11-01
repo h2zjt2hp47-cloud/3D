@@ -9,6 +9,12 @@ export function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<
 }
 
 export const eur = (x: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(x);
+
+/** Klantweergave aan? Dan tonen de lijsten prijzen incl. btw (een particulier vergelijkt prijzen met btw). */
+export const klantweergave = () => document.body.classList.contains('klantmodus');
+/** Prijs zoals getoond in de lijsten: excl. btw, of incl. btw in de klantweergave. */
+export const toonPrijs = (excl: number, btw: number) => (klantweergave() ? excl * (1 + btw / 100) : excl);
+export const btwLabel = () => (klantweergave() ? 'incl. btw' : 'excl. btw');
 export const getal = (x: number, d = 0) => new Intl.NumberFormat('nl-BE', { maximumFractionDigits: d }).format(x);
 export const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 

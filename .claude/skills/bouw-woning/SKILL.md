@@ -65,6 +65,7 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - **Model** (`plattegrond.ts`): `plan.gevelOntwerp = { standaard, vlakken?, sokkel? }` met `GevelKeuze { materiaal, kleur, voeg? }` (codes uit `cat.gevels`, catalogus `gevelCatalogus` in `inrichting.ts`). Zonder ontwerp geldt nog `plan.gevel` (soort + kleur); `gevelOntwerpVan(plan)` maakt een ontwerp dat erop lijkt. De editor maakt het ontwerp aan bij de eerste verfbeurt en zet `meta.regels.gevel` aan.
 - **Muurvlak** = buitenmuur van één ruimte aan één kant: `vlakSleutel(m) = "<ruimte-id>:<kant>"` met `buitenKant(m)` (boven/onder/links/rechts, zoals `kantVan`). Blijft gelijk als de ruimte verschuift.
 - **Verven**: `verfGevel(plan, keuze, bereik, doel)` met bereik `vlak` | `gevel` (alle verdiepingen, één kant) | `verdieping` | `woning` (standaard, vlakken gewist). Laatste verfbeurt wint, net als bij een verfborstel.
+- **Indelen / ruimte in ruimte**: `splitsRuimtes` en `tekenRuimteIn` roepen `erfGevel(plan, oud, nieuw)` aan, zodat de nieuwe ruimte (nieuwe id) het gevelmateriaal per kant houdt.
 - **3D** (`niveau3D`): de buitenzijde krijgt `gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m))` (soort, kleur, voeg).
   - Op het gelijkvloers wordt elk stuk gesplitst op de sokkelhoogte (`_sokkel`).
   - Op een verdieping begint een buitenmuur 30 cm lager, voor de rand van de vloerplaat.
@@ -86,6 +87,7 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
   - Shift = hele gevel;
   - Alt of *Pipet* = materiaal overnemen;
   - klik op een sokkelvorm = sokkel verven;
+  - verven, pipet en raam toevoegen gebeuren pas bij **pointerup** (`wacht`), niet als de vinger > 8 px verschoof of er een tweede vinger bijkwam (`opKnijpen` wist `wacht` en draait een begonnen verplaatsing terug), anders verft knijpen-om-te-zoomen een muur;
   - ramen slepen gebeurt via `momentopname()` + `wijzig(..., { zonderOngedaan: true })`;
   - deuren gaan alleen opzij;
   - een raam toevoegen gebeurt via `voegRaamToe` uit `plattegrond-ui.ts`.
@@ -152,7 +154,7 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - **Nieuwe planregel:** `controleerPlan` (met `ruimte`/`opening`-id zodat de editor kan selecteren).
 
 ## Testen
-- `npm test` en `npm run typecheck` in de root (158 tests op 1/11/2026; `core/test/woning.test.ts`, `werf.test.ts`, `gevel.test.ts`, `maatlijst.test.ts`).
+- `npm test` en `npm run typecheck` in de root (159 tests op 1/11/2026; `core/test/woning.test.ts`, `werf.test.ts`, `gevel.test.ts`, `maatlijst.test.ts`).
 - Browser: er zijn nu twee knoppen met `data-weergave="offerte"` (Ramenlijst en Offerte); klik in tests op `.nav [data-weergave="offerte"]:not(.alleen-ramen)`. Coördinaten in een tekenvlak pas berekenen ná klikken in het palet (Playwright scrolt het palet in beeld).
 - Browser: Playwright met cdnjs gerouteerd naar `node_modules/three/build/three.min.js`, Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader`. Klik op een opening met `{ force: true }` (de groep bevat ook bogen in de ruimte).
 

@@ -55,6 +55,11 @@ let passend: Kader = { x: 0, y: 0, b: 1000, d: 500 };
 let zoom: Zoom | undefined;
 let sleep: { id: string; start: { x: number; y: number }; midden: number; borstwering: number; bewogen: boolean; min: number; max: number; hoogteMax: number; zijwaarts: number; verticaal: boolean } | undefined;
 let pannen: { x: number; y: number; bewogen: boolean } | undefined;
+/**
+ * Verven, pipet of raam toevoegen gebeurt pas bij het loslaten (zoals een klik), en niet als de vinger
+ * verschoof of er een tweede vinger bijkwam (knijpen om te zoomen mag de gevel niet verven).
+ */
+let wacht: { code: string; shift: boolean; alt: boolean; x: number; y: number; u: number } | undefined;
 let terug: { voegRaamToe: (niveau: number, muur: string, midden: number) => string | undefined; naarPositie: (id: string) => void; naarPlan: (openingId: string) => void; naar3D: () => void } | undefined;
 
 /** Info per opening voor de gevelaanzichten (kleur, vakken, zonweringskast). */
@@ -395,20 +400,9 @@ function naDown(ev: PointerEvent) {
     return;
   }
   const doel = code ? doelVan(code, ev.shiftKey) : undefined;
-  if (doel && (gereedschap === 'pipet' || (gereedschap === 'verf' && ev.altKey))) {
-    const k = keuzeVan(toestand().plan, doel);
-    if (k) kwast = { ...k };
-    kiesGereedschap('verf');
-    return;
-  }
-  if (doel && gereedschap === 'verf') {
-    wijzig('plan', (t) => { metOntwerp(t); verf(t.plan, doel); });
-    return;
-  }
-  if (doel && doel.soort === 'vlak' && gereedschap === 'raam') {
-    const v = g.vlakken.find((x) => x.code === code)!;
-    const id = terug?.voegRaamToe(v.niveau, v.muur, Math.round(g.vanU(punt(ev).x)));
-    if (id) { gekozen = id; kiesGereedschap('ramen'); }
+  if (code && doel && (gereedschap === 'pipet' || gereedschap === 'verf' || (gereedschap === 'raam' && doel.soort === 'vlak'))) {
+    wacht = { code, shift: ev.shiftKey, alt: ev.altKey, x: ev.clientX, y: ev.clientY, u: punt(ev).x };
+    houder.setPointerCapture(ev.pointerId);
     return;
   }
   // Leeg stuk: slepen verschuift het beeld, een klik deselecteert.
@@ -418,6 +412,11 @@ function naDown(ev: PointerEvent) {
 }
 
 function naMove(ev: PointerEvent) {
+  if (wacht) {
+    // Verschoven: geen klik meer.
+    if (Math.hypot(ev.clientX - wacht.x, ev.clientY - wacht.y) > 8) wacht = undefined;
+    return;
+  }
   if (pannen) {
     if (Math.hypot(ev.clientX - pannen.x, ev.clientY - pannen.y) > 3) pannen.bewogen = true;
     zoom?.beweegPan(ev);
@@ -443,7 +442,35 @@ function naMove(ev: PointerEvent) {
   }
 }
 
+/** De klik uitvoeren die bij het indrukken klaargezet werd. */
+function voerUit(w: NonNullable<typeof wacht>) {
+  const g = gevels.find((x) => x.kant === kant);
+  const doel = doelVan(w.code, w.shift);
+  if (!g || !doel) return;
+  if (gereedschap === 'pipet' || (gereedschap === 'verf' && w.alt)) {
+    const k = keuzeVan(toestand().plan, doel);
+    if (k) kwast = { ...k };
+    kiesGereedschap('verf');
+    return;
+  }
+  if (gereedschap === 'verf') {
+    wijzig('plan', (t) => { metOntwerp(t); verf(t.plan, doel); });
+    return;
+  }
+  if (gereedschap === 'raam' && doel.soort === 'vlak') {
+    const v = g.vlakken.find((x) => x.code === w.code)!;
+    const id = terug?.voegRaamToe(v.niveau, v.muur, Math.round(g.vanU(w.u)));
+    if (id) { gekozen = id; kiesGereedschap('ramen'); }
+  }
+}
+
 function naUp(ev: PointerEvent) {
+  if (wacht) {
+    const w = wacht;
+    wacht = undefined;
+    voerUit(w);
+    return;
+  }
   if (pannen) {
     zoom?.stopPan();
     if (!pannen.bewogen) { gekozen = undefined; toonGevelEditor(); }
@@ -506,7 +533,13 @@ export function startGevels(nav: NonNullable<typeof terug>) {
     passend: () => passend,
     opnieuw: toonGevelEditor,
     minBreedte: 80,
-    opKnijpen: () => { sleep = undefined; pannen = undefined; },
+    opKnijpen: () => {
+      // Tweede vinger: de klaargezette klik vervalt, een begonnen verplaatsing wordt teruggedraaid.
+      if (sleep?.bewogen) ongedaan();
+      sleep = undefined;
+      pannen = undefined;
+      wacht = undefined;
+    },
   });
   const vlak = document.createElement('div');
   vlak.className = 'zoomvlak';
@@ -516,6 +549,7 @@ export function startGevels(nav: NonNullable<typeof terug>) {
   houder.addEventListener('pointermove', naMove);
   houder.addEventListener('pointerup', naUp);
   houder.addEventListener('pointerleave', () => { if (onderMuis) { onderMuis = undefined; toonGevelEditor(); } });
+  houder.addEventListener('pointercancel', () => { wacht = undefined; pannen = undefined; if (sleep) { sleep = undefined; zoom?.losmaken(); } });
   // Shift indrukken of loslaten verandert het voorbeeld (muurvlak ↔ hele gevel).
   const shift = (ev: KeyboardEvent) => {
     if (ev.key !== 'Shift' || !onderMuis || $('#gv-editor').hidden) return;

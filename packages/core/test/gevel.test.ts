@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  splitsRuimtes,
+  tekenRuimteIn,
   gevelAanzichten,
   gevelAfwerking,
   gevelKeuzeVan,
@@ -159,6 +161,18 @@ describe('gevelmaterialen', () => {
     const svg = tekenSvg(boven.tekening);
     expect(svg).toContain('<pattern id="pt-steen-');
     expect(svg).toContain('fill="url(#pt-natuursteen-');
+  });
+
+  it('indelen en ruimte in ruimte: de nieuwe ruimte houdt het gevelmateriaal van de oude', () => {
+    const { plan } = voorbeeldWoning();
+    const slk = plan.ruimtes.find((r) => r.niveau === 1 && r.type === 'slaapkamer')!;
+    const nieuw = splitsRuimtes(plan, 1, 'v', slk.x + Math.round(slk.b / 2), slk.y + 50, slk.y + 50, (oud) => ({ ...oud, id: 'gesplitst', naam: 'Nieuw', delen: undefined }), 60);
+    expect(nieuw).toHaveLength(1);
+    expect(gevelOppervlaktes(plan).filter((v) => v.niveau === 1).every((v) => v.keuze?.materiaal === 'hout_staand')).toBe(true);
+    // Ruimte in ruimte tegen de buitenmuur van verdieping 1.
+    const r = plan.ruimtes.find((x) => x.id === 'gesplitst')!;
+    tekenRuimteIn(plan, { id: 'kast', naam: 'Dressing', type: 'berging', x: r.x, y: r.y, b: 120, d: 120, vloer: r.vloer, wand: r.wand, niveau: 1 });
+    expect(gevelOppervlaktes(plan).filter((v) => v.niveau === 1).every((v) => v.keuze?.materiaal === 'hout_staand')).toBe(true);
   });
 
   it('voorbeeldwoning: verdieping in hout, gelijkvloers in baksteen met sokkel', () => {

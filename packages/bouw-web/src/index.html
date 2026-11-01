@@ -634,7 +634,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 <main id="view-offerte" class="view" hidden>
   <section class="kaart alleen-ramen" id="o-ramenlijst-kaart">
     <div class="kaartkop"><h2>Ramenlijst</h2><span class="klein">enkel ramen en deuren, zonder woning · maten in mm</span></div>
-    <div class="tabelhouder"><table id="o-ramenlijst"><thead><tr><th>Pos.</th><th>Omschrijving</th><th>Soort</th><th>Indeling (van binnen)</th><th class="num">Breedte</th><th class="num">Hoogte</th><th>Ruimte</th><th class="num">Verd.</th><th class="num">Aantal</th><th class="num">Totaal</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="tabelhouder"><table id="o-ramenlijst"><thead><tr><th>Pos.</th><th>Omschrijving</th><th>Soort</th><th>Indeling (van binnen)</th><th class="num">Breedte</th><th class="num">Hoogte</th><th>Ruimte</th><th class="num">Verd.</th><th class="num">Aantal</th><th class="num" id="o-ramenlijst-totaal">Totaal</th><th></th></tr></thead><tbody></tbody></table></div>
     <p id="o-ramenlijst-leeg" class="klein">Nog geen ramen. Voeg er een toe of plak hieronder een maatlijst.</p>
     <div class="nieuw">
       <button type="button" class="tweede" data-ramen-nieuw="raam">+ Raam</button>
@@ -710,7 +710,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
     </aside>
     <div class="links">
       <section class="kaart alleen-woning">
-        <div class="kaartkop"><h2>Posities</h2><span id="o-status" class="status ok"></span></div>
+        <div class="kaartkop"><h2>Posities</h2><span class="klein o-btwlabel"></span><span id="o-status" class="status ok"></span></div>
         <div id="o-posities"></div>
         <p id="o-leeg" class="klein" hidden>Nog geen posities. Plaats ramen en deuren in de plattegrond of voeg ze hier toe.</p>
         <div class="nieuw">
@@ -735,7 +735,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         </div>
       </section>
       <section class="kaart" id="o-regels-kaart">
-        <div class="kaartkop"><h2>Afwerking uit de plattegrond</h2></div>
+        <div class="kaartkop"><h2>Afwerking uit de plattegrond</h2><span class="klein o-btwlabel"></span></div>
         <div class="tabelhouder"><table id="o-regels"><thead><tr><th>Omschrijving</th><th class="num">Hoeveelheid</th><th class="num">Prijs</th><th class="num">Totaal</th></tr></thead><tbody></tbody></table></div>
       </section>
       <section class="kaart">

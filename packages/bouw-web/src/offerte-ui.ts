@@ -6,7 +6,7 @@
 import { berekenOfferte, controleerPlan, niveauPlan, tekenPlattegrond, tekenSvg, verdiepingenVan, type Keuzes, type OfferteResultaat, type StuklijstResultaat } from '../../core/src/index.js';
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
 import { ruitenVan } from '../../core/voorbeelden/raam.js';
-import { $, el, eur, getal, kopieer, num } from './hulp.js';
+import { $, el, eur, getal, kopieer, num, toonPrijs, btwLabel } from './hulp.js';
 import { gevelSvgs } from './plattegrond-ui.js';
 import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
 import { controles, inbegrepen } from './positie-ui.js';
@@ -138,8 +138,8 @@ export function toonOfferte() {
       if (x) x.aantal = Math.max(0, Math.round(Number(aantal.value) || 0));
     }));
     const aantalRij = el('label', { class: 'aantal' });
-    aantalRij.append(aantal, el('span', {}, `× ${eur(pos.stukprijs)}`));
-    prijs.append(aantalRij, el('strong', {}, eur(pos.totaal)));
+    aantalRij.append(aantal, el('span', {}, `× ${eur(toonPrijs(pos.stukprijs, o.btwProcent))}`));
+    prijs.append(aantalRij, el('strong', {}, eur(toonPrijs(pos.totaal, o.btwProcent))));
     rij.append(tekening, info, prijs);
     return rij;
   }));
@@ -156,11 +156,12 @@ export function toonOfferte() {
     (() => { const tr = el('tr', { class: 'groep' }); tr.append(el('th', { colspan: '4' }, g)); return tr; })(),
     ...o.regels.filter((r) => r.groep === g).map((r) => {
       const tr = el('tr');
-      tr.append(el('td', {}, r.omschrijving), el('td', { class: 'num' }, `${getal(r.hoeveelheid, 1)} ${r.eenheid}`), el('td', { class: 'num' }, eur(r.eenheidsprijs)), el('td', { class: 'num' }, eur(r.totaal)));
+      tr.append(el('td', {}, r.omschrijving), el('td', { class: 'num' }, `${getal(r.hoeveelheid, 1)} ${r.eenheid}`), el('td', { class: 'num' }, eur(toonPrijs(r.eenheidsprijs, o.btwProcent))), el('td', { class: 'num' }, eur(toonPrijs(r.totaal, o.btwProcent))));
       return tr;
     }),
   ]));
   $('#o-regels-kaart').hidden = o.regels.length === 0;
+  for (const x of document.querySelectorAll('.o-btwlabel')) x.textContent = `prijzen ${btwLabel()}`;
 
   // Totalen.
   const tot: [string, string, string?][] = [

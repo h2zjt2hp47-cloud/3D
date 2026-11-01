@@ -297,15 +297,33 @@ function zetDelen(r: Ruimte, delen: Rechthoek[]) {
  */
 export function tekenRuimteIn(plan: Plattegrond, nieuw: Ruimte): void {
   const n = niveauVan(nieuw);
+  const opp = (x: Rechthoek[]) => x.reduce((t, p) => t + p.b * p.d, 0);
+  const geraakt: { id: string; overlap: number }[] = [];
   for (const r of [...plan.ruimtes]) {
     if (niveauVan(r) !== n) continue;
     const oud = delenVan(r);
     const rest = oud.flatMap((p) => trekAf(p, nieuw)).filter((p) => p.b >= 1 && p.d >= 1);
     if (rest.length === oud.length && rest.every((p, i) => p === oud[i])) continue;
+    geraakt.push({ id: r.id, overlap: opp(oud) - opp(rest) });
     if (!rest.length) plan.ruimtes.splice(plan.ruimtes.indexOf(r), 1);
     else zetDelen(r, rest);
   }
   plan.ruimtes.push(nieuw);
+  // De gevel van de ruimte waaruit het meest gesneden werd, gaat mee naar de nieuwe ruimte.
+  for (const g of geraakt.sort((a, b) => b.overlap - a.overlap)) erfGevel(plan, g.id, nieuw.id, false);
+}
+
+/**
+ * Een nieuwe ruimte (na indelen of "ruimte in ruimte") neemt de gevelkeuzes per kant over van de ruimte
+ * waaruit ze komt; anders valt haar buitenmuur terug op de standaardgevel.
+ */
+export function erfGevel(plan: Plattegrond, van: string, naar: string, overschrijven = true) {
+  const v = plan.gevelOntwerp?.vlakken;
+  if (!v) return;
+  for (const kant of ['boven', 'onder', 'links', 'rechts'] as const) {
+    const k = v[`${van}:${kant}`];
+    if (k && (overschrijven || !v[`${naar}:${kant}`])) v[`${naar}:${kant}`] = { ...k };
+  }
 }
 
 /**
@@ -336,6 +354,7 @@ export function splitsRuimtes(
     b.niveau = niveau;
     zetDelen(b, gaat);
     plan.ruimtes.push(b);
+    erfGevel(plan, r.id, b.id);
     nieuw.push(b);
   }
   return nieuw;
