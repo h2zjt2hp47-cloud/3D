@@ -35,6 +35,9 @@ packages/
       vrij-ontwerp.ts   Zetelelementen (incl. houten tussenstuk, afgerond eindelement), aanpassingen (poten, poothoogte, hout,
                         metaal, zithoogte, comfort, zitting, rug, rughoogte, naden, armstijl/-hoogte,
                         extra's) en startopstellingen
+      aanbouw.ts        Bouwsector: aanbouw met schuifraam of enkel de raampartij (inmeting, systeemgrenzen,
+                        vleugelgewicht, veiligheidsglas, Uw, btw 6/21 %, bestellijst, vooraanzicht)
+      aanbouw3d.ts      3D-opbouw van de aanbouw (baksteen, houten planken, glas, dak)
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
@@ -47,6 +50,8 @@ packages/
                           ontwerpmodus: vorm van elk element (rugdikte, kussens, zachtheid,
                           rugvorm, houten frame)
                         - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
+  bouw-web/             Aparte demo voor de bouwsector (ramen, deuren, aanbouw): formulier, controles,
+                        prijs met btw-regime, inbegrepen/niet inbegrepen, bestellijst, vooraanzicht en 3D
 ```
 
 Later volgen: het echte configuratiescherm met beheer, een server (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.
@@ -60,6 +65,14 @@ npm run build -w @configurator/demo-web
 ```
 
 Open daarna `packages/demo-web/dist/configurator-demo.html` in een browser.
+
+**Bouwsector (ramen, deuren, aanbouw):**
+
+```bash
+npm run build -w @configurator/bouw-web
+```
+
+Open daarna `packages/bouw-web/dist/bouw-configurator.html` (of de `-offline`-versie om door te sturen).
 
 **Commandoregel:**
 

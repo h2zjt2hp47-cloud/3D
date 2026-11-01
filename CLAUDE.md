@@ -8,6 +8,7 @@ Productconfigurator (configureren → prijzen → offerte) voor maatwerkmeubelen
 - `packages/core`: de motor (geen UI/ERP-afhankelijkheid). Formules als Excel-tekst → JsonLogic (`formule.ts`, `logica.ts`), productmodel (`types.ts`, `motor.ts`), modelcontrole, SVG-tekening (`svg.ts`), materialen, vrij ontwerp (`ontwerp.ts`: elementen, opties, vormgeving), vooraanzicht, 3D-opbouw (`ruimtelijk.ts`).
 - `packages/core/voorbeelden`: demomodellen (kast, sofa per cm, zetelcatalogus `vrij-ontwerp.ts`, modellen `modellen.ts`). **Alle prijzen zijn verzonnen.**
 - `packages/demo-web`: klikbare demo, gebundeld met esbuild tot één HTML-bestand (`npm run build -w @configurator/demo-web` → `dist/configurator-demo.html`). three.js r128 wordt van cdnjs geladen.
+- `packages/bouw-web`: aparte demo voor de bouwsector (ramen, deuren, aanbouw) op dezelfde motor, model in `core/voorbeelden/aanbouw.ts` + `aanbouw3d.ts` (`npm run build -w @configurator/bouw-web` → `dist/bouw-configurator.html` en `-offline.html`). Onderzoek: `docs/onderzoek-bouw-ramen-deuren.md`.
 - `docs/`: analyse en stappenplan, fase 0-sjabloon, onderzoek, overdracht, afbeeldingen.
 
 ## Werkwijze

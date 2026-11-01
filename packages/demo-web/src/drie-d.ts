@@ -75,12 +75,77 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   scene.add(groep);
   const kleur = (hex: string) => new THREE.Color(hex).convertSRGBToLinear();
   const materialen = new Map<string, any>();
+  // ---------- texturen voor bouwmaterialen (in cm via wereld-UV) ----------
+  const STEEN = { b: 88, h: 60 }; // 4 stenen van 21 cm + voeg, 10 lagen van 5 cm + voeg
+  const PLANK = { b: 48, h: 200 }; // 4 verticale planken van 12 cm
+  function tint(hex: string, f: number) {
+    const c = new THREE.Color(hex);
+    return `#${c.multiplyScalar(f).getHexString()}`;
+  }
+  function baksteen(hex: string) {
+    const px = 4, c = document.createElement('canvas');
+    c.width = STEEN.b * px;
+    c.height = STEEN.h * px;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#cfc8bb';
+    g.fillRect(0, 0, c.width, c.height);
+    for (let rij = 0; rij < 10; rij++) {
+      const off = rij % 2 ? 11 : 0;
+      for (let s = -1; s < 5; s++) {
+        g.fillStyle = tint(hex, 0.82 + Math.random() * 0.3);
+        g.fillRect((s * 22 + off) * px, (rij * 6) * px, 21 * px, 5 * px);
+      }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  function planken(hex: string) {
+    const px = 2, c = document.createElement('canvas');
+    c.width = PLANK.b * px;
+    c.height = PLANK.h * px;
+    const g = c.getContext('2d')!;
+    for (let p = 0; p < 4; p++) {
+      g.fillStyle = tint(hex, 0.85 + Math.random() * 0.25);
+      g.fillRect(p * 12 * px, 0, 12 * px, c.height);
+      for (let n = 0; n < 6; n++) {
+        g.fillStyle = `rgba(0,0,0,${0.04 + Math.random() * 0.05})`;
+        g.fillRect((p * 12 + 1 + Math.random() * 10) * px, 0, 1, c.height);
+      }
+      g.fillStyle = 'rgba(0,0,0,.35)';
+      g.fillRect((p * 12 + 11.6) * px, 0, 0.8 * px, c.height);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  /** UV in wereldmaat (cm) per vlak, zodat stenen en planken hun echte maat houden. */
+  function wereldUV(geo: any, bx: number, by: number) {
+    const p = geo.attributes.position, nrm = geo.attributes.normal, uv = geo.attributes.uv;
+    for (let i = 0; i < p.count; i++) {
+      const nx = Math.abs(nrm.getX(i)), ny = Math.abs(nrm.getY(i)), nz = Math.abs(nrm.getZ(i));
+      let u: number, v: number;
+      if (ny >= nx && ny >= nz) { u = p.getX(i); v = p.getZ(i); }
+      else if (nx >= nz) { u = p.getZ(i); v = p.getY(i); }
+      else { u = p.getX(i); v = p.getY(i); }
+      uv.setXY(i, u / bx, v / by);
+    }
+    uv.needsUpdate = true;
+  }
+
   const materiaal = (b: Blok) => {
     const sleutel = `${b.soort}:${b.kleur}`;
     let m = materialen.get(sleutel);
     if (!m) {
       if (b.soort === 'metaal') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), metalness: 0.85, roughness: 0.3 });
       else if (b.soort === 'hout') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.55 });
+      else if (b.soort === 'planken') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: planken(b.kleur) });
+      else if (b.soort === 'steen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, map: baksteen(b.kleur) });
+      else if (b.soort === 'glas') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.15, depthWrite: false });
+      else if (b.soort === 'dak') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.85 });
+      else if (b.soort === 'gevel') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.97 });
       else if (b.soort === 'donker') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.9 });
       else m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.95, map: weefsel });
       materialen.set(sleutel, m);
@@ -138,6 +203,8 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
         break;
       default:
         geo = b.afronding ? afgerondeBalk(b.b, b.h, b.d, b.afronding) : new THREE.BoxGeometry(b.b, b.h, b.d).translate(0, b.h / 2, 0);
+        if (!b.afronding && b.soort === 'steen') wereldUV(geo, STEEN.b, STEEN.h);
+        if (!b.afronding && b.soort === 'planken') wereldUV(geo, PLANK.b, PLANK.h);
     }
     const m = new THREE.Mesh(geo, materiaal(b));
     m.position.set(cx, y, cz);
@@ -149,7 +216,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       if (b.kantel.richting === 'x+') m.rotation.z = -a;
       if (b.kantel.richting === 'x-') m.rotation.z = a;
     }
-    m.castShadow = b.vorm !== 'bol';
+    m.castShadow = b.vorm !== 'bol' && b.soort !== 'glas';
     m.receiveShadow = true;
     return m;
   }
@@ -220,7 +287,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       const nieuw = s.kader;
       const veranderd = Math.abs(nieuw.b - kader.b) > 1 || Math.abs(nieuw.d - kader.d) > 1 || Math.abs(nieuw.x - kader.x) > 1 || Math.abs(nieuw.z - kader.z) > 1;
       kader = nieuw;
-      doel = new THREE.Vector3(kader.x + kader.b / 2, Math.min(40, kader.h / 2), kader.z + kader.d / 2);
+      doel = new THREE.Vector3(kader.x + kader.b / 2, Math.min(Math.max(40, kader.h * 0.35), kader.h / 2), kader.z + kader.d / 2);
       const grootte = Math.max(kader.b, kader.d, 120);
       zon.position.set(doel.x - grootte * 0.6, grootte * 1.6, doel.z + grootte * 1.1);
       zon.target.position.copy(doel);

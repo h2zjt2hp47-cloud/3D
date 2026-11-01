@@ -8,7 +8,7 @@
 import type { Materiaal } from './materialen.js';
 import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
-export type BlokSoort = 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker';
+export type BlokSoort = 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken';
 
 export interface Blok {
   code: string;

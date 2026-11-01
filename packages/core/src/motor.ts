@@ -209,7 +209,8 @@ export function berekenConfiguratie(
   if (model.prijs.minimumPrijs !== undefined && bruto > 0) bruto = Math.max(bruto, model.prijs.minimumPrijs);
   const kortingProcent = opties.kortingProcent ?? 0;
   const excl = rond(bruto * (1 - kortingProcent / 100));
-  const btw = rond((excl * model.prijs.btwProcent) / 100);
+  const btwPct = model.prijs.btw !== undefined ? evalueerGetal(model.prijs.btw, g) : model.prijs.btwProcent;
+  const btw = rond((excl * btwPct) / 100);
   const margeProcent = excl > 0 ? rond(((excl - kostprijs) / excl) * 100, 1) : null;
 
   const tekening = model.tekening ? bouwTekening(model, g) : undefined;

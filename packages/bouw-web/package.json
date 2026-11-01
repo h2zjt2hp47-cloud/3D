@@ -1,0 +1,12 @@
+{
+  "name": "@configurator/bouw-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Klikbare demo voor de bouwsector: ramen, deuren en aanbouw (één HTML-bestand).",
+  "scripts": {
+    "build": "node bouw.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "echo geen tests"
+  }
+}

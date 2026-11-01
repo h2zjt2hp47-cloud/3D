@@ -1,4 +1,4 @@
-# Overdracht — stand van zaken (31 oktober 2026, bijgewerkt)
+# Overdracht — stand van zaken (1 november 2026)
 
 ## Waar staan we
 
@@ -7,10 +7,11 @@
 | Analyse en stappenplan | `docs/configurator-analyse-en-stappenplan.md` (incl. beslissingen en voortgangstabel) |
 | Onderzoek zetelconfigurators | `docs/onderzoek-zetelconfigurators.md` |
 | Fase 0-sjabloon (productkennis klant) | `docs/fase0-productkennis-meubels.md`, nog in te vullen met de klant |
-| Motor (`packages/core`) | Klaar voor demo: formules, regels, prijstabellen, korting, stuklijst, materialen, vrij ontwerp met opties, vormgeving (ontwerpmodus), vooraanzicht, 3D-opbouw, collectie van 42 modellen, opzet-elementen, catalogus-controle, vrije hoogtes. **102 tests groen.** |
+| Motor (`packages/core`) | Klaar voor demo: formules, regels, prijstabellen, korting, stuklijst, materialen, vrij ontwerp met opties, vormgeving (ontwerpmodus), vooraanzicht, 3D-opbouw, collectie van 42 modellen, opzet-elementen, catalogus-controle, vrije hoogtes. **111 tests groen.** |
 | Klikbare demo (`packages/demo-web`) | Tabbladen: Modellen · Sofa op maat · Vrij ontwerp (tekenen in boven- én vooraanzicht, verplaatsen, vrije hoogtes, 3D, ontwerpmodus, rugleuningen en kussens) · Kast op maat · Materialen · **Catalogus** (editor: elementen, opties, modellen, delen) |
 | Huisstijl klant | `npm run build -w @configurator/demo-web` maakt ook `dist/configurator-corneille-silence.html` (stijl van hun website). **Niet publiek publiceren**: alleen als bestand aan de gebruiker. |
 | Doorsturen (offline) | De build maakt ook `dist/*-offline.html`: één bestand met 3D-bibliotheek, lettertypes en foto's ingebakken, werkt zonder internet. Eerst `python3 -I packages/demo-web/scripts/haal_lettertypes.py` en `haal_fotos.py` (niet in git). Zip met LEES MIJ: `obsidian-export/Configurator Corneille & Silence.zip`. |
+| **Bouwsector (tweede case)** | Aparte demo `packages/bouw-web` → `dist/bouw-configurator.html` (+ `-offline.html`). Model `core/voorbeelden/aanbouw.ts`: aanbouw of enkel raampartij, inmeting (kleinste maat − speling), systeemgrenzen en vleugelgewicht, veiligheidsglas, Uw-berekening, btw 6/21 %, ligger, vergunning, bestellijst. 3D in `aanbouw3d.ts` (baksteen, planken, glas). Onderzoek en wat nog moet: `docs/onderzoek-bouw-ramen-deuren.md`. Alle waarden zijn voorbeelden. |
 | Skill | `.claude/skills/zetel-3d/SKILL.md`: hoe de 3D-logica werkt en hoe je een nieuwe vorm toevoegt |
 | Obsidian | `python3 -I scripts/obsidian_export.py` → `obsidian-export/Configurator.zip` (+ `zetel-3d-skill.zip`) |
 

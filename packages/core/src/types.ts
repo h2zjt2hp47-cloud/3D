@@ -141,6 +141,8 @@ export interface PrijsInstellingen {
   /** Minimum verkoopprijs excl. btw. */
   minimumPrijs?: number;
   btwProcent: number;
+  /** Optioneel: btw-percentage als formule (bv. afhankelijk van renovatie of nieuwbouw). Overschrijft btwProcent. */
+  btw?: Formule;
 }
 
 export interface ProductModel {

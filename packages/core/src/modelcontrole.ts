@@ -82,6 +82,7 @@ export function controleerModel(model: ProductModel): ModelProbleem[] {
   }
   for (const r of model.regels) check(`regel ${r.code}`, r.als);
   check('prijs (verkoopprijs)', model.prijs.verkoopprijs);
+  check('prijs (btw)', model.prijs.btw);
   for (const s of model.stuklijst) {
     for (const veld of ['artikel', 'aantal', 'lengte', 'breedte', 'als'] as const)
       check(`stuklijst ${s.code} (${veld})`, s[veld]);

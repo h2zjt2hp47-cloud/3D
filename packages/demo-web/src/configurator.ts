@@ -82,6 +82,8 @@ function bouwVeld(k: Kenmerk): HTMLElement {
       const s = r.kenmerken.find((x) => x.code === k.code)!;
       if (s.min !== undefined) { schuif.min = String(s.min); invoer.min = String(s.min); }
       if (s.max !== undefined) { schuif.max = String(s.max); invoer.max = String(s.max); }
+      // Pas na min/max de waarde zetten, anders klemt de schuifbalk ze op 0–100.
+      if (typeof keuzes[k.code] === 'number') schuif.value = String(keuzes[k.code]);
       bereik.textContent = s.min !== undefined && s.max !== undefined ? `${getal(s.min)} – ${getal(s.max)} ${k.eenheid ?? ''}` : '';
     };
   }
