@@ -5,7 +5,7 @@
  */
 import { berekenOfferte } from '../../core/src/index.js';
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
-import { $, el, eur } from './hulp.js';
+import { $, el, eur, labelCellen } from './hulp.js';
 import {
   actiefProject,
   bewaarAlsSjabloon,
@@ -96,6 +96,7 @@ export function toonProjecten() {
     return tr;
   }));
 
+  labelCellen($('#pr-lijst'));
   // Sjablonen.
   $('#pr-sjablonen').replaceChildren(...sjablonen().map((s) => {
     const li = el('li');

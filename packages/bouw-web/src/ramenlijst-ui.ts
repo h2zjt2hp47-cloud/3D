@@ -6,7 +6,7 @@
 import { tekenSvg, type Keuzes } from '../../core/src/index.js';
 import { leesMaatlijst } from '../../core/voorbeelden/maatlijst.js';
 import { raamdeur } from '../../core/voorbeelden/raam.js';
-import { $, btwLabel, el, eur, toonPrijs } from './hulp.js';
+import { $, btwLabel, el, eur, labelCellen, toonPrijs } from './hulp.js';
 import { nieuwePositie, resultaat, toestand, wijzig, type Positie } from './staat.js';
 
 const SOORTEN: [string, string][] = [['raam', 'Raam'], ['terrasdeur', 'Terrasdeur'], ['voordeur', 'Voordeur'], ['schuif', 'Schuifraam']];
@@ -25,7 +25,7 @@ const INDELINGEN: Record<string, [string, string][]> = {
   ],
   terrasdeur: [['v1:draai_l', 'Deur links'], ['v1:draai_r', 'Deur rechts'], ['v2:draai_l+vast', 'Deur + vast'], ['v2:vast+draai_r', 'Vast + deur'], ['v2:draai_l+draai_r', 'Dubbele deur']],
   voordeur: [['links', 'Scharnieren links'], ['rechts', 'Scharnieren rechts']],
-  schuif: [['links', 'Linker vleugel schuift'], ['rechts', 'Rechter vleugel schuift'], ['beide', 'Beide vleugels']],
+  schuif: [['links', 'Links schuift'], ['rechts', 'Rechts schuift'], ['beide', 'Beide schuiven']],
 };
 const VOORBEELD = [
   'Keuken 1600 x 1200 vast + draai-kip rechts',
@@ -138,6 +138,7 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
     tr.append(actiesCel);
     return tr;
   }));
+  labelCellen($('#o-ramenlijst'));
   $('#o-ramenlijst-leeg').hidden = t.posities.length > 0;
   $('#o-ramenlijst-totaal').textContent = `Totaal (${btwLabel()})`;
   const raam = t.posities.filter((p) => p.model === 'RAAM');

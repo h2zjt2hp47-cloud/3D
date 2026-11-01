@@ -98,7 +98,7 @@ fieldset.keuzes legend { width: 100%; }
 .knoppenrij button, button.tweede { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 6px; padding: 5px 11px; cursor: pointer; font-size: .9rem; }
 
 .status { font-size: .8rem; font-weight: 600; border-radius: 999px; padding: 3px 10px; }
-.status.ok { color: var(--goed); background: color-mix(in srgb, var(--goed) 14%, transparent); }
+.status.ok { color: color-mix(in srgb, var(--goed) 82%, #000); background: color-mix(in srgb, var(--goed) 14%, transparent); }
 .status.let-op { color: var(--let-op); background: color-mix(in srgb, var(--let-op) 14%, transparent); }
 .status.fout { color: var(--fout); background: color-mix(in srgb, var(--fout) 14%, transparent); }
 .controles { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -164,7 +164,7 @@ select, input[type="text"], input[type="date"], .eig input, .maatveld input { fo
 .gereedschap { display: grid; gap: 4px; }
 .gereedschap button, .palet button { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; padding: 7px 10px; cursor: pointer; font-size: .9rem; }
 .gereedschap button[aria-pressed="true"], .palet button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
-kbd { font: 600 .7rem ui-monospace, monospace; border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; opacity: .7; }
+kbd { font: 600 .75rem ui-monospace, monospace; border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; opacity: .7; }
 .palet { display: grid; gap: 4px; margin-top: 8px; }
 .palet button { font-size: .85rem; padding: 5px 9px; }
 #pl-canvas { background: #f7f7f4; border-radius: 6px; border: 1px solid var(--lijn); touch-action: none; user-select: none; }
@@ -273,10 +273,10 @@ body.zonder-woning .alleen-woning, body.zonder-woning [data-weergave="plan"], bo
 body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: none !important; }
 #o-ramenlijst { font-size: .88rem; }
 #o-ramenlijst td { vertical-align: middle; padding: 4px 5px; }
-#o-ramenlijst input[type="text"] { width: 100%; min-width: 120px; }
+#o-ramenlijst input[type="text"] { width: 100%; min-width: 170px; }
 #o-ramenlijst input.maat { width: 78px; text-align: right; }
 #o-ramenlijst input.kort { width: 52px; text-align: right; }
-#o-ramenlijst select { max-width: 170px; }
+#o-ramenlijst select { max-width: 210px; }
 #o-ramenlijst-kaart { margin-bottom: 16px; }
 #o-ramenlijst-kaart .situatie { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 #o-ramenlijst .poscel > div { display: flex; align-items: center; gap: 6px; }
@@ -284,6 +284,48 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 #o-ramenlijst .acties-cel > div { display: flex; gap: 4px; align-items: center; justify-content: flex-end; white-space: nowrap; }
 #o-maatlijst { width: 100%; font: .9rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
 .plakken summary { cursor: pointer; font-weight: 600; margin: 8px 0; }
+
+/* ---------- lege plattegrond ---------- */
+.leeg-kaart { display: grid; gap: 6px; justify-items: start; padding: 12px 14px; margin-bottom: 8px; background: var(--accent-zacht); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 8px; }
+.leeg-kaart[hidden] { display: none; }
+.leeg-kaart strong { font-size: 1rem; }
+
+/* ---------- aanraakschermen: ook invoervelden en keuzelijsten minstens 44 px ---------- */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { min-height: 44px; font-size: 1rem; }
+  summary { min-height: 44px; display: flex; align-items: center; }
+  .zoomvlak .zoomknoppen button, .tabs button, .knoppenrij button, #o-ramenlijst .acties-cel button, .meting .positieacties button { min-width: 44px; min-height: 44px; }
+  button.gevaar, button.tweede, .acties button, .positieacties button { min-height: 44px; }
+  input[type="range"] { min-height: 44px; }
+  .gv-rij .gv-kleur { width: 44px; height: 44px; }
+  label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { min-height: 36px; display: inline-flex; align-items: center; gap: 8px; }
+  input[type="checkbox"], input[type="radio"] { width: 22px; height: 22px; }
+}
+
+/* ---------- smalle schermen: tabellen als kaartjes (ramenlijst en projecten) ---------- */
+/* De ramenlijst heeft 11 kolommen: al onder 1500 px als kaartjes (laptop, tablet), anders valt de rechterkant weg. */
+@media (max-width: 1500px) {
+  #o-ramenlijst, #o-ramenlijst tbody, #o-ramenlijst tr, #o-ramenlijst td { display: block; }
+  #o-ramenlijst thead { display: none; }
+  #o-ramenlijst tr { padding: 10px 0; border-bottom: 1px solid var(--lijn); }
+  #o-ramenlijst tbody tr { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; align-items: end; }
+  #o-ramenlijst td { padding: 0; text-align: left; }
+  #o-ramenlijst td[data-label]::before { content: attr(data-label); display: block; font-size: .75rem; color: var(--zacht); margin-bottom: 2px; }
+  #o-ramenlijst td.poscel, #o-ramenlijst td.acties-cel { grid-column: 1 / -1; }
+  #o-ramenlijst td:nth-child(2), #o-ramenlijst td:nth-child(4) { grid-column: span 2; }
+  #o-ramenlijst td.poscel::before, #o-ramenlijst td.acties-cel::before { display: none; }
+  #o-ramenlijst input, #o-ramenlijst select, #o-ramenlijst input[type="text"], #o-ramenlijst input.maat, #o-ramenlijst input.kort { width: 100%; max-width: none; text-align: left; }
+  #o-ramenlijst .acties-cel > div { justify-content: flex-start; }
+}
+@media (max-width: 900px) {
+  #pr-lijst, #pr-lijst tbody, #pr-lijst tr, #pr-lijst td { display: block; }
+  #pr-lijst thead { display: none; }
+  #pr-lijst tr { padding: 10px 0; border-bottom: 1px solid var(--lijn); }
+  #pr-lijst td { padding: 0; text-align: left; }
+  #pr-lijst td[data-label]::before { content: attr(data-label); display: inline-block; min-width: 82px; font-size: .75rem; color: var(--zacht); }
+  #pr-lijst td.acties-cel { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  #pr-lijst td.acties-cel::before { display: none; }
+}
 
 /* ---------- gevel-editor ---------- */
 #view-plan.gevelmodus .alleen-plan, #view-plan:not(.gevelmodus) .alleen-gevel { display: none !important; }
@@ -317,7 +359,7 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 #gv-sokkel p { margin: 4px 0; }
 .legende { list-style: none; padding: 0; margin: 4px 0; display: grid; gap: 4px; }
 .legende .staal { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; border: 1px solid rgba(0,0,0,.2); }
-@media (pointer: coarse) { .gv-kleur { width: 40px; height: 40px; } .gv-tegel { min-height: 44px; } }
+@media (pointer: coarse) { .gv-tegel { min-height: 44px; } }
 
 /* ---------- klantweergave: geen marges, kostprijzen of technische details ---------- */
 .nav .klantknop { border-style: dashed; }
@@ -337,7 +379,7 @@ body.klantmodus [data-weergave="werf"] { display: none; }
 .zoomhint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; max-width: 92%; text-align: center; background: rgba(34, 38, 42, .9); color: #fff; padding: 7px 14px; border-radius: 999px; font-size: .84rem; pointer-events: none; opacity: 0; transition: opacity .2s; }
 .zoomhint.aan { opacity: 1; }
 .zoomvlak { display: grid; gap: 6px; }
-.zoomknoppen { order: -1; justify-self: end; display: flex; gap: 4px; align-items: center; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 3px; }
+.zoomknoppen { order: -1; justify-self: end; display: flex; flex-wrap: wrap; justify-content: flex-end; max-width: 100%; gap: 4px; align-items: center; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 3px; }
 .zoomknoppen button { min-width: 34px; height: 32px; border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; cursor: pointer; font-size: .95rem; padding: 0 8px; color: var(--inkt); }
 .zoomknoppen button:hover { border-color: var(--accent); }
 .zoomlabel { min-width: 62px; text-align: center; font-size: .8rem; color: var(--zacht); font-variant-numeric: tabular-nums; }
@@ -388,7 +430,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 .fotoknop { display: inline-flex; align-items: center; border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; padding: 10px 14px; cursor: pointer; }
 .fotoknop input { display: none; }
 .meetfoto { max-width: 160px; max-height: 120px; border-radius: 6px; object-fit: cover; }
-.meting .positieacties button { min-height: 42px; }
+.meting .positieacties button { min-height: 44px; }
 .meerwerktabel ul { margin: 4px 0 0; padding-left: 18px; font-size: .85rem; color: var(--zacht); }
 .meerwerktabel td { white-space: normal; vertical-align: top; }
 .meerwerktabel tr.meer td.num { color: var(--let-op); }
@@ -548,7 +590,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         <p id="gv-hint" class="hint"></p>
         <div id="gv-legende"></div>
       </div>
-      <div id="pl-canvas" role="application" aria-label="Plattegrond: teken ruimtes, plaats ramen, deuren en meubels"></div>
+      <div id="pl-canvas" role="application" tabindex="0" aria-label="Plattegrond: teken ruimtes, plaats ramen, deuren en meubels"></div>
       <p id="pl-hint" class="hint"></p>
       <p id="pl-zoomhint" class="hint klein"></p>
       <div class="drie-d" id="pl-3d" hidden></div>

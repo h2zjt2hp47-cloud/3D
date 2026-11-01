@@ -116,6 +116,8 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
   - twee vingers knijpen of verschuiven (vangfase; `opKnijpen` laat de editor zijn actie stoppen);
   - middelste muisknop of slepen op een leeg stuk verschuift (de editor roept `startPan`/`beweegPan`/`stopPan` aan);
   - knoppen −, +, Passend, Selectie en sneltoetsen + − 0.
+- **Muiswiel:** gewoon scrollen scrolt de pagina (`wielZoomt` in `ZoomOpties`); zoomen met Ctrl/⌘ + wiel, knijpen of de knoppen, met een korte `zoomhint` (`wielHint`) als je toch scrolt. Alleen in het groot scherm (`body.heeft-groot-scherm`) zoomt het wiel. Dezelfde regel geldt voor de 3D (`drie-d.ts`). Zo is er geen scrolval boven de tekening.
+- **Groot scherm** (`main.view.groot-scherm`): flex-kolom, drie kolommen naast elkaar (ook < 1200 px), elke kolom scrolt zelf (`overflow-y: auto`), tekening vult de rest; onder 900 px één kolom met ruimte onder de tekening. Een zware `main.view`-regel (`display: block`) wint van `.groot-scherm`; gebruik daarom `main.view.groot-scherm`. De knop komt op de tekening, de gevels én de 3D; alle labels blijven gelijk.
 - De verhouding van het beeld blijft gelijk, zodat het tekenvlak niet van grootte verandert. Een wereldpunt blijft onder de cursor: x' = p − (p − x)/f.
 - `vastzetten()`/`losmaken()` houden het automatische beeld stil tijdens het slepen.
 - Plattegrond:
@@ -157,6 +159,12 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - `npm test` en `npm run typecheck` in de root (159 tests op 1/11/2026; `core/test/woning.test.ts`, `werf.test.ts`, `gevel.test.ts`, `maatlijst.test.ts`).
 - Browser: er zijn nu twee knoppen met `data-weergave="offerte"` (Ramenlijst en Offerte); klik in tests op `.nav [data-weergave="offerte"]:not(.alleen-ramen)`. Coördinaten in een tekenvlak pas berekenen ná klikken in het palet (Playwright scrolt het palet in beeld).
 - Browser: Playwright met cdnjs gerouteerd naar `node_modules/three/build/three.min.js`, Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader`. Klik op een opening met `{ force: true }` (de groep bevat ook bogen in de ruimte).
+
+## Gebruiksgemak testen
+- Testrun in de browser: `docs/analyse-gebruiksgemak.md`, hoofdstuk 8. Per scherm en schermformaat (desktop, laptop, tablet, telefoon) controleren op aanraakdoelen onder 44 px, een pagina die te breed is, afgekapte tekst en contrast, en de taken doorlopen met een teller voor het aantal handelingen.
+- Echt volledig scherm (Fullscreen API) werkt in headless Chromium niet betrouwbaar (het muiswiel scrolt maar over een deel van het scherm). Test de groot-scherm-opmaak met `Element.prototype.requestFullscreen = undefined` (dan geldt alleen de klasse `.groot-scherm`) en controleer echt volledig scherm op een toestel.
+- Aanraking: `Input.dispatchTouchEvent` via CDP; wacht ± 1 s na een sleepbeweging voor je opnieuw tikt, anders wordt de tik niet als klik gezien (testartefact).
+- Tabellen die op een smal scherm kaartjes worden (`#o-ramenlijst`, `#pr-lijst`) krijgen `data-label` via `labelCellen()` uit `hulp.ts`.
 
 ## Valkuilen
 - In `staat.ts` moet `synchroniseer('plan')` bij het laden **na** alle declaraties staan (esbuild maakt van `const` een `var`; anders "Cannot read properties of undefined").

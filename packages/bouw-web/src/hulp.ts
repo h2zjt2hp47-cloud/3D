@@ -10,6 +10,12 @@ export function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<
 
 export const eur = (x: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(x);
 
+/** Zet de kolomkoppen als data-label op de cellen, zodat een tabel op een smal scherm als kaartjes kan staan. */
+export function labelCellen(tabel: HTMLElement) {
+  const koppen = [...tabel.querySelectorAll('thead th')].map((th) => th.textContent?.trim() ?? '');
+  for (const tr of tabel.querySelectorAll('tbody tr')) [...tr.children].forEach((td, i) => { if (koppen[i]) td.setAttribute('data-label', koppen[i]!); });
+}
+
 /** Klantweergave aan? Dan tonen de lijsten prijzen incl. btw (een particulier vergelijkt prijzen met btw). */
 export const klantweergave = () => document.body.classList.contains('klantmodus');
 /** Prijs zoals getoond in de lijsten: excl. btw, of incl. btw in de klantweergave. */

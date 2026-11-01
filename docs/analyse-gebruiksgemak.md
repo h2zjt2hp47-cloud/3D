@@ -64,7 +64,7 @@ Ernst: **hoog** = de klant of verkoper loopt vast of maakt een dure fout; **midd
 | 5 | **Kleine knoppen op een tablet** (onder 44 px). | middel | Opgelost: op aanraakschermen zijn knoppen, tabs, kleurstalen en tegels minstens 44 px. |
 | 6 | **Tekenen op een klein scherm.** | middel | Verbeterd: zoomen, knijpen, verschuiven en *Groot scherm*. Advies: op een telefoon bekijken en inmeten, tekenen op een tablet of pc. |
 | 7 | **Maten bij het plaatsen van een raam** waren niet zichtbaar (hoe ver van de muur?). | middel | Opgelost: tijdens het plaatsen en bij selectie komen de kettingmaten tot de muren, en je kunt de afstand intypen. |
-| 8 | **Gebaren en sneltoetsen zijn moeilijk te ontdekken**: zoomen, Shift+klik, Alt+klik. | middel | Deels: er staat een hint onder elk tekenvlak. Nog te doen: een korte rondleiding (3 tips) bij het eerste gebruik. |
+| 8 | **Gebaren en sneltoetsen zijn moeilijk te ontdekken**: zoomen, Shift+klik, Alt+klik. | middel | Deels: er staat een hint onder elk tekenvlak, en als je boven een tekening scrolt, verschijnt kort hoe je zoomt (Ctrl/⌘ + scrollen). Nog te doen: een korte rondleiding (3 tips) bij het eerste gebruik. |
 | 9 | **Ongedaan maken op een tablet**: in de gevel-editor kon dat alleen met Ctrl+Z. | middel | Opgelost: knop *Ongedaan maken* in de gevel-editor. In de plattegrond stond die er al. |
 | 10 | **Technische foutmeldingen**, bv. "de tussenstijl buigt te ver door". | middel | Nog te doen: in de klantweergave een klantvriendelijke zin, bv. "Dit raam is te groot voor dit profiel; uw verkoper stelt een sterker profiel voor." |
 | 11 | **Opslag alleen in deze browser.** Wordt de browser gewist, dan is het project weg. Een ander toestel ziet het project niet. | hoog (in productie) | Voor de demo aanvaardbaar, en *Bewaar als bestand* bestaat. In productie bewaren op de server of in Missing Link (project = offerte in het ERP). |
@@ -137,3 +137,58 @@ Ernst: **hoog** = de klant of verkoper loopt vast of maakt een dure fout; **midd
   - aantal fouten;
   - na afloop de vragenlijst *System Usability Scale* (10 vragen, score 0–100; boven 70 is goed).
 - **Waar:** bij de klant thuis of in de toonzaal, op de tablet die de verkoper echt gebruikt.
+
+## 8. Testrun in de browser (1/11/2026)
+
+Aanleiding: "er kan niet gescrold worden in de configurator fullscreen". Daarna heb ik de hele bouwdemo als nieuwe gebruiker doorlopen in een echte browser (Chromium, via Playwright). Het script staat niet in de repository; de bevindingen en wat ik ermee deed staan hieronder.
+
+**Methode**
+- **Taken** (hoofdstuk 3) uitgevoerd op een desktop van 1440 × 900, met een teller voor het aantal handelingen (klikken, slepen, intypen) en meting van trage momenten (langer dan 50 ms).
+- **Audit van elk scherm** (projecten, plattegrond, gevels, 3D, offerte, configurator, werf, ramenlijst) op vijf formaten: desktop 1440 × 900, laptop 1280 × 720, tablet landschap 1024 × 768, tablet portret 768 × 1024 en telefoon 390 × 844. Gecontroleerd op:
+  - te kleine aanraakdoelen (onder 44 px; op desktop onder 24 px);
+  - knoppen of velden zonder naam;
+  - elementen die over elkaar liggen of buiten beeld vallen;
+  - afgekapte tekst;
+  - een pagina die breder is dan het scherm;
+  - tekst onder 12 px en te weinig contrast (onder 4,5 : 1).
+- **Toetsenbord:** 60 keer Tab, met controle op een zichtbare focusrand, plus de sneltoetsen.
+- **Aanraking op een tablet** met echte aanraakgebeurtenissen: een ruimte tekenen met de vinger, een raam plaatsen met een tik, een raam met de vinger verschuiven, en het scrollen van de pagina.
+- **Scrollen met het muiswiel** boven elk onderdeel, in het gewone scherm en in het groot scherm.
+
+**Resultaat van de taken** (aantal handelingen)
+
+| Taak | Handelingen | Gelukt |
+|---|---|---|
+| Nieuw leeg project, ruimte tekenen, raam plaatsen, breedte aanpassen, naar de offerte en afdrukken | 13 (5 + 2 + 2 + 2 + 2) | ja |
+| Gevel verven (muurvlak, daarna hele gevel), sokkel, 3D bekijken, raam in het aanzicht verschuiven | 14 (4 + 5 + 2 + 3) | ja |
+| Enkel ramen: maatlijst plakken, aanpassen, btw 6 %, klantprijs, één raam configureren | 13 (6 + 4 + 2 + 1) | ja |
+| Werf: akkoord, 7 maten inmeten en overnemen, meerwerk met handtekening, klantweergave, ongedaan maken | 26 (6 + 8 + 6 + 2 + 4) | ja |
+
+- Alle taken lukten zonder foutmelding.
+- Er waren geen trage momenten, behalve het eerste opbouwen van de 3D (± 0,3 seconde, eenmalig).
+- Een nieuwe gebruiker komt in ongeveer 13 handelingen van niets tot een afdrukbare offerte met één raam.
+
+**Bevindingen en wat ik eraan deed**
+
+| # | Bevinding | Ernst | Stand |
+|---|---|---|---|
+| 8.1 | **Scrolval:** het muiswiel (en twee vingers op een trackpad) boven een tekening of de 3D zoomde in plaats van de pagina te scrollen. In het groot scherm beslaat de tekening het grootste deel van het scherm, dus scrollen leek te "hangen". | hoog | **Opgelost:** gewoon scrollen scrolt de pagina; zoomen met Ctrl (⌘) + scrollen, knijpen of de knoppen. Als je toch scrolt, staat er kort een uitleg onder in de tekening. In het groot scherm zoomt het wiel wel. Geldt ook voor de zeteldemo en de 3D. |
+| 8.2 | **Groot scherm paste niet op het scherm:** de kolommen (gereedschap, eigenschappen, controles) waren hoger dan het scherm en alleen met de pagina mee te scrollen. | middel | **Opgelost:** de drie kolommen scrollen zelf en de tekening vult de rest. Ook op een tablet in landschap staan er drie kolommen naast elkaar; op een smal scherm blijft er onder de tekening ruimte om te scrollen. De 3D heeft nu ook een knop *Groot scherm*. |
+| 8.3 | **De hoofdknop "1 · Plattegrond" toonde soms de gevels of de 3D** (de laatst geopende weergave). | middel | **Opgelost:** hij toont altijd de plattegrond. |
+| 8.4 | **Lege plattegrond zonder wegwijzer:** de hulpregel zei "klik om te selecteren" terwijl er niets te selecteren valt. | middel | **Opgelost:** het gereedschap *Ruimte tekenen* staat meteen aan, en een kaart legt uit wat je eerst doet, met een knop naar de voorbeeldwoning. |
+| 8.5 | **Telefoon:** de plattegrond was 27 px breder dan het scherm (de zoomknoppen pasten niet), waardoor de hele pagina zijwaarts schoof. | hoog (telefoon) | **Opgelost:** de zoomknoppen springen naar een volgende regel. |
+| 8.6 | **Aanraakdoelen onder 44 px** op tablet en telefoon: invoervelden, keuzelijsten, schuifregelaars, kleurstalen (30 px), icoonknoppen in de ramenlijst, knoppen in de werf (42 px). | middel | **Opgelost** voor aanraakschermen. Op een desktop zijn nog 9 inklapkoppen van 22 px en de schuifregelaars (16 px) kleiner dan 24 px; dat laat ik zo. |
+| 8.7 | **Ramenlijst met 11 kolommen:** op een laptop, tablet en telefoon vielen *Aantal*, *Configureren*, *Dupliceren* en *Verwijderen* buiten beeld; omschrijvingen werden afgekapt. | hoog (tablet) | **Opgelost:** onder 1500 px staat elke positie als een kaartje met de velden onder elkaar; breder veld voor de omschrijving; kortere teksten bij het schuifraam. |
+| 8.8 | **Projectenlijst op een telefoon:** de knoppen *Dupliceren*, *Bewaar als bestand* en *Verwijderen* stonden buiten beeld. | middel | **Opgelost:** kaartjes onder 900 px. |
+| 8.9 | **Contrast:** het label "open" in de projectenlijst had 4,2 : 1 (minimaal 4,5 : 1). | laag | **Opgelost.** Alle andere tekst haalt het. |
+| 8.10 | **Sneltoets-aanduidingen** (V, T, W …) waren 11,2 px. | laag | **Opgelost** (12 px). |
+| 8.11 | **Toetsenbord:** de volgorde van Tab is logisch (menu, gereedschap, tekening, eigenschappen) en alle 59 geteste elementen tonen een focusrand. De tekening was niet bereikbaar met Tab. | middel | Tekening nu bereikbaar. **Nog open:** een ruimte of raam kiezen met het toetsenbord kan niet; dat kan alleen via de lijsten ernaast. |
+| 8.12 | **Configurator:** 7 stappen en 39 velden tegelijk (zie bevinding 2). | hoog (klant) | **Nog open.** |
+
+**Wat de aanraaktest liet zien:** op een tablet lukt tekenen, een raam plaatsen met een tik en een raam met de vinger verschuiven. Een vinger op de tekening verschuift de tekening en scrolt de pagina niet; dat is nodig om te kunnen tekenen. Scrollen kan op de kolommen ernaast.
+
+**Wat deze test niet kan zeggen**
+- **Echt volledig scherm:** de headless browser ondersteunt dat niet betrouwbaar (een eenvoudige testpagina scrolt er al niet overal). Ik heb daarom dezelfde opmaak getest zonder de browserfunctie. Controleer in Chrome of Safari op een echt toestel of scrollen daar nu wel goed gaat.
+- **Safari en echte aanraakschermen:** niet getest. Knijpen is alleen getest zoals de code het afhandelt.
+- **Begrip, smaak en vertrouwen:** een script weet niet of een klant de woorden begrijpt of het mooi vindt. Daarvoor blijft de gebruikstest met mensen (hoofdstuk 7) nodig.
+

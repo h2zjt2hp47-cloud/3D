@@ -182,6 +182,18 @@ export function render() {
   const zi = document.getElementById('pl-zoomhint');
   if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
   houder.dataset.gereedschap = gereedschap;
+  // Lege plattegrond: zeg wat je eerst doet (op het tekenvlak zelf, niet alleen in de hulpregel).
+  const leeg = !toestand().plan.ruimtes.length;
+  let kaart = document.getElementById('pl-leeg-kaart');
+  if (leeg && !kaart) {
+    kaart = el('div', { id: 'pl-leeg-kaart', class: 'leeg-kaart', role: 'note' });
+    kaart.append(el('strong', {}, 'Begin met de eerste ruimte'), el('span', {}, 'Sleep op het raster een rechthoek (bv. 4 × 3 m). De muren volgen vanzelf; daarna plaats je ramen en deuren.'));
+    const proef = el('button', { type: 'button', class: 'tweede' }, 'Of start met de voorbeeldwoning');
+    proef.addEventListener('click', () => naarProjecten());
+    kaart.append(proef);
+    houder.before(kaart);
+  }
+  if (kaart) kaart.hidden = !leeg || weergave !== 'plan';
   toonNiveaus();
   if (weergave === '3d') plan3D();
   if (weergave === 'gevels') gevelNaWijziging();
@@ -880,6 +892,10 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
 }
 
 export function toonPlan(openingId?: string) {
+  // De hoofdknop "Plattegrond" toont de plattegrond zelf (niet de laatst geopende sub-weergave Gevels of 3D).
+  if (weergave !== 'plan') toonWeergave('plan');
+  // Leeg plan: meteen het gereedschap om een ruimte te tekenen.
+  if (!toestand().plan.ruimtes.length && gereedschap === 'kies') kiesGereedschap('ruimte');
   if (openingId) {
     selectie = { soort: 'opening', id: openingId };
     const o = toestand().plan.openingen.find((x) => x.id === openingId);
