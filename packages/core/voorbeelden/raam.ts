@@ -6,7 +6,7 @@
  * DEMO: prijzen, gewichten, U-waarden en grenzen zijn voorbeelden. De controles op
  * veiligheidsglas, ventilatie en EPB zijn signalen voor de verkoper (te bevestigen).
  */
-import type { Prijslijst, ProductModel } from '../src/index.js';
+import type { ConfiguratieResultaat, Prijslijst, ProductModel } from '../src/index.js';
 
 /** Kleur van glas in tekening en 3D. */
 export const GLASKLEUR = '#c5d5da';
@@ -34,6 +34,7 @@ export const raamdeur: ProductModel = {
     { code: 'indeling', label: 'Indeling en draairichting' },
     { code: 'materiaal', label: 'Profiel, kleur en glas' },
     { code: 'opties', label: 'Zonwering en opties' },
+    { code: 'statiek', label: 'Statiek (voordimensionering)' },
     { code: 'plaatsing', label: 'Plaatsing' },
   ],
   kenmerken: [
@@ -101,11 +102,12 @@ export const raamdeur: ProductModel = {
     {
       code: 'profiel', label: 'Profiel', stap: 'materiaal', type: 'keuze', standaard: 'pvc',
       keuzes: [
-        { code: 'pvc', label: 'PVC', eigenschappen: { uf: 1.2, aanzicht: 120, kgm: 2.6, artikel: 'PROF-PVC', weken: 4, soort: 'kunststof' } },
-        { code: 'alu', label: 'Aluminium', eigenschappen: { uf: 1.7, aanzicht: 90, kgm: 3.0, artikel: 'PROF-ALU', weken: 6, soort: 'metaal' } },
-        { code: 'alu_hi', label: 'Aluminium hoog geïsoleerd', eigenschappen: { uf: 1.3, aanzicht: 100, kgm: 3.4, artikel: 'PROF-ALU-HI', weken: 7, soort: 'metaal' } },
-        { code: 'hout', label: 'Hout (meranti)', eigenschappen: { uf: 1.4, aanzicht: 110, kgm: 3.2, artikel: 'PROF-HOUT', weken: 8, soort: 'hout' } },
-        { code: 'hout_alu', label: 'Hout binnen, aluminium buiten', eigenschappen: { uf: 1.1, aanzicht: 115, kgm: 3.6, artikel: 'PROF-HOUT-ALU', weken: 9, soort: 'hout' } },
+        // e = elasticiteitsmodulus van het dragende deel (N/mm²); ix / ix_vers = traagheidsmoment tussenstijl standaard / versterkt (cm⁴). Demowaarden.
+        { code: 'pvc', label: 'PVC', eigenschappen: { uf: 1.2, aanzicht: 120, kgm: 2.6, artikel: 'PROF-PVC', weken: 4, soort: 'kunststof', e: 210000, ix: 8, ix_vers: 22, drager: 'stalen versterking' } },
+        { code: 'alu', label: 'Aluminium', eigenschappen: { uf: 1.7, aanzicht: 90, kgm: 3.0, artikel: 'PROF-ALU', weken: 6, soort: 'metaal', e: 70000, ix: 45, ix_vers: 120, drager: 'aluminium' } },
+        { code: 'alu_hi', label: 'Aluminium hoog geïsoleerd', eigenschappen: { uf: 1.3, aanzicht: 100, kgm: 3.4, artikel: 'PROF-ALU-HI', weken: 7, soort: 'metaal', e: 70000, ix: 60, ix_vers: 150, drager: 'aluminium' } },
+        { code: 'hout', label: 'Hout (meranti)', eigenschappen: { uf: 1.4, aanzicht: 110, kgm: 3.2, artikel: 'PROF-HOUT', weken: 8, soort: 'hout', e: 11000, ix: 300, ix_vers: 480, drager: 'hout' } },
+        { code: 'hout_alu', label: 'Hout binnen, aluminium buiten', eigenschappen: { uf: 1.1, aanzicht: 115, kgm: 3.6, artikel: 'PROF-HOUT-ALU', weken: 9, soort: 'hout', e: 11000, ix: 320, ix_vers: 500, drager: 'hout' } },
       ],
     },
     {
@@ -136,6 +138,15 @@ export const raamdeur: ProductModel = {
         { code: 'triple_gelaagd', label: 'Driedubbel gelaagd (veiligheid)', eigenschappen: { ug: 0.6, kgm2: 40, veilig: true, mat: false, artikel: 'GLAS-TRIPLE-GEL' } },
         { code: 'mat_gelaagd', label: 'Mat gelaagd (badkamer, wc)', eigenschappen: { ug: 1.0, kgm2: 30, veilig: true, mat: true, artikel: 'GLAS-MAT-GEL' } },
         { code: 'zon_gelaagd', label: 'Zonwerend gelaagd', eigenschappen: { ug: 1.0, kgm2: 30, veilig: true, mat: false, artikel: 'GLAS-ZON-GEL' } },
+      ],
+    },
+    {
+      code: 'afstandhouder', label: 'Afstandhouder in het glas', stap: 'materiaal', type: 'keuze', standaard: 'warm',
+      helptekst: 'Bepaalt het warmteverlies langs de rand van het glas (ψ). Typische waarden, te bevestigen met de glasleverancier.',
+      keuzes: [
+        { code: 'alu', label: 'Aluminium (ψ 0,08)', eigenschappen: { psi: 0.08, kleur: '#a9adb0', artikel: '' } },
+        { code: 'rvs', label: 'Roestvrij staal (ψ 0,06)', eigenschappen: { psi: 0.06, kleur: '#8c9194', artikel: 'GLAS-RAND-RVS' } },
+        { code: 'warm', label: 'Warm edge, kunststof (ψ 0,04)', eigenschappen: { psi: 0.04, kleur: '#1d1d1d', artikel: 'GLAS-RAND-WARM' } },
       ],
     },
     {
@@ -212,6 +223,25 @@ export const raamdeur: ProductModel = {
     },
 
     {
+      code: 'winddruk', label: 'Winddruk op de gevel', stap: 'statiek', type: 'getal', eenheid: 'Pa', min: 200, max: 3000, stapgrootte: 10, standaard: 800,
+      helptekst: 'Volgens NBN EN 1991-1-4 (windzone, terrein, hoogte van het gebouw). 800 Pa is een voorbeeldwaarde; laat ze per project bepalen.',
+    },
+    {
+      code: 'doorbuiging', label: 'Toegelaten doorbuiging', stap: 'statiek', type: 'keuze', standaard: 'c',
+      keuzes: [
+        { code: 'c', label: 'L/300 (klasse C, isolerend glas)', eigenschappen: { k: 300 } },
+        { code: 'b', label: 'L/200 (klasse B)', eigenschappen: { k: 200 } },
+      ],
+    },
+    {
+      code: 'tussenstijl', label: 'Tussenstijl / koppeling', stap: 'statiek', type: 'keuze', standaard: 'standaard', zichtbaarAls: 'heeft_stijl',
+      keuzes: [
+        { code: 'standaard', label: 'Standaard' },
+        { code: 'versterkt', label: 'Versterkt (zwaarder profiel of versterking)' },
+        { code: 'koppel', label: 'Koppelprofiel (aluminium buis, 400 cm⁴)' },
+      ],
+    },
+    {
       code: 'situatie', label: 'Situatie', stap: 'plaatsing', type: 'keuze', standaard: 'nieuwbouw',
       keuzes: [{ code: 'nieuwbouw', label: 'Nieuwbouw' }, { code: 'renovatie', label: 'Renovatie (oud raam uitbreken)' }],
     },
@@ -238,15 +268,39 @@ export const raamdeur: ProductModel = {
     { code: 'n_draai', formule: 'als(in(op1; "draai_l"; "draai_r"); 1; 0) + als(n >= 2 en in(op2; "draai_l"; "draai_r"); 1; 0) + als(n >= 3 en in(op3; "draai_l"; "draai_r"); 1; 0)' },
     { code: 'n_draaikip', formule: 'als(in(op1; "draaikip_l"; "draaikip_r"); 1; 0) + als(n >= 2 en in(op2; "draaikip_l"; "draaikip_r"); 1; 0) + als(n >= 3 en in(op3; "draaikip_l"; "draaikip_r"); 1; 0)' },
     { code: 'n_kip', formule: 'als(op1 = "kip"; 1; 0) + als(n >= 2 en op2 = "kip"; 1; 0) + als(n >= 3 en op3 = "kip"; 1; 0) + als(bl > 0 en bovenlicht_open = "kip"; 1; 0)' },
-    { code: 'gb', label: 'Glasbreedte per vak (mm)', formule: 'vb - f' },
-    { code: 'gh', label: 'Glashoogte per vak (mm)', formule: 'vh - f' },
+    { code: 'gb', label: 'Dagmaat glas per vak, breedte (mm)', formule: 'vb - f' },
+    { code: 'gh', label: 'Dagmaat glas per vak, hoogte (mm)', formule: 'vh - f' },
+    // Glasmaat = falsmaat − glasspeling; falsmaat = dagmaat + 2 × glasinstand (demowaarden, per systeem te bevestigen).
+    { code: 'glasinstand', formule: '14' },
+    { code: 'glasspeling', formule: '8' },
+    { code: 'glasmaat_b', label: 'Glasmaat per vak, breedte (mm)', formule: 'gb + 2 * glasinstand - glasspeling' },
+    { code: 'glasmaat_h', label: 'Glasmaat per vak, hoogte (mm)', formule: 'gh + 2 * glasinstand - glasspeling' },
+    { code: 'blglas_b', formule: 'breedte - 2 * f + 2 * glasinstand - glasspeling' },
+    { code: 'blglas_h', formule: 'bl - f + 2 * glasinstand - glasspeling' },
     { code: 'glas_vak_m2', formule: 'als(type = "voordeur"; als(paneel_glas; 0.18 * gb * gh / 1000000; 0); n * gb * gh / 1000000)' },
     { code: 'glas_bl_m2', formule: 'als(bl > 0; (breedte - 2 * f) * (bl - f) / 1000000; 0)' },
     { code: 'glas_m2', label: 'Glasoppervlakte (m²)', formule: 'glas_vak_m2 + glas_bl_m2' },
     { code: 'paneel_m2', formule: 'als(type = "voordeur"; gb * gh / 1000000 - glas_vak_m2; 0)' },
     { code: 'raam_m2', label: 'Oppervlakte (m²)', formule: 'breedte * hoogte / 1000000' },
     { code: 'lg', formule: 'als(type = "voordeur"; als(paneel_glas; 2 * (0.18 * gb + gh) / 1000; 0); n * 2 * (gb + gh) / 1000) + als(bl > 0; 2 * (breedte + bl) / 1000; 0)' },
-    { code: 'uw', label: 'Uw (W/m²K)', formule: 'afronden((glas_m2 * glas_ug + paneel_m2 * 0.8 + (raam_m2 - glas_m2 - paneel_m2) * profiel_uf + lg * 0.06) / raam_m2; 2)' },
+    { code: 'psi', label: 'ψ afstandhouder (W/mK)', formule: 'als(glas_m2 > 0; afstandhouder_psi; 0)' },
+    { code: 'uw', label: 'Uw (W/m²K)', formule: 'afronden((glas_m2 * glas_ug + paneel_m2 * 0.8 + (raam_m2 - glas_m2 - paneel_m2) * profiel_uf + lg * psi) / raam_m2; 2)' },
+    // Statische voordimensionering: tussenstijl (tussen vakken of de ontmoetingsstijl van een schuifraam) en de regel onder het bovenlicht.
+    // Doorbuiging f = 5·q·L⁴ / (384·E·I) ≤ L/k  →  E·I nodig = 5·q·L³·k / 384, met q = winddruk × invloedsbreedte.
+    { code: 'heeft_stijl', formule: 'type_schuif of bl > 0 of (in(type; "raam"; "terrasdeur") en n >= 2)' },
+    { code: 'stijl_l', label: 'Overspanning tussenstijl (mm)', formule: 'als(type_schuif of n >= 2; vh + f; 0)' },
+    { code: 'stijl_a', label: 'Invloedsbreedte tussenstijl (mm)', formule: 'als(type_schuif of n >= 2; vb; 0)' },
+    { code: 'regel_l', label: 'Overspanning regel bovenlicht (mm)', formule: 'als(bl > 0; breedte - 2 * f; 0)' },
+    { code: 'regel_a', formule: 'als(bl > 0; (bl + vh) / 2; 0)' },
+    { code: 'ei_stijl', formule: '5 * (winddruk * stijl_a / 1000000) * stijl_l * stijl_l * stijl_l * doorbuiging_k / 384' },
+    { code: 'ei_regel', formule: '5 * (winddruk * regel_a / 1000000) * regel_l * regel_l * regel_l * doorbuiging_k / 384' },
+    { code: 'ei_nodig', formule: 'max(ei_stijl; ei_regel)' },
+    { code: 'stijl_e', formule: 'als(tussenstijl = "koppel"; 70000; profiel_e)' },
+    // Bij een schuifraam dragen de twee ontmoetingsstijlen samen.
+    { code: 'i_aanwezig', label: 'Traagheidsmoment tussenstijl (cm⁴)', formule: 'als(tussenstijl = "koppel"; 400; als(tussenstijl = "versterkt"; profiel_ix_vers; profiel_ix) * als(type_schuif; 2; 1))' },
+    { code: 'i_nodig', label: 'Nodig traagheidsmoment (cm⁴)', formule: 'afronden(ei_nodig / stijl_e / 10000; 1)' },
+    { code: 'statiek_ok', formule: 'niet heeft_stijl of i_aanwezig >= i_nodig' },
+    { code: 'stijl_lm', formule: 'als(type_schuif; vh / 1000; (n - 1) * (vh + f) / 1000) + als(bl > 0; (breedte - 2 * f) / 1000; 0)' },
     { code: 'vleugel_kg', label: 'Gewicht zwaarste vleugel (kg)', formule: 'afronden(gb * gh / 1000000 * als(type = "voordeur"; 35; glas_kgm2) + 2 * (vb + vh) / 1000 * profiel_kgm; 0)' },
     { code: 'profiel_lm', formule: '2 * (breedte + hoogte) / 1000 + beweeg * 2 * (vb + vh) / 1000 + (n - 1) * hoogte / 1000 + als(bl > 0; breedte / 1000; 0)' },
     { code: 'zon_kast', label: 'Hoogte zonweringskast (mm)', formule: 'zonwering_kast' },
@@ -256,6 +310,7 @@ export const raamdeur: ProductModel = {
     { code: 'montage_uren', formule: 'naarboven(1.5 + raam_m2 * 0.8 + als(type_schuif; 2; 0) + als(zonwering <> "geen"; 1.5; 0) + als(situatie = "renovatie"; 1; 0); 0.5)' },
     // Voor tekening en 3D.
     { code: 'kb', formule: 'kleur_buiten_kleur' },
+    { code: 'randkleur', formule: 'als(afstandhouder_kleur <> ""; afstandhouder_kleur; "#1d1d1d")' },
     { code: 'ki', formule: 'als(kleur_binnen = "zelfde"; kleur_buiten_kleur; kleur_binnen_kleur)' },
     { code: 'profielsoort', formule: 'profiel_soort' },
     { code: 'glaskleur', formule: `als(glas_mat; "#eef1f2"; als(glas = "zon_gelaagd"; "#9fb5bd"; "${GLASKLEUR}"))` },
@@ -279,6 +334,10 @@ export const raamdeur: ProductModel = {
     { code: 'valgevaar', ernst: 'waarschuwing', als: 'verdieping > 0 en (type_deur of borst < 850) en (beweeg > 0 of type_deur)', melding: 'Op de verdieping met een lage borstwering of een deur: valbeveiliging nodig (balustrade of vast glas, te bevestigen).' },
     { code: 'ventilatie', ernst: 'waarschuwing', als: 'ruimte_droog en type <> "voordeur" en niet rooster', melding: 'Droge ruimte zonder ventilatierooster: bij ventilatiesysteem C is luchttoevoer nodig (EPB, te bevestigen).' },
     { code: 'privacy', ernst: 'waarschuwing', als: 'in(ruimte; "badkamer"; "wc") en glas_m2 > 0 en niet glas_mat', melding: 'Badkamer of wc met helder glas: mat glas voor privacy?' },
+    {
+      code: 'statiek', ernst: 'fout', als: 'heeft_stijl en niet statiek_ok',
+      melding: 'De tussenstijl buigt te ver door bij deze winddruk: kies een versterkte tussenstijl of een koppelprofiel (voordimensionering, te laten bevestigen).',
+    },
     { code: 'rc2_glas', ernst: 'fout', als: 'rc2 en glas_m2 > 0 en niet glas_veilig', melding: 'Inbraakwerend (RC2) vraagt gelaagd glas.' },
     { code: 'uw', ernst: 'waarschuwing', als: 'uw > 1.5', melding: 'Uw hoger dan 1,5 W/m²K: controleer de EPB-eis (beter profiel of driedubbel glas).' },
     { code: 'screen_breed', ernst: 'fout', als: 'zonwering = "screen" en breedte > 5000', melding: 'Een screen breder dan 5 m kan niet: verdeel in twee screens.' },
@@ -286,9 +345,12 @@ export const raamdeur: ProductModel = {
   ],
   stuklijst: [
     { code: 'profiel', omschrijving: 'Profielen kader en vleugels', artikel: 'profiel_artikel', eenheid: 'lm', aantal: '1', lengte: 'profiel_lm * 1000', zaaglijst: true },
-    { code: 'glas', omschrijving: 'Beglazing per vak', artikel: 'glas_artikel', eenheid: 'm2', aantal: 'n', lengte: 'gb', breedte: 'gh', als: 'type <> "voordeur"' },
-    { code: 'glas_bl', omschrijving: 'Beglazing bovenlicht', artikel: 'glas_artikel', eenheid: 'm2', aantal: '1', lengte: 'breedte - 2 * f', breedte: 'bl - f', als: 'bl > 0' },
-    { code: 'glas_deur', omschrijving: 'Glasstrook deurpaneel', artikel: 'glas_artikel', eenheid: 'm2', aantal: '1', lengte: '0.18 * gb', breedte: 'gh', als: 'type = "voordeur" en paneel_glas' },
+    { code: 'glas', omschrijving: 'Beglazing per vak (glasmaat)', artikel: 'glas_artikel', eenheid: 'm2', aantal: 'n', lengte: 'glasmaat_b', breedte: 'glasmaat_h', als: 'type <> "voordeur"' },
+    { code: 'glas_bl', omschrijving: 'Beglazing bovenlicht (glasmaat)', artikel: 'glas_artikel', eenheid: 'm2', aantal: '1', lengte: 'blglas_b', breedte: 'blglas_h', als: 'bl > 0' },
+    { code: 'glas_deur', omschrijving: 'Glasstrook deurpaneel (glasmaat)', artikel: 'glas_artikel', eenheid: 'm2', aantal: '1', lengte: '0.18 * gb + 2 * glasinstand - glasspeling', breedte: 'glasmaat_h', als: 'type = "voordeur" en paneel_glas' },
+    { code: 'rand', omschrijving: 'Meerprijs afstandhouder', artikel: 'afstandhouder_artikel', eenheid: 'lm', aantal: '1', lengte: 'lg * 1000', als: 'glas_m2 > 0 en afstandhouder_artikel <> ""' },
+    { code: 'versterking', omschrijving: 'Versterkte tussenstijl / regel', artikel: '"VERST-STIJL"', eenheid: 'lm', aantal: '1', lengte: 'stijl_lm * 1000', als: 'heeft_stijl en tussenstijl = "versterkt"' },
+    { code: 'koppel', omschrijving: 'Koppelprofiel aluminium', artikel: '"KOPPELPROFIEL"', eenheid: 'lm', aantal: '1', lengte: 'stijl_lm * 1000', als: 'heeft_stijl en tussenstijl = "koppel"' },
     { code: 'paneel', omschrijving: 'Deurpaneel', artikel: 'paneel_artikel', eenheid: 'stuk', aantal: '1', als: 'type = "voordeur"' },
     { code: 'draai', omschrijving: 'Draaibeslag', artikel: '"BES-DRAAI"', eenheid: 'stuk', aantal: 'n_draai', als: 'type <> "voordeur"' },
     { code: 'draaikip', omschrijving: 'Draai-kipbeslag', artikel: '"BES-DRAAIKIP"', eenheid: 'stuk', aantal: 'n_draaikip' },
@@ -357,6 +419,10 @@ export const raamPrijslijst: Prijslijst = Object.fromEntries(
       ['GLAS-TRIPLE-GEL', 'Driedubbel glas gelaagd', 'm2', 138, 0],
       ['GLAS-MAT-GEL', 'Mat gelaagd glas', 'm2', 110, 0],
       ['GLAS-ZON-GEL', 'Zonwerend gelaagd glas', 'm2', 112, 0],
+      ['GLAS-RAND-RVS', 'Meerprijs afstandhouder rvs', 'lm', 1.2, 0],
+      ['GLAS-RAND-WARM', 'Meerprijs warm edge', 'lm', 1.9, 0],
+      ['VERST-STIJL', 'Versterking tussenstijl', 'lm', 24, 8],
+      ['KOPPELPROFIEL', 'Koppelprofiel aluminium', 'lm', 46, 8],
       ['PANEEL-VLAK', 'Deurpaneel vlak', 'stuk', 420, 0],
       ['PANEEL-GLAS', 'Deurpaneel met glasstrook', 'stuk', 560, 0],
       ['PANEEL-GROEF', 'Deurpaneel met groeven', 'stuk', 520, 0],
@@ -391,3 +457,55 @@ export const raamPrijslijst: Prijslijst = Object.fromEntries(
     ] as const
   ).map(([code, omschrijving, eenheid, kostprijs, verliesProcent]) => [code, { code, omschrijving, eenheid, kostprijs, verliesProcent }]),
 );
+
+/** Eén ruit voor de glasbestelling. Maten in mm. */
+export interface Ruit {
+  /** Volgnummer binnen de positie (1, 2 …) en waar de ruit zit. */
+  nr: number;
+  plaats: string;
+  dagB: number;
+  dagH: number;
+  falsB: number;
+  falsH: number;
+  /** Glasmaat = falsmaat − glasspeling (te bestellen maat). */
+  b: number;
+  h: number;
+  m2: number;
+  kg: number;
+  glas: string;
+  afstandhouder: string;
+  ug: number;
+  veilig: boolean;
+  mat: boolean;
+  artikel: string;
+}
+
+/** Glasbestelling per ruit uit een berekend raam (vakken, bovenlicht, glasstrook van een voordeur). */
+export function ruitenVan(r: ConfiguratieResultaat): Ruit[] {
+  const a = r.afgeleid as Record<string, unknown>;
+  const k = Object.fromEntries(r.kenmerken.map((x) => [x.code, x]));
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  const glasKeuze = raamdeur.kenmerken.find((x) => x.code === 'glas');
+  const eig = glasKeuze && glasKeuze.type === 'keuze' ? glasKeuze.keuzes.find((x) => x.code === k.glas?.waarde)?.eigenschappen ?? {} : {};
+  const instand = num(a.glasinstand), speling = num(a.glasspeling);
+  const basis = {
+    glas: String(k.glas?.weergave ?? ''), afstandhouder: String(k.afstandhouder?.weergave ?? ''),
+    ug: num(eig.ug), veilig: eig.veilig === true, mat: eig.mat === true, artikel: String(eig.artikel ?? ''),
+  };
+  const ruit = (nr: number, plaats: string, dagB: number, dagH: number): Ruit => {
+    const falsB = dagB + 2 * instand, falsH = dagH + 2 * instand;
+    const b = Math.round(falsB - speling), h = Math.round(falsH - speling);
+    const m2 = Math.round((b * h) / 10000) / 100;
+    return { nr, plaats, dagB: Math.round(dagB), dagH: Math.round(dagH), falsB: Math.round(falsB), falsH: Math.round(falsH), b, h, m2, kg: Math.round(m2 * num(eig.kgm2)), ...basis };
+  };
+  const uit: Ruit[] = [];
+  const type = k.type?.waarde;
+  const n = Math.max(1, Math.round(num(a.n)));
+  if (type === 'voordeur') {
+    if (k.paneel?.waarde === 'glasstrook') uit.push(ruit(1, 'glasstrook deur', 0.18 * num(a.gb), num(a.gh)));
+  } else {
+    for (let i = 0; i < n; i++) uit.push(ruit(uit.length + 1, n > 1 ? `vak ${i + 1}` : 'raam', num(a.gb), num(a.gh)));
+  }
+  if (num(a.bl) > 0) uit.push(ruit(uit.length + 1, 'bovenlicht', num(k.breedte?.waarde) - 2 * num(a.f), num(a.bl) - num(a.f)));
+  return uit;
+}

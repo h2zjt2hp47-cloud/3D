@@ -133,6 +133,7 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--lijn
 th { font-weight: 600; color: var(--zacht); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.code { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--zacht); }
+td.sterk { font-weight: 600; }
 footer { text-align: center; color: var(--zacht); font-size: .8rem; padding: 0 16px 32px; max-width: 80ch; margin: 0 auto; }
 .foutmelding { margin: 16px clamp(16px, 3vw, 32px) 0; padding: 12px 14px; border: 1px solid var(--fout); border-radius: 8px; color: var(--fout); background: color-mix(in srgb, var(--fout) 8%, var(--vlak)); }
 .foutmelding p { margin: 4px 0 0; font-family: ui-monospace, monospace; font-size: .8rem; }
@@ -443,6 +444,10 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
           <div class="kaartkop"><h2>Wat zit erin</h2><span class="klein">vermijdt discussie over meerwerk</span></div>
           <div class="twee"><div><h3>Inbegrepen</h3><ul id="p-inbegrepen"></ul></div><div><h3>Niet inbegrepen</h3><ul id="p-niet"></ul></div></div>
         </section>
+        <section class="kaart" id="p-glas-kaart">
+          <div class="kaartkop"><h2>Glasbestelling</h2><span class="klein">glasmaat = falsmaat − glasspeling</span></div>
+          <div class="tabelhouder"><table id="p-glas"><thead><tr><th>Ruit</th><th>Plaats</th><th class="num">Dagmaat</th><th class="num">Falsmaat</th><th class="num">Glasmaat</th><th>Samenstelling</th><th class="num">m²</th><th class="num">Gewicht</th></tr></thead><tbody></tbody></table></div>
+        </section>
         <section class="kaart">
           <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">maten in mm</span></div>
           <div class="tabelhouder"><table id="p-stuklijst"><thead><tr><th>Omschrijving</th><th>Artikel</th><th class="num">Aantal</th><th class="num">Maat</th><th class="num">Hoeveelheid</th><th class="num">Kost</th></tr></thead><tbody></tbody></table></div>
@@ -478,6 +483,14 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
         </div>
       </section>
       <section class="kaart">
+        <h3>Statiek (voordimensionering)</h3>
+        <p class="klein">Winddruk op de gevel volgens NBN EN 1991-1-4 (windzone, terrein, hoogte). Te laten bepalen per project.</p>
+        <div class="positieacties">
+          <label class="klein">Winddruk <input type="number" id="o-winddruk" min="200" max="3000" step="10" style="width:90px"> Pa</label>
+          <button type="button" id="o-winddruk-toepassen" class="tweede">Toepassen op alle ramen</button>
+        </div>
+      </section>
+      <section class="kaart">
         <h3>Uit de plattegrond</h3>
         <div class="schakelaars" style="display:grid;gap:6px">
           <label><input type="checkbox" id="o-regel-vloeren"> Vloeren (m² per materiaal)</label>
@@ -503,6 +516,18 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
           <button type="button" class="tweede" data-nieuw="voordeur">+ Voordeur</button>
           <button type="button" class="tweede" data-nieuw="schuif">+ Schuifraam</button>
           <button type="button" class="tweede" data-nieuw="aanbouw">+ Aanbouw</button>
+        </div>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Glasbestelling per ruit</h2><span id="o-glas-totaal" class="klein"></span></div>
+        <details>
+          <summary>Toon alle ruiten (glasmaat = falsmaat − glasspeling)</summary>
+          <div class="tabelhouder"><table id="o-glas"><thead><tr><th>Ruit</th><th>Positie · plaats</th><th class="num">Aantal</th><th class="num">Glasmaat (mm)</th><th>Glas</th><th>Afstandhouder</th><th class="num">m²</th><th class="num">Gewicht</th></tr></thead><tbody></tbody></table></div>
+        </details>
+        <div class="acties">
+          <button type="button" id="o-glas-kopieer" class="tweede">Kopieer voor de glasleverancier</button>
+          <button type="button" id="o-glas-csv" class="tweede">Download als CSV (Excel)</button>
+          <span id="o-glas-melding" class="klein" role="status"></span>
         </div>
       </section>
       <section class="kaart" id="o-regels-kaart">

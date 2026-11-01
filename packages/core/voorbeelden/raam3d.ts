@@ -35,6 +35,9 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
   const schuif = type === 'schuif', voordeur = type === 'voordeur';
   const ops = [a.op1, a.op2, a.op3].map((o) => tekst(o, 'vast'));
   const kast = cm(a.zon_kast);
+  const statiekFout = a.heeft_stijl === true && a.statiek_ok === false;
+  const koppel = k.tussenstijl === 'koppel';
+  const randKleur = tekst(a.randkleur, '#1d1d1d');
 
   const blokken: Blok[] = [];
   const blok = (code: string, soort: BlokSoort, x: number, y: number, z: number, b: number, h: number, d: number, kleur: string, extra: Partial<Blok> = {}) => {
@@ -43,6 +46,12 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
   // Profiel: binnenkleur, buitenzijde in de buitenkleur.
   const prof = (code: string, x: number, y: number, z: number, b: number, h: number, d: number) =>
     blok(code, profiel, x, y, z, b, h, d, ki, { zijden: { 'z-': { soort: profiel, kleur: kb } } });
+  /** Tussenstijl of regel: rood als de statiek niet klopt, dieper bij een koppelprofiel. */
+  const stijl = (code: string, x: number, y: number, b: number, h: number) => {
+    const d = koppel ? 13 : 7;
+    if (statiekFout) blok(code, 'metaal', x, y, 0, b, h, d, '#e0412f');
+    else prof(code, x, y, 0, b, h, d);
+  };
 
   // Kader.
   prof('kader_boven', 0, H - f, 0, B, f, 7);
@@ -52,7 +61,7 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
 
   // Bovenlicht met tussenregel.
   if (bl > 0) {
-    prof('tussenregel', f, f + vh, 0, B - 2 * f, f, 7);
+    stijl('tussenregel', f, f + vh, B - 2 * f, f);
     blok('glas_bovenlicht', glasSoort, f, H - bl, 3, B - 2 * f, bl - f, 1, glasKleur);
     if (k.bovenlicht_open === 'kip') blok('greep_bovenlicht', 'metaal', B / 2 - 6, H - f - 3, 7, 12, 2, 2.5, '#b9b9b4');
   }
@@ -91,8 +100,11 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
     for (let i = 0; i < n; i++) {
       const x = f + i * stapx, s = f * 0.8, z = 0.5 + (i % 2) * 3.2;
       const kleur = { zijden: { 'z-': { soort: profiel, kleur: kb } } };
-      blok(`vleugel${i + 1}_l`, profiel, x, f * 0.5, z, s, vh + f * 0.5, 3, ki, kleur);
-      blok(`vleugel${i + 1}_r`, profiel, x + vb - s, f * 0.5, z, s, vh + f * 0.5, 3, ki, kleur);
+      const ontmoet = (rechts: boolean) => (i === 0 ? rechts : !rechts) && statiekFout;
+      if (ontmoet(false)) blok(`vleugel${i + 1}_l`, 'metaal', x, f * 0.5, z, s, vh + f * 0.5, 3, '#e0412f');
+      else blok(`vleugel${i + 1}_l`, profiel, x, f * 0.5, z, s, vh + f * 0.5, 3, ki, kleur);
+      if (ontmoet(true)) blok(`vleugel${i + 1}_r`, 'metaal', x + vb - s, f * 0.5, z, s, vh + f * 0.5, 3, '#e0412f');
+      else blok(`vleugel${i + 1}_r`, profiel, x + vb - s, f * 0.5, z, s, vh + f * 0.5, 3, ki, kleur);
       blok(`vleugel${i + 1}_o`, profiel, x + s, f * 0.5, z, vb - 2 * s, s, 3, ki, kleur);
       blok(`vleugel${i + 1}_b`, profiel, x + s, f + vh - s, z, vb - 2 * s, s, 3, ki, kleur);
       blok(`glas${i + 1}`, glasSoort, x + s, f * 0.5 + s, z + 1, vb - 2 * s, vh + f * 0.5 - 2 * s, 1, glasKleur);
@@ -103,7 +115,7 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
     }
   } else {
     // Raam of terrasdeur: vakken met tussenstijlen, vaste of opendraaiende vakken.
-    for (let i = 1; i < n; i++) prof(`stijl${i}`, f + i * vb - f / 2, f, 0, f, vh, 7);
+    for (let i = 1; i < n; i++) stijl(`stijl${i}`, f + i * vb - f / 2, f, f, vh);
     for (let i = 0; i < n; i++) {
       const ax = f + i * vb + (i > 0 ? f / 2 : 0);
       const bx = f + (i + 1) * vb - (i < n - 1 ? f / 2 : 0);
@@ -132,6 +144,15 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
         if (k.roeden === 'kruis') blok(`roede${i + 1}_v`, profiel, (gx0 + gx1) / 2 - 1.2, gy0, 2.5, 2.4, gy1 - gy0, 2, ki, { zijden: { 'z-': { soort: profiel, kleur: kb } } });
       }
     }
+  }
+
+  // Afstandhouder: smalle rand langs de rand van elke ruit (zwart = warm edge, grijs = metaal).
+  for (const g of blokken.filter((b) => b.soort === 'glas' || b.soort === 'matglas')) {
+    const w = 1.6, z = g.z - 0.25, d = g.d + 0.5;
+    blok(`${g.code}_rand_o`, 'donker', g.x, g.y, z, g.b, w, d, randKleur);
+    blok(`${g.code}_rand_b`, 'donker', g.x, g.y + g.h - w, z, g.b, w, d, randKleur);
+    blok(`${g.code}_rand_l`, 'donker', g.x, g.y + w, z, w, g.h - 2 * w, d, randKleur);
+    blok(`${g.code}_rand_r`, 'donker', g.x + g.b - w, g.y + w, z, w, g.h - 2 * w, d, randKleur);
   }
 
   if (k.rooster === true) blok('rooster', 'donker', f, H - f * 0.65, 7, B - 2 * f, 1.4, 0.4, '#3a3a3a');

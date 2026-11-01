@@ -18,6 +18,13 @@ En: "ga maar helemaal los".
 
 De demo werkt in vier stappen, met de knoppen bovenaan: **Plattegrond → Configurator → Offerte → Werf**.
 
+### Nieuw in de derde ronde (na het onderzoek naar LogiKal, ReynaPro en Chacal)
+| Functie | Hoe het werkt |
+|---|---|
+| **Statische voordimensionering** | Stap "Statiek" per raam: winddruk, doorbuigingseis (L/300 of L/200), tussenstijl standaard, versterkt of koppelprofiel. De demo berekent het nodige traagheidsmoment (5 · q · L³ · k / 384 · E) en vergelijkt het met wat het profiel heeft. In 3D wordt een te slappe stijl rood. Winddruk voor alle ramen in te stellen vanuit de offerte. |
+| **Afstandhouder** | Aluminium, rvs of warm edge (ψ 0,08 / 0,06 / 0,04): de Uw verandert mee; in 3D een rand rond het glas. |
+| **Glasbestelling per ruit** | Dagmaat, falsmaat en glasmaat per ruit, met samenstelling en gewicht; voor de hele offerte te kopiëren of als CSV te downloaden. |
+
 ### Nieuw in de tweede ronde
 | Functie | Hoe het werkt |
 |---|---|

@@ -48,7 +48,9 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - Per vak: `vast`, `draai_l`, `draai_r`, `draaikip_l`, `draaikip_r`, `kip` (alleen raam). `_l` = scharnieren links gezien van binnen. Afgeleid `op1..op3` = symbool per vak (voordeur → `draai_l/r`, schuif → `schuif_l/r`/`vast`).
 - **Symboolafspraak in de tekening (zicht van binnen):** de punt van de driehoek wijst naar de scharnierzijde; kip gestippeld met de punt onderaan; schuif = pijl. Getekend door `symbool` op een `Vorm` (motor) → `symboolLijnen` in `svg.ts`. Te bevestigen met de klant welke afspraak zij hanteren.
 - Controles (regels): maat per vak t.o.v. beslag (maxb/maxh per vakkeuze), vleugelgewicht (draai 130 kg, schuif 250 kg), veiligheidsglas (deur of borstwering < 850 mm), valbeveiliging, ventilatierooster in droge ruimtes, mat glas in badkamer/wc, RC2 vraagt gelaagd glas, Uw > 1,5, screen > 5 m. De wettelijke grenzen zijn **te verifiëren**.
-- Uw = (glas·Ug + paneel·0,8 + rest·Uf + lg·0,06) / A.
+- Uw = (glas·Ug + paneel·0,8 + rest·Uf + lg·ψ) / A, met ψ van de gekozen **afstandhouder** (alu 0,08, rvs 0,06, warm edge 0,04); `randkleur` kleurt de rand rond het glas in 3D.
+- **Statiek** (stap `statiek`): `heeft_stijl` = schuifraam, bovenlicht of ≥ 2 vakken. Nodig E·I = 5 · q · L³ · k / 384 met q = winddruk × invloedsbreedte (`stijl_a` = vb, `regel_a` = (bl + vh)/2), L = `stijl_l` (vh + f) of `regel_l` (breedte − 2f), k = 300 of 200. `i_nodig` (cm⁴) = E·I / E van het dragende deel (profiel `e`, koppelprofiel 70 000); `i_aanwezig` = profiel `ix`, `ix_vers` of 400 (koppel), × 2 bij een schuifraam (twee ontmoetingsstijlen). Regel `statiek` (fout) als niet `statiek_ok`; in 3D maakt `stijl()` de stijl rood (#e0412f) of dieper (koppel, 13 cm). Profielstijfheden zijn demowaarden.
+- **Glasbestelling**: `ruitenVan(r)` geeft per ruit dagmaat, falsmaat (dagmaat + 2 × `glasinstand`), glasmaat (falsmaat − `glasspeling`), m², kg, samenstelling. De stuklijst glas rekent op `glasmaat_b × glasmaat_h`. De offerte bundelt alle ruiten (kopiëren of CSV).
 - Zonwering: kast boven het raam (`zon_kast`), in 3D doek/lamellen deels neer, geleiders opzij.
 
 ## Koppeling plattegrond ↔ positie (`staat.ts`)
@@ -80,7 +82,7 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - **Nieuwe planregel:** `controleerPlan` (met `ruimte`/`opening`-id zodat de editor kan selecteren).
 
 ## Testen
-- `npm test` en `npm run typecheck` in de root (140 tests op 1/11/2026; `core/test/woning.test.ts` en `werf.test.ts`).
+- `npm test` en `npm run typecheck` in de root (145 tests op 1/11/2026; `core/test/woning.test.ts` en `werf.test.ts`).
 - Browser: Playwright met cdnjs gerouteerd naar `node_modules/three/build/three.min.js`, Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader`. Klik op een opening met `{ force: true }` (de groep bevat ook bogen in de ruimte).
 
 ## Valkuilen

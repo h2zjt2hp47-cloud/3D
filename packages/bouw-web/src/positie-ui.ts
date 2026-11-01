@@ -4,6 +4,7 @@
  */
 import { tekenSvg, type ConfiguratieResultaat, type Kenmerk } from '../../core/src/index.js';
 import { bouwAanbouw3D } from '../../core/voorbeelden/aanbouw3d.js';
+import { ruitenVan } from '../../core/voorbeelden/raam.js';
 import { raamScene } from '../../core/voorbeelden/raam3d.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
@@ -61,7 +62,17 @@ function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
   if (num(p.keuzes.verdieping) > 0 && (num(a.borst) < 850 || a.type_deur === true || type !== 'raam')) {
     uit.push({ titel: 'Valbeveiliging (verdieping)', toestand: 'let-op', waarde: `borstwering ${getal(num(a.borst) / 10)} cm`, uitleg: 'Balustrade of vast onderdeel nodig (te bevestigen).' });
   }
-  uit.push({ titel: 'Isolatie (EPB)', toestand: uw <= 1.5 ? 'ok' : 'let-op', waarde: `Uw ${getal(uw, 2)} W/m²K`, uitleg: 'Richtwaarde Uw ≤ 1,5 (te verifiëren met de EPB-verslaggever).' });
+  uit.push({ titel: 'Isolatie (EPB)', toestand: uw <= 1.5 ? 'ok' : 'let-op', waarde: `Uw ${getal(uw, 2)} W/m²K`, uitleg: `Richtwaarde Uw ≤ 1,5 (te verifiëren). Afstandhouder ψ ${getal(num(a.psi), 2)}.` });
+  if (a.heeft_stijl === true) {
+    const nodig = num(a.i_nodig), aanwezig = num(a.i_aanwezig);
+    const benut = aanwezig > 0 ? nodig / aanwezig : 9;
+    const wat = type === 'schuif' ? 'Ontmoetingsstijlen schuifraam' : num(a.stijl_l) > 0 ? 'Tussenstijl' : 'Regel onder het bovenlicht';
+    uit.push({
+      titel: `Statiek: ${wat.toLowerCase()}`, toestand: benut > 1 ? 'fout' : benut > 0.85 ? 'let-op' : 'ok',
+      waarde: `nodig ${getal(nodig, 1)} · aanwezig ${getal(aanwezig, 1)} cm⁴ (${getal(benut * 100)} %)`,
+      uitleg: `Winddruk ${getal(num(p.keuzes.winddruk))} Pa, overspanning ${getal(Math.max(num(a.stijl_l), num(a.regel_l)))} mm, doorbuiging ≤ L/${p.keuzes.doorbuiging === 'b' ? 200 : 300}. ${benut > 1 ? 'Kies een versterkte tussenstijl of een koppelprofiel.' : ''} Voordimensionering, te laten bevestigen.`,
+    });
+  }
   if (eigenschap(p, 'ruimte', 'droog') === true && type !== 'voordeur') {
     uit.push({ titel: 'Ventilatie droge ruimte', toestand: p.keuzes.rooster === true ? 'ok' : 'let-op', waarde: p.keuzes.rooster === true ? 'rooster' : 'geen rooster', uitleg: 'Systeem C: luchttoevoer via een rooster (EPB, te bevestigen).' });
   }
@@ -114,9 +125,11 @@ export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string]
     ['Glasoppervlakte', `${getal(num(a.glas_m2), 2)} m²`],
     ['Gewicht zwaarste vleugel', `${getal(num(a.vleugel_kg))} kg`],
     ['Ug glas / Uf profiel', `${getal(num(eigenschap(p, 'glas', 'ug')), 1)} / ${getal(num(eigenschap(p, 'profiel', 'uf')), 1)} W/m²K`],
-    ['Uw', `${getal(num(a.uw), 2)} W/m²K`],
+    ['Uw', `${getal(num(a.uw), 2)} W/m²K (ψ ${getal(num(a.psi), 2)})`],
+    ['Glasmaat per vak', `${getal(num(a.glasmaat_b))} × ${getal(num(a.glasmaat_h))} mm`],
     ['Levertermijn', `± ${getal(num(a.levertermijn))} weken`],
   ];
+  if (a.heeft_stijl === true) t.push(['Statiek tussenstijl', `${getal(num(a.i_nodig), 1)} / ${getal(num(a.i_aanwezig), 1)} cm⁴ (nodig / aanwezig)`]);
   if (num(a.zon_kast) > 0) t.push(['Zonweringskast', `${getal(num(a.zon_kast))} mm boven het raam`]);
   return t;
 }
@@ -337,6 +350,21 @@ export function herbereken() {
   const ib = inbegrepen(p, r);
   $('#p-inbegrepen').replaceChildren(...ib.wel.map((x) => el('li', {}, x)));
   $('#p-niet').replaceChildren(...ib.niet.map((x) => el('li', {}, x)));
+  // Glasbestelling per ruit (alleen bij ramen en deuren).
+  const ruiten = p.model === 'RAAM' ? ruitenVan(r) : [];
+  $('#p-glas-kaart').hidden = !ruiten.length;
+  $('#p-glas tbody').replaceChildren(...ruiten.map((g) => {
+    const tr = el('tr');
+    tr.append(
+      el('td', {}, `${p.code}-${g.nr}`), el('td', {}, g.plaats),
+      el('td', { class: 'num' }, `${getal(g.dagB)} × ${getal(g.dagH)}`),
+      el('td', { class: 'num' }, `${getal(g.falsB)} × ${getal(g.falsH)}`),
+      el('td', { class: 'num sterk' }, `${getal(g.b)} × ${getal(g.h)}`),
+      el('td', {}, `${g.glas} · ${g.afstandhouder}`),
+      el('td', { class: 'num' }, `${getal(g.m2, 2)} m²`), el('td', { class: 'num' }, `${getal(g.kg)} kg`),
+    );
+    return tr;
+  }));
   $('#p-stuklijst tbody').replaceChildren(...r.stuklijst.map((s) => {
     const tr = el('tr');
     const maat = s.lengte !== undefined ? `${getal(s.lengte)}${s.breedte !== undefined ? ` × ${getal(s.breedte)}` : ''}` : '';

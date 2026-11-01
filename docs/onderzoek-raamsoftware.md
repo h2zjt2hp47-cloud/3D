@@ -120,6 +120,24 @@
 
 Mijn voorstel: **1, 2 en 3 eerst** (klein werk, groot effect bij een technische koper), daarna 5 en 6. De punten 4, 7 en 8 pas met een echte klant en echte systeemdata.
 
+**Stand 1/11/2026: 1, 2 en 3 zijn ingebouwd** in het raammodel (`core/voorbeelden/raam.ts`) en de demo:
+- **Statiek.**
+  - Nieuwe stap in de configurator met winddruk (Pa), doorbuigingseis (L/300 of L/200) en de keuze standaard, versterkt of koppelprofiel.
+  - Gecontroleerd worden: de tussenstijl, de regel onder het bovenlicht en bij een schuifraam de twee ontmoetingsstijlen samen.
+  - Controlekaart met nodig en aanwezig traagheidsmoment in cm⁴ en het percentage. Boven 85 % volgt een waarschuwing, boven 100 % een fout.
+  - In de offerte stel je één winddruk in voor alle ramen.
+  - In 3D wordt een te slappe stijl **rood**; een koppelprofiel staat dieper.
+  - De stijfheden van de profielen zijn demowaarden.
+- **Afstandhouder.**
+  - Keuze tussen aluminium (ψ 0,08), rvs (0,06) en warm edge (0,04); de Uw rekent mee.
+  - Een meerprijs per lopende meter staat in de bestellijst.
+  - In 3D zie je de afstandhouder als rand rond het glas (zwart bij warm edge, grijs bij metaal).
+- **Glasbestelling per ruit.**
+  - Glasmaat = dagmaat + 2 × glasinstand (14 mm) − glasspeling (8 mm), per vak, bovenlicht en glasstrook van de deur.
+  - Met samenstelling, afstandhouder, Ug, m² en gewicht.
+  - Te zien per positie, en voor de hele offerte met "Kopieer voor de glasleverancier" en een CSV-download.
+  - De stuklijst rekent het glas nu op de glasmaat.
+
 ## 7. Te verifiëren
 
 - Winddruk per project (zone, ruwheid, hoogte) volgens NBN EN 1991-1-4.

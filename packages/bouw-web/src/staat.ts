@@ -74,6 +74,8 @@ export interface OfferteMeta {
   klanttype: 'particulier' | 'aannemer';
   korting: number;
   regels: PlanRegelOpties;
+  /** Winddruk voor het project (Pa), voor de statische voordimensionering van nieuwe ramen. */
+  winddruk: number;
   akkoord?: Akkoord;
   meerwerk: MeerwerkRegel[];
   meerwerkbon?: { nummer: number; naam: string; datum: string; handtekening?: string; getekend: boolean };
@@ -100,6 +102,7 @@ function standaardMeta(): OfferteMeta {
     korting: 0,
     regels: { vloeren: true, wanden: true, binnendeuren: true, ruwbouw: false, inrichting: false },
     meerwerk: [],
+    winddruk: 800,
   };
 }
 
@@ -209,7 +212,7 @@ export function nieuwePositie(model: ModelCode, extra: Keuzes = {}, naam?: strin
     code: '',
     naam: naam ?? MODELLEN[model].label,
     model,
-    keuzes: model === 'RAAM' ? raamKeuzes(extra) : { ...standaardKeuzes(aanbouw), ...extra },
+    keuzes: model === 'RAAM' ? raamKeuzes({ winddruk: t.meta.winddruk ?? 800, ...extra }) : { ...standaardKeuzes(aanbouw), ...extra },
     aantal: 1,
   };
   return p;

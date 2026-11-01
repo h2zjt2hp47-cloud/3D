@@ -15,6 +15,14 @@
 | **Openingssymbool** | De driehoek in de tekening: de punt wijst naar de scharnieren. Kip gestippeld met de punt onderaan; schuiven met een pijl. Te bevestigen welke afspraak de klant gebruikt. |
 | **Schuifraam / hef-schuifdeur** | Een vleugel schuift voor een andere. Hef-schuif: de vleugel wordt eerst opgetild, waardoor zwaardere vleugels kunnen. |
 | **Bovenlicht** | Apart vak boven het raam of de deur (vast of kip). |
+| **Dagmaat / falsmaat / glasmaat** | Dagmaat: het zichtbare glas tussen de profielen. Falsmaat: de ruimte in de sponning (dagmaat + 2 × glasinstand). Glasmaat: de te bestellen maat (falsmaat − glasspeling). |
+| **Glasinstand / glasspeling** | Hoe ver het glas in het profiel steekt (demo: 14 mm per zijde), en de ruimte die rondom vrij blijft (demo: 8 mm in totaal). Per systeem te bevestigen. |
+| **Tussenstijl, regel, koppelprofiel** | Tussenstijl: staand profiel tussen twee vakken. Regel: liggend profiel, bv. onder een bovenlicht. Koppelprofiel: extra stijf profiel waarmee twee ramen gekoppeld worden. |
+| **Ontmoetingsstijl** | Bij een schuifraam de twee stijlen waar de vleugels elkaar raken; ze dragen samen de windbelasting. |
+| **Traagheidsmoment (I)** | Maat voor de stijfheid van een profiel tegen doorbuigen (cm⁴). Nodig I = 5 · q · L³ · k / (384 · E). |
+| **Winddruk** | Druk van de wind op de gevel (Pa = N/m²), volgens NBN EN 1991-1-4 (windzone, terrein, hoogte). Te bepalen per project. |
+| **Doorbuigingseis** | Hoeveel een stijl mag doorbuigen: L/300 (klasse C, gangbaar bij isolerend glas) of L/200 (klasse B), volgens EN 12210 (te bevestigen). |
+| **Afstandhouder (warm edge)** | Rand tussen de glasbladen. Een "warm edge" in kunststof isoleert beter dan aluminium (lagere ψ). |
 | **Roede** | Lat in of op het glas, die het glas in kleinere ruiten verdeelt. |
 | **Borstwering** | Hoogte van de onderkant van het raam boven de vloer. |
 | **Vensterbank / dorpel** | Vensterbank binnen (natuursteen, composiet, hout); dorpel buiten (aluminium, arduin) onder het raam. |

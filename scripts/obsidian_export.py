@@ -113,6 +113,11 @@ Vakken met draairichting (punt van de driehoek = scharnieren, zicht van binnen),
 ![[bouw-raam-symbolen.png]]
 ![[bouw-raam-3d.png]]
 
+## Raamberekening: statiek, afstandhouder, glasbestelling
+Een te slappe stijl wordt rood in 3D (hier de ontmoetingsstijlen van een schuifraam bij hoge winddruk).
+
+![[bouw-statiek-3d.png]]
+
 ## Werf: inmeting en meerwerkbon
 ![[bouw-inmeting.png]]
 ![[bouw-meerwerkbon.png]]

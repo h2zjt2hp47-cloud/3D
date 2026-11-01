@@ -5,6 +5,7 @@
  */
 import { berekenOfferte, controleerPlan, niveauPlan, tekenPlattegrond, tekenSvg, verdiepingenVan, type Keuzes, type OfferteResultaat, type StuklijstResultaat } from '../../core/src/index.js';
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
+import { ruitenVan } from '../../core/voorbeelden/raam.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
 import { gevelSvgs } from './plattegrond-ui.js';
 import { controles, inbegrepen } from './positie-ui.js';
@@ -212,6 +213,18 @@ export function toonOfferte() {
   }));
   $('#o-meldingen-leeg').hidden = meldingen.length > 0;
 
+  // Glasbestelling per ruit (alle posities).
+  const gl = glasbestelling();
+  $('#o-glas tbody').replaceChildren(...gl.map((g) => {
+    const tr = el('tr');
+    tr.append(el('td', {}, g.ref), el('td', {}, g.plaats), el('td', { class: 'num' }, String(g.aantal)), el('td', { class: 'num sterk' }, `${getal(g.b)} × ${getal(g.h)}`),
+      el('td', {}, g.glas), el('td', {}, g.afstandhouder), el('td', { class: 'num' }, `${getal(g.m2 * g.aantal, 2)} m²`), el('td', { class: 'num' }, `${getal(g.kg * g.aantal)} kg`));
+    return tr;
+  }));
+  $('#o-glas-totaal').textContent = `${gl.reduce((t, g) => t + g.aantal, 0)} ruiten · ${getal(gl.reduce((t, g) => t + g.m2 * g.aantal, 0), 2)} m² · ${getal(gl.reduce((t, g) => t + g.kg * g.aantal, 0))} kg`;
+  const wd = $<HTMLInputElement>('#o-winddruk');
+  if (document.activeElement !== wd) wd.value = String(m.winddruk ?? 800);
+
   // Bestellijst per leverancier.
   const bl = bestellijst();
   $('#o-bestellijst').replaceChildren(...[...bl].map(([groep, artikels]) => {
@@ -228,6 +241,18 @@ export function toonOfferte() {
     d.append(tabel);
     return d;
   }));
+}
+
+/** Alle ruiten van alle ramen en deuren, met de positie en het aantal. */
+function glasbestelling() {
+  return toestand().posities.filter((p) => p.model === 'RAAM' && p.aantal > 0).flatMap((p) =>
+    ruitenVan(resultaat(p)).map((g) => ({ ...g, ref: `${p.code}-${g.nr}`, plaats: `${p.naam} · ${g.plaats}`, aantal: p.aantal })));
+}
+
+function glasbestellingTekst(scheiding = '\t'): string {
+  const kop = ['Ref', 'Omschrijving', 'Aantal', 'Breedte (mm)', 'Hoogte (mm)', 'Glas', 'Afstandhouder', 'Ug', 'Veiligheidsglas', 'm² per stuk'];
+  const rijen = glasbestelling().map((g) => [g.ref, g.plaats, g.aantal, g.b, g.h, g.glas, g.afstandhouder, g.ug, g.veilig ? 'ja' : 'nee', g.m2.toFixed(2).replace('.', ',')]);
+  return [kop, ...rijen].map((r) => r.map((c) => String(c).replace(new RegExp(scheiding, 'g'), ' ')).join(scheiding)).join('\n');
 }
 
 function nFouten(r: ReturnType<typeof resultaat>) {
@@ -343,6 +368,15 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
     });
   }
   $('#o-afdruk').addEventListener('click', drukAf);
+  $('#o-glas-kopieer').addEventListener('click', () => void kopieer(glasbestellingTekst(), $('#o-glas-melding')));
+  $('#o-glas-csv').addEventListener('click', () => download(`glasbestelling-${toestand().meta.nummer}.csv`, '\ufeff' + glasbestellingTekst(';'), 'text/csv'));
+  $('#o-winddruk-toepassen').addEventListener('click', () => {
+    const w = Math.min(3000, Math.max(200, Math.round((Number($<HTMLInputElement>('#o-winddruk').value) || 800) / 10) * 10));
+    wijzig('offerte', (t) => {
+      t.meta.winddruk = w;
+      for (const p of t.posities) if (p.model === 'RAAM') p.keuzes.winddruk = w;
+    });
+  });
   $('#o-kopieer').addEventListener('click', () => void kopieer(offertetekst(), $('#o-melding')));
   $('#o-export').addEventListener('click', () => download(`${toestand().meta.nummer}.json`, exportJson(), 'application/json'));
 }
