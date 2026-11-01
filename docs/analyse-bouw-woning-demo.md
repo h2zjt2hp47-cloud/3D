@@ -38,6 +38,21 @@ De demo werkt in vier stappen, met de knoppen bovenaan: **Plattegrond → Config
 
 Beperking: alles staat in de browser van één toestel. Om kantoor en werf **tegelijk** met dezelfde gegevens te laten werken is een server nodig. Dat is ook de plaats waar de koppeling met Missing Link komt.
 
+### Nieuw in de vijfde ronde (gevel, enkel ramen, gebruiksgemak)
+| Functie | Hoe het werkt |
+|---|---|
+| **Gevel-editor** | Tab "Gevels": palet met gevelmaterialen en kleurstalen (en voegkleur bij metselwerk). Verven per muurvlak; Shift+klik verft de hele gevel, en je kunt ook een verdieping of de hele woning in één keer verven. Pipet (Alt+klik), sokkel, voorbeeld onder de muis, ongedaan maken. Ramen verschuiven en toevoegen in het gevelaanzicht. |
+| **Gevel in 3D en offerte** | Elk muurvlak met zijn eigen textuur (baksteen met voeg, crepi, staande of liggende planken, leien, zink met staande naad, natuursteen), sokkel als apart stuk, dakrand op het platte dak, vloerrand tussen de verdiepingen. In de offerte de groep Gevel: m² netto per materiaal en sokkel (buitenkant, met buiten- en binnenhoeken). |
+| **Enkel ramen** | Project zonder woning: ramenlijst met snelle invoer, maatlijst plakken (Excel, mail), situatie vervanging of nieuwbouw. |
+| **Groot scherm en maten** | Tekenen op het volledige scherm; kettingmaten tot de muren bij het plaatsen van een raam; afstand van een meubel tot de muren. |
+| **Klantweergave** | Scherm tonen aan de klant zonder interne gegevens, met prijzen incl. btw. Analyse: [analyse gebruiksgemak](analyse-gebruiksgemak.md). |
+
+![Gevel-editor: hele gevel in crepi zand als voorbeeld (Shift)](afbeeldingen/bouw-gevel-editor.png)
+
+![Voorbeeldwoning in 3D: rode handvormsteen met sokkel, verdieping in zwart hout, dakrand](afbeeldingen/bouw-gevel-3d.png)
+
+![Enkel ramen: ramenlijst met geplakte maatlijst](afbeeldingen/bouw-ramenlijst.png)
+
 ### Nieuw in de derde ronde (na het onderzoek naar LogiKal, ReynaPro en Chacal)
 | Functie | Hoe het werkt |
 |---|---|

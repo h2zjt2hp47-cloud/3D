@@ -44,6 +44,7 @@ packages/
       aanbouw.ts        Bouwsector: aanbouw met schuifraam of enkel de raampartij (inmeting, systeemgrenzen,
                         vleugelgewicht, veiligheidsglas, Uw, btw 6/21 %, bestellijst, vooraanzicht)
       aanbouw3d.ts      3D-opbouw van de aanbouw (baksteen, houten planken, glas, dak)
+      maatlijst.ts      Maatlijst lezen (Excel, mail, opmeting) → posities, voor offertes zonder woning
       raam.ts           Raam, terrasdeur, voordeur of schuifraam: vakken met draairichting, bovenlicht, zonwering,
                         rooster, RC2, vensterbank; controles veiligheidsglas, ventilatie, privacy, Uw
       raam3d.ts         3D van een raam of deur (ook in de plattegrond gebruikt)
@@ -64,7 +65,9 @@ packages/
   bouw-web/             Aparte demo voor de bouwsector: plattegrond tekenen (ruimtes, ramen, deuren, meubels),
                         positie configureren (draairichting, zonwering …), offerte (PDF, bestellijst, export)
                         en werf (inmeting op tablet, meerwerkbon met handtekening); verdiepingen en gevels;
-                        projecten, sjablonen en bibliotheek (bewaard in de browser of als .woning.json-bestand)
+                        projecten, sjablonen en bibliotheek (bewaard in de browser of als .woning.json-bestand);
+                        gevel-editor (materialen en kleurstalen per muurvlak, sokkel), enkel ramen zonder woning
+                        (ramenlijst, maatlijst plakken) en klantweergave (zonder marges, prijzen incl. btw)
 ```
 
 Later volgen: het echte configuratiescherm met beheer, een server (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.

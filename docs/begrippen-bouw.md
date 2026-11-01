@@ -55,6 +55,18 @@
 | **Dagkant** | De zijkant van de muuropening, binnen af te werken na het plaatsen van een raam. |
 | **Gevelaanzicht** | Tekening van een gevel, recht van voren gezien, met ramen en maten. |
 | **Kettingmaat** | Reeks maten na elkaar langs een gevel: muur, raam, muur, raam … Samen geven ze de totale breedte. |
+| **Muurvlak** | In de gevel-editor: het stuk buitenmuur van één ruimte aan één kant van de woning. Klik = dit vlak verven. |
+| **Sokkel (plint)** | Strook onderaan de gevel in een ander, harder materiaal (bv. blauwe hardsteen), tegen opspattend water en vuil. |
+| **Voeg** | De mortel tussen de stenen. De voegkleur verandert het uitzicht van een baksteengevel sterk. |
+| **Handvormsteen** | Gevelsteen met een onregelmatig, "met de hand gevormd" uitzicht; klassiek in Vlaanderen. |
+| **Steenstrips** | Dunne plaatjes baksteen op buitenisolatie: het uitzicht van baksteen zonder volle steen, vaak bij renovatie. |
+| **Crepi (sierpleister)** | Gekleurde pleisterlaag op buitenisolatie (ETICS: isolatieplaten met pleister erop). |
+| **Rabat** | Liggende houten planken die elkaar overlappen, met een schaduwnaad. |
+| **Gevelleien** | Kleine leien (vezelcement of natuurleien) op een houten onderstructuur. |
+| **Staande naad** | Zinken of metalen banen met een opstaande, geplooide naad om de 40 à 50 cm. |
+| **Dakrand (muurkap)** | De afwerking bovenaan de muur rond een plat dak, meestal in aluminium. |
+| **Maatlijst** | Lijst met de ramen en hun maten (bv. uit Excel of een opmeting), om zonder plattegrond snel een offerte te maken. |
+| **Vervanging (renovatie)** | Een bestaand raam uitbreken en een nieuw plaatsen; met uitbraak, afvoer en afwerking van de dagkanten. |
 
 ## Werf en offerte
 | Begrip | Uitleg |

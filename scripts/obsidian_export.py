@@ -30,6 +30,7 @@ NOTITIES = {
     'docs/analyse-bouw-woning-demo.md': ('Analyse bouw - woningconfigurator', ['configurator', 'bouw', 'analyse'], BOUW),
     'docs/begrippen-bouw.md': ('Begrippenlijst bouw', ['configurator', 'bouw', 'begrippen'], BOUW),
     'docs/onderzoek-raamsoftware.md': ('Onderzoek raamsoftware - LogiKal, ReynaPro, Chacal', ['configurator', 'bouw', 'onderzoek', 'concurrentie'], BOUW),
+    'docs/analyse-gebruiksgemak.md': ('Analyse gebruiksgemak', ['configurator', 'bouw', 'analyse', 'gebruiksgemak'], BOUW),
     '.claude/skills/bouw-woning/SKILL.md': ('Skill - woningconfigurator bouw', ['configurator', 'bouw', 'skill', '3d'], BOUW),
 }
 TITEL_VAN = {os.path.basename(k): v[0] for k, v in NOTITIES.items()}
@@ -107,6 +108,17 @@ Ruimtes tekenen (ook ruimte in ruimte), wanden tekenen om in te delen, ramen en 
 ## Gevelaanzichten met kettingmaten
 ![[bouw-voorgevel.png]]
 
+## Gevel ontwerpen: materialen en kleuren
+Zoals de verfborstel in de bouwmodus van een bouwspel: kies baksteen, steenstrips, crepi, hout (staand of liggend), leien, zink of blauwe hardsteen, met kleurstalen en voegkleur. Klik op een muurvlak, met Shift+klik verf je de hele gevel; je kunt ook een verdieping of de hele woning in één keer verven. Je ziet een voorbeeld vóór je klikt. Verder: pipet, sokkel, ramen verschuiven of toevoegen in het aanzicht, en ongedaan maken. 3D en offerte (m² per materiaal) volgen meteen.
+
+![[bouw-gevel-editor.png]]
+![[bouw-gevel-3d.png]]
+
+## Enkel ramen, zonder woning
+Projectsoort zonder plattegrond: een ramenlijst met snelle invoer, en een maatlijst plakken uit Excel of een mail ("Keuken 1200 x 1400 draai-kip links 2 st"). Kies daarna vervanging (renovatie) of nieuwbouw.
+
+![[bouw-ramenlijst.png]]
+
 ## Raam of deur configureren
 Vakken met draairichting (punt van de driehoek = scharnieren, zicht van binnen), bovenlicht, roeden, zonwering, rooster, RC2.
 
@@ -134,6 +146,7 @@ Meerdere projecten, automatisch bewaard in de browser; bewaren als bestand (.won
 - [[Onderzoek bouw - pijnpunten ramen en deuren]]
 - [[Onderzoek raamsoftware - LogiKal, ReynaPro, Chacal]]
 - [[Analyse bouw - woningconfigurator]]: wat er is en wat nog kan
+- [[Analyse gebruiksgemak]]: taken, bevindingen, klantreis en aanbevelingen
 - [[Begrippenlijst bouw]]
 - [[Skill - woningconfigurator bouw]]: hoe het technisch werkt (skill voor Claude)
 """)
@@ -157,11 +170,12 @@ Eigen productconfigurator, als aparte app **koppelbaar met Missing Link**. Eén 
 - [[Skill - 3D-logica zetels]]: hoe de 3D-weergave werkt
 
 ## Case 2: bouwsector (ramen, deuren, woning)
-- **Demo:** [Woningconfigurator]({BOUWDEMO}): Plattegrond met verdiepingen · Configurator per raam/deur · Offerte · Werf (inmeting, meerwerkbon)
+- **Demo:** [Woningconfigurator]({BOUWDEMO}): Plattegrond met verdiepingen · Gevels ontwerpen (materialen, kleuren) · Configurator per raam/deur · Offerte · Werf (inmeting, meerwerkbon) · Enkel ramen zonder woning · Klantweergave
 - [[Bouw - woningconfigurator]]: overzicht met beelden
 - [[Onderzoek bouw - pijnpunten ramen en deuren]]
 - [[Onderzoek raamsoftware - LogiKal, ReynaPro, Chacal]]: hoe de grote pakketten rekenen en waar wij passen
 - [[Analyse bouw - woningconfigurator]]: wat er is en wat nog kan
+- [[Analyse gebruiksgemak]]: voor de klant en de verkoper op tablet
 - [[Begrippenlijst bouw]]
 - [[Skill - woningconfigurator bouw]]
 
@@ -171,9 +185,11 @@ Eigen productconfigurator, als aparte app **koppelbaar met Missing Link**. Eén 
 - [ ] Bouw: regels laten bevestigen (veiligheidsglas NBN S 23-002, EPB Uw, daglicht, ventilatie, valbeveiliging, btw 6 %)
 - [ ] Koppeling met Missing Link uitwerken (offerte, akkoord, meerwerk als order, bestelbon per leverancier)
 - [ ] Betekenis offerteregelvelden Missing Link laten bevestigen (keuzegroep, optie_sleutel, vereist_sleutel, berekening)
+- [ ] Gebruikstest met 5 klanten en 5 verkopers (taken en SUS-vragenlijst, zie [[Analyse gebruiksgemak]])
+- [ ] Echte gevelmaterialen en kleurstalen (foto's) van een leverancier
 
 ![[modellen-3d.png]]
-![[bouw-woning-3d.png]]
+![[bouw-gevel-3d.png]]
 """)
     # De skill ook apart als zip (om te installeren in Claude).
     shutil.make_archive(os.path.join(ROOT, 'obsidian-export', 'zetel-3d-skill'), 'zip', os.path.join(ROOT, '.claude', 'skills'), 'zetel-3d')

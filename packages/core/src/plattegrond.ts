@@ -742,6 +742,13 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       const zijden: Blok['zijden'] = m.as === 'h'
         ? { 'z+': m.plus || !buiten ? plusWand : buiten, 'z-': m.min || !buiten ? minWand : buiten }
         : { 'x+': m.plus || !buiten ? plusWand : buiten, 'x-': m.min || !buiten ? minWand : buiten };
+      // Kopse kant waar de buitenmuur in een volgend stuk doorloopt (bv. waar een binnenmuur aansluit):
+      // ook gevelmateriaal, anders schemert de witte snijkant als een haarlijn door de naad.
+      if (buiten) {
+        const [za, zb] = m.as === 'h' ? (['x-', 'x+'] as const) : (['z-', 'z+'] as const);
+        if (gelijk(a, begin) && !vlak.verlengdBegin) zijden[za] = buiten;
+        if (gelijk(b, einde) && !vlak.verlengdEinde) zijden[zb] = buiten;
+      }
       // Kopse kant van een buitenmuur op een buitenhoek: gevelafwerking van de gevel ernaast.
       if (buiten && m.as === 'h') {
         const hoek = (p: number) => { const v = hoekMuur(m, p); return v ? buitenAfw(v, y0) : buiten; };

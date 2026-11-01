@@ -1,6 +1,6 @@
 ---
 name: bouw-woning
-description: Bouw, wijzig of debug de woningconfigurator voor de bouwsector (packages/bouw-web) — plattegrond met verdiepingen (ruimtes en samengestelde L/U-ruimtes, automatisch afgeleide muren, wand tekenen, ruimte in ruimte, ramen/deuren in muren, trap, meubels), gevelaanzichten met kettingmaten, het raam/deur-model met vakken en draairichting, zonwering, de koppeling plattegrond ↔ offertepositie, de offerte, de werf (inmeting, akkoord, meerwerkbon met handtekening) en de 3D van woning en raam. Gebruik deze skill bij een nieuw raamtype, een nieuwe controle (veiligheidsglas, daglicht, ventilatie), een nieuw meubel of afwerking, een fout in draairichting of 3D-plaatsing van een raam, of een uitbreiding van de offerte.
+description: Bouw, wijzig of debug de woningconfigurator voor de bouwsector (packages/bouw-web) — gevel-editor met gevelmaterialen (verven per muurvlak, sokkel), enkel ramen zonder woning (ramenlijst, maatlijst plakken), klantweergave, plattegrond met verdiepingen (ruimtes en samengestelde L/U-ruimtes, automatisch afgeleide muren, wand tekenen, ruimte in ruimte, ramen/deuren in muren, trap, meubels), gevelaanzichten met kettingmaten, het raam/deur-model met vakken en draairichting, zonwering, de koppeling plattegrond ↔ offertepositie, de offerte, de werf (inmeting, akkoord, meerwerkbon met handtekening) en de 3D van woning en raam. Gebruik deze skill bij een nieuw raamtype, een nieuwe controle (veiligheidsglas, daglicht, ventilatie), een nieuw meubel of afwerking, een fout in draairichting of 3D-plaatsing van een raam, of een uitbreiding van de offerte.
 ---
 
 # Woningconfigurator (bouw) — hoe het werkt
@@ -23,6 +23,9 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 | `core/voorbeelden/woning.ts` | Voorbeeldwoning + `raamKeuzes` |
 | `bouw-web/src/staat.ts` | Toestand (plan, posities, meta), localStorage, ongedaan maken, synchronisatie plan ↔ positie |
 | `bouw-web/src/plattegrond-ui.ts`, `positie-ui.ts`, `offerte-ui.ts` | De drie schermen |
+| `bouw-web/src/gevel-ui.ts` | Gevel-editor (tab Gevels): palet, verven, pipet, sokkel, ramen verschuiven/toevoegen, `gevelSvgs` voor de afdruk |
+| `bouw-web/src/ramenlijst-ui.ts` | Ramenlijst voor projecten zonder woning, maatlijst plakken |
+| `core/voorbeelden/maatlijst.ts` | `leesMaatlijst`: tekst of Excel-kolommen → posities (RAAM-keuzes) |
 
 ## Plattegrond
 - Eenheid **cm**; x naar rechts, y naar onder (papier). In 3D wordt plan-y de z-as.
@@ -57,6 +60,53 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - Plaats je een raam/buitendeur/schuifraam, dan maakt de editor een positie met standaardkeuzes volgens de ruimte (hal → voordeur, badkamer → kip + mat glas, keuken → hoger raam, droge ruimte → rooster).
 - Na elke wijziging `synchroniseer(bron)`: bij bron `positie` gaan maten, soort en draairichting van de positie naar de opening; anders van de opening (en de ruimte) naar de positie. Codes P1…Pn worden hernummerd.
 - Een opening verwijderen verwijdert ook de positie; een positie verwijderen in de offerte verwijdert de opening.
+
+## Gevelmaterialen en gevel-editor
+- **Model** (`plattegrond.ts`): `plan.gevelOntwerp = { standaard, vlakken?, sokkel? }` met `GevelKeuze { materiaal, kleur, voeg? }` (codes uit `cat.gevels`, catalogus `gevelCatalogus` in `inrichting.ts`). Zonder ontwerp geldt nog `plan.gevel` (soort + kleur); `gevelOntwerpVan(plan)` maakt een ontwerp dat erop lijkt. De editor maakt het ontwerp aan bij de eerste verfbeurt en zet `meta.regels.gevel` aan.
+- **Muurvlak** = buitenmuur van één ruimte aan één kant: `vlakSleutel(m) = "<ruimte-id>:<kant>"` met `buitenKant(m)` (boven/onder/links/rechts, zoals `kantVan`). Blijft gelijk als de ruimte verschuift.
+- **Verven**: `verfGevel(plan, keuze, bereik, doel)` met bereik `vlak` | `gevel` (alle verdiepingen, één kant) | `verdieping` | `woning` (standaard, vlakken gewist). Laatste verfbeurt wint, net als bij een verfborstel.
+- **3D** (`niveau3D`): de buitenzijde krijgt `gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m))` (soort, kleur, voeg).
+  - Op het gelijkvloers wordt elk stuk gesplitst op de sokkelhoogte (`_sokkel`).
+  - Op een verdieping begint een buitenmuur 30 cm lager, voor de rand van de vloerplaat.
+  - Kopse kanten op een hoek krijgen het materiaal van de gevel ernaast; kopse kanten waar de muur doorloopt krijgen gevelmateriaal (anders zie je witte haarlijnen).
+  - Een dakrand (`dakrand_*`, 32 cm, donker) staat op de buitenmuren waar geen muur van de verdieping erboven staat.
+  - Texturen in `drie-d.ts`:
+    - `steen` met voegkleur, `planken`, `planken_h`, `leien`, `zink`, `natuursteen`, `pleister`;
+    - textuurmaat per zijvlak (`wereldUV` met een maat per vlak);
+    - `tint` is begrensd op 255.
+- **Gevelaanzicht** (`gevels.ts`, derde parameter `cat`): muren met `vulling` + `patroon`/`patroonKleur`, getekend als `<pattern>` in `svg.ts`. Ook een `sokkel.<n>.<muur>`-vorm. Ramen staan na alle muren. `Gevel.vlakken` (code → sleutel, niveau, muur, ruimte, sokkel) en `naarU`/`vanU`/`naarY`/`vanY` dienen voor de editor.
+- **Oppervlakte**: `gevelOppervlaktes(plan)` per muurvlak, berekend op de buitenkant:
+  - lengte = as + ½ dikte op een buitenhoek en − ½ dikte op een binnenhoek;
+  - hoogte = muurhoogte, + 30 cm op een verdieping;
+  - netto = zonder ramen en deuren; de sokkel komt apart.
+- **Offerte** (`planNaarRegels`, optie `gevel === true`): groep *Gevel*, één regel per materiaal, kleur en voeg (m² netto), plus een regel voor de sokkel. De ruwbouw-buitenmuur wordt dan `buitenmuur_kaal` (zonder gevelsteen), om niet dubbel te tellen.
+- **Editor** (`gevel-ui.ts`):
+  - één gevel tegelijk (tabs per kant) met zoom en groot scherm;
+  - het voorbeeld onder de muis is een `structuredClone` van het plan met de verfbeurt, met de getroffen vormen blauw omlijnd;
+  - Shift = hele gevel;
+  - Alt of *Pipet* = materiaal overnemen;
+  - klik op een sokkelvorm = sokkel verven;
+  - ramen slepen gebeurt via `momentopname()` + `wijzig(..., { zonderOngedaan: true })`;
+  - deuren gaan alleen opzij;
+  - een raam toevoegen gebeurt via `voegRaamToe` uit `plattegrond-ui.ts`.
+
+## Enkel ramen (project zonder woning)
+- `meta.zonderWoning` (sjabloon *Enkel ramen en deuren*, `ramenToestand()`): body-klasse `zonder-woning`.
+  - De plattegrond, "Uit de plattegrond", de positiekaarten en "Toon in plattegrond" verdwijnen.
+  - `toon('plan')` gaat naar de offerte.
+  - Navigatie: 1 Ramenlijst, 2 Configurator, 3 Werf.
+- **Ramenlijst** (`ramenlijst-ui.ts`, op volle breedte boven de offerte):
+  - per regel soort, indeling (vaste combinaties; anders "Andere indeling"), breedte, hoogte, ruimte, verdieping en aantal;
+  - knoppen: status, configureren, dupliceren, verwijderen.
+  - Nieuwe ramen krijgen situatie `renovatie`. Schuiframen zijn standaard aluminium, omdat PVC van 3 m de statiek niet haalt.
+- **`leesMaatlijst`** herkent:
+  - `b x h`, of twee getallenkolommen (in cm als beide maten < 400);
+  - aantal: `2 st`, `2x` of een losse kolom;
+  - soort, indeling (`+` voor vakken), ruimte en verdieping.
+  - Een kopregel en regels zonder maten worden overgeslagen, met de reden.
+- **Klantweergave** (`body.klantmodus`): verbergt `.intern`, de stap statiek en de afstandhouder.
+  - Ruimte en verdieping alleen bij een project mét woning; zonder woning zijn ze de enige invoer voor de controles.
+  - In de configurator staat de prijs incl. btw (zonder de korting, die op het totaal komt).
 
 ## Zoomen (`demo-web/src/zoom.ts`, gedeeld met de zetelontwerper)
 - `Zoom` beheert het beeld (viewBox) van een SVG-tekenvlak:
@@ -102,7 +152,8 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - **Nieuwe planregel:** `controleerPlan` (met `ruimte`/`opening`-id zodat de editor kan selecteren).
 
 ## Testen
-- `npm test` en `npm run typecheck` in de root (145 tests op 1/11/2026; `core/test/woning.test.ts` en `werf.test.ts`).
+- `npm test` en `npm run typecheck` in de root (158 tests op 1/11/2026; `core/test/woning.test.ts`, `werf.test.ts`, `gevel.test.ts`, `maatlijst.test.ts`).
+- Browser: er zijn nu twee knoppen met `data-weergave="offerte"` (Ramenlijst en Offerte); klik in tests op `.nav [data-weergave="offerte"]:not(.alleen-ramen)`. Coördinaten in een tekenvlak pas berekenen ná klikken in het palet (Playwright scrolt het palet in beeld).
 - Browser: Playwright met cdnjs gerouteerd naar `node_modules/three/build/three.min.js`, Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader`. Klik op een opening met `{ force: true }` (de groep bevat ook bogen in de ruimte).
 
 ## Valkuilen
