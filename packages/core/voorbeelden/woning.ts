@@ -2,7 +2,7 @@
  * Voorbeeldwoning (gelijkvloers 14 × 9 m en een verdieping erboven, met trap) met ruimtes, ramen en deuren als offerteposities,
  * binnendeuren en inrichting. Volledig verzonnen; dient om de demo meteen iets te laten tonen.
  */
-import { standaardKeuzes, type Keuzes, type Opening, type Plattegrond, type Ruimte, type RuimteType } from '../src/index.js';
+import { standaardKeuzes, verfGevel, type Keuzes, type Opening, type Plattegrond, type Ruimte, type RuimteType } from '../src/index.js';
 import { raamdeur } from './raam.js';
 
 export interface DemoPositie {
@@ -120,13 +120,17 @@ export function voorbeeldWoning(): { plan: Plattegrond; posities: DemoPositie[] 
     meubel('wc', 760, 200, 40, 55, 90, 1),
     meubel('plant', 180, 300, 50, 50, 0, 1),
   ];
-  return {
-    plan: {
-      ruimtes, openingen, meubels,
-      muurhoogte: 270, buitenmuur: 30, binnenmuur: 10,
-      verdiepingen: [{ naam: 'Gelijkvloers' }, { naam: 'Verdieping 1' }],
-      gevel: { soort: 'steen', kleur: '#9c4a34' },
+  const plan: Plattegrond = {
+    ruimtes, openingen, meubels,
+    muurhoogte: 270, buitenmuur: 30, binnenmuur: 10,
+    verdiepingen: [{ naam: 'Gelijkvloers' }, { naam: 'Verdieping 1' }],
+    gevel: { soort: 'steen', kleur: '#9c4a34' },
+    // Gevel: rode handvormsteen met grijze voeg, sokkel in blauwe hardsteen, verdieping in zwart gebeitst hout.
+    gevelOntwerp: {
+      standaard: { materiaal: 'gevelsteen', kleur: 'rood', voeg: 'grijs' },
+      sokkel: { materiaal: 'natuursteen', kleur: 'blauwgrijs', hoogte: 30 },
     },
-    posities,
   };
+  verfGevel(plan, { materiaal: 'hout_staand', kleur: 'zwart' }, 'verdieping', { niveau: 1 });
+  return { plan, posities };
 }

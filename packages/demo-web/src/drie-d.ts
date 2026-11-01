@@ -79,15 +79,17 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   const STEEN = { b: 88, h: 60 }; // 4 stenen van 21 cm + voeg, 10 lagen van 5 cm + voeg
   const PLANK = { b: 48, h: 200 }; // 4 verticale planken van 12 cm
   function tint(hex: string, f: number) {
+    // Lichter of donkerder, begrensd op 0–255 per kanaal (anders lopen lichte kleuren over).
     const c = new THREE.Color(hex);
-    return `#${c.multiplyScalar(f).getHexString()}`;
+    const k = (x: number) => Math.max(0, Math.min(255, Math.round(x * f * 255))).toString(16).padStart(2, '0');
+    return `#${k(c.r)}${k(c.g)}${k(c.b)}`;
   }
-  function baksteen(hex: string) {
+  function baksteen(hex: string, voeg = '#cfc8bb') {
     const px = 4, c = document.createElement('canvas');
     c.width = STEEN.b * px;
     c.height = STEEN.h * px;
     const g = c.getContext('2d')!;
-    g.fillStyle = '#cfc8bb';
+    g.fillStyle = voeg;
     g.fillRect(0, 0, c.width, c.height);
     for (let rij = 0; rij < 10; rij++) {
       const off = rij % 2 ? 11 : 0;
@@ -164,13 +166,102 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     return t;
   }
   const TEGEL = { b: 120, h: 120 }, PARKET = { b: 240, h: 80 };
+  // ---------- gevelbekleding ----------
+  const LIGGEND = { b: 200, h: 60 }, LEIEN = { b: 80, h: 48 }, ZINK = { b: 43, h: 100 }, NATUURSTEEN = { b: 160, h: 80 }, PLEISTER = { b: 64, h: 64 };
+  const canvasTextuur = (b: number, h: number, px: number, teken: (g: CanvasRenderingContext2D, px: number) => void) => {
+    const c = document.createElement('canvas');
+    c.width = Math.round(b * px);
+    c.height = Math.round(h * px);
+    teken(c.getContext('2d')!, px);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  };
+  /** Liggende planken van 15 cm (rabat), met schaduwnaad en hier en daar een kopse naad. */
+  const plankenLiggend = (hex: string) => canvasTextuur(LIGGEND.b, LIGGEND.h, 2, (g, px) => {
+    for (let r = 0; r < 4; r++) {
+      const naad = (r * 53) % 200;
+      for (const [a, b] of [[0, naad], [naad, 200]] as const) {
+        g.fillStyle = tint(hex, 0.85 + Math.random() * 0.25);
+        g.fillRect(a * px, r * 15 * px, (b - a) * px, 15 * px);
+      }
+      for (let n = 0; n < 5; n++) {
+        g.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.05})`;
+        g.fillRect(0, (r * 15 + 1 + Math.random() * 12) * px, LIGGEND.b * px, 1);
+      }
+      g.fillStyle = 'rgba(0,0,0,.38)';
+      g.fillRect(0, (r * 15 + 14.2) * px, LIGGEND.b * px, 0.8 * px);
+      g.fillRect(naad * px, r * 15 * px, 1, 15 * px);
+    }
+  });
+  /** Gevelleien (vezelcement of natuurleien) 20 × 12 cm zichtbaar, in halfsteens verband. */
+  const leien = (hex: string) => canvasTextuur(LEIEN.b, LEIEN.h, 3, (g, px) => {
+    g.fillStyle = tint(hex, 0.55);
+    g.fillRect(0, 0, LEIEN.b * px, LEIEN.h * px);
+    for (let r = 0; r < 4; r++) {
+      const off = r % 2 ? 10 : 0;
+      for (let s = -1; s < 4; s++) {
+        g.fillStyle = tint(hex, 0.9 + Math.random() * 0.18);
+        g.fillRect((s * 20 + off + 0.3) * px, (r * 12 + 0.4) * px, 19.4 * px, 11.4 * px);
+      }
+    }
+  });
+  /** Zink met staande naad om de 43 cm. */
+  const zink = (hex: string) => canvasTextuur(ZINK.b, ZINK.h, 3, (g, px) => {
+    const grad = g.createLinearGradient(0, 0, ZINK.b * px, 0);
+    grad.addColorStop(0, tint(hex, 0.96));
+    grad.addColorStop(0.5, tint(hex, 1.04));
+    grad.addColorStop(1, tint(hex, 0.94));
+    g.fillStyle = grad;
+    g.fillRect(0, 0, ZINK.b * px, ZINK.h * px);
+    g.fillStyle = tint(hex, 1.25);
+    g.fillRect(0, 0, 1.2 * px, ZINK.h * px);
+    g.fillStyle = 'rgba(0,0,0,.35)';
+    g.fillRect(1.2 * px, 0, 0.6 * px, ZINK.h * px);
+  });
+  /** Natuursteen (bv. blauwe hardsteen) in platen van 80 × 40 cm. */
+  const natuursteen = (hex: string) => canvasTextuur(NATUURSTEEN.b, NATUURSTEEN.h, 2, (g, px) => {
+    g.fillStyle = tint(hex, 1.25);
+    g.fillRect(0, 0, NATUURSTEEN.b * px, NATUURSTEEN.h * px);
+    for (let r = 0; r < 2; r++) {
+      const off = r % 2 ? 40 : 0;
+      for (let s = -1; s < 2; s++) {
+        g.fillStyle = tint(hex, 0.93 + Math.random() * 0.12);
+        g.fillRect((s * 80 + off + 0.4) * px, (r * 40 + 0.4) * px, 79.2 * px, 39.2 * px);
+        for (let n = 0; n < 40; n++) {
+          g.fillStyle = `rgba(255,255,255,${Math.random() * 0.08})`;
+          g.fillRect((s * 80 + off + Math.random() * 79) * px, (r * 40 + Math.random() * 39) * px, 1.5, 1.5);
+        }
+      }
+    }
+  });
+  /** Sierpleister (crepi): fijne korrel. */
+  const pleister = (hex: string) => canvasTextuur(PLEISTER.b, PLEISTER.h, 3, (g, px) => {
+    g.fillStyle = hex;
+    g.fillRect(0, 0, PLEISTER.b * px, PLEISTER.h * px);
+    for (let n = 0; n < 2600; n++) {
+      g.fillStyle = Math.random() < 0.5 ? `rgba(0,0,0,${Math.random() * 0.07})` : `rgba(255,255,255,${Math.random() * 0.08})`;
+      g.fillRect(Math.random() * PLEISTER.b * px, Math.random() * PLEISTER.h * px, 1.5, 1.5);
+    }
+  });
   /** Textuurmaat per soort (cm); soorten zonder textuur hebben geen maat. */
-  const textuurMaat: Partial<Record<string, { b: number; h: number }>> = { steen: STEEN, planken: PLANK, tegel: TEGEL, parket: PARKET };
+  const textuurMaat: Partial<Record<string, { b: number; h: number }>> = {
+    steen: STEEN, planken: PLANK, tegel: TEGEL, parket: PARKET,
+    planken_h: LIGGEND, leien: LEIEN, zink: ZINK, natuursteen: NATUURSTEEN, pleister: PLEISTER,
+  };
 
-  /** UV in wereldmaat (cm) per vlak, zodat stenen en planken hun echte maat houden. */
-  function wereldUV(geo: any, bx: number, by: number, ox = 0, oy = 0, oz = 0) {
+  /**
+   * UV in wereldmaat (cm) per vlak, zodat stenen en planken hun echte maat houden.
+   * `maten` per vlak van de balk (volgorde +x, −x, +y, −y, +z, −z; 4 hoekpunten per vlak), zodat
+   * bv. hout buiten en tegels binnen elk hun eigen maat krijgen.
+   */
+  function wereldUV(geo: any, maten: ({ b: number; h: number } | undefined)[], ox = 0, oy = 0, oz = 0) {
     const p = geo.attributes.position, nrm = geo.attributes.normal, uv = geo.attributes.uv;
     for (let i = 0; i < p.count; i++) {
+      const maat = maten[Math.floor(i / 4)] ?? maten.find(Boolean);
+      if (!maat) continue;
+      const bx = maat.b, by = maat.h;
       const nx = Math.abs(nrm.getX(i)), ny = Math.abs(nrm.getY(i)), nz = Math.abs(nrm.getZ(i));
       let u: number, v: number;
       const X = p.getX(i) + ox, Y = p.getY(i) + oy, Z = p.getZ(i) + oz;
@@ -182,14 +273,19 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     uv.needsUpdate = true;
   }
 
-  const materiaal = (b: { soort: Blok['soort']; kleur: string }) => {
-    const sleutel = `${b.soort}:${b.kleur}`;
+  const materiaal = (b: { soort: Blok['soort']; kleur: string; voeg?: string }) => {
+    const sleutel = `${b.soort}:${b.kleur}:${b.voeg ?? ''}`;
     let m = materialen.get(sleutel);
     if (!m) {
       if (b.soort === 'metaal') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), metalness: 0.85, roughness: 0.3 });
       else if (b.soort === 'hout') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.55 });
       else if (b.soort === 'planken') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: planken(b.kleur) });
-      else if (b.soort === 'steen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, map: baksteen(b.kleur) });
+      else if (b.soort === 'steen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, map: baksteen(b.kleur, b.voeg) });
+      else if (b.soort === 'planken_h') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62, map: plankenLiggend(b.kleur) });
+      else if (b.soort === 'leien') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, map: leien(b.kleur) });
+      else if (b.soort === 'zink') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.42, metalness: 0.45, map: zink(b.kleur) });
+      else if (b.soort === 'natuursteen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, map: natuursteen(b.kleur) });
+      else if (b.soort === 'pleister') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.98, map: pleister(b.kleur) });
       else if (b.soort === 'glas') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.15, depthWrite: false });
       else if (b.soort === 'matglas') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), transparent: true, opacity: 0.82, roughness: 0.6, depthWrite: false });
       else if (b.soort === 'tegel') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, map: tegels(b.kleur) });
@@ -255,10 +351,10 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       default:
         geo = b.afronding ? afgerondeBalk(b.b, b.h, b.d, b.afronding) : new THREE.BoxGeometry(b.b, b.h, b.d).translate(0, b.h / 2, 0);
         if (!b.afronding) {
-          // Textuur in wereldmaat; bij verschillende zijden telt de soort met textuur.
-          const soorten = [b.soort, ...Object.values(b.zijden ?? {}).map((z) => z!.soort)];
-          const maat = soorten.map((s) => textuurMaat[s]).find(Boolean);
-          if (maat) wereldUV(geo, maat.b, maat.h, cx, b.y, cz);
+          // Textuur in wereldmaat, per vlak de maat van het materiaal op dat vlak.
+          const vlakken: (keyof NonNullable<Blok['zijden']> | null)[] = ['x+', 'x-', 'y+', null, 'z+', 'z-'];
+          const maten = vlakken.map((k) => textuurMaat[(k && b.zijden?.[k]?.soort) || b.soort]);
+          if (maten.some(Boolean)) wereldUV(geo, maten, cx, b.y, cz);
         }
     }
     let mat: any = materiaal(b);

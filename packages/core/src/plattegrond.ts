@@ -708,8 +708,9 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     // Op een verdieping loopt de buitenmuur door voor de rand van de vloerplaat.
     const onderkant = n > 0 && m.soort === 'buiten' ? -VLOERDIKTE : 0;
     const stuk = (code: string, a: number, b: number, y0: number, y1: number) => {
-      if (b - a < 0.1 || y1 - y0 < 0.1) return;
+      // Eerst verlengen (ook onder een deur op de verdieping komt de rand van de vloerplaat), dan pas de maat controleren.
       if (m.soort === 'buiten' && y0 === 0 && onderkant < 0) y0 = onderkant;
+      if (b - a < 0.1 || y1 - y0 < 0.1) return;
       // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten.
       if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1) {
         stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte);

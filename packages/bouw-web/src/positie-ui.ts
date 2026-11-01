@@ -338,7 +338,8 @@ export function herbereken() {
   if (document.body.classList.contains('klantmodus')) {
     // Voor de klant (particulier): prijs inclusief btw.
     const btw = toestand().meta.btw;
-    const incl = stuk * (1 - korting / 100) * (1 + btw / 100);
+    // Zoals de prijs excl. btw: zonder de korting, die op het offertetotaal komt.
+    const incl = stuk * (1 + btw / 100);
     $('#p-prijs').textContent = eur(incl * p.aantal);
     $('#p-prijs-sub').textContent = p.aantal > 1 ? `${p.aantal} × ${eur(incl)} incl. ${btw} % btw` : `incl. ${btw} % btw, per stuk`;
   } else {
