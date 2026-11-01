@@ -252,6 +252,24 @@ body.heeft-groot-scherm { overflow: hidden; }
 .groot-scherm #pl-canvas svg { width: 100%; height: calc(100vh - 175px); max-height: none; }
 .groot-scherm #pl-hint, .groot-scherm #pl-zoomhint { display: none; }
 @media (max-width: 900px) { .groot-scherm .planraster { grid-template-columns: minmax(0, 1fr); } .groot-scherm #pl-canvas svg { max-height: calc(100vh - 120px); } }
+/* ---------- enkel ramen (project zonder woning) ---------- */
+body.zonder-woning .alleen-woning, body.zonder-woning [data-weergave="plan"], body:not(.zonder-woning) .alleen-ramen { display: none !important; }
+/* In de navigatie: "Ramenlijst" en "Offerte" tonen hetzelfde scherm (de nummering zet main.ts). */
+body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: none !important; }
+#o-ramenlijst { font-size: .88rem; }
+#o-ramenlijst td { vertical-align: middle; padding: 4px 5px; }
+#o-ramenlijst input[type="text"] { width: 100%; min-width: 120px; }
+#o-ramenlijst input.maat { width: 78px; text-align: right; }
+#o-ramenlijst input.kort { width: 52px; text-align: right; }
+#o-ramenlijst select { max-width: 170px; }
+#o-ramenlijst-kaart { margin-bottom: 16px; }
+#o-ramenlijst-kaart .situatie { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+#o-ramenlijst .poscel > div { display: flex; align-items: center; gap: 6px; }
+#o-ramenlijst .mini-lijst svg { display: block; height: 38px; width: auto; max-width: 48px; }
+#o-ramenlijst .acties-cel > div { display: flex; gap: 4px; align-items: center; justify-content: flex-end; white-space: nowrap; }
+#o-maatlijst { width: 100%; font: .9rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.plakken summary { cursor: pointer; font-weight: 600; margin: 8px 0; }
+
 /* ---------- gevel-editor ---------- */
 #view-plan.gevelmodus .alleen-plan, #view-plan:not(.gevelmodus) .alleen-gevel { display: none !important; }
 #gv-editor { display: grid; gap: 8px; }
@@ -288,8 +306,9 @@ body.heeft-groot-scherm { overflow: hidden; }
 /* ---------- klantweergave: geen marges, kostprijzen of technische details ---------- */
 .nav .klantknop { border-style: dashed; }
 .nav .klantknop[aria-pressed="true"] { background: var(--goed); border-color: var(--goed); color: #fff; border-style: solid; }
-body.klantmodus .intern, body.klantmodus .stap[data-stap="statiek"],
-body.klantmodus .veld[data-kenmerk="afstandhouder"], body.klantmodus .veld[data-kenmerk="ruimte"], body.klantmodus .veld[data-kenmerk="verdieping"] { display: none !important; }
+body.klantmodus .intern, body.klantmodus .stap[data-stap="statiek"], body.klantmodus .veld[data-kenmerk="afstandhouder"] { display: none !important; }
+/* Ruimte en verdieping komen uit de plattegrond; zonder woning zijn ze de enige invoer voor de controles (veiligheidsglas, valbeveiliging, mat glas). */
+body.klantmodus:not(.zonder-woning) .veld[data-kenmerk="ruimte"], body.klantmodus:not(.zonder-woning) .veld[data-kenmerk="verdieping"] { display: none !important; }
 body.klantmodus [data-weergave="werf"] { display: none; }
 /* Aanraakschermen: grotere knoppen en keuzes (minstens 44 px). */
 @media (pointer: coarse) {
@@ -407,10 +426,11 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
   </div>
   <nav class="nav" aria-label="Onderdelen">
     <button type="button" data-weergave="projecten" aria-pressed="false">Projecten</button>
-    <button type="button" data-weergave="plan" aria-pressed="true">1 · Plattegrond</button>
-    <button type="button" data-weergave="positie" aria-pressed="false">2 · Configurator</button>
-    <button type="button" data-weergave="offerte" aria-pressed="false">3 · Offerte <span class="teller" id="nav-aantal">0</span></button>
-    <button type="button" data-weergave="werf" aria-pressed="false">4 · Werf</button>
+    <button type="button" data-weergave="plan" aria-pressed="true"><span class="nr">1 · </span>Plattegrond</button>
+    <button type="button" data-weergave="offerte" aria-pressed="false" class="alleen-ramen"><span class="nr">1 · </span>Ramenlijst</button>
+    <button type="button" data-weergave="positie" aria-pressed="false"><span class="nr">2 · </span>Configurator</button>
+    <button type="button" data-weergave="offerte" aria-pressed="false"><span class="nr">3 · </span>Offerte <span class="teller" id="nav-aantal">0</span></button>
+    <button type="button" data-weergave="werf" aria-pressed="false"><span class="nr">4 · </span>Werf</button>
     <button type="button" id="klantweergave" class="klantknop" aria-pressed="false" title="Scherm tonen aan de klant: zonder marges, kostprijzen en technische details; prijzen inclusief btw">Klantweergave</button>
   </nav>
 </header>
@@ -556,7 +576,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       <label class="klein">Naam <input type="text" id="p-naam"></label>
       <label class="klein">Aantal <input type="number" id="p-aantal" min="1" step="1"></label>
       <span id="p-model" class="klein"></span>
-      <button type="button" id="p-naarplan" class="tweede">Toon in plattegrond</button>
+      <button type="button" id="p-naarplan" class="tweede alleen-woning">Toon in plattegrond</button>
     </div>
     <div class="positieraster">
       <form id="p-formulier" aria-label="Configuratie" onsubmit="return false" style="display:grid;gap:16px;align-content:start"></form>
@@ -611,6 +631,34 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 </main>
 
 <main id="view-offerte" class="view" hidden>
+  <section class="kaart alleen-ramen" id="o-ramenlijst-kaart">
+    <div class="kaartkop"><h2>Ramenlijst</h2><span class="klein">enkel ramen en deuren, zonder woning · maten in mm</span></div>
+    <div class="tabelhouder"><table id="o-ramenlijst"><thead><tr><th>Pos.</th><th>Omschrijving</th><th>Soort</th><th>Indeling (van binnen)</th><th class="num">Breedte</th><th class="num">Hoogte</th><th>Ruimte</th><th class="num">Verd.</th><th class="num">Aantal</th><th class="num">Totaal</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p id="o-ramenlijst-leeg" class="klein">Nog geen ramen. Voeg er een toe of plak hieronder een maatlijst.</p>
+    <div class="nieuw">
+      <button type="button" class="tweede" data-ramen-nieuw="raam">+ Raam</button>
+      <button type="button" class="tweede" data-ramen-nieuw="terrasdeur">+ Terrasdeur</button>
+      <button type="button" class="tweede" data-ramen-nieuw="voordeur">+ Voordeur</button>
+      <button type="button" class="tweede" data-ramen-nieuw="schuif">+ Schuifraam</button>
+    </div>
+    <details class="plakken" open>
+      <summary>Maatlijst plakken (uit Excel, een mail of een opmeting)</summary>
+      <textarea id="o-maatlijst" rows="5" placeholder="Eén raam per regel, bv.&#10;Keuken 1200 x 1400 vast + draai-kip rechts&#10;Slaapkamer verdieping 1400 x 1500 draai-kip links 2 st&#10;Of kolommen uit Excel: omschrijving – breedte – hoogte – aantal"></textarea>
+      <div class="acties">
+        <button type="button" id="o-maatlijst-lees">Toevoegen aan de lijst</button>
+        <button type="button" id="o-maatlijst-voorbeeld" class="tweede">Voorbeeld invullen</button>
+      </div>
+      <p id="o-maatlijst-melding" class="klein" role="status"></p>
+      <p class="klein">Herkend: maten (mm, of cm als beide onder 400), aantal ("2 st"), soort (voordeur, terrasdeur, schuifraam), indeling (vast, kip, draai, draai-kip, links/rechts, vakken met "+"), ruimte en verdieping. Controleer daarna de lijst.</p>
+    </details>
+    <div class="situatie">
+      <span class="klein">Situatie van alle ramen:</span>
+      <div class="tabs klein" role="group" aria-label="Situatie">
+        <button type="button" id="o-situatie-renovatie" aria-pressed="false" title="Oud raam uitbreken en afvoeren, dagkanten afwerken">Vervanging (renovatie)</button>
+        <button type="button" id="o-situatie-nieuwbouw" aria-pressed="false">Nieuwbouw</button>
+      </div>
+    </div>
+  </section>
   <div class="offerteraster">
     <aside class="links">
       <section class="kaart">
@@ -643,7 +691,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <button type="button" id="o-winddruk-toepassen" class="tweede">Toepassen op alle ramen</button>
         </div>
       </section>
-      <section class="kaart">
+      <section class="kaart alleen-woning">
         <h3>Uit de plattegrond</h3>
         <div class="schakelaars" style="display:grid;gap:6px">
           <label><input type="checkbox" id="o-regel-vloeren"> Vloeren (m² per materiaal)</label>
@@ -660,7 +708,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       </section>
     </aside>
     <div class="links">
-      <section class="kaart">
+      <section class="kaart alleen-woning">
         <div class="kaartkop"><h2>Posities</h2><span id="o-status" class="status ok"></span></div>
         <div id="o-posities"></div>
         <p id="o-leeg" class="klein" hidden>Nog geen posities. Plaats ramen en deuren in de plattegrond of voeg ze hier toe.</p>

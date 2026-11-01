@@ -8,6 +8,7 @@ import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting
 import { ruitenVan } from '../../core/voorbeelden/raam.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
 import { gevelSvgs } from './plattegrond-ui.js';
+import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
 import { controles, inbegrepen } from './positie-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
@@ -91,6 +92,7 @@ export function toonOfferte() {
   kv.disabled = m.klanttype !== 'aannemer';
   if (document.activeElement !== kv) kv.value = String(m.korting);
   for (const k of REGELSOORTEN) $<HTMLInputElement>(`#o-regel-${k}`).checked = !!m.regels[k];
+  if (m.zonderWoning) toonRamenlijst({ naarPositie });
 
   const o = berekenHuidigeOfferte();
 
@@ -352,6 +354,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
   naarPositie = nav.naarPositie;
   naarPlan = nav.naarPlan;
   naarWerf = nav.naarWerf;
+  startRamenlijst();
   for (const [id, veld] of [['o-klant', 'klant'], ['o-adres', 'adres'], ['o-project', 'project'], ['o-nummer', 'nummer'], ['o-datum', 'datum']] as const) {
     $<HTMLInputElement>(`#${id}`).addEventListener('change', (e) => wijzig('meta', (t) => { t.meta[veld] = (e.target as HTMLInputElement).value; }));
   }

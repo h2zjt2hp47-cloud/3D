@@ -17,9 +17,12 @@ type Weergave = 'projecten' | 'plan' | 'offerte' | 'positie' | 'werf';
 let actief: Weergave = 'plan';
 
 function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) {
+  // Een project zonder woning heeft geen plattegrond: dan de ramenlijst (offerte).
+  if (w === 'plan' && toestand().meta.zonderWoning) w = 'offerte';
   actief = w;
   for (const v of ['projecten', 'plan', 'offerte', 'positie', 'werf'] as const) $(`#view-${v}`).hidden = v !== w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.weergave === w));
+  document.body.classList.toggle('zonder-woning', !!toestand().meta.zonderWoning);
   if (w === 'plan') toonPlan(opties.opening);
   if (w === 'offerte') toonOfferte();
   if (w === 'positie') toonPositie(opties.positie);
@@ -54,6 +57,10 @@ const nav = {
 function kop() {
   const t = toestand();
   $('#hd-project').textContent = t.meta.project || 'Naamloos project';
+  document.body.classList.toggle('zonder-woning', !!t.meta.zonderWoning);
+  // Zonder woning: 1 Ramenlijst, 2 Configurator, 3 Werf.
+  const werfNr = document.querySelector('.nav [data-weergave="werf"] .nr');
+  if (werfNr) werfNr.textContent = t.meta.zonderWoning ? '3 · ' : '4 · ';
   $('#hd-bewaard').textContent = opslagProbleem || (laatstBewaard ? `automatisch bewaard om ${laatstBewaard}` : 'automatisch bewaard in deze browser');
   $('#hd-bewaard').classList.toggle('fout', !!opslagProbleem);
 }

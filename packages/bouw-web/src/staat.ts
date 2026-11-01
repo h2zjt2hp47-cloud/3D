@@ -77,6 +77,8 @@ export interface OfferteMeta {
   /** Winddruk voor het project (Pa), voor de statische voordimensionering van nieuwe ramen. */
   winddruk: number;
   akkoord?: Akkoord;
+  /** Project zonder woning: enkel ramen en deuren (geen plattegrond, meteen een ramenlijst). */
+  zonderWoning?: boolean;
   meerwerk: MeerwerkRegel[];
   meerwerkbon?: { nummer: number; naam: string; datum: string; handtekening?: string; getekend: boolean };
 }
@@ -125,6 +127,19 @@ export function voorbeeldToestand(): Toestand {
 export function legeToestand(): Toestand {
   const v = voorbeeldToestand();
   return { plan: { ...v.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] }, posities: [], meta: v.meta };
+}
+
+/** Project "enkel ramen en deuren": geen plattegrond, lege ramenlijst, bedoeld voor vervanging of losse ramen. */
+export function ramenToestand(): Toestand {
+  const v = legeToestand();
+  return {
+    plan: v.plan,
+    posities: [],
+    meta: {
+      ...v.meta, klant: '', adres: '', project: 'Vervanging ramen en deuren', zonderWoning: true,
+      regels: { vloeren: false, wanden: false, binnendeuren: false, ruwbouw: false, inrichting: false, gevel: false },
+    },
+  };
 }
 
 // ---------- opslag ----------
@@ -293,6 +308,7 @@ export function projectUitBestand(tekst: string): string {
 export function sjablonen(): Sjabloon[] {
   const ingebouwd: Sjabloon[] = [
     { id: 'leeg', naam: 'Leeg project', omschrijving: 'Lege plattegrond, geen posities.', gewijzigd: '', ingebouwd: true, toestand: legeToestand() },
+    { id: 'ramen', naam: 'Enkel ramen en deuren (zonder woning)', omschrijving: 'Geen plattegrond: meteen een ramenlijst, of plak een maatlijst uit Excel. Voor vervanging of losse ramen.', gewijzigd: '', ingebouwd: true, toestand: ramenToestand() },
     { id: 'voorbeeld', naam: 'Voorbeeldwoning', omschrijving: 'Gelijkvloers en verdieping, 14 ramen en deuren, inrichting.', gewijzigd: '', ingebouwd: true, toestand: voorbeeldToestand() },
   ];
   return [...ingebouwd, ...(lees<Sjabloon[]>(SJABLONEN) ?? [])];
