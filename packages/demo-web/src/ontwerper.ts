@@ -26,6 +26,7 @@ import {
 } from '../../core/src/index.js';
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
 import { maak3D, type Viewer3D } from './drie-d.js';
+import { Zoom } from './zoom.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
@@ -133,18 +134,32 @@ function punt(ev: PointerEvent) {
   return { x: p.x, y: p.y };
 }
 
-function pasKijkvakAan() {
+/** Passend beeld rond alle elementen (bovenaanzicht). */
+function passendBoven() {
   const afdrukken = ontwerp.elementen.map(voetafdruk);
   const x0 = Math.min(0, ...afdrukken.map((p) => p.x));
   const y0 = Math.min(0, ...afdrukken.map((p) => p.y));
   const x1 = Math.max(400, ...afdrukken.map((p) => p.x + p.b));
   const y1 = Math.max(280, ...afdrukken.map((p) => p.y + p.h));
-  kijkvak = { x: x0 - 50, y: y0 - 50, b: x1 - x0 + 110, h: y1 - y0 + 100 };
+  return { x: x0 - 50, y: y0 - 50, b: x1 - x0 + 110, d: y1 - y0 + 100 };
+}
+
+let zoomBoven: Zoom | undefined;
+let zoomVoor: Zoom | undefined;
+/** Slepen op een leeg stuk verschuift het beeld. */
+let pannen: { zoom: Zoom; bewogen: boolean } | undefined;
+
+function selectieKader() {
+  const e = elementVan(geselecteerd);
+  if (!e) return undefined;
+  const f = voetafdruk(e);
+  return { x: f.x, y: f.y, b: f.b, d: f.h };
 }
 
 function tekenCanvas() {
   const s = svg();
-  if (!actie) pasKijkvakAan();
+  const k = zoomBoven ? zoomBoven.kijkvak() : passendBoven();
+  kijkvak = { x: k.x, y: k.y, b: k.b, h: k.d };
   s.setAttribute('viewBox', `${kijkvak.x} ${kijkvak.y} ${kijkvak.b} ${kijkvak.h}`);
   s.replaceChildren();
 
@@ -240,6 +255,7 @@ function opPointerDown(ev: PointerEvent) {
   const rol = doel.getAttribute('data-rol');
   const p = punt(ev);
   svg().focus({ preventScroll: true });
+  zoomBoven?.vastzetten();
 
   if (rol === 'greep') {
     actie = { soort: 'vergroten', id: doel.getAttribute('data-id')!, voor: JSON.stringify(ontwerp) };
@@ -256,12 +272,15 @@ function opPointerDown(ev: PointerEvent) {
   } else {
     geselecteerd = null;
     toonEigenschappen();
+    // Leeg stuk: slepen verschuift het beeld.
+    if (zoomBoven) { pannen = { zoom: zoomBoven, bewogen: false }; zoomBoven.startPan(ev); }
   }
   svg().setPointerCapture(ev.pointerId);
   tekenCanvas();
 }
 
 function opPointerMove(ev: PointerEvent) {
+  if (pannen) { pannen.bewogen = true; pannen.zoom.beweegPan(ev); return; }
   if (!actie) return;
   const p = punt(ev);
   if (actie.soort === 'slepen') {
@@ -285,6 +304,8 @@ function opPointerMove(ev: PointerEvent) {
 }
 
 function opPointerUp() {
+  zoomBoven?.losmaken();
+  if (pannen) { pannen.zoom.stopPan(); pannen = undefined; return; }
   if (!actie) return;
   const a = actie;
   actie = null;
@@ -308,6 +329,8 @@ function opPointerUp() {
 }
 
 function opToets(ev: KeyboardEvent) {
+  const z = ev.currentTarget === voorvlak() ? zoomVoor : zoomBoven;
+  if (z?.toets(ev)) { ev.preventDefault(); return; }
   const e = elementVan(geselecteerd);
   if (ev.key === 'Escape') {
     kiesGereedschap('selecteren');
@@ -624,16 +647,22 @@ function voorPunt(ev: PointerEvent) {
   return { x: p.x, y: p.y };
 }
 
+/** Passend beeld rond het vooraanzicht. */
+function passendVoor() {
+  const t = tekenVooraanzicht(ontwerp, getCatalogus(), getMaterialen());
+  const vormen = t.vormen.filter((v) => v.code !== 'vloer');
+  const x0 = Math.min(0, ...vormen.map((v) => v.x));
+  const x1 = Math.max(300, ...vormen.map((v) => v.x + v.breedte));
+  const y0 = Math.min(-110, ...vormen.map((v) => v.y));
+  return { x: x0 - 45, y: y0 - 25, b: x1 - x0 + 110, d: -y0 + 25 + 40 };
+}
+
 function tekenVoorvlak() {
   const s = voorvlak();
   const t = tekenVooraanzicht(ontwerp, getCatalogus(), getMaterialen());
   const vormen = t.vormen.filter((v) => v.code !== 'vloer');
-  if (!voorActie) {
-    const x0 = Math.min(0, ...vormen.map((v) => v.x));
-    const x1 = Math.max(300, ...vormen.map((v) => v.x + v.breedte));
-    const y0 = Math.min(-110, ...vormen.map((v) => v.y));
-    voorKijkvak = { x: x0 - 45, y: y0 - 25, b: x1 - x0 + 110, h: -y0 + 25 + 40 };
-  }
+  const k = zoomVoor ? zoomVoor.kijkvak() : passendVoor();
+  voorKijkvak = { x: k.x, y: k.y, b: k.b, h: k.d };
   s.setAttribute('viewBox', `${voorKijkvak.x} ${voorKijkvak.y} ${voorKijkvak.b} ${voorKijkvak.h}`);
   s.replaceChildren();
   s.append(svgEl('rect', { x: voorKijkvak.x, y: voorKijkvak.y, width: voorKijkvak.b, height: voorKijkvak.h, fill: 'transparent', 'data-rol': 'achtergrond' }));
@@ -705,6 +734,7 @@ function opVoorDown(ev: PointerEvent) {
   const id = doel.getAttribute('data-id');
   const p = voorPunt(ev);
   voorvlak().focus({ preventScroll: true });
+  zoomVoor?.vastzetten();
   if (rol === 'v-breedte' && id) {
     const e = elementVan(id)!;
     const f = voetafdruk(e);
@@ -724,12 +754,15 @@ function opVoorDown(ev: PointerEvent) {
     geselecteerd = null;
     toonEigenschappen();
     herbereken();
+    // Leeg stuk: slepen verschuift het beeld.
+    if (zoomVoor) { pannen = { zoom: zoomVoor, bewogen: false }; zoomVoor.startPan(ev); voorvlak().setPointerCapture(ev.pointerId); }
     return;
   }
   voorvlak().setPointerCapture(ev.pointerId);
 }
 
 function opVoorMove(ev: PointerEvent) {
+  if (pannen) { pannen.bewogen = true; pannen.zoom.beweegPan(ev); return; }
   if (!voorActie) return;
   const p = voorPunt(ev);
   const klemB = (w: number, b: { min: number; max: number }) => Math.round(Math.min(b.max, Math.max(b.min, w)));
@@ -779,6 +812,8 @@ function opVoorMove(ev: PointerEvent) {
 }
 
 function opVoorUp() {
+  zoomVoor?.losmaken();
+  if (pannen) { pannen.zoom.stopPan(); pannen = undefined; return; }
   if (!voorActie) return;
   const a = voorActie;
   voorActie = null;
@@ -1164,6 +1199,21 @@ export function startOntwerper() {
   });
 
   const vv = voorvlak();
+  zoomVoor = new Zoom({
+    doel: vv, svg: voorvlak, passend: passendVoor, opnieuw: tekenVoorvlak, minBreedte: 40,
+    opKnijpen: () => { voorActie = null; pannen = undefined; },
+  });
+  const sb = svg();
+  zoomBoven = new Zoom({
+    doel: sb, svg, passend: passendBoven, opnieuw: tekenCanvas, minBreedte: 40,
+    opKnijpen: () => { actie = null; pannen = undefined; },
+  });
+  for (const [vlak, z, sel] of [[sb, zoomBoven, true], [vv, zoomVoor, false]] as const) {
+    const wrap = document.createElement('div');
+    wrap.className = 'zoomvlak';
+    vlak.before(wrap);
+    wrap.append(vlak, z.knoppen(sel ? { selectie: selectieKader } : {}));
+  }
   vv.addEventListener('pointerdown', opVoorDown);
   vv.addEventListener('pointermove', opVoorMove);
   vv.addEventListener('pointerup', opVoorUp);

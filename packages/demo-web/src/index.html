@@ -145,6 +145,14 @@ main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
 .gereedschap { align-self: start; display: grid; gap: 4px; }
 .gereedschap h2 { font-size: 1.05rem; margin: 4px 0 6px; }
 .tekenvlak { display: grid; gap: 10px; align-content: start; }
+/* Zoomen in de tekenvlakken */
+.zoomvlak { position: relative; }
+.zoomvlak:has(> svg[hidden]) { display: none; }
+.zoomvlak { display: grid; gap: 6px; }
+.zoomknoppen { order: -1; justify-self: end; display: flex; gap: 4px; align-items: center; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 3px; }
+.zoomknoppen button { min-width: 34px; height: 32px; border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; cursor: pointer; font-size: .95rem; padding: 0 8px; color: var(--inkt); }
+.zoomknoppen button:hover { border-color: var(--accent); }
+.zoomlabel { min-width: 62px; text-align: center; font-size: .8rem; color: var(--zacht); font-variant-numeric: tabular-nums; }
 #o-canvas { width: 100%; height: auto; aspect-ratio: 4 / 3; max-height: 70vh; background: var(--papier); border-radius: 6px; touch-action: none; user-select: none; cursor: default; }
 #o-canvas.tekenmodus { cursor: crosshair; }
 #o-canvas .raster-klein { stroke: #e7eae6; stroke-width: .4; }

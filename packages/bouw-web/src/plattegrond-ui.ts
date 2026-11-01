@@ -33,6 +33,7 @@ import {
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { raamBlokken } from '../../core/voorbeelden/raam3d.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
+import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import {
@@ -75,6 +76,9 @@ let gereedschap: Gereedschap = 'kies';
 let meubelType = 'bank3';
 let selectie: Selectie;
 let viewBox: { x: number; y: number; b: number; d: number } | undefined;
+let zoom: Zoom | undefined;
+/** Slepen op een leeg stuk verschuift het beeld (een klik zonder bewegen deselecteert). */
+let pannen: { bewogen: boolean; x: number; y: number } | undefined;
 let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeldOpening: Opening | undefined;
 let weergave: 'plan' | 'gevels' | '3d' = 'plan';
@@ -101,7 +105,53 @@ let sleep: Sleep | undefined;
 
 /** De actieve verdieping (alleen-lezen kopie); wijzigen gebeurt via wijzig() op id. */
 const plan = () => niveauPlan(toestand().plan, niveau);
-const snap = (v: number, s = 10) => Math.round(v / s) * s;
+/** Raster volgens de zoom: 10 cm, 5 cm of 1 cm als je ver inzoomt. */
+/** Centimeter per schermpixel voor het huidige beeld (het tekenvlak is 100 % breed, hoogstens 72 % van het scherm hoog). */
+function schaalNu(): number {
+  const houder = document.getElementById('pl-canvas');
+  const vb = zoom ? zoom.kijkvak() : passendKader();
+  const w = houder?.clientWidth || 900;
+  const h = Math.min((w * vb.d) / vb.b, window.innerHeight * 0.72);
+  return Math.max(vb.b / w, vb.d / Math.max(1, h));
+}
+const rasterStap = () => {
+  const e = schaalNu();
+  return e < 0.35 ? 1 : e < 0.9 ? 5 : 10;
+};
+const fijn = () => Math.min(5, rasterStap());
+const snap = (v: number, s = rasterStap()) => Math.round(v / s) * s;
+
+/** Passend beeld: de verdieping, samen met de verdieping eronder (om erop te tekenen). */
+function passendKader(): Kader {
+  const a = planKader(plan(), 140);
+  const onder = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
+  if (!onder?.ruimtes.length) return a;
+  const b = planKader(onder, 140);
+  if (!plan().ruimtes.length) return b;
+  const x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y);
+  return { x: x0, y: y0, b: Math.max(a.x + a.b, b.x + b.b) - x0, d: Math.max(a.y + a.d, b.y + b.d) - y0 };
+}
+
+/** Kader rond de selectie (om erop in te zoomen). */
+function selectieKader(): Kader | undefined {
+  const s = selectie;
+  if (!s) return undefined;
+  const pl = plan();
+  if (s.soort === 'ruimte') {
+    const r = pl.ruimtes.find((x) => x.id === s.id);
+    if (!r) return undefined;
+    const d = delenVan(r);
+    const x0 = Math.min(...d.map((p) => p.x)), y0 = Math.min(...d.map((p) => p.y));
+    return { x: x0, y: y0, b: Math.max(...d.map((p) => p.x + p.b)) - x0, d: Math.max(...d.map((p) => p.y + p.d)) - y0 };
+  }
+  if (s.soort === 'meubel') {
+    const m = pl.meubels.find((x) => x.id === s.id);
+    return m ? meubelVoetafdruk(m) : undefined;
+  }
+  const o = pl.openingen.find((x) => x.id === s.id);
+  if (!o) return undefined;
+  return o.as === 'h' ? { x: o.midden - o.breedte / 2, y: o.lijn - 40, b: o.breedte, d: 80 } : { x: o.lijn - 40, y: o.midden - o.breedte / 2, b: 80, d: o.breedte };
+}
 
 // ---------- tekenen ----------
 function raamInfo(o: Opening) {
@@ -125,17 +175,12 @@ function fouten(): Set<string> {
 
 export function render() {
   const houder = $('#pl-canvas');
-  if (!sleep) viewBox = planKader(plan(), 140);
   const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
-  if (!sleep && onderlegger?.ruimtes.length) {
-    // Kader ook rond de verdieping eronder, zodat je erop kan tekenen.
-    const a = planKader(plan(), 140), b = planKader(onderlegger, 140);
-    if (plan().ruimtes.length) {
-      const x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y);
-      viewBox = { x: x0, y: y0, b: Math.max(a.x + a.b, b.x + b.b) - x0, d: Math.max(a.y + a.d, b.y + b.d) - y0 };
-    } else viewBox = b;
-  }
-  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox });
+  viewBox = zoom ? zoom.kijkvak() : passendKader();
+  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu() });
+  zoom?.bijwerken();
+  const zi = document.getElementById('pl-zoomhint');
+  if (zi) zi.textContent = `Zoomen: muiswiel, knijpen of + − · verschuiven: sleep op een leeg stuk (of met het muiswiel ingedrukt) · raster ${rasterStap()} cm`;
   houder.dataset.gereedschap = gereedschap;
   toonNiveaus();
   if (weergave === '3d') plan3D();
@@ -314,7 +359,7 @@ function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Openin
   const std = standaardOpening(soort, ruimte?.type);
   const lengte = m.tot - m.van;
   const breedte = Math.min(std.b, Math.max(40, lengte - 30));
-  const midden = Math.min(m.tot - breedte / 2 - 10, Math.max(m.van + breedte / 2 + 10, snap(d.midden, 5)));
+  const midden = Math.min(m.tot - breedte / 2 - 10, Math.max(m.van + breedte / 2 + 10, snap(d.midden, fijn())));
   const binnenPlus = m.soort === 'buiten' ? !!m.plus : (m.as === 'h' ? y > m.lijn : x > m.lijn);
   const opening: Opening = {
     niveau,
@@ -381,6 +426,7 @@ function naPointerDown(ev: PointerEvent) {
   const p = punt(ev);
   const doel = ev.target as Element;
   const houder = $('#pl-canvas');
+  zoom?.vastzetten();
   if (gereedschap === 'ruimte') {
     sleep = { soort: 'teken', start: { x: kleef(p.x, 'x'), y: kleef(p.y, 'y') }, bewogen: false };
     houder.setPointerCapture(ev.pointerId);
@@ -395,7 +441,7 @@ function naPointerDown(ev: PointerEvent) {
   if (gereedschap === 'meubel') {
     const t = cat.meubels[meubelType];
     if (!t) return;
-    const m: Meubel = { niveau, id: nieuweId('m'), type: meubelType, x: snap(p.x - t.b / 2, 5), y: snap(p.y - t.d / 2, 5), b: t.b, d: t.d, rotatie: 0 };
+    const m: Meubel = { niveau, id: nieuweId('m'), type: meubelType, x: snap(p.x - t.b / 2, fijn()), y: snap(p.y - t.d / 2, fijn()), b: t.b, d: t.d, rotatie: 0 };
     wijzig('plan', (tt) => { tt.plan.meubels.push(m); });
     selectie = { soort: 'meubel', id: m.id };
     kiesGereedschap('kies');
@@ -416,15 +462,22 @@ function naPointerDown(ev: PointerEvent) {
     render();
     toonEigenschappen();
   } else {
-    selectie = undefined;
-    render();
-    toonEigenschappen();
+    // Leeg stuk: slepen verschuift het beeld; een klik zonder bewegen deselecteert.
+    pannen = { bewogen: false, x: ev.clientX, y: ev.clientY };
+    zoom?.startPan(ev);
+    houder.setPointerCapture(ev.pointerId);
     return;
   }
   houder.setPointerCapture(ev.pointerId);
 }
 
 function naPointerMove(ev: PointerEvent) {
+  if (pannen) {
+    if (!pannen.bewogen && Math.hypot(ev.clientX - pannen.x, ev.clientY - pannen.y) < 4) return;
+    pannen.bewogen = true;
+    zoom?.beweegPan(ev);
+    return;
+  }
   const p = punt(ev);
   if (!sleep) {
     // Voorbeeld van een nieuwe opening onder de muisaanwijzer.
@@ -460,12 +513,12 @@ function naPointerMove(ev: PointerEvent) {
     const pl = t.plan;
     if (sleep!.soort === 'meubel') {
       const m0 = oud.meubels.find((m) => m.id === id)!, m = pl.meubels.find((x) => x.id === id)!;
-      m.x = snap(m0.x + dx, 5); m.y = snap(m0.y + dy, 5);
+      m.x = snap(m0.x + dx, fijn()); m.y = snap(m0.y + dy, fijn());
     }
     if (sleep!.soort === 'opening') {
       const o0 = oud.openingen.find((o) => o.id === id)!, o = pl.openingen.find((x) => x.id === id)!;
       const muur = muurVanOpening(o0, murenVan(oud));
-      let midden = snap(o0.midden + (o0.as === 'h' ? dx : dy), 5);
+      let midden = snap(o0.midden + (o0.as === 'h' ? dx : dy), fijn());
       if (muur) midden = Math.min(muur.tot - o.breedte / 2 - 5, Math.max(muur.van + o.breedte / 2 + 5, midden));
       o.midden = midden;
     }
@@ -538,6 +591,14 @@ function naPointerUp(ev: PointerEvent) {
   const s = sleep;
   sleep = undefined;
   $('#pl-canvas').releasePointerCapture?.(ev.pointerId);
+  zoom?.losmaken();
+  if (pannen) {
+    const klik = !pannen.bewogen;
+    pannen = undefined;
+    zoom?.stopPan();
+    if (klik) { selectie = undefined; render(); toonEigenschappen(); }
+    return;
+  }
   if (s?.soort === 'wand') {
     const w = voorbeeldWand;
     voorbeeldWand = undefined;
@@ -850,6 +911,25 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     return d;
   }));
   const houder = $('#pl-canvas');
+  zoom = new Zoom({
+    doel: houder,
+    svg: () => houder.querySelector('svg'),
+    passend: passendKader,
+    opnieuw: render,
+    minBreedte: 60,
+    opKnijpen: () => {
+      // Tweede vinger: de lopende actie annuleren (en een begonnen verplaatsing terugdraaien).
+      if (sleep?.bewogen && sleep.soort !== 'teken' && sleep.soort !== 'wand') ongedaan();
+      sleep = undefined;
+      pannen = undefined;
+      voorbeeld = undefined;
+      voorbeeldWand = undefined;
+    },
+  });
+  const vlak = document.createElement('div');
+  vlak.className = 'zoomvlak';
+  houder.before(vlak);
+  vlak.append(houder, zoom.knoppen({ selectie: selectieKader }));
   houder.addEventListener('pointerdown', naPointerDown);
   houder.addEventListener('pointermove', naPointerMove);
   houder.addEventListener('pointerup', naPointerUp);
@@ -886,6 +966,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     if (ev.key === 'Delete' || ev.key === 'Backspace') { if (selectie) { ev.preventDefault(); verwijderSelectie(); } return; }
     if (ev.key === 'Escape') { selectie = undefined; kiesGereedschap('kies'); return; }
     if (ev.key.toLowerCase() === 'q') { draaiMeubel(); return; }
+    if (zoom?.toets(ev)) { ev.preventDefault(); return; }
     const sneltoets = GEREEDSCHAP.find((g) => g.toets && g.toets.toLowerCase() === ev.key.toLowerCase());
     if (sneltoets && !ev.ctrlKey && !ev.metaKey) { kiesGereedschap(sneltoets.code); return; }
     // Pijltjes: selectie 5 cm verschuiven (met Shift 1 cm).

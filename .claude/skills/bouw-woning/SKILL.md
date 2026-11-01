@@ -58,6 +58,19 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - Na elke wijziging `synchroniseer(bron)`: bij bron `positie` gaan maten, soort en draairichting van de positie naar de opening; anders van de opening (en de ruimte) naar de positie. Codes P1…Pn worden hernummerd.
 - Een opening verwijderen verwijdert ook de positie; een positie verwijderen in de offerte verwijdert de opening.
 
+## Zoomen (`demo-web/src/zoom.ts`, gedeeld met de zetelontwerper)
+- `Zoom` beheert het beeld (viewBox) van een SVG-tekenvlak:
+  - muiswiel of trackpad zoomt rond de muisaanwijzer;
+  - twee vingers knijpen of verschuiven (vangfase; `opKnijpen` laat de editor zijn actie stoppen);
+  - middelste muisknop of slepen op een leeg stuk verschuift (de editor roept `startPan`/`beweegPan`/`stopPan` aan);
+  - knoppen −, +, Passend, Selectie en sneltoetsen + − 0.
+- De verhouding van het beeld blijft gelijk, zodat het tekenvlak niet van grootte verandert. Een wereldpunt blijft onder de cursor: x' = p − (p − x)/f.
+- `vastzetten()`/`losmaken()` houden het automatische beeld stil tijdens het slepen.
+- Plattegrond:
+  - het raster volgt de zoom: 10, 5 of 1 cm (`rasterStap`, met `schaalNu` = cm per pixel), met een fijn raster van 10 cm bij inzoomen;
+  - tekst, labels en grepen blijven op schermgrootte (`schaal` in `tekenPlattegrond`);
+  - lijnen blijven dun via `vector-effect: non-scaling-stroke` (alleen in de editor-CSS).
+
 ## Projecten en opslag (`staat.ts`, `projecten-ui.ts`)
 - localStorage: index `bouw-demo.projecten.v1` ({ actief, projecten: ProjectInfo[] }), elk project apart in `bouw-demo.project.<id>`, sjablonen in `bouw-demo.sjablonen.v1`, bibliotheek in `bouw-demo.bibliotheek.v1`. Het oude enkele project (`bouw-demo.v1`) wordt bij de eerste start het eerste project.
 - `bewaar()` na elke `wijzig()`: schrijft het actieve project en werkt de index bij (geeft `opslagProbleem` als het niet lukt). Doet niets zonder actief project.

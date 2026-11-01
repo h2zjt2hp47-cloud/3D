@@ -33,6 +33,10 @@ export interface PlanSvgOpties {
   onderlegger?: Plattegrond;
   /** Lijn die getekend wordt (nieuwe wand). */
   voorbeeldWand?: { x1: number; y1: number; x2: number; y2: number };
+  /** Centimeter per schermpixel: bij inzoomen blijven tekst en labels even groot op het scherm. */
+  schaal?: number;
+  /** Raster per 10 cm tonen (bij inzoomen). */
+  fijnRaster?: boolean;
   /** Vaste viewBox (cm); anders passend rond de plattegrond. */
   viewBox?: { x: number; y: number; b: number; d: number };
   breedtePx?: number;
@@ -56,6 +60,8 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   const vb = opties.viewBox ?? planKader(plan);
   const sel = opties.selectie;
   const fouten = opties.fouten ?? new Set<string>();
+  // Tekstfactor: 1 bij passend beeld, kleiner bij inzoomen.
+  const k = opties.schaal ? Math.min(1, Math.max(0.06, opties.schaal / 1.6)) : 1;
   const uit: string[] = [];
   const breedte = opties.breedtePx ? ` width="${opties.breedtePx}" height="${Math.round((opties.breedtePx * vb.d) / vb.b)}"` : '';
   uit.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n(vb.x)} ${n(vb.y)} ${n(vb.b)} ${n(vb.d)}"${breedte} font-family="system-ui, sans-serif" role="img" aria-label="Plattegrond">`);
@@ -64,6 +70,10 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     uit.push('<defs><pattern id="raster" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M 50 0 L 0 0 0 50" fill="none" stroke="#d9dcd6" stroke-width="0.8"/></pattern>'
       + '<pattern id="raster1m" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="#c5c9c2" stroke-width="1.2"/></pattern></defs>');
     uit.push(`<rect x="${n(vb.x - 2000)}" y="${n(vb.y - 2000)}" width="${n(vb.b + 4000)}" height="${n(vb.d + 4000)}" fill="#f7f7f4" data-soort="leeg"/>`);
+    if (opties.fijnRaster) {
+      uit.push('<defs><pattern id="raster10" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e8eae5" stroke-width="0.4"/></pattern></defs>');
+      uit.push(`<rect x="${n(vb.x - 2000)}" y="${n(vb.y - 2000)}" width="${n(vb.b + 4000)}" height="${n(vb.d + 4000)}" fill="url(#raster10)" pointer-events="none"/>`);
+    }
     uit.push(`<rect x="${n(vb.x - 2000)}" y="${n(vb.y - 2000)}" width="${n(vb.b + 4000)}" height="${n(vb.d + 4000)}" fill="url(#raster)" pointer-events="none"/>`);
     uit.push(`<rect x="${n(vb.x - 2000)}" y="${n(vb.y - 2000)}" width="${n(vb.b + 4000)}" height="${n(vb.d + 4000)}" fill="url(#raster1m)" pointer-events="none"/>`);
   }
@@ -113,7 +123,7 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   for (const r of plan.ruimtes) {
     const mt = ruimteMaten(plan, r, muren);
     const cx = r.x + r.b / 2, cy = r.y + r.d / 2; // hoofddeel = grootste deel
-    const fs = Math.max(12, Math.min(22, r.b / 8, r.d / 4));
+    const fs = Math.max(12, Math.min(22, r.b / 8, r.d / 4)) * k;
     uit.push(`<g pointer-events="none" text-anchor="middle"><text x="${n(cx)}" y="${n(cy - fs * 0.15)}" font-size="${n(fs)}" font-weight="600" fill="#2c2f2d">${esc(r.naam)}</text>`
       + `<text x="${n(cx)}" y="${n(cy + fs * 1.05)}" font-size="${n(fs * 0.8)}" fill="#5f6763">${m2(mt.netto)}</text></g>`);
   }
@@ -125,10 +135,10 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
       for (const p of delenVan(r)) uit.push(`<rect x="${n(p.x + 4)}" y="${n(p.y + 4)}" width="${n(p.b - 8)}" height="${n(p.d - 8)}" fill="${gekozen ? '#2f6fd0' : 'none'}" fill-opacity="0.06" stroke="${gekozen ? '#2f6fd0' : '#c0392b'}" stroke-width="3" stroke-dasharray="${gekozen ? '0' : '10 6'}" pointer-events="none"/>`);
     }
     if (gekozen && !opties.afdruk && !r.delen?.length) {
-      uit.push(maatlijn(r.x, r.y, r.x + r.b, r.y, -28, `${Math.round(r.b)}`, '#2f6fd0'));
-      uit.push(maatlijn(r.x, r.y + r.d, r.x, r.y, -28, `${Math.round(r.d)}`, '#2f6fd0'));
+      uit.push(maatlijn(r.x, r.y, r.x + r.b, r.y, -28 * k, `${Math.round(r.b)}`, '#2f6fd0', k));
+      uit.push(maatlijn(r.x, r.y + r.d, r.x, r.y, -28 * k, `${Math.round(r.d)}`, '#2f6fd0', k));
       for (const [greep, gx, gy] of [['n', r.x + r.b / 2, r.y], ['s', r.x + r.b / 2, r.y + r.d], ['w', r.x, r.y + r.d / 2], ['o', r.x + r.b, r.y + r.d / 2]] as const) {
-        uit.push(`<circle data-greep="${greep}" cx="${n(gx)}" cy="${n(gy)}" r="11" fill="#fff" stroke="#2f6fd0" stroke-width="3" style="cursor:${greep === 'n' || greep === 's' ? 'ns' : 'ew'}-resize"/>`);
+        uit.push(`<circle data-greep="${greep}" cx="${n(gx)}" cy="${n(gy)}" r="${n(11 * Math.max(k, 0.35))}" fill="#fff" stroke="#2f6fd0" stroke-width="${n(3 * Math.max(k, 0.35))}" style="cursor:${greep === 'n' || greep === 's' ? 'ns' : 'ew'}-resize"/>`);
       }
     }
   }
@@ -139,35 +149,35 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     const x0 = Math.min(...delen.map((r) => r.x)), y0 = Math.min(...delen.map((r) => r.y));
     const x1 = Math.max(...delen.map((r) => r.x + r.b)), y1 = Math.max(...delen.map((r) => r.y + r.d));
     const t = plan.buitenmuur / 2;
-    uit.push(maatlijn(x1 + t, y1 + t, x0 - t, y1 + t, 70, `${Math.round(x1 - x0 + 2 * t)}`, '#4b5753'));
-    uit.push(maatlijn(x1 + t, y0 - t, x1 + t, y1 + t, 70, `${Math.round(y1 - y0 + 2 * t)}`, '#4b5753'));
+    uit.push(maatlijn(x1 + t, y1 + t, x0 - t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(x1 - x0 + 2 * t)}`, '#4b5753', k));
+    uit.push(maatlijn(x1 + t, y0 - t, x1 + t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(y1 - y0 + 2 * t)}`, '#4b5753', k));
   }
 
   if (opties.voorbeeldWand) {
     const w = opties.voorbeeldWand;
     uit.push(`<line x1="${n(w.x1)}" y1="${n(w.y1)}" x2="${n(w.x2)}" y2="${n(w.y2)}" stroke="#2f6fd0" stroke-width="10" stroke-opacity="0.45" stroke-linecap="round" pointer-events="none"/>`);
-    uit.push(`<text x="${n((w.x1 + w.x2) / 2 + 14)}" y="${n((w.y1 + w.y2) / 2 - 14)}" font-size="18" fill="#2f6fd0" pointer-events="none">${Math.round(Math.hypot(w.x2 - w.x1, w.y2 - w.y1))}</text>`);
+    uit.push(`<text x="${n((w.x1 + w.x2) / 2 + 14 * k)}" y="${n((w.y1 + w.y2) / 2 - 14 * k)}" font-size="${n(18 * k)}" fill="#2f6fd0" pointer-events="none">${Math.round(Math.hypot(w.x2 - w.x1, w.y2 - w.y1))}</text>`);
   }
   if (opties.voorbeeld) {
     const p = opties.voorbeeld;
     uit.push(`<rect x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="#2f6fd0" fill-opacity="0.12" stroke="#2f6fd0" stroke-width="3" stroke-dasharray="12 8" pointer-events="none"/>`);
-    uit.push(`<text x="${n(p.x + p.b / 2)}" y="${n(p.y + p.d / 2)}" font-size="20" text-anchor="middle" fill="#2f6fd0" pointer-events="none">${Math.round(p.b)} × ${Math.round(p.d)}</text>`);
+    uit.push(`<text x="${n(p.x + p.b / 2)}" y="${n(p.y + p.d / 2)}" font-size="${n(20 * k)}" text-anchor="middle" fill="#2f6fd0" pointer-events="none">${Math.round(p.b)} × ${Math.round(p.d)}</text>`);
   }
   uit.push('</svg>');
   return uit.join('');
 }
 
 /** Maatlijn van punt 1 naar 2, verschoven over afstand (links van de richting). */
-function maatlijn(x1: number, y1: number, x2: number, y2: number, afstand: number, tekst: string, kleur: string): string {
+function maatlijn(x1: number, y1: number, x2: number, y2: number, afstand: number, tekst: string, kleur: string, k = 1): string {
   const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1;
   const nx = dy / l, ny = -dx / l;
   const a = [x1 + nx * afstand, y1 + ny * afstand], b = [x2 + nx * afstand, y2 + ny * afstand];
-  const mx = (a[0]! + b[0]!) / 2 + nx * 12, my = (a[1]! + b[1]!) / 2 + ny * 12;
+  const mx = (a[0]! + b[0]!) / 2 + nx * 12 * k, my = (a[1]! + b[1]!) / 2 + ny * 12 * k;
   let hoek = (Math.atan2(dy, dx) * 180) / Math.PI;
   if (hoek > 90 || hoek <= -90) hoek += 180;
   return `<g pointer-events="none" stroke="${kleur}" stroke-width="1.5"><line x1="${n(a[0]!)}" y1="${n(a[1]!)}" x2="${n(b[0]!)}" y2="${n(b[1]!)}"/>`
     + `<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(a[0]! + nx * 6)}" y2="${n(a[1]! + ny * 6)}" stroke-dasharray="4 4"/><line x1="${n(x2)}" y1="${n(y2)}" x2="${n(b[0]! + nx * 6)}" y2="${n(b[1]! + ny * 6)}" stroke-dasharray="4 4"/></g>`
-    + `<text x="${n(mx)}" y="${n(my)}" font-size="17" fill="${kleur}" text-anchor="middle" dominant-baseline="central" transform="rotate(${n(hoek)} ${n(mx)} ${n(my)})" pointer-events="none">${esc(tekst)}</text>`;
+    + `<text x="${n(mx)}" y="${n(my)}" font-size="${n(17 * k)}" fill="${kleur}" text-anchor="middle" dominant-baseline="central" transform="rotate(${n(hoek)} ${n(mx)} ${n(my)})" pointer-events="none">${esc(tekst)}</text>`;
 }
 
 /** Deurboog: blad open (loodrecht op de muur) en de draaicirkel. */
@@ -232,9 +242,10 @@ function openingSvg(o: Opening, m: Muur | undefined, opties: PlanSvgOpties, geko
     delen.push(boog(o.as, L + ds * half, a + 4, b - 4, scharnierBegin, ds, stijl));
   }
   if (info?.label) {
-    const d = -s * (half + 22);
+    const k = opties.schaal ? Math.min(1, Math.max(0.06, opties.schaal / 1.6)) : 1;
+    const d = -s * (half + 22 * k);
     const [tx, ty] = o.as === 'h' ? [o.midden, L + d] : [L + d, o.midden];
-    delen.push(`<g pointer-events="none"><rect x="${n(tx - 20)}" y="${n(ty - 12)}" width="40" height="24" rx="12" fill="${fout ? '#c0392b' : '#34505f'}"/><text x="${n(tx)}" y="${n(ty)}" font-size="15" font-weight="600" fill="#fff" text-anchor="middle" dominant-baseline="central">${esc(info.label)}</text></g>`);
+    delen.push(`<g pointer-events="none"><rect x="${n(tx - 20 * k)}" y="${n(ty - 12 * k)}" width="${n(40 * k)}" height="${n(24 * k)}" rx="${n(12 * k)}" fill="${fout ? '#c0392b' : '#34505f'}"/><text x="${n(tx)}" y="${n(ty)}" font-size="${n(15 * k)}" font-weight="600" fill="#fff" text-anchor="middle" dominant-baseline="central">${esc(info.label)}</text></g>`);
   }
   if (gekozen) delen.push(rect(a - 4, b + 4, -half - 6, half + 6, 'fill="none" stroke="#2f6fd0" stroke-width="3"'));
   delen.push('</g>');

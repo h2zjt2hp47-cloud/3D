@@ -53,6 +53,10 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - Rugleuningen en kussens op een element **verhuizen mee** (`kinderenVan` / `verhuisKinderen`); de magneet negeert opzet-elementen voor basiselementen.
 - Vooraanzicht is tekenbaar: element klikken/zijwaarts slepen; grepen voor breedte (rij schuift mee, rugleuning over volle breedte groeit mee), rug-/arm-/zithoogte (bovenkant) en poothoogte (onderkant); nieuw element tekenen (breedte = kader, hoogte = rug-/armhoogte); opzet komt op het element met de meeste overlap, vóór een eigen rug of losse rugleuning (`voorkantRug`).
 
+## Zoomen in boven- en vooraanzicht
+- `zoom.ts` (klasse `Zoom`): muiswiel, knijpen, verschuiven (leeg stuk of middelste muisknop), knoppen −, +, Passend en Selectie, sneltoetsen + − 0.
+- `passendBoven()` en `passendVoor()` geven het automatische beeld; `tekenCanvas` en `tekenVoorvlak` tekenen met `zoom.kijkvak()`.
+
 ## Weergave (drie-d.ts)
 - Afgeronde balken: `ExtrudeGeometry` van een afgerond grondvlak met bevel, gedraaid zodat de extrusie naar boven gaat; onderkant op `y = 0` van de mesh.
 - Kleuren zijn sRGB-hex → `new THREE.Color(hex).convertSRGBToLinear()`; `renderer.outputEncoding = sRGBEncoding`, ACES-tonemapping, belichting ≈ 0,88.

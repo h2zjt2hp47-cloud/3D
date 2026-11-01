@@ -239,6 +239,17 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 .symbool { width: 16px; height: 21px; flex: none; color: var(--accent); }
 
 
+/* ---------- zoomen ---------- */
+.zoomvlak { position: relative; }
+.zoomvlak { display: grid; gap: 6px; }
+.zoomknoppen { order: -1; justify-self: end; display: flex; gap: 4px; align-items: center; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 3px; }
+.zoomknoppen button { min-width: 34px; height: 32px; border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; cursor: pointer; font-size: .95rem; padding: 0 8px; color: var(--inkt); }
+.zoomknoppen button:hover { border-color: var(--accent); }
+.zoomlabel { min-width: 62px; text-align: center; font-size: .8rem; color: var(--zacht); font-variant-numeric: tabular-nums; }
+#pl-canvas { touch-action: none; }
+/* Lijnen blijven even dik op het scherm, hoe ver je ook inzoomt (alleen in de editor, niet in de afdruk). */
+#pl-canvas svg line, #pl-canvas svg path, #pl-canvas svg polyline, #pl-canvas svg rect, #pl-canvas svg circle, #pl-canvas svg ellipse { vector-effect: non-scaling-stroke; }
+
 /* ---------- projecten ---------- */
 .projectraster { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 1000px) { .projectraster { grid-template-columns: minmax(0, 1fr); } }
@@ -429,6 +440,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       <div id="pl-gevels" class="gevels" hidden></div>
       <div id="pl-canvas" role="application" aria-label="Plattegrond: teken ruimtes, plaats ramen, deuren en meubels"></div>
       <p id="pl-hint" class="hint"></p>
+      <p id="pl-zoomhint" class="hint klein"></p>
       <div class="drie-d" id="pl-3d" hidden></div>
       <div id="pl-3d-knoppen" hidden>
         <div class="knoppenrij">

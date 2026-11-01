@@ -18,6 +18,14 @@ En: "ga maar helemaal los".
 
 De demo werkt in vier stappen, met de knoppen bovenaan: **Plattegrond → Configurator → Offerte → Werf**.
 
+### Zoomen in de tekenvlakken
+- **Zoomen:** muiswiel (rond de muisaanwijzer), knijpen met twee vingers of de knoppen − en +.
+- **Verschuiven:** sleep op een leeg stuk (of houd de middelste muisknop ingedrukt).
+- **"Passend"** toont alles; **"Selectie"** zoomt in op het gekozen raam, de gekozen ruimte of het gekozen meubel.
+- **Raster:** bij inzoomen wordt het fijner (10 → 5 → 1 cm), zodat je op de centimeter tekent.
+- **Leesbaarheid:** tekst, labels en lijnen blijven even groot op het scherm.
+- Ook in de zetelontwerper (boven- en vooraanzicht).
+
 ### Projecten bewaren en hergebruiken (vierde ronde)
 | Functie | Hoe het werkt |
 |---|---|
