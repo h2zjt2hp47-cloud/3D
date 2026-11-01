@@ -153,6 +153,15 @@ describe('plattegrond', () => {
     expect(s.kader.b).toBeGreaterThan(1400);
     expect(s.blokken.some((b) => b.zijden && Object.values(b.zijden).some((z) => z?.soort === 'steen'))).toBe(true);
     expect(s.blokken.filter((b) => b.soort === 'glas').length).toBeGreaterThan(10);
+    // Vensterbanken: geen bovenvlak van de muur op dezelfde hoogte als de vensterbank (anders strepen in 3D).
+    const banken = s.blokken.filter((b) => b.code === 'vensterbank');
+    expect(banken.length).toBeGreaterThan(3);
+    for (const v of banken) {
+      const top = v.y + v.h;
+      const samen = s.blokken.filter((b) => b !== v && Math.abs(b.y + b.h - top) < 0.01
+        && Math.min(b.x + b.b, v.x + v.b) - Math.max(b.x, v.x) > 0.5 && Math.min(b.z + b.d, v.z + v.d) - Math.max(b.z, v.z) > 0.5);
+      expect(samen.map((b) => b.code)).toEqual([]);
+    }
     const laag = plattegrond3D(plan, planCatalogus, { laag: 110, meubels: false, totNiveau: 0 });
     expect(Math.max(...laag.blokken.map((b) => b.y + b.h))).toBeLessThanOrEqual(110);
   });

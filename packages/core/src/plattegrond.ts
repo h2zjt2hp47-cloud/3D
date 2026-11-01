@@ -784,7 +784,10 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       stuk(`muur_${m.id}_${cursor}`, cursor, a, 0, H);
       const inhoud = opties.inhoud?.(o);
       const hoogte = inhoud?.hoogte ?? (o.soort === 'doorgang' ? o.hoogte : o.hoogte + 4);
-      stuk(`onder_${o.id}`, a, b, 0, o.borstwering);
+      // Vensterbank of dorpel: de muur eronder stopt onder de dunste ervan. Anders vallen de bovenvlakken van
+      // muur en vensterbank samen en flikkert de vensterbank in witte en donkere strepen.
+      const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
+      stuk(`onder_${o.id}`, a, b, 0, o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0));
       stuk(`boven_${o.id}`, a, b, Math.min(H, o.borstwering + hoogte), H);
       for (const blok of openingBlokken(o, m, inhoud, cat)) voeg(blok);
       cursor = b;
