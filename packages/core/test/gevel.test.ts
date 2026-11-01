@@ -125,6 +125,22 @@ describe('gevelmaterialen', () => {
     expect(stukken.length).toBeGreaterThan(0);
   });
 
+  it('3D: dakrand op het gelijkvloers waar geen verdieping op staat, niet onder de muren erboven', () => {
+    const { plan } = voorbeeldWoning();
+    const s = plattegrond3D(plan, planCatalogus, { meubels: false });
+    const rand = s.blokken.filter((b) => b.code.startsWith('dakrand_'));
+    expect(rand.length).toBeGreaterThan(0);
+    expect(rand.every((b) => b.y === 270 && b.h === 32)).toBe(true);
+    // Zonder hogere verdieping in beeld: geen dak en geen dakrand.
+    expect(plattegrond3D(plan, planCatalogus, { meubels: false, totNiveau: 0 }).blokken.some((b) => b.code.startsWith('dakrand_'))).toBe(false);
+    // De muren van verdieping 1 staan op de buitenmuren: daar geen dakrand (overlap met de muur erboven).
+    const n1 = s.blokken.filter((b) => b.y === 270 && b.code.startsWith('muur_'));
+    for (const r of rand) for (const m of n1) {
+      const overlapX = Math.min(r.x + r.b, m.x + m.b) - Math.max(r.x, m.x), overlapZ = Math.min(r.z + r.d, m.z + m.d) - Math.max(r.z, m.z);
+      expect(overlapX > 1 && overlapZ > 1).toBe(false);
+    }
+  });
+
   it('gevelaanzicht: materialen met patroon, sokkel, vlakken om te verven en omkeerbare maten', () => {
     const plan = doos();
     plan.gevelOntwerp!.sokkel = { materiaal: 'natuursteen', kleur: 'blauwgrijs', hoogte: 30 };

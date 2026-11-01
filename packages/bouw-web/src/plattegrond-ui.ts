@@ -8,12 +8,10 @@ import {
   meubelAfstanden,
   openingAfstanden,
   dichtsteMuur,
-  gevelAanzichten,
   niveauPlan,
   niveauVan,
   splitsRuimtes,
   tekenRuimteIn,
-  tekenSvg,
   verdiepingenVan,
   meubelVoetafdruk,
   murenVan,
@@ -38,6 +36,10 @@ import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
+import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
+import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
+
+export { gevelSvgs } from './gevel-ui.js';
 import {
   kanOngedaan,
   momentopname,
@@ -66,13 +68,6 @@ const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: stri
   { code: 'doorgang', label: 'Doorgang (zonder deur)', toets: '', hint: 'Klik op een binnenmuur.' },
   { code: 'meubel', label: 'Meubel', toets: 'M', hint: 'Kies een meubel hieronder en klik in de plattegrond.' },
 ];
-
-const GEVELS: Record<string, { label: string; soort: Plattegrond['gevel']['soort']; kleur: string }> = {
-  steen_rood: { label: 'Gevelsteen rood-bruin', soort: 'steen', kleur: '#9c4a34' },
-  steen_grijs: { label: 'Gevelsteen grijs', soort: 'steen', kleur: '#77736d' },
-  crepi: { label: 'Crepi wit', soort: 'gevel', kleur: '#ece9e2' },
-  ceder: { label: 'Houten gevelbekleding', soort: 'planken', kleur: '#b0764d' },
-};
 
 let gereedschap: Gereedschap = 'kies';
 let meubelType = 'bank3';
@@ -189,41 +184,7 @@ export function render() {
   houder.dataset.gereedschap = gereedschap;
   toonNiveaus();
   if (weergave === '3d') plan3D();
-  if (weergave === 'gevels') toonGevels();
-}
-
-/** Info per opening voor de gevelaanzichten (kleur, vakken, zonweringskast). */
-function gevelInfo(o: Opening) {
-  const p = positieVan(o);
-  if (!p || p.model !== 'RAAM') return undefined;
-  const r = resultaat(p);
-  const a = r.afgeleid;
-  const n = Math.max(1, Number(a.n) || 1);
-  return {
-    label: p.code,
-    kleur: String(a.kb ?? '#383e42'),
-    vakken: [a.op1, a.op2, a.op3].slice(0, n).map(String),
-    kast: (Number(a.zon_kast) || 0) / 10,
-    paneel: p.keuzes.type === 'voordeur' && p.keuzes.paneel !== 'glasstrook',
-    voordeur: p.keuzes.type === 'voordeur',
-  };
-}
-
-export function toonGevels() {
-  const vak = $('#pl-gevels');
-  const gevels = gevelAanzichten(toestand().plan, gevelInfo);
-  if (!gevels.length) { vak.replaceChildren(el('p', { class: 'klein' }, 'Teken eerst ruimtes; de gevels volgen vanzelf.')); return; }
-  vak.replaceChildren(...gevels.map((g) => {
-    const f = el('figure', { class: 'gevel' });
-    const d = el('div', { class: 'tekening' });
-    d.innerHTML = tekenSvg(g.tekening, { breedtePx: 720, lijnkleur: '#2b2b28', maatkleur: '#34505f' });
-    f.append(el('figcaption', {}, g.naam), d);
-    return f;
-  }));
-}
-
-export function gevelSvgs(breedtePx = 600): { naam: string; svg: string }[] {
-  return gevelAanzichten(toestand().plan, gevelInfo).map((g) => ({ naam: g.naam, svg: tekenSvg(g.tekening, { breedtePx, lijnkleur: '#222', maatkleur: '#34505f' }) }));
+  if (weergave === 'gevels') gevelNaWijziging();
 }
 
 function toonNiveaus() {
@@ -381,7 +342,15 @@ function plaatsOpening(soort: OpeningSoort, x: number, y: number) {
   const r = openingOp(soort, x, y);
   if (!r) { melding = 'Klik dichter bij een muur.'; toonEigenschappen(); return; }
   if (r.fout) { melding = r.fout; toonEigenschappen(); return; }
-  const o = r.opening;
+  bewaarNieuweOpening(soort, r.opening, r.ruimte);
+  melding = '';
+  selectie = { soort: 'opening', id: r.opening.id };
+  kiesGereedschap('kies');
+}
+
+/** Voegt een nieuwe opening toe; een raam of buitendeur krijgt meteen een offertepositie. */
+function bewaarNieuweOpening(soort: OpeningSoort, o: Opening, ruimte: Ruimte | undefined) {
+  const r = { ruimte };
   wijzig('plan', (t) => {
     if (soort === 'raam' || soort === 'buitendeur' || soort === 'schuifraam') {
       const std = standaardOpening(soort, r.ruimte?.type);
@@ -397,9 +366,23 @@ function plaatsOpening(soort: OpeningSoort, x: number, y: number) {
     }
     t.plan.openingen.push(o);
   });
-  melding = '';
-  selectie = { soort: 'opening', id: o.id };
-  kiesGereedschap('kies');
+}
+
+/** Raam toevoegen vanuit de gevel-editor: op een buitenmuur van een verdieping, op een plaats langs de muur. */
+function voegRaamToe(n: number, muurId: string, midden: number): string | undefined {
+  const pl = niveauPlan(toestand().plan, n);
+  const m = murenVan(pl).find((x) => x.id === muurId);
+  if (!m || m.soort !== 'buiten') return undefined;
+  const ruimte = pl.ruimtes.find((r) => r.id === (m.plus ?? m.min));
+  const std = standaardOpening('raam', ruimte?.type);
+  const breedte = Math.min(std.b, Math.max(40, m.tot - m.van - 30));
+  const mid = Math.min(m.tot - breedte / 2 - 10, Math.max(m.van + breedte / 2 + 10, Math.round(midden / 5) * 5));
+  const o: Opening = {
+    niveau: n, id: nieuweId('o'), soort: 'raam', as: m.as, lijn: m.lijn, midden: mid, breedte, hoogte: std.h, borstwering: std.borst,
+    scharnier: 'begin', naarPlus: !!m.plus,
+  };
+  bewaarNieuweOpening('raam', o, ruimte);
+  return o.id;
 }
 
 function splits(x: number, y: number, staand: boolean) {
@@ -806,10 +789,14 @@ function toonEigenschappen() {
       getalVeld('Binnenmuur', pl.binnenmuur, (w) => zet((p) => { p.binnenmuur = Math.min(30, Math.max(5, w)); }), { min: 5, max: 30, eenheid: 'cm' }),
     );
     vak.append(maten);
-    const gevel = Object.entries(GEVELS).find(([, g]) => g.kleur === pl.gevel.kleur)?.[0] ?? 'steen_rood';
-    const l = el('label', { class: 'eig' });
-    l.append(el('span', {}, 'Gevel'), keuzelijst('pl-gevel', Object.entries(GEVELS).map(([k, g]) => [k, g.label]), gevel, (w) => zet((p) => { p.gevel = { soort: GEVELS[w]!.soort, kleur: GEVELS[w]!.kleur }; })));
-    vak.append(l, el('p', { class: 'klein' }, 'Selecteer een ruimte, raam, deur of meubel om het aan te passen.'));
+    // Gevel: materialen kies je in de gevel-editor (tab Gevels).
+    const st = toestand().plan.gevelOntwerp?.standaard;
+    const mat = st ? gevelCatalogus[st.materiaal] : undefined;
+    const gevelTekst = mat ? `${mat.label}, ${(mat.kleuren[st!.kleur]?.label ?? st!.kleur).toLowerCase()}${toestand().plan.gevelOntwerp?.vlakken && Object.keys(toestand().plan.gevelOntwerp!.vlakken!).length ? ' (en andere materialen per vlak)' : ''}` : 'Gevelsteen (standaard)';
+    const g = el('div', { class: 'eig' });
+    const gk = knop('Gevel ontwerpen', () => toonWeergave('gevels'));
+    g.append(el('span', {}, 'Gevel'), el('span', { class: 'klein' }, gevelTekst));
+    vak.append(g, gk, el('p', { class: 'klein' }, 'Selecteer een ruimte, raam, deur of meubel om het aan te passen.'));
   }
   toonOverzicht();
 }
@@ -876,9 +863,12 @@ function kiesGereedschap(g: Gereedschap) {
 function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   weergave = w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.plWeergave === w));
-  $('#pl-canvas').hidden = w !== 'plan';
-  $('#pl-gevels').hidden = w !== 'gevels';
-  if (w === 'gevels') toonGevels();
+  // Het tekenvlak met zijn zoomknoppen.
+  $('#pl-canvas').parentElement!.hidden = w !== 'plan';
+  $('#pl-zoomhint').hidden = w !== 'plan';
+  $('#gv-editor').hidden = w !== 'gevels';
+  $('#view-plan').classList.toggle('gevelmodus', w === 'gevels');
+  if (w === 'gevels') gevelNaWijziging();
   $('#pl-3d').hidden = w !== '3d';
   $('#pl-3d-knoppen').hidden = w !== '3d';
   $('#pl-hint').hidden = w !== 'plan';
@@ -975,12 +965,20 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     kiesGereedschap('ruimte');
   });
   $('#pl-naarofferte').addEventListener('click', () => naarOfferte());
+  startGevels({
+    voegRaamToe,
+    naarPositie: (id) => naarPositie(id),
+    naarPlan: (id) => { toonWeergave('plan'); toonPlan(id); },
+    naar3D: () => toonWeergave('3d'),
+  });
 
   document.addEventListener('keydown', (ev) => {
     if ($('#view-plan').hidden) return;
     const doel = ev.target as HTMLElement;
     if (doel.closest('input, select, textarea')) return;
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ongedaan(); return; }
+    if (weergave === 'gevels') { if (gevelToets(ev)) ev.preventDefault(); return; }
+    if (weergave === '3d') return;
     if (ev.key === 'Delete' || ev.key === 'Backspace') { if (selectie) { ev.preventDefault(); verwijderSelectie(); } return; }
     if (ev.key === 'Escape') { selectie = undefined; kiesGereedschap('kies'); return; }
     if (ev.key.toLowerCase() === 'q') { draaiMeubel(); return; }

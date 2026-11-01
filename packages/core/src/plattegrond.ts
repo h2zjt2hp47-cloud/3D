@@ -650,6 +650,27 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     }
     const scene = niveau3D(p, cat, { ...opties, laag: n === laatste ? opties.laag : undefined }, zonderGaten, n);
     for (const b of scene) blokken.push({ ...b, y: r2(b.y + y0) });
+    // Dakrand (opstand met muurkap) op de buitenmuren waar geen muur van de verdieping erboven op staat.
+    if (n < laatste) {
+      const hier = murenVan(p), boven = murenVan(niveauPlan(plan, n + 1));
+      for (const m of hier.filter((x) => x.soort === 'buiten')) {
+        const vlak = muurVlak(m, hier);
+        const a0 = m.as === 'h' ? vlak.x : vlak.y, a1 = a0 + (m.as === 'h' ? vlak.b : vlak.d);
+        let vrij: [number, number][] = [[a0, a1]];
+        // Alle muren van de verdieping erboven die op deze muur staan (ook loodrechte, op een hoek).
+        for (const b of boven) {
+          const vb = muurVlak(b, boven);
+          const ox = Math.min(vlak.x + vlak.b, vb.x + vb.b) - Math.max(vlak.x, vb.x), oz = Math.min(vlak.y + vlak.d, vb.y + vb.d) - Math.max(vlak.y, vb.y);
+          if (ox <= 0.5 || oz <= 0.5) continue;
+          const b0 = m.as === 'h' ? Math.max(vlak.x, vb.x) : Math.max(vlak.y, vb.y), b1 = b0 + (m.as === 'h' ? ox : oz);
+          vrij = vrij.flatMap(([x, y]): [number, number][] => (b1 <= x || b0 >= y ? [[x, y]] : ([[x, Math.max(x, b0)], [Math.min(y, b1), y]] as [number, number][]).filter(([u, v]) => v - u > 0.5)));
+        }
+        for (const [x, y] of vrij) {
+          const basis = { code: `dakrand_${m.id}_${x}`, soort: 'kunststof' as BlokSoort, vorm: 'blok' as const, kleur: '#2b2b2b', y: y0 + H, h: VLOERDIKTE + 2 };
+          blokken.push(m.as === 'h' ? { ...basis, x, z: vlak.y, b: y - x, d: vlak.d } : { ...basis, x: vlak.x, z: x, b: vlak.b, d: y - x });
+        }
+      }
+    }
     // Plat dak boven delen die niet onder een hogere (getoonde) verdieping liggen.
     if (n < laatste) {
       const boven = niveauPlan(plan, n + 1).ruimtes.flatMap(delenVan);

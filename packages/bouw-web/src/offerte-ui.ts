@@ -12,6 +12,9 @@ import { controles, inbegrepen } from './positie-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
 
+/** Soorten regels uit de plattegrond (vinkjes in de offerte). */
+const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'inrichting'] as const;
+
 let naarPositie: (id: string) => void = () => {};
 let naarPlan: (openingId?: string) => void = () => {};
 let naarWerf: () => void = () => {};
@@ -87,7 +90,7 @@ export function toonOfferte() {
   const kv = $<HTMLInputElement>('#o-korting');
   kv.disabled = m.klanttype !== 'aannemer';
   if (document.activeElement !== kv) kv.value = String(m.korting);
-  for (const k of Object.keys(m.regels) as (keyof typeof m.regels)[]) $<HTMLInputElement>(`#o-regel-${k}`).checked = m.regels[k];
+  for (const k of REGELSOORTEN) $<HTMLInputElement>(`#o-regel-${k}`).checked = !!m.regels[k];
 
   const o = berekenHuidigeOfferte();
 
@@ -355,7 +358,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
   for (const b of [6, 21]) $<HTMLInputElement>(`#o-btw-${b}`).addEventListener('change', () => wijzig('meta', (t) => { t.meta.btw = b; }));
   for (const k of ['particulier', 'aannemer'] as const) $<HTMLInputElement>(`#o-klanttype-${k}`).addEventListener('change', () => wijzig('meta', (t) => { t.meta.klanttype = k; }));
   $<HTMLInputElement>('#o-korting').addEventListener('change', (e) => wijzig('meta', (t) => { t.meta.korting = Math.min(50, Math.max(0, Number((e.target as HTMLInputElement).value) || 0)); }));
-  for (const k of ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'inrichting'] as const) {
+  for (const k of REGELSOORTEN) {
     $<HTMLInputElement>(`#o-regel-${k}`).addEventListener('change', (e) => wijzig('meta', (t) => { t.meta.regels[k] = (e.target as HTMLInputElement).checked; }));
   }
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-nieuw]')) {

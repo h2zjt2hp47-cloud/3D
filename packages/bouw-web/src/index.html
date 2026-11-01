@@ -252,6 +252,39 @@ body.heeft-groot-scherm { overflow: hidden; }
 .groot-scherm #pl-canvas svg { width: 100%; height: calc(100vh - 175px); max-height: none; }
 .groot-scherm #pl-hint, .groot-scherm #pl-zoomhint { display: none; }
 @media (max-width: 900px) { .groot-scherm .planraster { grid-template-columns: minmax(0, 1fr); } .groot-scherm #pl-canvas svg { max-height: calc(100vh - 120px); } }
+/* ---------- gevel-editor ---------- */
+#view-plan.gevelmodus .alleen-plan, #view-plan:not(.gevelmodus) .alleen-gevel { display: none !important; }
+#gv-editor { display: grid; gap: 8px; }
+#gv-editor[hidden] { display: none; }
+#gv-canvas { touch-action: none; user-select: none; -webkit-user-select: none; }
+#gv-canvas svg { display: block; width: 100%; height: auto; max-height: 64vh; background: var(--papier); border: 1px solid var(--lijn); border-radius: 8px; }
+.groot-scherm #gv-canvas svg { height: calc(100vh - 230px); max-height: none; }
+#gv-canvas[data-gereedschap="verf"] svg { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26'%3E%3Cpath d='M3 23l5-1 13-13-4-4L4 18z' fill='%23f2c14e' stroke='%23222' stroke-width='1.5'/%3E%3Cpath d='M17 5l2-2 4 4-2 2' fill='%23888' stroke='%23222' stroke-width='1.5'/%3E%3C/svg%3E") 2 24, crosshair; }
+#gv-canvas[data-gereedschap="pipet"] svg { cursor: copy; }
+#gv-canvas[data-gereedschap="raam"] svg { cursor: cell; }
+#gv-canvas[data-gereedschap="ramen"] [data-code^="kader."], #gv-canvas[data-gereedschap="ramen"] [data-code^="vak."] { cursor: move; }
+#gv-canvas .gv-doel { stroke: #1f6fd0 !important; stroke-width: 3px !important; vector-effect: non-scaling-stroke; }
+#gv-canvas .gv-gekozen { stroke: #1f6fd0 !important; stroke-width: 4px !important; vector-effect: non-scaling-stroke; }
+#gv-bereik { margin: 10px 0 4px; }
+#gv-materialen { display: grid; gap: 8px; margin-top: 8px; }
+.gv-groep p { margin: 6px 0 3px; }
+.gv-tegels { display: grid; gap: 4px; }
+#view-plan.gevelmodus #pl-niveaus { visibility: hidden; }
+.gv-naam { display: grid; gap: 1px; line-height: 1.25; }
+.gv-tegel { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; gap: 8px; text-align: left; border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; padding: 4px 8px 4px 4px; cursor: pointer; font-size: .86rem; }
+.gv-tegel[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.gv-staal svg { display: block; border-radius: 4px; }
+.gv-stalen { border-top: 1px solid var(--lijn); padding-top: 6px; }
+.gv-stalen p { margin: 4px 0; }
+.gv-rij { display: flex; flex-wrap: wrap; gap: 7px; }
+.gv-kleur { width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--papier); box-shadow: 0 0 0 1px rgba(0,0,0,.25); padding: 0; cursor: pointer; }
+.gv-kleur[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--accent); }
+#gv-sokkel { border-top: 1px solid var(--lijn); margin-top: 8px; padding-top: 6px; }
+#gv-sokkel p { margin: 4px 0; }
+.legende { list-style: none; padding: 0; margin: 4px 0; display: grid; gap: 4px; }
+.legende .staal { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; border: 1px solid rgba(0,0,0,.2); }
+@media (pointer: coarse) { .gv-kleur { width: 40px; height: 40px; } .gv-tegel { min-height: 44px; } }
+
 /* ---------- klantweergave: geen marges, kostprijzen of technische details ---------- */
 .nav .klantknop { border-style: dashed; }
 .nav .klantknop[aria-pressed="true"] { background: var(--goed); border-color: var(--goed); color: #fff; border-style: solid; }
@@ -440,12 +473,19 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 <main id="view-plan" class="view">
   <div class="planraster">
     <aside class="links">
-      <section class="kaart">
+      <section class="kaart alleen-plan">
         <h3>Gereedschap</h3>
         <div id="pl-gereedschap" class="gereedschap" role="group" aria-label="Gereedschap"></div>
         <div id="pl-meubels" hidden></div>
       </section>
-      <section class="kaart">
+      <section class="kaart alleen-gevel" id="gv-palet">
+        <h3>Gevel ontwerpen</h3>
+        <div id="gv-gereedschap" class="gereedschap" role="group" aria-label="Gereedschap gevel"></div>
+        <div id="gv-bereik" class="tabs klein" role="group" aria-label="Wat verf je met één klik?"></div>
+        <div id="gv-materialen"></div>
+        <div id="gv-sokkel"></div>
+      </section>
+      <section class="kaart alleen-plan">
         <div class="knoppenrij" style="margin-top:0">
           <button type="button" id="pl-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button>
           <button type="button" id="pl-voorbeeld" class="tweede">Nieuw project …</button>
@@ -463,7 +503,12 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
         </div>
       </div>
-      <div id="pl-gevels" class="gevels" hidden></div>
+      <div id="gv-editor" hidden>
+        <div id="gv-kanten" class="tabs" role="group" aria-label="Gevel"></div>
+        <div id="gv-canvas" role="application" aria-label="Gevelaanzicht: verf muurvlakken, verschuif of voeg ramen toe"></div>
+        <p id="gv-hint" class="hint"></p>
+        <div id="gv-legende"></div>
+      </div>
       <div id="pl-canvas" role="application" aria-label="Plattegrond: teken ruimtes, plaats ramen, deuren en meubels"></div>
       <p id="pl-hint" class="hint"></p>
       <p id="pl-zoomhint" class="hint klein"></p>
@@ -485,7 +530,8 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       </div>
     </section>
     <aside class="rechts">
-      <section class="kaart" id="pl-eigenschappen" aria-live="polite"></section>
+      <section class="kaart alleen-plan" id="pl-eigenschappen" aria-live="polite"></section>
+      <section class="kaart alleen-gevel" id="gv-eigenschappen" aria-live="polite"></section>
       <section class="kaart">
         <div class="kaartkop"><h2>Controles</h2><span id="pl-controle-status" class="status ok"></span></div>
         <ul id="pl-meldingen" class="meldingen scroll"></ul>
@@ -604,6 +650,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label><input type="checkbox" id="o-regel-wanden"> Wandafwerking (verf, tegels)</label>
           <label><input type="checkbox" id="o-regel-binnendeuren"> Binnendeuren en doorgangen</label>
           <label><input type="checkbox" id="o-regel-ruwbouw"> Ruwbouw muren</label>
+          <label><input type="checkbox" id="o-regel-gevel"> Gevelafwerking (m² per materiaal, sokkel)</label>
           <label><input type="checkbox" id="o-regel-inrichting"> Inrichting (richtprijs)</label>
         </div>
       </section>
