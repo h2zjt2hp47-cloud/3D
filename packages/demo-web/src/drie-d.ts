@@ -11,7 +11,7 @@ declare const THREE: any;
 
 export interface Viewer3D {
   toon(scene: Scene3D): void;
-  standpunt(naam: 'schuin' | 'voor' | 'boven' | 'zij'): void;
+  standpunt(naam: 'schuin' | 'voor' | 'boven' | 'zij' | 'achter'): void;
   formaat(): void;
 }
 
@@ -121,21 +121,68 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     t.encoding = THREE.sRGBEncoding;
     return t;
   }
+  function tegels(hex: string) {
+    // 60 × 60 cm tegels met voeg; lichte kleurvariatie per tegel.
+    const px = 4, c = document.createElement('canvas');
+    c.width = c.height = 120 * px;
+    const g = c.getContext('2d')!;
+    g.fillStyle = tint(hex, 0.78);
+    g.fillRect(0, 0, c.width, c.height);
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+      g.fillStyle = tint(hex, 0.95 + Math.random() * 0.08);
+      g.fillRect((i * 60 + 0.3) * px, (j * 60 + 0.3) * px, 59.4 * px, 59.4 * px);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  function parket(hex: string) {
+    // Planken van 20 × 120 cm in halfsteens verband.
+    const px = 2, c = document.createElement('canvas');
+    c.width = 240 * px;
+    c.height = 80 * px;
+    const g = c.getContext('2d')!;
+    for (let rij = 0; rij < 4; rij++) {
+      const off = (rij % 2) * 60;
+      for (let s = -1; s < 2; s++) {
+        g.fillStyle = tint(hex, 0.86 + Math.random() * 0.24);
+        g.fillRect((s * 120 + off) * px, rij * 20 * px, 120 * px, 20 * px);
+        for (let n = 0; n < 5; n++) {
+          g.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.04})`;
+          g.fillRect((s * 120 + off) * px, (rij * 20 + 2 + Math.random() * 16) * px, 120 * px, 1);
+        }
+        g.fillStyle = 'rgba(0,0,0,.28)';
+        g.fillRect((s * 120 + off) * px, rij * 20 * px, 1, 20 * px);
+      }
+      g.fillStyle = 'rgba(0,0,0,.28)';
+      g.fillRect(0, rij * 20 * px, c.width, 1);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  const TEGEL = { b: 120, h: 120 }, PARKET = { b: 240, h: 80 };
+  /** Textuurmaat per soort (cm); soorten zonder textuur hebben geen maat. */
+  const textuurMaat: Partial<Record<string, { b: number; h: number }>> = { steen: STEEN, planken: PLANK, tegel: TEGEL, parket: PARKET };
+
   /** UV in wereldmaat (cm) per vlak, zodat stenen en planken hun echte maat houden. */
-  function wereldUV(geo: any, bx: number, by: number) {
+  function wereldUV(geo: any, bx: number, by: number, ox = 0, oy = 0, oz = 0) {
     const p = geo.attributes.position, nrm = geo.attributes.normal, uv = geo.attributes.uv;
     for (let i = 0; i < p.count; i++) {
       const nx = Math.abs(nrm.getX(i)), ny = Math.abs(nrm.getY(i)), nz = Math.abs(nrm.getZ(i));
       let u: number, v: number;
-      if (ny >= nx && ny >= nz) { u = p.getX(i); v = p.getZ(i); }
-      else if (nx >= nz) { u = p.getZ(i); v = p.getY(i); }
-      else { u = p.getX(i); v = p.getY(i); }
+      const X = p.getX(i) + ox, Y = p.getY(i) + oy, Z = p.getZ(i) + oz;
+      if (ny >= nx && ny >= nz) { u = X; v = Z; }
+      else if (nx >= nz) { u = Z; v = Y; }
+      else { u = X; v = Y; }
       uv.setXY(i, u / bx, v / by);
     }
     uv.needsUpdate = true;
   }
 
-  const materiaal = (b: Blok) => {
+  const materiaal = (b: { soort: Blok['soort']; kleur: string }) => {
     const sleutel = `${b.soort}:${b.kleur}`;
     let m = materialen.get(sleutel);
     if (!m) {
@@ -144,6 +191,10 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       else if (b.soort === 'planken') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: planken(b.kleur) });
       else if (b.soort === 'steen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, map: baksteen(b.kleur) });
       else if (b.soort === 'glas') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.15, depthWrite: false });
+      else if (b.soort === 'matglas') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), transparent: true, opacity: 0.82, roughness: 0.6, depthWrite: false });
+      else if (b.soort === 'tegel') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, map: tegels(b.kleur) });
+      else if (b.soort === 'parket') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: parket(b.kleur) });
+      else if (b.soort === 'kunststof') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.35 });
       else if (b.soort === 'dak') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.85 });
       else if (b.soort === 'gevel') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.97 });
       else if (b.soort === 'donker') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.9 });
@@ -203,10 +254,21 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
         break;
       default:
         geo = b.afronding ? afgerondeBalk(b.b, b.h, b.d, b.afronding) : new THREE.BoxGeometry(b.b, b.h, b.d).translate(0, b.h / 2, 0);
-        if (!b.afronding && b.soort === 'steen') wereldUV(geo, STEEN.b, STEEN.h);
-        if (!b.afronding && b.soort === 'planken') wereldUV(geo, PLANK.b, PLANK.h);
+        if (!b.afronding) {
+          // Textuur in wereldmaat; bij verschillende zijden telt de soort met textuur.
+          const soorten = [b.soort, ...Object.values(b.zijden ?? {}).map((z) => z!.soort)];
+          const maat = soorten.map((s) => textuurMaat[s]).find(Boolean);
+          if (maat) wereldUV(geo, maat.b, maat.h, cx, b.y, cz);
+        }
     }
-    const m = new THREE.Mesh(geo, materiaal(b));
+    let mat: any = materiaal(b);
+    if (b.zijden && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
+      // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z.
+      const z = b.zijden;
+      const kies = (k: keyof NonNullable<Blok['zijden']> | null) => (k && z[k] ? materiaal(z[k]!) : mat);
+      mat = [kies('x+'), kies('x-'), kies('y+'), mat, kies('z+'), kies('z-')];
+    }
+    const m = new THREE.Mesh(geo, mat);
     m.position.set(cx, y, cz);
     if (b.kantel) {
       // Achterover hellen rond de onderkant: de bovenkant gaat naar de achterkant.
@@ -216,7 +278,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       if (b.kantel.richting === 'x+') m.rotation.z = -a;
       if (b.kantel.richting === 'x-') m.rotation.z = a;
     }
-    m.castShadow = b.vorm !== 'bol' && b.soort !== 'glas';
+    m.castShadow = b.vorm !== 'bol' && b.soort !== 'glas' && b.soort !== 'matglas';
     m.receiveShadow = true;
     return m;
   }
@@ -306,6 +368,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       if (naam === 'boven') { hoekH = 0; hoekV = 1.45; }
       if (naam === 'zij') { hoekH = Math.PI / 2; hoekV = 0.15; }
       if (naam === 'schuin') { hoekH = -0.6; hoekV = 0.42; }
+      if (naam === 'achter') { hoekH = Math.PI + 0.5; hoekV = 0.3; }
       afstand = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5);
       plaatsCamera();
     },

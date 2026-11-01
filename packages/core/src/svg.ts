@@ -80,6 +80,7 @@ export function tekenSvg(t: TekeningResultaat, opties: SvgOpties = {}): string {
         `<rect data-code="${esc(v.code)}" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}"${r} fill="${kleurVeilig(v.vulling, 'none')}" stroke="${stroke}" stroke-width="${dikte}"/>`,
       );
     }
+    if (v.symbool) delen.push(...symboolLijnen(v.x, v.y, v.breedte, v.hoogte, v.symbool, lijn, sw));
     if (v.label) {
       delen.push(
         `<text x="${n(v.x + v.breedte / 2)}" y="${n(v.y + v.hoogte / 2)}" font-size="${n(fs * 0.8)}" text-anchor="middle" dominant-baseline="central" fill="${lijn}">${esc(v.label)}</text>`,
@@ -109,4 +110,39 @@ export function tekenSvg(t: TekeningResultaat, opties: SvgOpties = {}): string {
 
   delen.push('</svg>');
   return delen.join('\n');
+}
+
+/**
+ * Lijnen van een openingssymbool in een raam- of deurvak (zicht van binnen).
+ * Afspraak: de punt van de driehoek wijst naar de scharnierzijde; draai-kip toont beide driehoeken.
+ */
+function symboolLijnen(x: number, y: number, b: number, h: number, symbool: string, kleur: string, sw: number): string[] {
+  const uit: string[] = [];
+  const m = Math.min(b, h) * 0.04; // kleine marge binnen het vak
+  const x0 = x + m, x1 = x + b - m, y0 = y + m, y1 = y + h - m;
+  const xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
+  const lijn = (pts: [number, number][], streep = false) =>
+    uit.push(`<polyline points="${pts.map(([a, c]) => `${n(a)},${n(c)}`).join(' ')}" fill="none" stroke="${kleur}" stroke-width="${n(sw * 1.2)}"${streep ? ` stroke-dasharray="${n(sw * 6)} ${n(sw * 4)}"` : ''} data-symbool="${esc(symbool)}"/>`);
+  const draai = (scharnierLinks: boolean) =>
+    scharnierLinks ? lijn([[x1, y0], [x0, ym], [x1, y1]]) : lijn([[x0, y0], [x1, ym], [x0, y1]]);
+  const kip = () => lijn([[x0, y0], [xm, y1], [x1, y0]], true);
+  const pijl = (naarRechts: boolean) => {
+    const l = (x1 - x0) * 0.5, p = Math.min(l * 0.25, (y1 - y0) * 0.08);
+    const a = xm - l / 2, c = xm + l / 2;
+    lijn([[a, ym], [c, ym]]);
+    if (naarRechts) lijn([[c - p, ym - p], [c, ym], [c - p, ym + p]]);
+    else lijn([[a + p, ym - p], [a, ym], [a + p, ym + p]]);
+  };
+  switch (symbool) {
+    case 'draai_l': draai(true); break;
+    case 'draai_r': draai(false); break;
+    case 'draaikip_l': draai(true); kip(); break;
+    case 'draaikip_r': draai(false); kip(); break;
+    case 'kip': kip(); break;
+    case 'uitzet': lijn([[x0, y1], [xm, y0], [x1, y1]]); break;
+    case 'schuif_l': pijl(false); break;
+    case 'schuif_r': pijl(true); break;
+    default: break; // vast: geen lijnen
+  }
+  return uit;
 }

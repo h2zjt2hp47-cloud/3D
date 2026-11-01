@@ -1,0 +1,729 @@
+/**
+ * Plattegrond-editor: ruimtes tekenen en indelen, wanden verschuiven, ramen en deuren in de
+ * muren zetten (gekoppeld aan offerteposities), meubels plaatsen, eigenschappen, controles en 3D.
+ */
+import {
+  controleerPlan,
+  dichtsteMuur,
+  meubelVoetafdruk,
+  murenVan,
+  muurVanOpening,
+  planKader,
+  plattegrond3D,
+  RUIMTE_TYPES,
+  ruimteMaten,
+  ruimteOp,
+  tekenPlattegrond,
+  type Keuzes,
+  type Meubel,
+  type Opening,
+  type OpeningSoort,
+  type Plattegrond,
+  type Ruimte,
+  type RuimteType,
+} from '../../core/src/index.js';
+import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
+import { raamBlokken } from '../../core/voorbeelden/raam3d.js';
+import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
+import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
+import { berekenHuidigeOfferte } from './offerte-ui.js';
+import {
+  kanOngedaan,
+  legeToestand,
+  momentopname,
+  nieuweId,
+  nieuwePositie,
+  ongedaan,
+  positieVan,
+  resultaat,
+  toestand,
+  vervang,
+  voorbeeldToestand,
+  wijzig,
+} from './staat.js';
+
+type Gereedschap = 'kies' | 'ruimte' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'meubel';
+type Selectie = { soort: 'ruimte' | 'opening' | 'meubel'; id: string } | undefined;
+
+const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
+  { code: 'kies', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
+  { code: 'ruimte', label: 'Ruimte tekenen', toets: 'T', hint: 'Sleep een rechthoek. Hij kleeft aan bestaande muren. De muren volgen automatisch.' },
+  { code: 'wand_v', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
+  { code: 'wand_h', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
+  { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een positie in de offerte bij.' },
+  { code: 'buitendeur', label: 'Buitendeur', toets: '', hint: 'Klik op een buitenmuur. In een hal wordt het een voordeur, anders een terrasdeur.' },
+  { code: 'schuifraam', label: 'Schuifraam', toets: '', hint: 'Klik op een buitenmuur.' },
+  { code: 'binnendeur', label: 'Binnendeur', toets: 'D', hint: 'Klik op een binnenmuur. Draairichting wissel je in de eigenschappen.' },
+  { code: 'doorgang', label: 'Doorgang (zonder deur)', toets: '', hint: 'Klik op een binnenmuur.' },
+  { code: 'meubel', label: 'Meubel', toets: 'M', hint: 'Kies een meubel hieronder en klik in de plattegrond.' },
+];
+
+const GEVELS: Record<string, { label: string; soort: Plattegrond['gevel']['soort']; kleur: string }> = {
+  steen_rood: { label: 'Gevelsteen rood-bruin', soort: 'steen', kleur: '#9c4a34' },
+  steen_grijs: { label: 'Gevelsteen grijs', soort: 'steen', kleur: '#77736d' },
+  crepi: { label: 'Crepi wit', soort: 'gevel', kleur: '#ece9e2' },
+  ceder: { label: 'Houten gevelbekleding', soort: 'planken', kleur: '#b0764d' },
+};
+
+let gereedschap: Gereedschap = 'kies';
+let meubelType = 'bank3';
+let selectie: Selectie;
+let viewBox: { x: number; y: number; b: number; d: number } | undefined;
+let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
+let voorbeeldOpening: Opening | undefined;
+let weergave: 'plan' | '3d' = 'plan';
+let viewer: Viewer3D | null | undefined;
+let laag = false;
+let toonMeubels = true;
+let melding = '';
+let naarPositie: (id: string) => void = () => {};
+let naarOfferte: () => void = () => {};
+
+interface Sleep {
+  soort: 'teken' | 'ruimte' | 'greep' | 'opening' | 'meubel';
+  start: { x: number; y: number };
+  id?: string;
+  kant?: 'n' | 's' | 'w' | 'o';
+  bewogen: boolean;
+  orig?: string;
+}
+let sleep: Sleep | undefined;
+
+const plan = () => toestand().plan;
+const snap = (v: number, s = 10) => Math.round(v / s) * s;
+
+// ---------- tekenen ----------
+function raamInfo(o: Opening) {
+  const p = positieVan(o);
+  if (!p) return undefined;
+  if (p.model !== 'RAAM') return { label: p.code };
+  const r = resultaat(p);
+  const n = Math.max(1, Number(r.afgeleid.n) || 1);
+  return { label: p.code, vakken: [r.afgeleid.op1, r.afgeleid.op2, r.afgeleid.op3].slice(0, n).map(String) };
+}
+
+function fouten(): Set<string> {
+  const s = new Set<string>();
+  for (const m of controleerPlan(plan())) if (m.ernst === 'fout') { if (m.ruimte) s.add(m.ruimte); if (m.opening) s.add(m.opening); }
+  for (const o of plan().openingen) {
+    const p = positieVan(o);
+    if (p && !resultaat(p).geldig) s.add(o.id);
+  }
+  return s;
+}
+
+export function render() {
+  const houder = $('#pl-canvas');
+  if (!sleep) viewBox = planKader(plan(), 140);
+  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, raamInfo, fouten: fouten(), viewBox });
+  houder.dataset.gereedschap = gereedschap;
+  if (weergave === '3d') plan3D();
+}
+
+let wachtend3D = false;
+function plan3D() {
+  if (!viewer || wachtend3D) return;
+  wachtend3D = true;
+  requestAnimationFrame(() => {
+    wachtend3D = false;
+    viewer?.toon(plattegrond3D(plan(), cat, {
+      laag: laag ? 110 : undefined,
+      meubels: toonMeubels,
+      inhoud: (o) => {
+        const p = positieVan(o);
+        if (!p || p.model !== 'RAAM') return undefined;
+        const rb = raamBlokken(resultaat(p));
+        return { blokken: rb.blokken, hoogte: rb.h + rb.kast };
+      },
+    }));
+  });
+}
+
+function punt(ev: PointerEvent | MouseEvent): { x: number; y: number } {
+  const svg = $('#pl-canvas').querySelector('svg') as SVGSVGElement | null;
+  if (!svg) return { x: 0, y: 0 };
+  const p = svg.createSVGPoint();
+  p.x = ev.clientX;
+  p.y = ev.clientY;
+  const m = svg.getScreenCTM();
+  if (!m) return { x: 0, y: 0 };
+  const q = p.matrixTransform(m.inverse());
+  return { x: q.x, y: q.y };
+}
+
+/** Kleef een waarde aan de dichtste bestaande lijn (randen van ruimtes) binnen een marge. */
+function kleef(v: number, as: 'x' | 'y', marge = 18, behalve?: string): number {
+  let beste = snap(v), afstand = marge;
+  for (const r of plan().ruimtes) {
+    if (r.id === behalve) continue;
+    for (const l of as === 'x' ? [r.x, r.x + r.b] : [r.y, r.y + r.d]) {
+      if (Math.abs(l - v) < afstand) { afstand = Math.abs(l - v); beste = l; }
+    }
+  }
+  return beste;
+}
+
+// ---------- nieuwe elementen ----------
+function nieuweRuimteNaam(): string {
+  let i = plan().ruimtes.length + 1;
+  while (plan().ruimtes.some((r) => r.naam === `Ruimte ${i}`)) i++;
+  return `Ruimte ${i}`;
+}
+
+function standaardOpening(soort: OpeningSoort, type?: RuimteType): { b: number; h: number; borst: number; extra: Keuzes } {
+  switch (soort) {
+    case 'raam':
+      if (type === 'badkamer' || type === 'wc') return { b: 80, h: 80, borst: 140, extra: { vak1: 'kip', glas: 'mat_gelaagd', vensterbank: 'composiet' } };
+      if (type === 'keuken') return { b: 160, h: 120, borst: 105, extra: { vakken: 'v2', vak1: 'vast', vak2: 'draaikip_r', vensterbank: 'geen' } };
+      return { b: 120, h: 140, borst: 90, extra: { vak1: 'draaikip_l' } };
+    case 'buitendeur':
+      return type === 'hal'
+        ? { b: 100, h: 230, borst: 0, extra: { type: 'voordeur', glas: 'dubbel_gelaagd' } }
+        : { b: 90, h: 230, borst: 0, extra: { type: 'terrasdeur', vak1: 'draai_l', glas: 'dubbel_gelaagd' } };
+    case 'schuifraam':
+      return { b: 300, h: 230, borst: 0, extra: { type: 'schuif', glas: 'dubbel_gelaagd' } };
+    case 'binnendeur':
+      return { b: 90, h: 211, borst: 0, extra: {} };
+    default:
+      return { b: 120, h: 220, borst: 0, extra: {} };
+  }
+}
+
+/** Opening op de muur onder de muisaanwijzer (nog niet toegevoegd). */
+function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Opening; fout?: string; ruimte?: Ruimte } | undefined {
+  const muren = murenVan(plan());
+  const d = dichtsteMuur(muren, x, y, 45);
+  if (!d) return undefined;
+  const m = d.muur;
+  const buiten = soort === 'raam' || soort === 'buitendeur' || soort === 'schuifraam';
+  const binnenRuimteId = m.soort === 'buiten' ? (m.plus ?? m.min) : (m.as === 'h' ? (y > m.lijn ? m.plus : m.min) : (x > m.lijn ? m.plus : m.min));
+  const ruimte = plan().ruimtes.find((r) => r.id === binnenRuimteId);
+  const std = standaardOpening(soort, ruimte?.type);
+  const lengte = m.tot - m.van;
+  const breedte = Math.min(std.b, Math.max(40, lengte - 30));
+  const midden = Math.min(m.tot - breedte / 2 - 10, Math.max(m.van + breedte / 2 + 10, snap(d.midden, 5)));
+  const binnenPlus = m.soort === 'buiten' ? !!m.plus : (m.as === 'h' ? y > m.lijn : x > m.lijn);
+  const opening: Opening = {
+    id: nieuweId('o'), soort, as: m.as, lijn: m.lijn, midden, breedte, hoogte: std.h, borstwering: std.borst,
+    scharnier: 'begin', naarPlus: binnenPlus, deurtype: soort === 'binnendeur' ? 'schilder' : undefined,
+  };
+  let fout: string | undefined;
+  if (buiten && m.soort !== 'buiten') fout = 'Ramen en buitendeuren horen in een buitenmuur.';
+  if (!buiten && m.soort !== 'binnen') fout = 'Binnendeuren en doorgangen horen in een binnenmuur.';
+  return { opening, fout, ruimte };
+}
+
+function plaatsOpening(soort: OpeningSoort, x: number, y: number) {
+  const r = openingOp(soort, x, y);
+  if (!r) { melding = 'Klik dichter bij een muur.'; toonEigenschappen(); return; }
+  if (r.fout) { melding = r.fout; toonEigenschappen(); return; }
+  const o = r.opening;
+  wijzig('plan', (t) => {
+    if (soort === 'raam' || soort === 'buitendeur' || soort === 'schuifraam') {
+      const std = standaardOpening(soort, r.ruimte?.type);
+      const naam = `${soort === 'raam' ? 'Raam' : soort === 'schuifraam' ? 'Schuifraam' : std.extra.type === 'voordeur' ? 'Voordeur' : 'Terrasdeur'} ${r.ruimte?.naam.toLowerCase() ?? ''}`.trim();
+      const droog = r.ruimte && ['leefruimte', 'slaapkamer', 'bureau'].includes(r.ruimte.type);
+      const p = nieuwePositie('RAAM', {
+        ...std.extra, breedte: o.breedte * 10, hoogte: o.hoogte * 10, borstwering: o.borstwering * 10,
+        rooster: !!droog && std.extra.type !== 'voordeur',
+        ...(o.borstwering < 85 && !std.extra.glas ? { glas: 'dubbel_gelaagd' } : {}),
+      }, naam);
+      o.positie = p.id;
+      t.posities.push(p);
+    }
+    t.plan.openingen.push(o);
+  });
+  melding = '';
+  selectie = { soort: 'opening', id: o.id };
+  kiesGereedschap('kies');
+}
+
+function splits(x: number, y: number, staand: boolean) {
+  const r = ruimteOp(plan(), x, y);
+  if (!r) return;
+  const lijn = staand ? kleef(x, 'x', 10, r.id) : kleef(y, 'y', 10, r.id);
+  const min = 60;
+  if (staand ? lijn - r.x < min || r.x + r.b - lijn < min : lijn - r.y < min || r.y + r.d - lijn < min) {
+    melding = 'Te dicht bij de rand: elke ruimte moet minstens 60 cm breed blijven.';
+    toonEigenschappen();
+    return;
+  }
+  const nieuw: Ruimte = { ...r, id: nieuweId('r'), naam: nieuweRuimteNaam() };
+  wijzig('plan', (t) => {
+    const oud = t.plan.ruimtes.find((x) => x.id === r.id)!;
+    if (staand) { nieuw.x = lijn; nieuw.b = oud.x + oud.b - lijn; oud.b = lijn - oud.x; }
+    else { nieuw.y = lijn; nieuw.d = oud.y + oud.d - lijn; oud.d = lijn - oud.y; }
+    t.plan.ruimtes.push(nieuw);
+  });
+  selectie = { soort: 'ruimte', id: nieuw.id };
+  melding = 'Ruimte ingedeeld. Vergeet geen deur of doorgang naar de nieuwe ruimte.';
+  kiesGereedschap('kies');
+}
+
+// ---------- muis ----------
+function naPointerDown(ev: PointerEvent) {
+  if (ev.button !== 0) return;
+  const p = punt(ev);
+  const doel = ev.target as Element;
+  const houder = $('#pl-canvas');
+  if (gereedschap === 'ruimte') {
+    sleep = { soort: 'teken', start: { x: kleef(p.x, 'x'), y: kleef(p.y, 'y') }, bewogen: false };
+    houder.setPointerCapture(ev.pointerId);
+    return;
+  }
+  if (gereedschap === 'wand_v' || gereedschap === 'wand_h') { splits(p.x, p.y, gereedschap === 'wand_v'); return; }
+  if (gereedschap === 'meubel') {
+    const t = cat.meubels[meubelType];
+    if (!t) return;
+    const m: Meubel = { id: nieuweId('m'), type: meubelType, x: snap(p.x - t.b / 2, 5), y: snap(p.y - t.d / 2, 5), b: t.b, d: t.d, rotatie: 0 };
+    wijzig('plan', (tt) => { tt.plan.meubels.push(m); });
+    selectie = { soort: 'meubel', id: m.id };
+    kiesGereedschap('kies');
+    return;
+  }
+  if (gereedschap !== 'kies') { plaatsOpening(gereedschap, p.x, p.y); return; }
+
+  const greep = doel.closest('[data-greep]') as SVGElement | null;
+  const item = doel.closest('[data-soort]') as SVGElement | null;
+  const orig = JSON.stringify(plan());
+  if (greep && selectie?.soort === 'ruimte') {
+    sleep = { soort: 'greep', start: p, id: selectie.id, kant: greep.dataset.greep as Sleep['kant'], bewogen: false, orig };
+  } else if (item && ['ruimte', 'opening', 'meubel'].includes(item.dataset.soort ?? '')) {
+    const soort = item.dataset.soort as 'ruimte' | 'opening' | 'meubel';
+    selectie = { soort, id: item.dataset.id! };
+    sleep = { soort, start: p, id: item.dataset.id!, bewogen: false, orig };
+    melding = '';
+    render();
+    toonEigenschappen();
+  } else {
+    selectie = undefined;
+    render();
+    toonEigenschappen();
+    return;
+  }
+  houder.setPointerCapture(ev.pointerId);
+}
+
+function naPointerMove(ev: PointerEvent) {
+  const p = punt(ev);
+  if (!sleep) {
+    // Voorbeeld van een nieuwe opening onder de muisaanwijzer.
+    if (['raam', 'buitendeur', 'schuifraam', 'binnendeur', 'doorgang'].includes(gereedschap)) {
+      const r = openingOp(gereedschap as OpeningSoort, p.x, p.y);
+      voorbeeldOpening = r && !r.fout ? r.opening : undefined;
+      render();
+    }
+    return;
+  }
+  const dx = p.x - sleep.start.x, dy = p.y - sleep.start.y;
+  if (!sleep.bewogen && Math.hypot(dx, dy) < 4) return;
+  if (!sleep.bewogen && sleep.soort !== 'teken') momentopname();
+  sleep.bewogen = true;
+  if (sleep.soort === 'teken') {
+    const x2 = kleef(p.x, 'x'), y2 = kleef(p.y, 'y');
+    voorbeeld = { x: Math.min(sleep.start.x, x2), y: Math.min(sleep.start.y, y2), b: Math.abs(x2 - sleep.start.x), d: Math.abs(y2 - sleep.start.y) };
+    render();
+    return;
+  }
+  const oud = JSON.parse(sleep.orig!) as Plattegrond;
+  const id = sleep.id!;
+  wijzig('plan', (t) => {
+    const pl = t.plan;
+    if (sleep!.soort === 'meubel') {
+      const m0 = oud.meubels.find((m) => m.id === id)!, m = pl.meubels.find((x) => x.id === id)!;
+      m.x = snap(m0.x + dx, 5); m.y = snap(m0.y + dy, 5);
+    }
+    if (sleep!.soort === 'opening') {
+      const o0 = oud.openingen.find((o) => o.id === id)!, o = pl.openingen.find((x) => x.id === id)!;
+      const muur = muurVanOpening(o0, murenVan(oud));
+      let midden = snap(o0.midden + (o0.as === 'h' ? dx : dy), 5);
+      if (muur) midden = Math.min(muur.tot - o.breedte / 2 - 5, Math.max(muur.van + o.breedte / 2 + 5, midden));
+      o.midden = midden;
+    }
+    if (sleep!.soort === 'ruimte') {
+      const r0 = oud.ruimtes.find((r) => r.id === id)!, r = pl.ruimtes.find((x) => x.id === id)!;
+      const nx = kleef(r0.x + dx, 'x', 18, id), ny = kleef(r0.y + dy, 'y', 18, id);
+      const ddx = nx - r0.x, ddy = ny - r0.y;
+      r.x = nx; r.y = ny;
+      // Meubels in de ruimte en openingen op de randen gaan mee.
+      for (const m0 of oud.meubels) {
+        const v = meubelVoetafdruk(m0);
+        const cx = v.x + v.b / 2, cy = v.y + v.d / 2;
+        if (cx > r0.x && cx < r0.x + r0.b && cy > r0.y && cy < r0.y + r0.d) {
+          const m = pl.meubels.find((x) => x.id === m0.id)!;
+          m.x = m0.x + ddx; m.y = m0.y + ddy;
+        }
+      }
+      for (const o0 of oud.openingen) {
+        const opRand = o0.as === 'h'
+          ? (Math.abs(o0.lijn - r0.y) < 0.5 || Math.abs(o0.lijn - (r0.y + r0.d)) < 0.5) && o0.midden > r0.x && o0.midden < r0.x + r0.b
+          : (Math.abs(o0.lijn - r0.x) < 0.5 || Math.abs(o0.lijn - (r0.x + r0.b)) < 0.5) && o0.midden > r0.y && o0.midden < r0.y + r0.d;
+        if (!opRand) continue;
+        const o = pl.openingen.find((x) => x.id === o0.id)!;
+        o.lijn = o0.lijn + (o0.as === 'h' ? ddy : ddx);
+        o.midden = o0.midden + (o0.as === 'h' ? ddx : ddy);
+      }
+    }
+    if (sleep!.soort === 'greep') verschuifWand(oud, pl, id, sleep!.kant!, p);
+  }, { zonderOngedaan: true });
+}
+
+/** Verschuift één rand van een ruimte; aangrenzende ruimtes en openingen op die rand schuiven mee. */
+function verschuifWand(oud: Plattegrond, pl: Plattegrond, id: string, kant: 'n' | 's' | 'w' | 'o', p: { x: number; y: number }) {
+  const r0 = oud.ruimtes.find((r) => r.id === id)!;
+  const staand = kant === 'w' || kant === 'o';
+  const lijn0 = kant === 'w' ? r0.x : kant === 'o' ? r0.x + r0.b : kant === 'n' ? r0.y : r0.y + r0.d;
+  const [van, tot] = staand ? [r0.y, r0.y + r0.d] : [r0.x, r0.x + r0.b];
+  let lijn = kleef(staand ? p.x : p.y, staand ? 'x' : 'y', 12, id);
+  // Alle ruimtes met een rand op dezelfde lijn binnen hetzelfde stuk schuiven mee (min. 60 cm).
+  const betrokken = oud.ruimtes.filter((r) => {
+    const [a, b] = staand ? [r.y, r.y + r.d] : [r.x, r.x + r.b];
+    const overlap = Math.min(b, tot) - Math.max(a, van) > 1;
+    const opLijn = staand ? Math.abs(r.x - lijn0) < 0.5 || Math.abs(r.x + r.b - lijn0) < 0.5 : Math.abs(r.y - lijn0) < 0.5 || Math.abs(r.y + r.d - lijn0) < 0.5;
+    return overlap && opLijn;
+  });
+  for (const r of betrokken) {
+    const begin = staand ? r.x : r.y, einde = staand ? r.x + r.b : r.y + r.d;
+    if (Math.abs(begin - lijn0) < 0.5) lijn = Math.min(lijn, einde - 60);
+    else lijn = Math.max(lijn, begin + 60);
+  }
+  for (const r0b of betrokken) {
+    const r = pl.ruimtes.find((x) => x.id === r0b.id)!;
+    if (staand) {
+      if (Math.abs(r0b.x - lijn0) < 0.5) { r.x = lijn; r.b = r0b.x + r0b.b - lijn; } else { r.b = lijn - r0b.x; }
+    } else if (Math.abs(r0b.y - lijn0) < 0.5) { r.y = lijn; r.d = r0b.y + r0b.d - lijn; } else { r.d = lijn - r0b.y; }
+  }
+  for (const o0 of oud.openingen) {
+    if ((o0.as === 'v') !== staand || Math.abs(o0.lijn - lijn0) > 0.5 || o0.midden < van || o0.midden > tot) continue;
+    pl.openingen.find((x) => x.id === o0.id)!.lijn = lijn;
+  }
+}
+
+function naPointerUp(ev: PointerEvent) {
+  const s = sleep;
+  sleep = undefined;
+  $('#pl-canvas').releasePointerCapture?.(ev.pointerId);
+  if (s?.soort === 'teken') {
+    const v = voorbeeld;
+    voorbeeld = undefined;
+    if (v && v.b >= 80 && v.d >= 80) {
+      const r: Ruimte = { id: nieuweId('r'), naam: nieuweRuimteNaam(), type: 'leefruimte', ...v, vloer: 'parket_eik', wand: 'wit' };
+      wijzig('plan', (t) => { t.plan.ruimtes.push(r); });
+      selectie = { soort: 'ruimte', id: r.id };
+      melding = '';
+      kiesGereedschap('kies');
+      return;
+    }
+    if (v) melding = 'Te klein: een ruimte moet minstens 80 × 80 cm zijn.';
+  }
+  render();
+  toonEigenschappen();
+}
+
+// ---------- eigenschappen ----------
+function verwijderSelectie() {
+  if (!selectie) return;
+  const s = selectie;
+  wijzig('plan', (t) => {
+    if (s.soort === 'ruimte') t.plan.ruimtes = t.plan.ruimtes.filter((r) => r.id !== s.id);
+    if (s.soort === 'meubel') t.plan.meubels = t.plan.meubels.filter((m) => m.id !== s.id);
+    if (s.soort === 'opening') {
+      const o = t.plan.openingen.find((x) => x.id === s.id);
+      if (o?.positie) t.posities = t.posities.filter((p) => p.id !== o.positie);
+      t.plan.openingen = t.plan.openingen.filter((x) => x.id !== s.id);
+    }
+  });
+  selectie = undefined;
+  toonEigenschappen();
+}
+
+function draaiMeubel() {
+  if (selectie?.soort !== 'meubel') return;
+  const id = selectie.id;
+  wijzig('plan', (t) => {
+    const m = t.plan.meubels.find((x) => x.id === id);
+    if (!m) return;
+    const v = meubelVoetafdruk(m);
+    const cx = v.x + v.b / 2, cy = v.y + v.d / 2;
+    m.rotatie = ((m.rotatie + 90) % 360) as Meubel['rotatie'];
+    const n = meubelVoetafdruk(m);
+    m.x = snap(cx - n.b / 2, 5);
+    m.y = snap(cy - n.d / 2, 5);
+  });
+}
+
+function knop(tekst: string, f: () => void, cls = 'tweede'): HTMLButtonElement {
+  const b = el('button', { type: 'button', class: cls }, tekst) as HTMLButtonElement;
+  b.addEventListener('click', f);
+  return b;
+}
+
+function toonEigenschappen() {
+  const vak = $('#pl-eigenschappen');
+  vak.replaceChildren();
+  if (melding) vak.append(el('p', { class: 'melding' }, melding));
+  const pl = plan();
+  const s = selectie;
+  if (s?.soort === 'ruimte') {
+    const r = pl.ruimtes.find((x) => x.id === s.id);
+    if (!r) { selectie = undefined; return toonEigenschappen(); }
+    const m = ruimteMaten(pl, r);
+    const zet = (f: (x: Ruimte) => void) => wijzig('plan', (t) => { const x = t.plan.ruimtes.find((y) => y.id === r.id); if (x) f(x); });
+    vak.append(el('h3', {}, 'Ruimte'));
+    const naam = el('input', { type: 'text', 'aria-label': 'Naam' }) as HTMLInputElement;
+    naam.value = r.naam;
+    naam.addEventListener('change', () => zet((x) => { x.naam = naam.value.trim() || x.naam; }));
+    const rij = (label: string, inhoud: HTMLElement) => { const l = el('label', { class: 'eig' }); l.append(el('span', {}, label), inhoud); return l; };
+    vak.append(
+      rij('Naam', naam),
+      rij('Soort', keuzelijst('pl-type', Object.entries(RUIMTE_TYPES).map(([k, v]) => [k, v.label]), r.type, (w) => zet((x) => {
+        const oudLabel = RUIMTE_TYPES[x.type].label;
+        x.type = w as RuimteType;
+        if (x.naam === oudLabel || /^Ruimte \d+$/.test(x.naam)) x.naam = RUIMTE_TYPES[x.type].label;
+        if (w === 'badkamer' || w === 'wc') { x.vloer = 'tegel_wit'; x.wand = 'tegels_wit'; }
+      }))),
+      rij('Vloer', keuzelijst('pl-vloer', Object.entries(cat.vloeren).map(([k, v]) => [k, v.label]), r.vloer, (w) => zet((x) => { x.vloer = w; }))),
+      rij('Wanden', keuzelijst('pl-wand', Object.entries(cat.wanden).map(([k, v]) => [k, v.label]), r.wand, (w) => zet((x) => { x.wand = w; }))),
+    );
+    const maten = el('div', { class: 'maten' });
+    maten.append(
+      getalVeld('Breedte', r.b, (w) => zet((x) => { x.b = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
+      getalVeld('Diepte', r.d, (w) => zet((x) => { x.d = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
+    );
+    vak.append(maten);
+    const dl = el('dl', { class: 'detail' });
+    const daglicht = m.netto ? (m.glas / m.netto) * 100 : 0;
+    for (const [a, b] of [
+      ['Netto vloer', `${getal(m.netto, 1)} m² (${getal(m.nb)} × ${getal(m.nd)} cm)`],
+      ['Wanden (zonder openingen)', `${getal(m.wand, 1)} m²`],
+      ['Glas', `${getal(m.glas, 2)} m² · ${getal(daglicht)} % van de vloer`],
+    ]) dl.append(el('dt', {}, a!), el('dd', {}, b!));
+    vak.append(dl, el('div', { class: 'knoppenrij' }));
+    vak.lastElementChild!.append(knop('Verwijderen', verwijderSelectie, 'gevaar'));
+    vak.append(el('p', { class: 'klein' }, 'Tip: sleep de blauwe bolletjes om een wand te verschuiven; de buurruimte schuift mee.'));
+  } else if (s?.soort === 'opening') {
+    const o = pl.openingen.find((x) => x.id === s.id);
+    if (!o) { selectie = undefined; return toonEigenschappen(); }
+    const zet = (f: (x: Opening) => void) => wijzig('plan', (t) => { const x = t.plan.openingen.find((y) => y.id === o.id); if (x) f(x); });
+    const titel: Record<OpeningSoort, string> = { raam: 'Raam', buitendeur: 'Buitendeur', schuifraam: 'Schuifraam', binnendeur: 'Binnendeur', doorgang: 'Doorgang' };
+    const p = positieVan(o);
+    vak.append(el('h3', {}, `${titel[o.soort]}${p ? ` · ${p.code}` : ''}`));
+    const maten = el('div', { class: 'maten' });
+    maten.append(
+      getalVeld('Breedte', o.breedte, (w) => zet((x) => { x.breedte = Math.max(40, w); }), { min: 40, stap: 5, eenheid: 'cm' }),
+      getalVeld('Hoogte', o.hoogte, (w) => zet((x) => { x.hoogte = Math.max(40, w); }), { min: 40, stap: 5, eenheid: 'cm' }),
+    );
+    if (o.soort === 'raam') maten.append(getalVeld('Borstwering', o.borstwering, (w) => zet((x) => { x.borstwering = Math.max(0, w); }), { min: 0, stap: 5, eenheid: 'cm' }));
+    vak.append(maten);
+    if (o.soort === 'binnendeur' || o.soort === 'buitendeur') {
+      const r = el('div', { class: 'knoppenrij' });
+      r.append(
+        knop('Scharnier wisselen', () => zet((x) => { x.scharnier = x.scharnier === 'begin' ? 'einde' : 'begin'; })),
+        knop('Andere kant opendraaien', () => zet((x) => { x.naarPlus = !x.naarPlus; })),
+      );
+      vak.append(el('p', { class: 'klein' }, 'Draairichting'), r);
+    }
+    if (o.soort === 'binnendeur') {
+      const l = el('label', { class: 'eig' });
+      l.append(el('span', {}, 'Deur'), keuzelijst('pl-deur', Object.entries(cat.binnendeuren).map(([k, v]) => [k, v.label]), o.deurtype ?? 'schilder', (w) => zet((x) => { x.deurtype = w; })));
+      vak.append(l);
+    }
+    if (p) {
+      const r = resultaat(p);
+      const kaart = el('div', { class: 'gekoppeld' });
+      kaart.append(
+        el('strong', {}, `${p.code} · ${p.naam}`),
+        el('p', { class: 'klein' }, r.kenmerken.filter((k) => k.zichtbaar && ['type', 'profiel', 'glas', 'zonwering'].includes(k.code)).map((k) => k.weergave).join(' · ')),
+        el('p', {}, `${eur(r.prijs.brutoprijsExcl)} excl. btw ${r.geldig ? '' : '· heeft fouten'}`),
+      );
+      for (const mm of r.meldingen.slice(0, 3)) kaart.append(el('p', { class: `kleinmelding ${mm.ernst}` }, mm.melding));
+      kaart.append(knop('Configureren: draairichting, glas, zonwering …', () => naarPositie(p.id), ''));
+      vak.append(kaart);
+    }
+    const r = el('div', { class: 'knoppenrij' });
+    r.append(knop('Verwijderen', verwijderSelectie, 'gevaar'));
+    vak.append(r);
+  } else if (s?.soort === 'meubel') {
+    const m = pl.meubels.find((x) => x.id === s.id);
+    if (!m) { selectie = undefined; return toonEigenschappen(); }
+    const t = cat.meubels[m.type];
+    const zet = (f: (x: Meubel) => void) => wijzig('plan', (tt) => { const x = tt.plan.meubels.find((y) => y.id === m.id); if (x) f(x); });
+    vak.append(el('h3', {}, t?.label ?? 'Meubel'));
+    const maten = el('div', { class: 'maten' });
+    maten.append(
+      getalVeld('Breedte', m.b, (w) => zet((x) => { x.b = Math.max(10, w); }), { min: 10, stap: 5, eenheid: 'cm' }),
+      getalVeld('Diepte', m.d, (w) => zet((x) => { x.d = Math.max(10, w); }), { min: 10, stap: 5, eenheid: 'cm' }),
+    );
+    vak.append(maten);
+    const kleur = el('input', { type: 'color', 'aria-label': 'Kleur' }) as HTMLInputElement;
+    kleur.value = m.kleur ?? t?.kleur ?? '#888888';
+    kleur.addEventListener('change', () => zet((x) => { x.kleur = kleur.value; }));
+    const l = el('label', { class: 'eig' });
+    l.append(el('span', {}, 'Kleur'), kleur);
+    vak.append(l);
+    if (t?.prijs) vak.append(el('p', { class: 'klein' }, `Richtprijs ${eur(t.prijs)} (alleen in de offerte als "Inrichting" aan staat).`));
+    const r = el('div', { class: 'knoppenrij' });
+    r.append(knop('Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
+    vak.append(r);
+  } else {
+    vak.append(el('h3', {}, 'Woning'));
+    const zet = (f: (p: Plattegrond) => void) => wijzig('plan', (t) => f(t.plan));
+    const maten = el('div', { class: 'maten' });
+    maten.append(
+      getalVeld('Muurhoogte', pl.muurhoogte, (w) => zet((p) => { p.muurhoogte = Math.min(400, Math.max(200, w)); }), { min: 200, max: 400, stap: 5, eenheid: 'cm' }),
+      getalVeld('Buitenmuur', pl.buitenmuur, (w) => zet((p) => { p.buitenmuur = Math.min(60, Math.max(15, w)); }), { min: 15, max: 60, eenheid: 'cm' }),
+      getalVeld('Binnenmuur', pl.binnenmuur, (w) => zet((p) => { p.binnenmuur = Math.min(30, Math.max(5, w)); }), { min: 5, max: 30, eenheid: 'cm' }),
+    );
+    vak.append(maten);
+    const gevel = Object.entries(GEVELS).find(([, g]) => g.kleur === pl.gevel.kleur)?.[0] ?? 'steen_rood';
+    const l = el('label', { class: 'eig' });
+    l.append(el('span', {}, 'Gevel'), keuzelijst('pl-gevel', Object.entries(GEVELS).map(([k, g]) => [k, g.label]), gevel, (w) => zet((p) => { p.gevel = { soort: GEVELS[w]!.soort, kleur: GEVELS[w]!.kleur }; })));
+    vak.append(l, el('p', { class: 'klein' }, 'Selecteer een ruimte, raam, deur of meubel om het aan te passen.'));
+  }
+  toonOverzicht();
+}
+
+function toonOverzicht() {
+  const pl = plan();
+  const muren = murenVan(pl);
+  const tb = $('#pl-ruimtes tbody');
+  let netto = 0, bruto = 0;
+  tb.replaceChildren(...pl.ruimtes.map((r) => {
+    const m = ruimteMaten(pl, r, muren);
+    netto += m.netto;
+    bruto += m.bruto;
+    const tr = el('tr', { class: selectie?.id === r.id ? 'gekozen' : '' });
+    tr.append(el('td', {}, r.naam), el('td', {}, RUIMTE_TYPES[r.type].label), el('td', { class: 'num' }, getal(m.netto, 1)));
+    tr.addEventListener('click', () => { selectie = { soort: 'ruimte', id: r.id }; render(); toonEigenschappen(); });
+    return tr;
+  }));
+  $('#pl-totaal').textContent = `${getal(netto, 1)} m² netto · ${getal(bruto, 1)} m² bruto · ${pl.openingen.filter((o) => o.positie).length} ramen en buitendeuren`;
+  const meldingen = controleerPlan(pl);
+  for (const o of pl.openingen) {
+    const p = positieVan(o);
+    if (p) for (const m of resultaat(p).meldingen) meldingen.push({ ernst: m.ernst, melding: `${p.code}: ${m.melding}`, opening: o.id });
+  }
+  meldingen.sort((a, b) => (a.ernst === b.ernst ? 0 : a.ernst === 'fout' ? -1 : 1));
+  $('#pl-meldingen').replaceChildren(...meldingen.map((m) => {
+    const li = el('li', { class: m.ernst }, m.melding);
+    const id = m.opening ?? m.ruimte;
+    if (id) {
+      li.style.cursor = 'pointer';
+      li.addEventListener('click', () => { selectie = { soort: m.opening ? 'opening' : 'ruimte', id }; render(); toonEigenschappen(); });
+    }
+    return li;
+  }));
+  $('#pl-meldingen-leeg').hidden = meldingen.length > 0;
+  const nF = meldingen.filter((m) => m.ernst === 'fout').length;
+  $('#pl-controle-status').textContent = nF ? `${nF} fout${nF === 1 ? '' : 'en'}` : meldingen.length ? `${meldingen.length} aandachtspunt${meldingen.length === 1 ? '' : 'en'}` : 'alles in orde';
+  $('#pl-controle-status').className = `status ${nF ? 'fout' : meldingen.length ? 'let-op' : 'ok'}`;
+  const o = berekenHuidigeOfferte();
+  $('#pl-offerte').textContent = `${eur(o.excl)} excl. btw`;
+  $<HTMLButtonElement>('#pl-ongedaan').disabled = !kanOngedaan();
+}
+
+// ---------- gereedschap ----------
+function kiesGereedschap(g: Gereedschap) {
+  gereedschap = g;
+  voorbeeldOpening = undefined;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === g));
+  $('#pl-hint').textContent = GEREEDSCHAP.find((x) => x.code === g)?.hint ?? '';
+  $('#pl-meubels').hidden = g !== 'meubel';
+  render();
+  toonEigenschappen();
+}
+
+function toonWeergave(w: 'plan' | '3d') {
+  weergave = w;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.plWeergave === w));
+  $('#pl-canvas').hidden = w !== 'plan';
+  $('#pl-3d').hidden = w !== '3d';
+  $('#pl-3d-knoppen').hidden = w !== '3d';
+  $('#pl-hint').hidden = w !== 'plan';
+  if (w === '3d') {
+    if (viewer === undefined) viewer = maak3D($('#pl-3d'));
+    viewer?.formaat();
+    plan3D();
+  }
+}
+
+export function toonPlan(openingId?: string) {
+  if (openingId) selectie = { soort: 'opening', id: openingId };
+  render();
+  toonEigenschappen();
+}
+
+export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarOfferte: () => void }) {
+  naarPositie = nav.naarPositie;
+  naarOfferte = nav.naarOfferte;
+  const lijst = $('#pl-gereedschap');
+  lijst.replaceChildren(...GEREEDSCHAP.map((g) => {
+    const b = el('button', { type: 'button', 'data-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap) });
+    b.append(el('span', {}, g.label));
+    if (g.toets) b.append(el('kbd', {}, g.toets));
+    b.addEventListener('click', () => kiesGereedschap(g.code));
+    return b;
+  }));
+  // Meubelpalet per groep.
+  const palet = $('#pl-meubels');
+  const groepen = [...new Set(Object.values(cat.meubels).map((m) => m.groep))];
+  palet.replaceChildren(...groepen.map((g) => {
+    const d = el('div', { class: 'palet' });
+    d.append(el('p', { class: 'klein' }, g));
+    for (const [code, m] of Object.entries(cat.meubels).filter(([, m]) => m.groep === g)) {
+      const b = el('button', { type: 'button', 'data-meubel': code, 'aria-pressed': String(code === meubelType) }, m.label);
+      b.addEventListener('click', () => {
+        meubelType = code;
+        for (const x of palet.querySelectorAll<HTMLButtonElement>('[data-meubel]')) x.setAttribute('aria-pressed', String(x.dataset.meubel === code));
+        kiesGereedschap('meubel');
+      });
+      d.append(b);
+    }
+    return d;
+  }));
+  const houder = $('#pl-canvas');
+  houder.addEventListener('pointerdown', naPointerDown);
+  houder.addEventListener('pointermove', naPointerMove);
+  houder.addEventListener('pointerup', naPointerUp);
+  houder.addEventListener('pointerleave', () => { if (voorbeeldOpening) { voorbeeldOpening = undefined; render(); } });
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | '3d'));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.plStandpunt as 'schuin'));
+  $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => { laag = (e.target as HTMLInputElement).checked; plan3D(); });
+  $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
+  $('#pl-ongedaan').addEventListener('click', () => ongedaan());
+  $('#pl-voorbeeld').addEventListener('click', () => { selectie = undefined; vervang(voorbeeldToestand()); });
+  $('#pl-leeg').addEventListener('click', () => { selectie = undefined; vervang(legeToestand()); kiesGereedschap('ruimte'); });
+  $('#pl-naarofferte').addEventListener('click', () => naarOfferte());
+
+  document.addEventListener('keydown', (ev) => {
+    if ($('#view-plan').hidden) return;
+    const doel = ev.target as HTMLElement;
+    if (doel.closest('input, select, textarea')) return;
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') { ev.preventDefault(); ongedaan(); return; }
+    if (ev.key === 'Delete' || ev.key === 'Backspace') { if (selectie) { ev.preventDefault(); verwijderSelectie(); } return; }
+    if (ev.key === 'Escape') { selectie = undefined; kiesGereedschap('kies'); return; }
+    if (ev.key.toLowerCase() === 'q') { draaiMeubel(); return; }
+    const sneltoets = GEREEDSCHAP.find((g) => g.toets && g.toets.toLowerCase() === ev.key.toLowerCase());
+    if (sneltoets && !ev.ctrlKey && !ev.metaKey) { kiesGereedschap(sneltoets.code); return; }
+    // Pijltjes: selectie 5 cm verschuiven (met Shift 1 cm).
+    const stap = ev.shiftKey ? 1 : 5;
+    const d: Record<string, [number, number]> = { ArrowLeft: [-stap, 0], ArrowRight: [stap, 0], ArrowUp: [0, -stap], ArrowDown: [0, stap] };
+    const v = d[ev.key];
+    if (v && selectie) {
+      ev.preventDefault();
+      const s = selectie;
+      wijzig('plan', (t) => {
+        if (s.soort === 'meubel') { const m = t.plan.meubels.find((x) => x.id === s.id); if (m) { m.x += v[0]; m.y += v[1]; } }
+        if (s.soort === 'opening') { const o = t.plan.openingen.find((x) => x.id === s.id); if (o) o.midden += o.as === 'h' ? v[0] : v[1]; }
+      });
+    }
+  });
+  kiesGereedschap('kies');
+}
+
+/** Wordt opgeroepen na elke wijziging in de toestand. */
+export function naWijziging() {
+  render();
+  if (!sleep) toonEigenschappen();
+  else toonOverzicht();
+}

@@ -8,7 +8,12 @@
 import type { Materiaal } from './materialen.js';
 import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
-export type BlokSoort = 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken';
+export type BlokSoort =
+  | 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken'
+  | 'tegel' | 'parket' | 'kunststof' | 'matglas';
+
+/** Zijde van een blok (balk), voor een ander materiaal op één zijvlak (bv. baksteen buiten, verf binnen). */
+export type BlokZijde = 'x+' | 'x-' | 'z+' | 'z-' | 'y+';
 
 export interface Blok {
   code: string;
@@ -31,6 +36,8 @@ export interface Blok {
   taps?: number;
   /** Achterover hellen (rug): graden en de richting naar achter in het grondvlak. */
   kantel?: { graden: number; richting: 'x+' | 'x-' | 'z+' | 'z-' };
+  /** Ander materiaal per zijvlak (alleen voor rechte balken). */
+  zijden?: Partial<Record<BlokZijde, { soort: BlokSoort; kleur: string }>>;
 }
 
 export interface Scene3D {
@@ -306,3 +313,50 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
 
 /** Handig voor tests: de blokken van één element. */
 export const blokkenVan = (s: Scene3D, e: Pick<OntwerpElement, 'id'>) => s.blokken.filter((b) => b.code.startsWith(`${e.id}.`));
+
+/**
+ * Verplaatst en draait blokken (in stappen van 90° rond de verticale as, met de klok mee
+ * gezien van boven, met z naar voor). Handig om een raam of meubel in een plattegrond te zetten.
+ */
+export function plaatsBlokken(blokken: Blok[], plaats: { x: number; y?: number; z: number; draai?: 0 | 90 | 180 | 270 }): Blok[] {
+  const d = plaats.draai ?? 0;
+  const draaiVector = (vx: number, vz: number): [number, number] =>
+    d === 90 ? [-vz, vx] : d === 180 ? [-vx, -vz] : d === 270 ? [vz, -vx] : [vx, vz];
+  const richting = (r: 'x+' | 'x-' | 'z+' | 'z-'): 'x+' | 'x-' | 'z+' | 'z-' => {
+    const v: Record<string, [number, number]> = { 'x+': [1, 0], 'x-': [-1, 0], 'z+': [0, 1], 'z-': [0, -1] };
+    const [a, c] = draaiVector(...v[r]!);
+    return a > 0.5 ? 'x+' : a < -0.5 ? 'x-' : c > 0.5 ? 'z+' : 'z-';
+  };
+  return blokken.map((b) => {
+    const hoeken = [draaiVector(b.x, b.z), draaiVector(b.x + b.b, b.z + b.d)];
+    const x = Math.min(hoeken[0]![0], hoeken[1]![0]), z = Math.min(hoeken[0]![1], hoeken[1]![1]);
+    const wissel = d === 90 || d === 270;
+    const n: Blok = {
+      ...b,
+      x: r2(x + plaats.x),
+      y: r2(b.y + (plaats.y ?? 0)),
+      z: r2(z + plaats.z),
+      b: wissel ? b.d : b.b,
+      d: wissel ? b.b : b.d,
+    };
+    if (wissel && b.as && b.as !== 'y') n.as = b.as === 'x' ? 'z' : 'x';
+    if (b.kantel) n.kantel = { ...b.kantel, richting: richting(b.kantel.richting) };
+    if (b.zijden) {
+      n.zijden = {};
+      for (const [k, w] of Object.entries(b.zijden)) n.zijden[k === 'y+' ? 'y+' : richting(k as 'x+')] = w;
+    }
+    return n;
+  });
+}
+
+/** Omsluitend kader van een lijst blokken. */
+export function kaderVan(blokken: Blok[]): Scene3D['kader'] {
+  if (!blokken.length) return { x: 0, z: 0, b: 100, d: 100, h: 100 };
+  const x = Math.min(...blokken.map((b) => b.x)), z = Math.min(...blokken.map((b) => b.z));
+  return {
+    x, z,
+    b: Math.max(...blokken.map((b) => b.x + b.b)) - x,
+    d: Math.max(...blokken.map((b) => b.z + b.d)) - z,
+    h: Math.max(...blokken.map((b) => b.y + b.h)),
+  };
+}

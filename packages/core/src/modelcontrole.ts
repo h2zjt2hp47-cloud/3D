@@ -98,7 +98,7 @@ export function controleerModel(model: ProductModel): ModelProbleem[] {
     // Binnen een vorm mag ook het volgnummer `i` gebruikt worden.
     bekend.add('i');
     for (const v of model.tekening.vormen)
-      for (const veld of ['x', 'y', 'breedte', 'hoogte', 'vulling', 'afronding', 'label'] as const)
+      for (const veld of ['x', 'y', 'breedte', 'hoogte', 'vulling', 'afronding', 'label', 'symbool'] as const)
         check(`vorm ${v.code} (${veld})`, v[veld]);
   }
   return problemen;

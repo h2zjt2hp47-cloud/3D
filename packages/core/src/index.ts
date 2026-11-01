@@ -43,5 +43,8 @@ export {
   type Tekenstijl,
 } from './ontwerp.js';
 export { tekenVooraanzicht } from './vooraanzicht.js';
-export { bouw3D, blokkenVan, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
+export { bouw3D, blokkenVan, kaderVan, plaatsBlokken, type Blok, type BlokSoort, type BlokZijde, type Scene3D } from './ruimtelijk.js';
 export { controleerCatalogus, maakCode, tekenstijlen } from './catalogus.js';
+export * from './plattegrond.js';
+export * from './plattegrondsvg.js';
+export * from './offerte.js';

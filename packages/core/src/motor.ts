@@ -261,6 +261,7 @@ function bouwTekening(model: ProductModel, g: Gegevens): TekeningResultaat {
         vulling: v.vulling === undefined ? undefined : String(evalueer(v.vulling, gi) ?? ''),
         afronding: v.afronding === undefined ? undefined : evalueerGetal(v.afronding, gi),
         label: v.label === undefined ? undefined : String(evalueer(v.label, gi) ?? ''),
+        symbool: v.symbool === undefined ? undefined : String(evalueer(v.symbool, gi) ?? ''),
       });
     }
   }

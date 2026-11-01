@@ -189,6 +189,13 @@ export interface Vorm {
   afronding?: Formule;
   /** Tekst in het midden van de vorm. */
   label?: Formule;
+  /**
+   * Openingssymbool van een raam- of deurvak (zicht van binnen), getekend als lijnen in de vorm.
+   * Waarden: vast, draai_l, draai_r (scharnieren links/rechts), draaikip_l, draaikip_r, kip,
+   * schuif_l, schuif_r (schuift naar links/rechts), uitzet (scharnieren boven).
+   * De punt van de driehoek wijst naar de scharnierzijde.
+   */
+  symbool?: Formule;
 }
 
 /** Een maatlijn van punt 1 naar punt 2, verschoven over `afstand` (links van de richting 1 → 2). */
@@ -318,6 +325,8 @@ export interface VormResultaat {
   lijn?: string;
   /** Lijndikte als factor van de standaarddikte (bv. 2 voor een bies). */
   lijndikte?: number;
+  /** Openingssymbool (zie Vorm.symbool). */
+  symbool?: string;
 }
 
 export interface MaatlijnResultaat {

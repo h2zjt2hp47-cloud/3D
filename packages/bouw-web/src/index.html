@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Configurator ramen, deuren &amp; aanbouw</title>
+<title>Configurator ramen, deuren &amp; woning</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
@@ -32,6 +32,7 @@
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; }
 body { background: var(--achtergrond); color: var(--inkt); font: 15px/1.5 var(--tekst); }
 h1, h2, h3 { font-family: var(--display); font-weight: 500; text-wrap: balance; margin: 0; }
@@ -135,87 +136,347 @@ td.code { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--z
 footer { text-align: center; color: var(--zacht); font-size: .8rem; padding: 0 16px 32px; max-width: 80ch; margin: 0 auto; }
 .foutmelding { margin: 16px clamp(16px, 3vw, 32px) 0; padding: 12px 14px; border: 1px solid var(--fout); border-radius: 8px; color: var(--fout); background: color-mix(in srgb, var(--fout) 8%, var(--vlak)); }
 .foutmelding p { margin: 4px 0 0; font-family: ui-monospace, monospace; font-size: .8rem; }
+
+/* ---------- navigatie ---------- */
+.nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.nav button { border: 1px solid var(--lijn); background: transparent; border-radius: 6px; padding: 7px 14px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.nav button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+.nav .teller { font-size: .75rem; background: var(--accent-zacht); color: var(--accent); border-radius: 999px; padding: 0 7px; }
+main.view { display: block; max-width: 1500px; margin: 0 auto; padding: 20px clamp(12px, 2.5vw, 28px) 48px; }
+button.gevaar { border: 1px solid var(--fout); color: var(--fout); background: transparent; border-radius: 6px; padding: 5px 11px; cursor: pointer; font-size: .9rem; }
+button:disabled { opacity: .45; cursor: default; }
+select, input[type="text"], input[type="date"], .eig input, .maatveld input { font: inherit; color: inherit; padding: 6px 8px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); }
+.status.let-op { color: var(--let-op); background: color-mix(in srgb, var(--let-op) 14%, transparent); }
+
+/* ---------- plattegrond ---------- */
+.planraster { display: grid; grid-template-columns: 230px minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+@media (max-width: 1200px) { .planraster { grid-template-columns: 210px minmax(0, 1fr); } .planraster > .rechts { grid-column: 1 / -1; } }
+@media (max-width: 760px) {
+  .planraster { grid-template-columns: minmax(0, 1fr); }
+  .gereedschap { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .gereedschap button { padding: 6px 8px; font-size: .82rem; }
+  .gereedschap kbd { display: none; }
+  header h1 { font-size: 1.25rem; }
+  .nav button { padding: 6px 10px; font-size: .9rem; }
+}
+.gereedschap { display: grid; gap: 4px; }
+.gereedschap button, .palet button { display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; padding: 7px 10px; cursor: pointer; font-size: .9rem; }
+.gereedschap button[aria-pressed="true"], .palet button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+kbd { font: 600 .7rem ui-monospace, monospace; border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; opacity: .7; }
+.palet { display: grid; gap: 4px; margin-top: 8px; }
+.palet button { font-size: .85rem; padding: 5px 9px; }
+#pl-canvas { background: #f7f7f4; border-radius: 6px; border: 1px solid var(--lijn); touch-action: none; user-select: none; }
+#pl-canvas svg { display: block; width: 100%; height: auto; max-height: 72vh; }
+#pl-canvas[data-gereedschap="ruimte"], #pl-canvas[data-gereedschap="meubel"], #pl-canvas[data-gereedschap^="wand"] { cursor: crosshair; }
+#pl-canvas[data-gereedschap="raam"], #pl-canvas[data-gereedschap="buitendeur"], #pl-canvas[data-gereedschap="schuifraam"], #pl-canvas[data-gereedschap="binnendeur"], #pl-canvas[data-gereedschap="doorgang"] { cursor: copy; }
+.hint { font-size: .85rem; color: var(--zacht); margin: 8px 0 0; }
+.melding { background: color-mix(in srgb, var(--let-op) 14%, transparent); border-left: 3px solid var(--let-op); padding: 6px 10px; border-radius: 4px; font-size: .88rem; margin: 0 0 10px; }
+.eig { display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; font-size: .9rem; }
+.eig span { color: var(--zacht); }
+.eig select, .eig input[type="text"] { width: 100%; min-width: 0; }
+.eig input[type="color"] { width: 48px; height: 32px; padding: 2px; }
+.maten { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.maatveld { display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; font-size: .85rem; align-items: center; }
+.maatveld > span:first-child { grid-column: 1 / -1; color: var(--zacht); }
+.maatveld input { width: 100%; text-align: right; }
+.gekoppeld { border: 1px solid var(--lijn); border-radius: 8px; padding: 10px 12px; margin: 10px 0; background: var(--achtergrond); display: grid; gap: 4px; }
+.gekoppeld p { margin: 0; }
+.gekoppeld button { margin-top: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 10px; cursor: pointer; text-align: left; }
+.kleinmelding { font-size: .8rem; padding-left: 8px; border-left: 3px solid; }
+.kleinmelding.fout { border-color: var(--fout); } .kleinmelding.waarschuwing { border-color: var(--let-op); }
+.rechts { display: grid; gap: 16px; }
+.links { display: grid; gap: 16px; }
+.kaart h3 { font-family: var(--tekst); font-size: 1rem; font-weight: 600; margin: 0 0 10px; }
+#pl-ruimtes tr { cursor: pointer; }
+#pl-ruimtes tr.gekozen td { background: var(--accent-zacht); }
+.schakelaars { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .9rem; }
+.schakelaars label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.meldingen.scroll { max-height: 280px; overflow: auto; }
+
+/* ---------- offerte ---------- */
+.offerteraster { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .offerteraster { grid-template-columns: minmax(0, 1fr); } }
+.velden { display: grid; gap: 8px; }
+.velden label { display: grid; gap: 3px; font-size: .85rem; color: var(--zacht); }
+.velden input { width: 100%; }
+.keuzerij { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .9rem; margin: 6px 0; }
+.keuzerij label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.positie { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--lijn); }
+.positie.ongeldig { background: color-mix(in srgb, var(--fout) 5%, transparent); }
+@media (max-width: 700px) { .positie { grid-template-columns: 90px minmax(0, 1fr); } .positieprijs { grid-column: 1 / -1; } }
+.positie .mini { background: var(--papier); border-radius: 6px; padding: 4px; display: grid; place-items: center; }
+.positie .mini svg { max-width: 100%; height: auto; max-height: 150px; }
+.positiekop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.positiekop .code { font: 600 .8rem var(--tekst); background: var(--accent); color: var(--vlak); border-radius: 999px; padding: 1px 9px; }
+.positiekop .label { font-size: .75rem; color: var(--zacht); border: 1px solid var(--lijn); border-radius: 999px; padding: 0 8px; }
+.positie p { margin: 4px 0 8px; }
+.positieacties { display: flex; flex-wrap: wrap; gap: 6px; }
+.positieacties button:not(.tweede):not(.gevaar) { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 5px 11px; cursor: pointer; font-size: .9rem; }
+.positieprijs { display: grid; justify-items: end; gap: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.positieprijs strong { font-size: 1.1rem; }
+.aantal { display: inline-flex; gap: 6px; align-items: center; font-size: .85rem; color: var(--zacht); }
+.aantal input { width: 60px; text-align: right; padding: 4px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); }
+.nieuw { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+tr.groep th { padding-top: 12px; color: var(--inkt); font-family: var(--display); font-weight: 500; font-size: 1rem; }
+dl.totaal { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: .95rem; margin: 0; }
+dl.totaal dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+dl.totaal .sterk { font-weight: 600; border-top: 1px solid var(--lijn); padding-top: 6px; }
+dl.totaal .groot { font-family: var(--display); font-size: 1.6rem; }
+details { border-bottom: 1px solid var(--lijn); padding: 6px 0; }
+summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
+
+/* ---------- positie ---------- */
+.positiebalk { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 16px; }
+.positiebalk select { max-width: 340px; }
+.positiebalk input[type="text"] { min-width: 220px; }
+.positiebalk input[type="number"] { width: 70px; }
+.positieraster { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.2fr); gap: 24px; }
+@media (max-width: 900px) { .positieraster { grid-template-columns: minmax(0, 1fr); } }
+.reden { font-size: .75rem; color: var(--zacht); width: 100%; }
+.reden:empty { display: none; }
+.tegel.onbeschikbaar { opacity: .55; }
+.symbool { width: 16px; height: 21px; flex: none; color: var(--accent); }
+
+/* ---------- afdruk ---------- */
+#afdruk { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff; color: #111; font-size: 10pt; }
+  body > *:not(#afdruk) { display: none !important; }
+  #afdruk { display: block; }
+  #afdruk h1 { font-size: 20pt; margin: 4px 0; }
+  #afdruk h2 { break-after: avoid; font-size: 13pt; margin: 16px 0 6px; border-bottom: 1px solid #999; padding-bottom: 3px; }
+  #afdruk h3 { font-size: 11pt; margin: 0 0 4px; font-family: var(--tekst); font-weight: 600; }
+  .a-kop { display: flex; justify-content: space-between; gap: 20px; }
+  .a-firma { font-size: 9pt; color: #555; letter-spacing: .05em; text-transform: uppercase; }
+  .a-klant { text-align: right; }
+  .a-plan svg { width: 100%; height: auto; max-height: 120mm; }
+  .a-positie { display: grid; grid-template-columns: 62mm 1fr 32mm; gap: 6mm; padding: 4mm 0; border-bottom: 1px solid #ccc; break-inside: avoid; }
+  .a-tekening svg { width: 100%; height: auto; max-height: 70mm; }
+  .a-positie ul { columns: 2; margin: 4px 0; padding-left: 14px; font-size: 8.5pt; }
+  .a-prijs { text-align: right; }
+  .a-klein { font-size: 8.5pt; color: #444; }
+  #afdruk table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  #afdruk td { padding: 3px 4px; border-bottom: 1px solid #ddd; white-space: normal; }
+  .a-totaal { width: 60% !important; margin: 10px 0 0 auto; font-size: 10.5pt !important; }
+  .a-totaal .sterk td { font-weight: 700; border-top: 2px solid #111; }
+  .a-handtekening { display: grid; grid-template-columns: 1fr 1fr; gap: 20mm; margin-top: 12mm; }
+}
 </style>
 </head>
 <body>
 <header>
   <div>
-    <h1>Ramen, deuren &amp; aanbouw<span class="demo">demoprijzen</span></h1>
-    <p>Configureren, controleren en prijzen in één scherm, met vooraanzicht en 3D.</p>
+    <h1>Ramen, deuren &amp; woning<span class="demo">demoprijzen</span></h1>
+    <p>Teken de woning, plaats ramen en deuren, configureer en maak de offerte.</p>
   </div>
-  <div class="klant" role="group" aria-label="Klant">
-    <label><input type="radio" name="klant" value="particulier" checked> Particulier</label>
-    <label><input type="radio" name="klant" value="aannemer"> Aannemer / architect</label>
-    <label for="korting">korting <input type="number" id="korting" value="10" min="0" max="50" step="1" disabled> %</label>
-  </div>
+  <nav class="nav" aria-label="Onderdelen">
+    <button type="button" data-weergave="plan" aria-pressed="true">1 · Plattegrond</button>
+    <button type="button" data-weergave="positie" aria-pressed="false">2 · Configurator</button>
+    <button type="button" data-weergave="offerte" aria-pressed="false">3 · Offerte <span class="teller" id="nav-aantal">0</span></button>
+  </nav>
 </header>
 <noscript><p class="foutmelding">Deze pagina heeft JavaScript nodig. Open het bestand in een browser (Safari, Chrome, Edge), niet in een voorbeeldweergave.</p></noscript>
 <div id="foutmelding" class="foutmelding" role="alert" hidden><strong>Er liep iets mis in deze pagina.</strong> Stuur deze melding door (en zeg in welke browser je ze opende):</div>
 
-<main>
-  <form id="formulier" aria-label="Configuratie" onsubmit="return false"></form>
-  <aside class="resultaat" aria-label="Resultaat">
+<main id="view-plan" class="view">
+  <div class="planraster">
+    <aside class="links">
+      <section class="kaart">
+        <h3>Gereedschap</h3>
+        <div id="pl-gereedschap" class="gereedschap" role="group" aria-label="Gereedschap"></div>
+        <div id="pl-meubels" hidden></div>
+      </section>
+      <section class="kaart">
+        <div class="knoppenrij" style="margin-top:0">
+          <button type="button" id="pl-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button>
+          <button type="button" id="pl-voorbeeld" class="tweede">Voorbeeldwoning</button>
+          <button type="button" id="pl-leeg" class="gevaar">Leeg plan</button>
+        </div>
+        <p class="klein">Delete = verwijderen · Q = meubel draaien · pijltjes = verschuiven · Esc = selecteren</p>
+      </section>
+    </aside>
     <section class="kaart">
       <div class="kaartkop">
-        <h2 id="weergave-titel">Vooraanzicht</h2>
+        <h2>Plattegrond</h2>
         <div class="tabs" role="group" aria-label="Weergave">
-          <button type="button" data-weergave="voor" aria-pressed="true">Vooraanzicht</button>
-          <button type="button" data-weergave="3d" aria-pressed="false">3D</button>
+          <button type="button" data-pl-weergave="plan" aria-pressed="true">Plattegrond</button>
+          <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
         </div>
       </div>
-      <div class="tekening" id="tekening"></div>
-      <div class="drie-d" id="drie-d" hidden></div>
-      <div class="knoppenrij" id="drie-d-knoppen" hidden>
-        <button type="button" data-standpunt="schuin">Schuin</button>
-        <button type="button" data-standpunt="voor">Voor</button>
-        <button type="button" data-standpunt="zij">Zij</button>
-        <button type="button" data-standpunt="boven">Boven</button>
-        <span class="klein">slepen = draaien · scrollen of knijpen = zoomen</span>
+      <div id="pl-canvas" role="application" aria-label="Plattegrond: teken ruimtes, plaats ramen, deuren en meubels"></div>
+      <p id="pl-hint" class="hint"></p>
+      <div class="drie-d" id="pl-3d" hidden></div>
+      <div id="pl-3d-knoppen" hidden>
+        <div class="knoppenrij">
+          <button type="button" data-pl-standpunt="schuin">Schuin</button>
+          <button type="button" data-pl-standpunt="voor">Voorgevel</button>
+          <button type="button" data-pl-standpunt="achter">Achtergevel</button>
+          <button type="button" data-pl-standpunt="zij">Zij</button>
+          <button type="button" data-pl-standpunt="boven">Boven</button>
+        </div>
+        <div class="schakelaars" style="margin-top:8px">
+          <label><input type="checkbox" id="pl-laag"> Muren laag (binnenkijken)</label>
+          <label><input type="checkbox" id="pl-toon-meubels" checked> Meubels tonen</label>
+          <span class="klein">slepen = draaien · scrollen of knijpen = zoomen</span>
+        </div>
       </div>
     </section>
-
-    <section class="kaart" aria-live="polite">
-      <div class="kaartkop"><h2>Controles</h2><span id="controle-status" class="status ok"></span></div>
-      <ul id="controles" class="controles"></ul>
-    </section>
-
-    <section class="kaart" aria-live="polite">
-      <div class="kaartkop"><h2>Prijs</h2><span id="status" class="status ok"></span></div>
-      <div class="prijs"><span id="prijs-excl" class="grote-prijs">€ 0,00</span><span id="prijs-incl"></span></div>
-      <dl id="prijsdetail" class="detail"></dl>
-      <ul id="meldingen" class="meldingen" hidden></ul>
-      <div class="acties">
-        <button type="button" id="kopieer">Kopieer offertetekst</button>
-        <button type="button" id="herstel" class="tweede">Standaardkeuzes</button>
-        <span id="kopieer-melding" class="klein" role="status"></span>
-      </div>
-    </section>
-
-    <section class="kaart">
-      <div class="kaartkop"><h2>Technische gegevens</h2><span class="klein">voor offerte en bestelling</span></div>
-      <dl id="techniek" class="detail"></dl>
-    </section>
-
-    <section class="kaart">
-      <div class="kaartkop"><h2>Wat zit erin</h2><span class="klein">vermijdt discussie over meerwerk</span></div>
-      <div class="twee">
-        <div><h3>Inbegrepen</h3><ul id="inbegrepen"></ul></div>
-        <div><h3>Niet inbegrepen</h3><ul id="niet-inbegrepen"></ul></div>
-      </div>
-    </section>
-
-    <section class="kaart">
-      <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">maten in mm</span></div>
-      <div class="tabelhouder">
-        <table id="stuklijst">
-          <thead><tr><th>Omschrijving</th><th>Artikel</th><th class="num">Aantal</th><th class="num">Maat</th><th class="num">Hoeveelheid</th><th class="num">Kost</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-  </aside>
+    <aside class="rechts">
+      <section class="kaart" id="pl-eigenschappen" aria-live="polite"></section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Controles</h2><span id="pl-controle-status" class="status ok"></span></div>
+        <ul id="pl-meldingen" class="meldingen scroll"></ul>
+        <p id="pl-meldingen-leeg" class="klein">Geen opmerkingen.</p>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Ruimtes</h2></div>
+        <div class="tabelhouder"><table id="pl-ruimtes"><thead><tr><th>Ruimte</th><th>Soort</th><th class="num">m²</th></tr></thead><tbody></tbody></table></div>
+        <p id="pl-totaal" class="klein"></p>
+        <div class="acties"><button type="button" id="pl-naarofferte">Naar offerte</button><span id="pl-offerte" class="klein"></span></div>
+      </section>
+    </aside>
+  </div>
 </main>
-<footer>Demo. Prijzen, gewichten, U-waarden en systeemgrenzen zijn voorbeelden. De controles op veiligheidsglas, EPB en vergunning zijn signalen voor de verkoper en vervangen het advies van architect, EPB-verslaggever of stabiliteitsingenieur niet.</footer>
+
+<main id="view-positie" class="view" hidden>
+  <p id="p-leeg" class="klein" hidden>Er zijn nog geen posities. Plaats een raam in de plattegrond of voeg er een toe in de offerte.</p>
+  <div id="p-inhoud">
+    <div class="positiebalk">
+      <button type="button" id="p-terug" class="tweede">← Offerte</button>
+      <label class="klein">Positie <select id="p-kies"></select></label>
+      <label class="klein">Naam <input type="text" id="p-naam"></label>
+      <label class="klein">Aantal <input type="number" id="p-aantal" min="1" step="1"></label>
+      <span id="p-model" class="klein"></span>
+      <button type="button" id="p-naarplan" class="tweede">Toon in plattegrond</button>
+    </div>
+    <div class="positieraster">
+      <form id="p-formulier" aria-label="Configuratie" onsubmit="return false" style="display:grid;gap:16px;align-content:start"></form>
+      <aside class="resultaat" aria-label="Resultaat">
+        <section class="kaart">
+          <div class="kaartkop">
+            <h2>Vooraanzicht</h2>
+            <div class="tabs" role="group" aria-label="Weergave">
+              <button type="button" data-p-weergave="voor" aria-pressed="true">Vooraanzicht</button>
+              <button type="button" data-p-weergave="3d" aria-pressed="false">3D</button>
+            </div>
+          </div>
+          <div class="tekening" id="p-tekening"></div>
+          <div class="drie-d" id="p-3d" hidden></div>
+          <div class="knoppenrij" id="p-3d-knoppen" hidden>
+            <button type="button" data-p-standpunt="schuin">Binnen</button>
+            <button type="button" data-p-standpunt="achter">Buiten</button>
+            <button type="button" data-p-standpunt="voor">Recht</button>
+            <button type="button" data-p-standpunt="boven">Boven</button>
+          </div>
+        </section>
+        <section class="kaart" aria-live="polite">
+          <div class="kaartkop"><h2>Controles</h2><span id="p-controle-status" class="status ok"></span></div>
+          <ul id="p-controles" class="controles"></ul>
+        </section>
+        <section class="kaart" aria-live="polite">
+          <div class="kaartkop"><h2>Prijs</h2><span id="p-status" class="status ok"></span></div>
+          <div class="prijs"><span id="p-prijs" class="grote-prijs">€ 0,00</span><span id="p-prijs-sub" class="klein"></span></div>
+          <dl id="p-prijsdetail" class="detail"></dl>
+          <ul id="p-meldingen" class="meldingen" hidden></ul>
+          <div class="acties"><button type="button" id="p-kopieer">Kopieer tekst</button><span id="p-kopieer-melding" class="klein" role="status"></span></div>
+        </section>
+        <section class="kaart">
+          <div class="kaartkop"><h2>Technische gegevens</h2></div>
+          <dl id="p-techniek" class="detail"></dl>
+        </section>
+        <section class="kaart">
+          <div class="kaartkop"><h2>Wat zit erin</h2><span class="klein">vermijdt discussie over meerwerk</span></div>
+          <div class="twee"><div><h3>Inbegrepen</h3><ul id="p-inbegrepen"></ul></div><div><h3>Niet inbegrepen</h3><ul id="p-niet"></ul></div></div>
+        </section>
+        <section class="kaart">
+          <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">maten in mm</span></div>
+          <div class="tabelhouder"><table id="p-stuklijst"><thead><tr><th>Omschrijving</th><th>Artikel</th><th class="num">Aantal</th><th class="num">Maat</th><th class="num">Hoeveelheid</th><th class="num">Kost</th></tr></thead><tbody></tbody></table></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<main id="view-offerte" class="view" hidden>
+  <div class="offerteraster">
+    <aside class="links">
+      <section class="kaart">
+        <h3>Klant en project</h3>
+        <div class="velden">
+          <label>Klant <input type="text" id="o-klant"></label>
+          <label>Adres <input type="text" id="o-adres"></label>
+          <label>Project <input type="text" id="o-project"></label>
+          <label>Offertenummer <input type="text" id="o-nummer"></label>
+          <label>Datum <input type="date" id="o-datum"></label>
+        </div>
+      </section>
+      <section class="kaart">
+        <h3>Btw en klant</h3>
+        <div class="keuzerij" role="radiogroup" aria-label="Btw">
+          <label><input type="radio" name="o-btw" id="o-btw-21"> 21 %</label>
+          <label><input type="radio" name="o-btw" id="o-btw-6"> 6 % (renovatie)</label>
+        </div>
+        <div class="keuzerij" role="radiogroup" aria-label="Klant">
+          <label><input type="radio" name="o-klanttype" id="o-klanttype-particulier"> Particulier</label>
+          <label><input type="radio" name="o-klanttype" id="o-klanttype-aannemer"> Aannemer</label>
+          <label>korting <input type="number" id="o-korting" min="0" max="50" step="1" style="width:60px"> %</label>
+        </div>
+      </section>
+      <section class="kaart">
+        <h3>Uit de plattegrond</h3>
+        <div class="schakelaars" style="display:grid;gap:6px">
+          <label><input type="checkbox" id="o-regel-vloeren"> Vloeren (m² per materiaal)</label>
+          <label><input type="checkbox" id="o-regel-wanden"> Wandafwerking (verf, tegels)</label>
+          <label><input type="checkbox" id="o-regel-binnendeuren"> Binnendeuren en doorgangen</label>
+          <label><input type="checkbox" id="o-regel-ruwbouw"> Ruwbouw muren</label>
+          <label><input type="checkbox" id="o-regel-inrichting"> Inrichting (richtprijs)</label>
+        </div>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">per leverancier</span></div>
+        <div id="o-bestellijst"></div>
+      </section>
+    </aside>
+    <div class="links">
+      <section class="kaart">
+        <div class="kaartkop"><h2>Posities</h2><span id="o-status" class="status ok"></span></div>
+        <div id="o-posities"></div>
+        <p id="o-leeg" class="klein" hidden>Nog geen posities. Plaats ramen en deuren in de plattegrond of voeg ze hier toe.</p>
+        <div class="nieuw">
+          <button type="button" class="tweede" data-nieuw="raam">+ Raam</button>
+          <button type="button" class="tweede" data-nieuw="terrasdeur">+ Terrasdeur</button>
+          <button type="button" class="tweede" data-nieuw="voordeur">+ Voordeur</button>
+          <button type="button" class="tweede" data-nieuw="schuif">+ Schuifraam</button>
+          <button type="button" class="tweede" data-nieuw="aanbouw">+ Aanbouw</button>
+        </div>
+      </section>
+      <section class="kaart" id="o-regels-kaart">
+        <div class="kaartkop"><h2>Afwerking uit de plattegrond</h2></div>
+        <div class="tabelhouder"><table id="o-regels"><thead><tr><th>Omschrijving</th><th class="num">Hoeveelheid</th><th class="num">Prijs</th><th class="num">Totaal</th></tr></thead><tbody></tbody></table></div>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Totaal</h2></div>
+        <dl id="o-totalen" class="totaal"></dl>
+        <div class="acties">
+          <button type="button" id="o-afdruk">Afdrukken / PDF</button>
+          <button type="button" id="o-kopieer" class="tweede">Kopieer offertetekst</button>
+          <button type="button" id="o-export" class="tweede">Export voor ERP (JSON)</button>
+          <span id="o-melding" class="klein" role="status"></span>
+        </div>
+        <h3 style="margin-top:16px">Intern</h3>
+        <dl id="o-intern" class="detail"></dl>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Controles</h2></div>
+        <ul id="o-meldingen" class="meldingen scroll"></ul>
+        <p id="o-meldingen-leeg" class="klein">Geen opmerkingen.</p>
+      </section>
+    </div>
+  </div>
+</main>
+<div id="afdruk"></div>
+<footer>Demo. Prijzen, gewichten, U-waarden en systeemgrenzen zijn voorbeelden. De controles op veiligheidsglas, EPB, daglicht en vergunning zijn signalen voor de verkoper en vervangen het advies van architect, EPB-verslaggever of stabiliteitsingenieur niet.</footer>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>/*BUNDEL*/</script>
 </body>

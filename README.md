@@ -26,6 +26,10 @@ packages/
       ontwerp.ts        berekenOntwerp(): vrij zetelontwerp uit elementen (prijs, stof, overlap, opties, tekening)
       vooraanzicht.ts   tekenVooraanzicht(): poten, zithoogte, rug, armvormen, bies, houten delen
       ruimtelijk.ts     bouw3D(): 3D-blokken van het ontwerp (gerenderd met three.js in de demo)
+      plattegrond.ts    Plattegrond: ruimtes → muren (buiten/binnen), openingen, meubels, oppervlaktes,
+                        controles (bereikbaarheid, daglicht), 3D van de woning
+      plattegrondsvg.ts Tekening van de plattegrond (deurbogen, raamvakken, maten)
+      offerte.ts        Offerte met meerdere posities, vrije regels, korting en btw
     voorbeelden/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
       sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
@@ -38,6 +42,11 @@ packages/
       aanbouw.ts        Bouwsector: aanbouw met schuifraam of enkel de raampartij (inmeting, systeemgrenzen,
                         vleugelgewicht, veiligheidsglas, Uw, btw 6/21 %, bestellijst, vooraanzicht)
       aanbouw3d.ts      3D-opbouw van de aanbouw (baksteen, houten planken, glas, dak)
+      raam.ts           Raam, terrasdeur, voordeur of schuifraam: vakken met draairichting, bovenlicht, zonwering,
+                        rooster, RC2, vensterbank; controles veiligheidsglas, ventilatie, privacy, Uw
+      raam3d.ts         3D van een raam of deur (ook in de plattegrond gebruikt)
+      inrichting.ts     Vloeren, wanden, binnendeuren, meubels en de offerteregels uit een plattegrond
+      woning.ts         Voorbeeldwoning met 9 ruimtes, 10 ramen/deuren, binnendeuren en inrichting
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
@@ -50,8 +59,8 @@ packages/
                           ontwerpmodus: vorm van elk element (rugdikte, kussens, zachtheid,
                           rugvorm, houten frame)
                         - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
-  bouw-web/             Aparte demo voor de bouwsector (ramen, deuren, aanbouw): formulier, controles,
-                        prijs met btw-regime, inbegrepen/niet inbegrepen, bestellijst, vooraanzicht en 3D
+  bouw-web/             Aparte demo voor de bouwsector: plattegrond tekenen (ruimtes, ramen, deuren, meubels),
+                        positie configureren (draairichting, zonwering …) en offerte (PDF, bestellijst, export)
 ```
 
 Later volgen: het echte configuratiescherm met beheer, een server (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.
