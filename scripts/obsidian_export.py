@@ -29,6 +29,7 @@ NOTITIES = {
     'docs/onderzoek-bouw-ramen-deuren.md': ('Onderzoek bouw - pijnpunten ramen en deuren', ['configurator', 'bouw', 'onderzoek'], BOUW),
     'docs/analyse-bouw-woning-demo.md': ('Analyse bouw - woningconfigurator', ['configurator', 'bouw', 'analyse'], BOUW),
     'docs/begrippen-bouw.md': ('Begrippenlijst bouw', ['configurator', 'bouw', 'begrippen'], BOUW),
+    'docs/onderzoek-raamsoftware.md': ('Onderzoek raamsoftware - LogiKal, ReynaPro, Chacal', ['configurator', 'bouw', 'onderzoek', 'concurrentie'], BOUW),
     '.claude/skills/bouw-woning/SKILL.md': ('Skill - woningconfigurator bouw', ['configurator', 'bouw', 'skill', '3d'], BOUW),
 }
 TITEL_VAN = {os.path.basename(k): v[0] for k, v in NOTITIES.items()}
@@ -121,6 +122,7 @@ Vakken met draairichting (punt van de driehoek = scharnieren, zicht van binnen),
 
 ## Meer lezen
 - [[Onderzoek bouw - pijnpunten ramen en deuren]]
+- [[Onderzoek raamsoftware - LogiKal, ReynaPro, Chacal]]
 - [[Analyse bouw - woningconfigurator]]: wat er is en wat nog kan
 - [[Begrippenlijst bouw]]
 - [[Skill - woningconfigurator bouw]]: hoe het technisch werkt (skill voor Claude)
@@ -148,6 +150,7 @@ Eigen productconfigurator, als aparte app **koppelbaar met Missing Link**. Eén 
 - **Demo:** [Woningconfigurator]({BOUWDEMO}): Plattegrond met verdiepingen · Configurator per raam/deur · Offerte · Werf (inmeting, meerwerkbon)
 - [[Bouw - woningconfigurator]]: overzicht met beelden
 - [[Onderzoek bouw - pijnpunten ramen en deuren]]
+- [[Onderzoek raamsoftware - LogiKal, ReynaPro, Chacal]]: hoe de grote pakketten rekenen en waar wij passen
 - [[Analyse bouw - woningconfigurator]]: wat er is en wat nog kan
 - [[Begrippenlijst bouw]]
 - [[Skill - woningconfigurator bouw]]
