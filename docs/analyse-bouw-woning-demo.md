@@ -18,6 +18,18 @@ En: "ga maar helemaal los".
 
 De demo werkt in vier stappen, met de knoppen bovenaan: **Plattegrond → Configurator → Offerte → Werf**.
 
+### Projecten bewaren en hergebruiken (vierde ronde)
+| Functie | Hoe het werkt |
+|---|---|
+| **Projecten** | Nieuwe knop "Projecten" bovenaan. Hier maak je een nieuw project: geef een naam en eventueel een klant, en kies waarmee je start (leeg, voorbeeldwoning of een eigen sjabloon). Je kunt een project ook openen, dupliceren of verwijderen. Elk nieuw project krijgt het volgende offertenummer. |
+| **Automatisch bewaren** | Elke wijziging wordt meteen in de browser van het toestel bewaard. De kop toont de projectnaam en "automatisch bewaard om …". Is de opslag vol, dan meldt de kop dat. |
+| **Bewaren als bestand** | "Bewaar als bestand" geeft een `.woning.json`-bestand om te archiveren, te mailen of op een ander toestel te openen ("Project openen uit bestand" maakt er een nieuw project van). |
+| **Sjablonen** | "Bewaar als sjabloon" maakt van het huidige project een herbruikbaar startpunt, bv. een woningtype of een vaste set ramen. Klantgegevens, akkoord, meerwerk en inmetingen gaan er niet mee. |
+| **Bibliotheek** | In de configurator: "Bewaar in bibliotheek" voor een standaardraam of -deur. In elk project voeg je het toe via Offerte → "Uit bibliotheek". |
+| **Plattegrond wissen** | Wist alleen de plattegrond van het huidige project, na bevestiging en met ongedaan maken. De oude knoppen "Voorbeeldwoning" en "Leeg plan" overschreven het hele project; nu start je daarvoor een nieuw project. |
+
+Beperking: alles staat in de browser van één toestel. Om kantoor en werf **tegelijk** met dezelfde gegevens te laten werken is een server nodig. Dat is ook de plaats waar de koppeling met Missing Link komt.
+
 ### Nieuw in de derde ronde (na het onderzoek naar LogiKal, ReynaPro en Chacal)
 | Functie | Hoe het werkt |
 |---|---|

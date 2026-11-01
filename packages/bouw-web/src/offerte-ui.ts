@@ -10,7 +10,7 @@ import { $, el, eur, getal, kopieer, num } from './hulp.js';
 import { gevelSvgs } from './plattegrond-ui.js';
 import { controles, inbegrepen } from './positie-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
-import { klantKorting, MODELLEN, nieuwePositie, openingVan, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
+import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
 
 let naarPositie: (id: string) => void = () => {};
 let naarPlan: (openingId?: string) => void = () => {};
@@ -139,6 +139,10 @@ export function toonOfferte() {
     return rij;
   }));
   $('#o-leeg').hidden = t.posities.length > 0;
+  const bib = bibliotheek();
+  const kies = $<HTMLSelectElement>('#o-bibliotheek');
+  kies.replaceChildren(el('option', { value: '' }, bib.length ? '+ Uit bibliotheek …' : 'Bibliotheek is leeg'), ...bib.map((b) => el('option', { value: b.id }, b.naam)));
+  kies.disabled = !bib.length;
 
   // Regels uit de plattegrond.
   const tb = $('#o-regels tbody');
@@ -181,7 +185,7 @@ export function toonOfferte() {
     const naam = el('input', { type: 'text', id: 'o-akkoord-naam', 'aria-label': 'Naam klant' }) as HTMLInputElement;
     naam.value = m.klant;
     const b = el('button', { type: 'button' }, 'Klant gaat akkoord: offerte vastleggen');
-    b.addEventListener('click', () => legAkkoordVast(naam.value || m.klant));
+    b.addEventListener('click', () => legAkkoordVast(naam.value || m.klant || 'de klant'));
     const rij = el('div', { class: 'positieacties' });
     rij.append(naam, b);
     ak.append(el('p', { class: 'klein' }, 'Na het akkoord komt elke wijziging (inmeting, ander glas, extra raam …) automatisch op een meerwerkbon.'), rij);
@@ -368,6 +372,14 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
     });
   }
   $('#o-afdruk').addEventListener('click', drukAf);
+  $<HTMLSelectElement>('#o-bibliotheek').addEventListener('change', (e) => {
+    const s = e.target as HTMLSelectElement;
+    const p = s.value ? positieUitBibliotheek(s.value) : undefined;
+    s.value = '';
+    if (!p) return;
+    wijzig('offerte', (t) => { t.posities.push(p); });
+    naarPositie(p.id);
+  });
   $('#o-glas-kopieer').addEventListener('click', () => void kopieer(glasbestellingTekst(), $('#o-glas-melding')));
   $('#o-glas-csv').addEventListener('click', () => download(`glasbestelling-${toestand().meta.nummer}.csv`, '\ufeff' + glasbestellingTekst(';'), 'text/csv'));
   $('#o-winddruk-toepassen').addEventListener('click', () => {

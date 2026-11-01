@@ -37,7 +37,6 @@ import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import {
   kanOngedaan,
-  legeToestand,
   momentopname,
   nieuweId,
   nieuwePositie,
@@ -45,8 +44,6 @@ import {
   positieVan,
   resultaat,
   toestand,
-  vervang,
-  voorbeeldToestand,
   wijzig,
 } from './staat.js';
 
@@ -90,6 +87,7 @@ let toonMeubels = true;
 let melding = '';
 let naarPositie: (id: string) => void = () => {};
 let naarOfferte: () => void = () => {};
+let naarProjecten: () => void = () => {};
 
 interface Sleep {
   soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'opening' | 'meubel';
@@ -822,9 +820,10 @@ export function toonPlan(openingId?: string) {
   toonEigenschappen();
 }
 
-export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarOfferte: () => void }) {
+export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarOfferte: () => void; naarProjecten: () => void }) {
   naarPositie = nav.naarPositie;
   naarOfferte = nav.naarOfferte;
+  naarProjecten = nav.naarProjecten;
   const lijst = $('#pl-gereedschap');
   lijst.replaceChildren(...GEREEDSCHAP.map((g) => {
     const b = el('button', { type: 'button', 'data-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap) });
@@ -861,8 +860,22 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
   $('#pl-ongedaan').addEventListener('click', () => ongedaan());
-  $('#pl-voorbeeld').addEventListener('click', () => { selectie = undefined; niveau = 0; vervang(voorbeeldToestand()); });
-  $('#pl-leeg').addEventListener('click', () => { selectie = undefined; niveau = 0; vervang(legeToestand()); kiesGereedschap('ruimte'); });
+  $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());
+  const wis = $<HTMLButtonElement>('#pl-leeg');
+  wis.addEventListener('click', () => {
+    if (wis.dataset.zeker !== '1') { wis.dataset.zeker = '1'; wis.textContent = 'Zeker? (ongedaan maken kan)'; return; }
+    wis.dataset.zeker = '';
+    wis.textContent = 'Plattegrond wissen';
+    selectie = undefined;
+    niveau = 0;
+    // Alleen de plattegrond van dit project; posities zonder opening blijven in de offerte.
+    wijzig('plan', (t) => {
+      const weg = new Set(t.plan.openingen.map((o) => o.positie).filter(Boolean));
+      t.posities = t.posities.filter((p) => !weg.has(p.id));
+      t.plan = { ...t.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] };
+    });
+    kiesGereedschap('ruimte');
+  });
   $('#pl-naarofferte').addEventListener('click', () => naarOfferte());
 
   document.addEventListener('keydown', (ev) => {

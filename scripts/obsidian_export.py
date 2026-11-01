@@ -118,6 +118,11 @@ Een te slappe stijl wordt rood in 3D (hier de ontmoetingsstijlen van een schuifr
 
 ![[bouw-statiek-3d.png]]
 
+## Projecten, sjablonen en bibliotheek
+Meerdere projecten, automatisch bewaard in de browser; bewaren als bestand (.woning.json); sjablonen en standaardramen herbruikbaar.
+
+![[bouw-projecten.png]]
+
 ## Werf: inmeting en meerwerkbon
 ![[bouw-inmeting.png]]
 ![[bouw-meerwerkbon.png]]

@@ -239,6 +239,21 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 .symbool { width: 16px; height: 21px; flex: none; color: var(--accent); }
 
 
+/* ---------- projecten ---------- */
+.projectraster { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .projectraster { grid-template-columns: minmax(0, 1fr); } }
+#pr-lijst tr.gekozen td { background: var(--accent-zacht); }
+#pr-lijst td { white-space: normal; vertical-align: middle; }
+.acties-cel { display: flex; flex-wrap: wrap; gap: 4px; }
+.acties-cel button { font-size: .8rem !important; padding: 3px 8px !important; }
+.acties-cel button:not(.tweede):not(.gevaar) { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; cursor: pointer; }
+ul.lijst { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+ul.lijst li { border: 1px solid var(--lijn); border-radius: 8px; padding: 8px 10px; display: grid; gap: 4px; }
+ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 5px 11px; cursor: pointer; font-size: .85rem; }
+.bewaard { color: var(--goed); font-size: .85rem; }
+.bewaard.fout { color: var(--fout); font-weight: 600; }
+#o-bibliotheek { max-width: 220px; }
+
 /* ---------- verdiepingen en gevels ---------- */
 .niveaus button { font-size: .85rem; }
 .gevels { display: grid; gap: 16px; }
@@ -319,9 +334,10 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 <header>
   <div>
     <h1>Ramen, deuren &amp; woning<span class="demo">demoprijzen</span></h1>
-    <p>Teken de woning, plaats ramen en deuren, configureer en maak de offerte.</p>
+    <p><strong id="hd-project"></strong> · <span id="hd-bewaard" class="bewaard"></span></p>
   </div>
   <nav class="nav" aria-label="Onderdelen">
+    <button type="button" data-weergave="projecten" aria-pressed="false">Projecten</button>
     <button type="button" data-weergave="plan" aria-pressed="true">1 · Plattegrond</button>
     <button type="button" data-weergave="positie" aria-pressed="false">2 · Configurator</button>
     <button type="button" data-weergave="offerte" aria-pressed="false">3 · Offerte <span class="teller" id="nav-aantal">0</span></button>
@@ -330,6 +346,59 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 </header>
 <noscript><p class="foutmelding">Deze pagina heeft JavaScript nodig. Open het bestand in een browser (Safari, Chrome, Edge), niet in een voorbeeldweergave.</p></noscript>
 <div id="foutmelding" class="foutmelding" role="alert" hidden><strong>Er liep iets mis in deze pagina.</strong> Stuur deze melding door (en zeg in welke browser je ze opende):</div>
+
+<main id="view-projecten" class="view" hidden>
+  <div class="projectraster">
+    <div class="links">
+      <section class="kaart">
+        <div class="kaartkop"><h2>Huidig project</h2></div>
+        <p><strong id="pr-huidig-naam"></strong><br><span id="pr-huidig-info" class="klein"></span></p>
+        <div class="positieacties">
+          <button type="button" id="pr-bewaar">Bewaar als bestand</button>
+          <button type="button" id="pr-dupliceer" class="tweede">Dupliceren</button>
+        </div>
+        <p class="klein">Alles wordt <strong>automatisch</strong> bewaard in deze browser, op dit toestel. Met <strong>Bewaar als bestand</strong> heb je een kopie die je kan archiveren, mailen of op een ander toestel (bv. de tablet op de werf) openen.</p>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Nieuw project</h2></div>
+        <div class="velden">
+          <label>Projectnaam <input type="text" id="pr-naam" placeholder="bv. Renovatie Janssens"></label>
+          <label>Klant <input type="text" id="pr-klant" placeholder="optioneel"></label>
+          <label>Starten van <select id="pr-bron"></select></label>
+        </div>
+        <div class="positieacties" style="margin-top:10px">
+          <button type="button" id="pr-nieuw">Nieuw project maken</button>
+          <label class="fotoknop">Project openen uit bestand<input type="file" id="pr-open-bestand" accept=".json,application/json"></label>
+        </div>
+        <p id="pr-melding" class="klein" role="status"></p>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Huidig project als sjabloon</h2></div>
+        <p class="klein">Herbruikbaar startpunt (bv. een standaard woningtype of een vaste set ramen). Zonder klantgegevens, akkoord, meerwerk en inmetingen.</p>
+        <div class="velden">
+          <label>Naam sjabloon <input type="text" id="pr-sjabloon-naam" placeholder="bv. Rijwoning type A"></label>
+          <label>Omschrijving <input type="text" id="pr-sjabloon-oms" placeholder="optioneel"></label>
+        </div>
+        <div class="positieacties" style="margin-top:10px"><button type="button" id="pr-sjabloon" class="tweede">Bewaar als sjabloon</button></div>
+      </section>
+    </div>
+    <div class="links">
+      <section class="kaart">
+        <div class="kaartkop"><h2>Mijn projecten</h2><span class="klein">in deze browser</span></div>
+        <div class="tabelhouder"><table id="pr-lijst"><thead><tr><th>Project</th><th>Klant</th><th>Offerte</th><th class="num">Posities</th><th class="num">Excl. btw</th><th>Gewijzigd</th><th></th></tr></thead><tbody></tbody></table></div>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Sjablonen</h2><span class="klein">herbruikbare woningen en projecten</span></div>
+        <ul id="pr-sjablonen" class="lijst"></ul>
+      </section>
+      <section class="kaart">
+        <div class="kaartkop"><h2>Bibliotheek</h2><span class="klein">herbruikbare ramen en deuren</span></div>
+        <p id="pr-bib-leeg" class="klein">Nog leeg. Open een raam in de configurator en kies <strong>Bewaar in bibliotheek</strong>. In elk project voeg je het toe via Offerte → Uit bibliotheek.</p>
+        <ul id="pr-bibliotheek" class="lijst"></ul>
+      </section>
+    </div>
+  </div>
+</main>
 
 <main id="view-plan" class="view">
   <div class="planraster">
@@ -342,8 +411,8 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
       <section class="kaart">
         <div class="knoppenrij" style="margin-top:0">
           <button type="button" id="pl-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button>
-          <button type="button" id="pl-voorbeeld" class="tweede">Voorbeeldwoning</button>
-          <button type="button" id="pl-leeg" class="gevaar">Leeg plan</button>
+          <button type="button" id="pl-voorbeeld" class="tweede">Nieuw project …</button>
+          <button type="button" id="pl-leeg" class="gevaar">Plattegrond wissen</button>
         </div>
         <p class="klein">Delete = verwijderen · Q = meubel draaien · pijltjes = verschuiven · Esc = selecteren</p>
       </section>
@@ -434,7 +503,7 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
           <div class="prijs"><span id="p-prijs" class="grote-prijs">€ 0,00</span><span id="p-prijs-sub" class="klein"></span></div>
           <dl id="p-prijsdetail" class="detail"></dl>
           <ul id="p-meldingen" class="meldingen" hidden></ul>
-          <div class="acties"><button type="button" id="p-kopieer">Kopieer tekst</button><span id="p-kopieer-melding" class="klein" role="status"></span></div>
+          <div class="acties"><button type="button" id="p-kopieer">Kopieer tekst</button><button type="button" id="p-bibliotheek" class="tweede">Bewaar in bibliotheek</button><span id="p-kopieer-melding" class="klein" role="status"></span></div>
         </section>
         <section class="kaart">
           <div class="kaartkop"><h2>Technische gegevens</h2></div>
@@ -516,6 +585,7 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
           <button type="button" class="tweede" data-nieuw="voordeur">+ Voordeur</button>
           <button type="button" class="tweede" data-nieuw="schuif">+ Schuifraam</button>
           <button type="button" class="tweede" data-nieuw="aanbouw">+ Aanbouw</button>
+          <select id="o-bibliotheek" aria-label="Positie uit de bibliotheek"></select>
         </div>
       </section>
       <section class="kaart">

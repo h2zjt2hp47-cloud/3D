@@ -63,7 +63,8 @@ packages/
                         - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
   bouw-web/             Aparte demo voor de bouwsector: plattegrond tekenen (ruimtes, ramen, deuren, meubels),
                         positie configureren (draairichting, zonwering …), offerte (PDF, bestellijst, export)
-                        en werf (inmeting op tablet, meerwerkbon met handtekening); verdiepingen en gevels
+                        en werf (inmeting op tablet, meerwerkbon met handtekening); verdiepingen en gevels;
+                        projecten, sjablonen en bibliotheek (bewaard in de browser of als .woning.json-bestand)
 ```
 
 Later volgen: het echte configuratiescherm met beheer, een server (API, opslag, offerte-PDF) en `packages/koppeling-missing-link`.

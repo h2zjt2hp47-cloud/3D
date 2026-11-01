@@ -8,7 +8,7 @@ import { ruitenVan } from '../../core/voorbeelden/raam.js';
 import { raamScene } from '../../core/voorbeelden/raam3d.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
-import { klantKorting, MODELLEN, openingVan, resultaat, toestand, wijzig, type Positie } from './staat.js';
+import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, wijzig, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -420,6 +420,12 @@ export function startPositie(nav: { naarPlan: (openingId: string) => void; naarO
     const p = huidig();
     const o = p && openingVan(p);
     if (o) naarPlan(o.id);
+  });
+  $('#p-bibliotheek').addEventListener('click', () => {
+    const p = huidig();
+    if (!p) return;
+    const ok = bewaarInBibliotheek(p, p.naam);
+    $('#p-kopieer-melding').textContent = ok ? `"${p.naam}" bewaard in de bibliotheek: in elk project te gebruiken via Offerte → Uit bibliotheek.` : 'Bewaren lukt niet (opslag vol).';
   });
   $('#p-kopieer').addEventListener('click', () => {
     const p = huidig();

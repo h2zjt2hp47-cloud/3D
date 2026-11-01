@@ -240,7 +240,7 @@ function toonMeerwerk() {
     const naam = el('input', { type: 'text', id: 'w-akkoord-naam' }) as HTMLInputElement;
     naam.value = t.meta.klant;
     const b = el('button', { type: 'button' }, 'Klant gaat akkoord: offerte vastleggen');
-    b.addEventListener('click', () => legAkkoordVast(naam.value || t.meta.klant));
+    b.addEventListener('click', () => legAkkoordVast(naam.value || t.meta.klant || 'de klant'));
     const r = el('div', { class: 'positieacties' });
     r.append(naam, b);
     k.append(r);

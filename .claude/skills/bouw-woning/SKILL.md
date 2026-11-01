@@ -58,6 +58,13 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - Na elke wijziging `synchroniseer(bron)`: bij bron `positie` gaan maten, soort en draairichting van de positie naar de opening; anders van de opening (en de ruimte) naar de positie. Codes P1…Pn worden hernummerd.
 - Een opening verwijderen verwijdert ook de positie; een positie verwijderen in de offerte verwijdert de opening.
 
+## Projecten en opslag (`staat.ts`, `projecten-ui.ts`)
+- localStorage: index `bouw-demo.projecten.v1` ({ actief, projecten: ProjectInfo[] }), elk project apart in `bouw-demo.project.<id>`, sjablonen in `bouw-demo.sjablonen.v1`, bibliotheek in `bouw-demo.bibliotheek.v1`. Het oude enkele project (`bouw-demo.v1`) wordt bij de eerste start het eerste project.
+- `bewaar()` na elke `wijzig()`: schrijft het actieve project en werkt de index bij (geeft `opslagProbleem` als het niet lukt). Doet niets zonder actief project.
+- `nieuwProject(bron, naam)`: schone kopie (`schoon`: geen akkoord, meerwerk, inmeting; standaard zonder klant), volgend offertenummer `OF-jaar-nnnn`. `wissel()` bewaart eerst het huidige project, behalve bij verwijderen (`huidigBewaren: false`).
+- Bestand: `{ soort: 'woningconfigurator-project', versie: 1, bewaard, toestand }`; `projectUitBestand` maakt er altijd een nieuw project van.
+- Sjabloon = schone kopie zonder klant; ingebouwd: Leeg project en Voorbeeldwoning. Bibliotheek = positie (model + keuzes zonder verdieping); `positieUitBibliotheek` neemt de winddruk van het project over.
+
 ## Offerte
 - `berekenOfferte`: stukprijs = brutoprijs van de positie, × aantal; regels uit `planNaarRegels` (vloeren +7 % snijverlies, wandafwerking per kleur/tegel, binnendeuren, ruwbouw, inrichting); korting (aannemer) en btw (6/21) over het geheel.
 - Scherm: bestellijst per leverancier (op artikelprefix), planning (montage-uren / 16 per dag met 2 plaatsers), afdruk via `@media print` op `#afdruk`, export als JSON (basis voor Missing Link).

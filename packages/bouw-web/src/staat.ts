@@ -87,7 +87,18 @@ export interface Toestand {
   meta: OfferteMeta;
 }
 
-const SLEUTEL = 'bouw-demo.v1';
+// Opslag in de browser: een index met projecten, elk project apart, plus sjablonen en de bibliotheek.
+const OUD = 'bouw-demo.v1';
+const INDEX = 'bouw-demo.projecten.v1';
+const PROJECT = (id: string) => `bouw-demo.project.${id}`;
+const SJABLONEN = 'bouw-demo.sjablonen.v1';
+const BIBLIOTHEEK = 'bouw-demo.bibliotheek.v1';
+
+export interface ProjectInfo { id: string; naam: string; klant: string; nummer: string; gewijzigd: string; posities: number }
+export interface Sjabloon { id: string; naam: string; omschrijving: string; gewijzigd: string; ingebouwd?: boolean; toestand: Toestand }
+export interface BibliotheekItem { id: string; naam: string; model: ModelCode; keuzes: Keuzes; gewijzigd: string }
+/** Bestandsformaat om een project te bewaren of door te sturen. */
+export interface ProjectBestand { soort: 'woningconfigurator-project'; versie: 1; bewaard: string; toestand: Toestand }
 
 function standaardMeta(): OfferteMeta {
   const d = new Date();
@@ -116,14 +127,54 @@ export function legeToestand(): Toestand {
   return { plan: { ...v.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] }, posities: [], meta: v.meta };
 }
 
-function laad(): Toestand {
+// ---------- opslag ----------
+function lees<T>(sleutel: string): T | undefined {
   try {
-    const t = JSON.parse(localStorage.getItem(SLEUTEL) ?? 'null') as Toestand | null;
-    if (t && t.plan && Array.isArray(t.plan.ruimtes) && Array.isArray(t.posities) && t.meta) return { ...t, meta: { ...standaardMeta(), ...t.meta } };
+    const w = localStorage.getItem(sleutel);
+    return w ? (JSON.parse(w) as T) : undefined;
   } catch {
-    /* geen of ongeldige opslag */
+    return undefined;
   }
-  return voorbeeldToestand();
+}
+/** Schrijft naar de browser; geeft false als dat niet lukt (opslag vol of niet beschikbaar). */
+function schrijf(sleutel: string, waarde: unknown): boolean {
+  try {
+    localStorage.setItem(sleutel, JSON.stringify(waarde));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function isToestand(x: unknown): x is Toestand {
+  const t = x as Toestand;
+  return !!t && !!t.plan && Array.isArray(t.plan.ruimtes) && Array.isArray(t.plan.openingen) && Array.isArray(t.posities) && !!t.meta;
+}
+const aanvullen = (x: Toestand): Toestand => ({ ...x, plan: { ...x.plan, meubels: x.plan.meubels ?? [] }, meta: { ...standaardMeta(), ...x.meta } });
+
+let index: { actief: string; projecten: ProjectInfo[] } = { actief: '', projecten: [] };
+export let laatstBewaard = '';
+export let opslagProbleem = '';
+
+function infoVan(id: string, x: Toestand): ProjectInfo {
+  return { id, naam: x.meta.project || 'Naamloos project', klant: x.meta.klant, nummer: x.meta.nummer, gewijzigd: new Date().toISOString(), posities: x.posities.length };
+}
+
+function laad(): Toestand {
+  index = lees<typeof index>(INDEX) ?? { actief: '', projecten: [] };
+  const actief = index.projecten.find((p) => p.id === index.actief) ?? index.projecten[0];
+  if (actief) {
+    const x = lees<Toestand>(PROJECT(actief.id));
+    if (isToestand(x)) { index.actief = actief.id; return aanvullen(x); }
+  }
+  // Eerste keer: het oude enkele project (vorige versie van de demo) of de voorbeeldwoning.
+  const oud = lees<Toestand>(OUD);
+  const start = isToestand(oud) ? aanvullen(oud) : voorbeeldToestand();
+  const id = `pr${Date.now().toString(36)}`;
+  index = { actief: id, projecten: [infoVan(id, start)] };
+  schrijf(PROJECT(id), start);
+  schrijf(INDEX, index);
+  return start;
 }
 
 let t: Toestand = laad();
@@ -131,13 +182,158 @@ const geschiedenis: string[] = [];
 const luisteraars = new Set<(bron: string) => void>();
 
 export const toestand = () => t;
+export const actiefProject = () => index.actief;
 
 function bewaar() {
-  try {
-    localStorage.setItem(SLEUTEL, JSON.stringify(t));
-  } catch {
-    /* opslag niet beschikbaar */
+  if (!index.actief) return;
+  const ok = schrijf(PROJECT(index.actief), t);
+  const info = infoVan(index.actief, t);
+  index.projecten = index.projecten.some((p) => p.id === index.actief)
+    ? index.projecten.map((p) => (p.id === index.actief ? info : p))
+    : [...index.projecten, info];
+  const ok2 = schrijf(INDEX, index);
+  opslagProbleem = ok && ok2 ? '' : 'Bewaren in de browser lukt niet (opslag vol of uitgeschakeld). Bewaar het project als bestand.';
+  if (!opslagProbleem) laatstBewaard = new Date().toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ---------- projecten ----------
+export const projecten = (): ProjectInfo[] => [...index.projecten].sort((a, b) => b.gewijzigd.localeCompare(a.gewijzigd));
+
+export function laadProject(id: string): Toestand | undefined {
+  if (id === index.actief) return t;
+  const x = lees<Toestand>(PROJECT(id));
+  return isToestand(x) ? aanvullen(x) : undefined;
+}
+
+function wissel(id: string, nieuw: Toestand, opties: { huidigBewaren?: boolean } = {}) {
+  if (opties.huidigBewaren !== false) bewaar();
+  index.actief = id;
+  t = nieuw;
+  geschiedenis.length = 0;
+  synchroniseer('plan');
+  bewaar();
+  for (const l of luisteraars) l('vervang');
+}
+
+export function openProject(id: string, opties: { huidigBewaren?: boolean } = {}) {
+  const x = laadProject(id);
+  if (x) wissel(id, x, opties);
+}
+
+/** Volgend offertenummer: hoogste nummer van dit jaar + 1. */
+function volgendNummer(): string {
+  const jaar = new Date().getFullYear();
+  const nrs = index.projecten.map((p) => new RegExp(`^OF-${jaar}-(\\d+)$`).exec(p.nummer)?.[1]).filter(Boolean).map(Number);
+  return `OF-${jaar}-${String((nrs.length ? Math.max(...nrs) : 0) + 1).padStart(4, '0')}`;
+}
+
+/** Maakt een schone kopie: geen akkoord, meerwerk of inmetingen; eventueel ook zonder klantgegevens. */
+function schoon(x: Toestand, zonderKlant: boolean): Toestand {
+  const k = structuredClone(x);
+  k.meta = { ...k.meta, akkoord: undefined, meerwerk: [], meerwerkbon: undefined, datum: new Date().toISOString().slice(0, 10) };
+  if (zonderKlant) k.meta = { ...k.meta, klant: '', adres: '' };
+  for (const p of k.posities) delete p.inmeting;
+  return k;
+}
+
+/** Nieuw project, vanuit een bron (leeg, voorbeeld, sjabloon of kopie). */
+export function nieuwProject(bron: Toestand, naam: string, opties: { zonderKlant?: boolean } = {}): string {
+  const x = schoon(bron, opties.zonderKlant ?? true);
+  x.meta.project = naam || 'Nieuw project';
+  x.meta.nummer = volgendNummer();
+  const id = `pr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  index.projecten.push(infoVan(id, x));
+  wissel(id, x);
+  return id;
+}
+
+export function dupliceerProject(id: string) {
+  const x = laadProject(id);
+  if (x) nieuwProject(x, `${x.meta.project} (kopie)`, { zonderKlant: false });
+}
+
+export function verwijderProject(id: string) {
+  index.projecten = index.projecten.filter((p) => p.id !== id);
+  try { localStorage.removeItem(PROJECT(id)); } catch { /* niets */ }
+  if (id === index.actief) {
+    // Het verwijderde project niet opnieuw bewaren bij het wisselen.
+    const volgende = projecten()[0];
+    if (volgende) openProject(volgende.id, { huidigBewaren: false });
+    else {
+      index.actief = '';
+      nieuwProject(legeToestand(), 'Nieuw project');
+    }
+  } else {
+    schrijf(INDEX, index);
+    for (const l of luisteraars) l('projecten');
   }
+}
+
+// ---------- bestanden ----------
+export function projectAlsBestand(x: Toestand = t): string {
+  const bestand: ProjectBestand = { soort: 'woningconfigurator-project', versie: 1, bewaard: new Date().toISOString(), toestand: x };
+  return JSON.stringify(bestand, null, 1);
+}
+
+/** Opent een bewaard bestand als nieuw project (het bestaande project blijft ongewijzigd). */
+export function projectUitBestand(tekst: string): string {
+  let data: unknown;
+  try { data = JSON.parse(tekst); } catch { throw new Error('Dit bestand is geen geldig projectbestand (geen JSON).'); }
+  const b = data as Partial<ProjectBestand>;
+  const x = b?.soort === 'woningconfigurator-project' ? b.toestand : data;
+  if (!isToestand(x)) throw new Error('Dit bestand bevat geen project van de woningconfigurator.');
+  const id = `pr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const y = aanvullen(x);
+  index.projecten.push(infoVan(id, y));
+  wissel(id, y);
+  return id;
+}
+
+// ---------- sjablonen (herbruikbare woningen of projecten) ----------
+export function sjablonen(): Sjabloon[] {
+  const ingebouwd: Sjabloon[] = [
+    { id: 'leeg', naam: 'Leeg project', omschrijving: 'Lege plattegrond, geen posities.', gewijzigd: '', ingebouwd: true, toestand: legeToestand() },
+    { id: 'voorbeeld', naam: 'Voorbeeldwoning', omschrijving: 'Gelijkvloers en verdieping, 14 ramen en deuren, inrichting.', gewijzigd: '', ingebouwd: true, toestand: voorbeeldToestand() },
+  ];
+  return [...ingebouwd, ...(lees<Sjabloon[]>(SJABLONEN) ?? [])];
+}
+
+export function bewaarAlsSjabloon(naam: string, omschrijving: string): boolean {
+  const eigen = lees<Sjabloon[]>(SJABLONEN) ?? [];
+  eigen.push({ id: nieuweId('sj'), naam: naam || t.meta.project, omschrijving, gewijzigd: new Date().toISOString(), toestand: schoon(t, true) });
+  const ok = schrijf(SJABLONEN, eigen);
+  for (const l of luisteraars) l('projecten');
+  return ok;
+}
+
+export function verwijderSjabloon(id: string) {
+  schrijf(SJABLONEN, (lees<Sjabloon[]>(SJABLONEN) ?? []).filter((s) => s.id !== id));
+  for (const l of luisteraars) l('projecten');
+}
+
+// ---------- bibliotheek (herbruikbare ramen en deuren) ----------
+export const bibliotheek = (): BibliotheekItem[] => lees<BibliotheekItem[]>(BIBLIOTHEEK) ?? [];
+
+export function bewaarInBibliotheek(p: Positie, naam: string): boolean {
+  const keuzes = structuredClone(p.keuzes);
+  delete keuzes.verdieping;
+  const ok = schrijf(BIBLIOTHEEK, [...bibliotheek(), { id: nieuweId('bib'), naam: naam || p.naam, model: p.model, keuzes, gewijzigd: new Date().toISOString() }]);
+  for (const l of luisteraars) l('projecten');
+  return ok;
+}
+
+export function verwijderUitBibliotheek(id: string) {
+  schrijf(BIBLIOTHEEK, bibliotheek().filter((b) => b.id !== id));
+  for (const l of luisteraars) l('projecten');
+}
+
+/** Nieuwe positie op basis van een bibliotheekitem (met de winddruk van dit project). */
+export function positieUitBibliotheek(id: string): Positie | undefined {
+  const b = bibliotheek().find((x) => x.id === id);
+  if (!b) return undefined;
+  const p = nieuwePositie(b.model, structuredClone(b.keuzes), b.naam);
+  if (b.model === 'RAAM') p.keuzes.winddruk = t.meta.winddruk ?? p.keuzes.winddruk;
+  return p;
 }
 
 /** Voert een wijziging uit (met ongedaan maken), synchroniseert plan en posities, bewaart en verwittigt. */
