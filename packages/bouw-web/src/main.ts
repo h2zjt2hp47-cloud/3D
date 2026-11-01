@@ -73,6 +73,18 @@ opWijziging(() => veilig('Bijwerken', () => {
   kop();
 }));
 
+// Klantweergave: scherm tonen aan de klant (bewaard in deze browser).
+function zetKlantweergave(aan: boolean) {
+  document.body.classList.toggle('klantmodus', aan);
+  $('#klantweergave').setAttribute('aria-pressed', String(aan));
+  try { localStorage.setItem('bouw-demo.klantweergave', aan ? '1' : '0'); } catch { /* niets */ }
+  if (aan && actief === 'werf') toon('offerte');
+  else toon(actief);
+}
+$('#klantweergave').addEventListener('click', () => zetKlantweergave(!document.body.classList.contains('klantmodus')));
+try { if (localStorage.getItem('bouw-demo.klantweergave') === '1') document.body.classList.add('klantmodus'); } catch { /* niets */ }
+$('#klantweergave').setAttribute('aria-pressed', String(document.body.classList.contains('klantmodus')));
+
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]')) {
   b.addEventListener('click', () => veilig('Navigatie', () => toon(b.dataset.weergave as Weergave)));
 }

@@ -88,10 +88,111 @@ export interface Plattegrond {
   muurhoogte: number;
   buitenmuur: number;
   binnenmuur: number;
-  /** Gevelafwerking buiten. */
+  /** Gevelafwerking buiten (eenvoudig: één materiaal voor de hele woning; zie ook gevelOntwerp). */
   gevel: { soort: BlokSoort; kleur: string };
+  /** Gevelmaterialen uit de catalogus: hele woning, per muurvlak en een sokkel. Gaat voor op `gevel`. */
+  gevelOntwerp?: GevelOntwerp;
   /** Namen van de verdiepingen (index = niveau). Leeg = alleen gelijkvloers. */
   verdiepingen?: { naam: string }[];
+}
+
+/** Kant van de woning (op de plattegrond): boven, onder, links of rechts. */
+export type GevelKant = 'boven' | 'onder' | 'links' | 'rechts';
+
+/** Gekozen gevelmateriaal (codes uit de catalogus van de klant). */
+export interface GevelKeuze {
+  materiaal: string;
+  kleur: string;
+  /** Voegkleur (bij metselwerk). */
+  voeg?: string;
+}
+
+/** Gevelafwerking van de woning, zoals "geschilderd" in de gevel-editor. */
+export interface GevelOntwerp {
+  /** Materiaal voor de hele woning. */
+  standaard: GevelKeuze;
+  /** Per muurvlak, sleutel `ruimte-id:kant` (zie vlakSleutel). Gaat voor op de standaard. */
+  vlakken?: Record<string, GevelKeuze>;
+  /** Plint onderaan de gevel van het gelijkvloers (hoogte in cm; 0 = geen). */
+  sokkel?: GevelKeuze & { hoogte: number };
+}
+
+/** Een gevelmateriaal in de catalogus: soort voor 3D en tekening, kleuren (stalen) en prijs per m². */
+export interface GevelMateriaal {
+  label: string;
+  /** Groep in het palet (Baksteen, Pleister, Hout …). */
+  groep: string;
+  soort: BlokSoort;
+  kleuren: Record<string, { label: string; hex: string }>;
+  /** Voegkleuren (metselwerk). */
+  voegen?: Record<string, { label: string; hex: string }>;
+  /** Verkoop- en kostprijs per m², geplaatst (demo). */
+  prijs: number;
+  kost: number;
+  artikel?: string;
+  /** Korte uitleg voor de klant. */
+  uitleg?: string;
+}
+
+/** Afwerking zoals de 3D en de tekening ze nodig hebben. */
+export interface GevelAfwerking { soort: BlokSoort; kleur: string; voeg?: string }
+
+/** Naar welke kant van de woning kijkt de buitenkant van een buitenmuur? */
+export function buitenKant(m: Muur): GevelKant | undefined {
+  if (m.soort !== 'buiten') return undefined;
+  if (m.as === 'h') return m.min ? 'onder' : 'boven';
+  return m.min ? 'rechts' : 'links';
+}
+
+/** Sleutel van een muurvlak: de ruimte binnen en de kant van de woning. Blijft gelijk als de ruimte verschuift. */
+export function vlakSleutel(m: Muur): string {
+  return `${m.plus ?? m.min}:${buitenKant(m)}`;
+}
+
+/** Het gekozen materiaal voor een buitenmuur (of undefined zonder gevelontwerp). */
+export function gevelKeuzeVan(plan: Plattegrond, m: Muur): GevelKeuze | undefined {
+  const o = plan.gevelOntwerp;
+  if (!o) return undefined;
+  return o.vlakken?.[vlakSleutel(m)] ?? o.standaard;
+}
+
+/** Zet een keuze om naar soort en kleuren (valt terug op plan.gevel als het materiaal onbekend is). */
+export function gevelAfwerking(plan: Plattegrond, cat: PlanCatalogus | undefined, keuze: GevelKeuze | undefined): GevelAfwerking {
+  const mat = keuze ? cat?.gevels?.[keuze.materiaal] : undefined;
+  if (!keuze || !mat) return plan.gevel;
+  const kleur = mat.kleuren[keuze.kleur] ?? Object.values(mat.kleuren)[0];
+  const voeg = keuze.voeg ? mat.voegen?.[keuze.voeg] : mat.voegen ? Object.values(mat.voegen)[0] : undefined;
+  return { soort: mat.soort, kleur: kleur?.hex ?? plan.gevel.kleur, voeg: voeg?.hex };
+}
+
+export type VerfBereik = 'vlak' | 'gevel' | 'verdieping' | 'woning';
+
+/**
+ * "Verven" van de gevel (zoals in de gevel-editor): één muurvlak, een hele gevelkant (alle verdiepingen),
+ * een hele verdieping of de hele woning. Wijzigt het plan; het gevelontwerp moet al bestaan.
+ */
+export function verfGevel(plan: Plattegrond, keuze: GevelKeuze, bereik: VerfBereik, doel: { sleutel?: string; kant?: GevelKant; niveau?: number } = {}) {
+  const o = plan.gevelOntwerp;
+  if (!o) return;
+  const k = { ...keuze };
+  if (bereik === 'woning') {
+    o.standaard = k;
+    delete o.vlakken;
+    return;
+  }
+  o.vlakken ??= {};
+  if (bereik === 'vlak') {
+    if (doel.sleutel) o.vlakken[doel.sleutel] = k;
+    return;
+  }
+  for (let n = 0; n < verdiepingenVan(plan).length; n++) {
+    if (bereik === 'verdieping' && n !== doel.niveau) continue;
+    for (const m of murenVan(niveauPlan(plan, n))) {
+      if (m.soort !== 'buiten') continue;
+      if (bereik === 'gevel' && buitenKant(m) !== doel.kant) continue;
+      o.vlakken[vlakSleutel(m)] = { ...k };
+    }
+  }
 }
 
 /** Dikte van de vloerplaat tussen twee verdiepingen (cm). */
@@ -116,6 +217,8 @@ export interface PlanCatalogus {
   wanden: Record<string, { label: string; soort: BlokSoort; kleur: string }>;
   binnendeuren: Record<string, { label: string; soort: BlokSoort; kleur: string }>;
   meubels: Record<string, MeubelType>;
+  /** Gevelmaterialen (gevel-editor); zonder deze lijst geldt plan.gevel. */
+  gevels?: Record<string, GevelMateriaal>;
 }
 
 export type MeubelVorm =
@@ -545,7 +648,7 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
         blokken.push({ code: `plaat_${r.id}`, soort: 'gevel', vorm: 'blok', x: s.x, y: y0 - VLOERDIKTE, z: s.y, b: s.b, h: VLOERDIKTE, d: s.d, kleur: '#c9c6bf' });
       }
     }
-    const scene = niveau3D(p, cat, { ...opties, laag: n === laatste ? opties.laag : undefined }, zonderGaten);
+    const scene = niveau3D(p, cat, { ...opties, laag: n === laatste ? opties.laag : undefined }, zonderGaten, n);
     for (const b of scene) blokken.push({ ...b, y: r2(b.y + y0) });
     // Plat dak boven delen die niet onder een hogere (getoonde) verdieping liggen.
     if (n < laatste) {
@@ -560,14 +663,14 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
 }
 
 /** Eén verdieping (vloer op y = 0). */
-function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, zonderGaten: (r: Rechthoek) => Rechthoek[]): Blok[] {
+function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, zonderGaten: (r: Rechthoek) => Rechthoek[], n = 0): Blok[] {
   const blokken: Blok[] = [];
   const muren = murenVan(plan);
   const H = plan.muurhoogte;
   const top = opties.laag ? Math.min(opties.laag, H) : H;
   const pleister = '#efeee9';
   const ruimte = new Map(plan.ruimtes.map((r) => [r.id, r]));
-  const wandVan = (id?: string) => {
+  const wandVan = (id?: string): GevelAfwerking => {
     const r = id ? ruimte.get(id) : undefined;
     if (!r) return plan.gevel;
     const w = cat.wanden[r.wand];
@@ -590,18 +693,38 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     }
   }
 
+  // Gevelafwerking: per muurvlak (gevelontwerp) en een sokkel onderaan het gelijkvloers.
+  const sokkel = n === 0 && plan.gevelOntwerp?.sokkel && plan.gevelOntwerp.sokkel.hoogte > 0 ? plan.gevelOntwerp.sokkel : undefined;
+  const sokkelAfw = sokkel ? gevelAfwerking(plan, cat, sokkel) : undefined;
+  const buitenAfw = (m: Muur, y: number) => (sokkel && sokkelAfw && y < sokkel.hoogte ? sokkelAfw : gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m)));
+  // Kopse kant op een buitenhoek: het materiaal van de gevel ernaast (de loodrechte buitenmuur die daar eindigt).
+  const hoekMuur = (m: Muur, p: number) => muren.find((v) => v.as !== m.as && v.soort === 'buiten' && gelijk(v.lijn, p) && (gelijk(v.van, m.lijn) || gelijk(v.tot, m.lijn)));
+
   // Muren met openingen.
   for (const m of muren) {
     const vlak = muurVlak(m, muren);
     const plusWand = wandVan(m.plus), minWand = wandVan(m.min);
     const begin = m.as === 'h' ? vlak.x : vlak.y, einde = begin + (m.as === 'h' ? vlak.b : vlak.d);
+    // Op een verdieping loopt de buitenmuur door voor de rand van de vloerplaat.
+    const onderkant = n > 0 && m.soort === 'buiten' ? -VLOERDIKTE : 0;
     const stuk = (code: string, a: number, b: number, y0: number, y1: number) => {
       if (b - a < 0.1 || y1 - y0 < 0.1) return;
-      const zijden: Blok['zijden'] = m.as === 'h' ? { 'z+': plusWand, 'z-': minWand } : { 'x+': plusWand, 'x-': minWand };
-      // Kopse kant van een buitenmuur op een buitenhoek: gevelafwerking.
-      if (m.soort === 'buiten' && m.as === 'h') {
-        if (vlak.verlengdBegin && gelijk(a, begin)) zijden['x-'] = plan.gevel;
-        if (vlak.verlengdEinde && gelijk(b, einde)) zijden['x+'] = plan.gevel;
+      if (m.soort === 'buiten' && y0 === 0 && onderkant < 0) y0 = onderkant;
+      // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten.
+      if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1) {
+        stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte);
+        stuk(code, a, b, sokkel.hoogte, y1);
+        return;
+      }
+      const buiten = m.soort === 'buiten' ? buitenAfw(m, y0) : undefined;
+      const zijden: Blok['zijden'] = m.as === 'h'
+        ? { 'z+': m.plus || !buiten ? plusWand : buiten, 'z-': m.min || !buiten ? minWand : buiten }
+        : { 'x+': m.plus || !buiten ? plusWand : buiten, 'x-': m.min || !buiten ? minWand : buiten };
+      // Kopse kant van een buitenmuur op een buitenhoek: gevelafwerking van de gevel ernaast.
+      if (buiten && m.as === 'h') {
+        const hoek = (p: number) => { const v = hoekMuur(m, p); return v ? buitenAfw(v, y0) : buiten; };
+        if (vlak.verlengdBegin && gelijk(a, begin)) zijden['x-'] = hoek(m.van);
+        if (vlak.verlengdEinde && gelijk(b, einde)) zijden['x+'] = hoek(m.tot);
       }
       const base = { code, soort: 'gevel' as BlokSoort, vorm: 'blok' as const, kleur: pleister, zijden, y: y0, h: y1 - y0 };
       voeg(m.as === 'h' ? { ...base, x: a, z: vlak.y, b: b - a, d: vlak.d } : { ...base, x: vlak.x, z: a, b: vlak.b, d: b - a });
@@ -838,4 +961,61 @@ export function meubelBlokken(vorm: MeubelVorm, B: number, D: number, H: number,
     }
   }
   return uit;
+}
+
+// ---------- afstanden (maatvoering bij plaatsen en verslepen) ----------
+
+/** Dikte van de dwarsmuur op een punt van een muur (0 als er geen is). */
+function dwarsDikte(m: Muur, p: number, muren: Muur[]): number {
+  const loodrecht = muren.filter((x) => x.as !== m.as && gelijk(x.lijn, p) && x.van <= m.lijn + 0.5 && x.tot >= m.lijn - 0.5);
+  return loodrecht.length ? Math.max(...loodrecht.map((x) => x.dikte)) : 0;
+}
+
+export interface OpeningAfstanden {
+  muur: Muur;
+  /** Binnenvlak van de dwarsmuur aan het begin en het einde van de muur (coördinaat langs de muur). */
+  vlakBegin: number;
+  vlakEinde: number;
+  /** Vrije muur tussen het binnenvlak en de opening, aan het begin en aan het einde (cm). */
+  begin: number;
+  einde: number;
+  /** Kettingmaat langs de muur: binnenvlak, randen van alle openingen in die muur, binnenvlak. */
+  ketting: number[];
+  /** Ligt de ruimte (binnenkant) aan de plus-kant van de muur? */
+  binnenPlus: boolean;
+}
+
+/** Afstanden van een opening tot de muren en de andere openingen in dezelfde muur. */
+export function openingAfstanden(plan: Plattegrond, o: Opening, muren = murenVan(niveauPlan(plan, niveauVan(o)))): OpeningAfstanden | undefined {
+  const m = muurVanOpening(o, muren);
+  if (!m) return undefined;
+  const vlakBegin = m.van + dwarsDikte(m, m.van, muren) / 2, vlakEinde = m.tot - dwarsDikte(m, m.tot, muren) / 2;
+  const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
+  const anderen = plan.openingen.filter((x) => x.id !== o.id && niveauVan(x) === niveauVan(o) && muurVanOpening(x, [m]) === m);
+  const punten = [vlakBegin, vlakEinde, a, b, ...anderen.flatMap((x) => [x.midden - x.breedte / 2, x.midden + x.breedte / 2])]
+    .map((x) => Math.round(x * 10) / 10).filter((x, i, l) => l.indexOf(x) === i).sort((p, q) => p - q);
+  const binnenPlus = m.soort === 'buiten' ? !!m.plus : o.naarPlus;
+  return { muur: m, vlakBegin, vlakEinde, begin: a - vlakBegin, einde: vlakEinde - b, ketting: punten, binnenPlus };
+}
+
+export interface MeubelAfstanden {
+  /** Binnenvlakken van de ruimte rond het meubel. */
+  x0: number; x1: number; y0: number; y1: number;
+  links: number; rechts: number; boven: number; onder: number;
+}
+
+/** Afstanden van een meubel tot de binnenvlakken van de muren van de ruimte waarin het staat. */
+export function meubelAfstanden(plan: Plattegrond, m: Meubel, muren = murenVan(niveauPlan(plan, niveauVan(m)))): MeubelAfstanden | undefined {
+  const v = meubelVoetafdruk(m);
+  const cx = v.x + v.b / 2, cy = v.y + v.d / 2;
+  const r = ruimteOp(plan, cx, cy, niveauVan(m));
+  if (!r) return undefined;
+  const deel = delenVan(r).find((p) => cx > p.x && cx < p.x + p.b && cy > p.y && cy < p.y + p.d) ?? delenVan(r)[0]!;
+  const dikte = (as: 'h' | 'v', lijn: number, van: number, tot: number) => {
+    const op = muren.filter((x) => x.as === as && gelijk(x.lijn, lijn) && x.tot > van + 0.5 && x.van < tot - 0.5);
+    return op.length ? Math.max(...op.map((x) => x.dikte)) : 0;
+  };
+  const x0 = deel.x + dikte('v', deel.x, v.y, v.y + v.d) / 2, x1 = deel.x + deel.b - dikte('v', deel.x + deel.b, v.y, v.y + v.d) / 2;
+  const y0 = deel.y + dikte('h', deel.y, v.x, v.x + v.b) / 2, y1 = deel.y + deel.d - dikte('h', deel.y + deel.d, v.x, v.x + v.b) / 2;
+  return { x0, x1, y0, y1, links: v.x - x0, rechts: x1 - (v.x + v.b), boven: v.y - y0, onder: y1 - (v.y + v.d) };
 }

@@ -17,6 +17,22 @@ const kleurVeilig = (k: string | undefined, standaard: string) =>
 
 const n = (x: number) => String(Math.round(x * 100) / 100);
 
+/** Materiaalpatroon in tekeningeenheden (cm): voegen van stenen, naden van planken, leien of zink. */
+function patroonSvg(id: string, soort: string, kleur: string): string {
+  const vorm: Record<string, [number, number, string, number]> = {
+    steen: [22, 13, 'M0 0H22M0 6.5H22M0 0V6.5M11 6.5V13', 0.9],
+    leien: [40, 24, 'M0 0H40M0 12H40M0 0V12M20 12V24', 0.8],
+    natuursteen: [80, 40, 'M0 0H80M0 20H80M0 0V20M40 20V40', 0.9],
+    planken: [12, 100, 'M0 0V100', 0.8],
+    planken_h: [100, 15, 'M0 0H100', 0.8],
+    zink: [43, 100, 'M0 0V100', 1.6],
+  };
+  const v = vorm[soort];
+  if (!v) return '';
+  const [b, h, d, dikte] = v;
+  return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${b}" height="${h}"><path d="${d}" stroke="${kleur}" stroke-width="${dikte}" fill="none"/></pattern>`;
+}
+
 /**
  * Zet een uitgerekende tekening om naar een SVG-tekst.
  * Werkt in browser en server (geen DOM nodig), bv. voor scherm én offerte-PDF.
@@ -66,6 +82,8 @@ export function tekenSvg(t: TekeningResultaat, opties: SvgOpties = {}): string {
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n(minX)} ${n(minY)} ${n(w)} ${n(h)}" width="${breedtePx}" height="${Math.round((breedtePx * h) / w)}" font-family="${esc(font)}" role="img" aria-label="${esc(t.titel)}">`,
   );
   delen.push(`<title>${esc(t.titel)}</title>`);
+  const defsPlaats = delen.length;
+  const patronen = new Map<string, string>();
   if (opties.achtergrond) delen.push(`<rect x="${n(minX)}" y="${n(minY)}" width="${n(w)}" height="${n(h)}" fill="${kleurVeilig(opties.achtergrond, 'white')}"/>`);
 
   for (const v of t.vormen) {
@@ -79,6 +97,15 @@ export function tekenSvg(t: TekeningResultaat, opties: SvgOpties = {}): string {
       delen.push(
         `<rect data-code="${esc(v.code)}" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}"${r} fill="${kleurVeilig(v.vulling, 'none')}" stroke="${stroke}" stroke-width="${dikte}"/>`,
       );
+    }
+    if (v.patroon && v.pad === undefined) {
+      const pk = kleurVeilig(v.patroonKleur, '#00000055');
+      const id = `pt-${v.patroon}-${pk.replace(/[^0-9a-zA-Z]/g, '')}`;
+      const def = patroonSvg(id, v.patroon, pk);
+      if (def) {
+        patronen.set(id, def);
+        delen.push(`<rect x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}" fill="url(#${id})" stroke="none" pointer-events="none" class="patroon"/>`);
+      }
     }
     if (v.symbool) delen.push(...symboolLijnen(v.x, v.y, v.breedte, v.hoogte, v.symbool, lijn, sw));
     if (v.label) {
@@ -108,6 +135,7 @@ export function tekenSvg(t: TekeningResultaat, opties: SvgOpties = {}): string {
     );
   }
 
+  if (patronen.size) delen.splice(defsPlaats, 0, `<defs>${[...patronen.values()].join('')}</defs>`);
   delen.push('</svg>');
   return delen.join('\n');
 }

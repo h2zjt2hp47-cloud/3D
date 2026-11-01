@@ -10,7 +10,9 @@ import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, v
 
 export type BlokSoort =
   | 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken'
-  | 'tegel' | 'parket' | 'kunststof' | 'matglas';
+  | 'tegel' | 'parket' | 'kunststof' | 'matglas'
+  // Gevelbekleding: liggende planken, leien, zink met staande naad, natuursteen, sierpleister.
+  | 'planken_h' | 'leien' | 'zink' | 'natuursteen' | 'pleister';
 
 /** Zijde van een blok (balk), voor een ander materiaal op één zijvlak (bv. baksteen buiten, verf binnen). */
 export type BlokZijde = 'x+' | 'x-' | 'z+' | 'z-' | 'y+';
@@ -37,7 +39,9 @@ export interface Blok {
   /** Achterover hellen (rug): graden en de richting naar achter in het grondvlak. */
   kantel?: { graden: number; richting: 'x+' | 'x-' | 'z+' | 'z-' };
   /** Ander materiaal per zijvlak (alleen voor rechte balken). */
-  zijden?: Partial<Record<BlokZijde, { soort: BlokSoort; kleur: string }>>;
+  zijden?: Partial<Record<BlokZijde, { soort: BlokSoort; kleur: string; voeg?: string }>>;
+  /** Voegkleur bij metselwerk (soort steen). */
+  voeg?: string;
 }
 
 export interface Scene3D {

@@ -195,8 +195,8 @@ export class Zoom {
     for (const l of this.labels) l.textContent = `${this.ingezoomd ? this.procent() : 100} %`;
   }
 
-  /** Knoppenbalk: −, percentage, +, passend (en optioneel "selectie"). */
-  knoppen(opties: { selectie?: () => Kader | undefined } = {}): HTMLElement {
+  /** Knoppenbalk: −, percentage, +, passend (en optioneel "selectie" en "groot scherm"). */
+  knoppen(opties: { selectie?: () => Kader | undefined; grootScherm?: HTMLElement } = {}): HTMLElement {
     const balk = document.createElement('div');
     balk.className = 'zoomknoppen';
     balk.setAttribute('role', 'group');
@@ -220,6 +220,7 @@ export class Zoom {
         if (k) this.toon(k);
       }));
     }
+    if (opties.grootScherm) balk.append(grootSchermKnop(opties.grootScherm, () => this.klaar()));
     this.bijwerken();
     return balk;
   }
@@ -232,4 +233,47 @@ export class Zoom {
     if (ev.key === '0') { this.passendMaken(); return true; }
     return false;
   }
+}
+
+/**
+ * Knop om een onderdeel (bv. het hele tekenscherm met gereedschap en eigenschappen) op het volledige
+ * scherm te tonen. Gebruikt het echte volledig scherm waar de browser dat kan; anders (bv. iPhone)
+ * een laag over de hele pagina. Esc of de knop zet het terug.
+ */
+export function grootSchermKnop(doel: HTMLElement, opnieuw: () => void): HTMLButtonElement {
+  const b = document.createElement('button');
+  b.type = 'button';
+  const tekst = () => {
+    const aan = doel.classList.contains('groot-scherm');
+    b.textContent = aan ? 'Klein scherm' : 'Groot scherm';
+    b.title = aan ? 'Terug naar het gewone scherm (Esc)' : 'Tekenen op het volledige scherm';
+    b.setAttribute('aria-pressed', String(aan));
+  };
+  const zet = (aan: boolean) => {
+    doel.classList.toggle('groot-scherm', aan);
+    document.body.classList.toggle('heeft-groot-scherm', aan);
+    tekst();
+    // Na het wisselen van grootte opnieuw tekenen (passend beeld volgt de nieuwe maat).
+    requestAnimationFrame(() => { opnieuw(); window.dispatchEvent(new Event('resize')); });
+  };
+  b.addEventListener('click', async () => {
+    const aan = !doel.classList.contains('groot-scherm');
+    if (aan) {
+      zet(true);
+      try { if (doel.requestFullscreen && !document.fullscreenElement) await doel.requestFullscreen(); } catch { /* laag over de pagina volstaat */ }
+    } else {
+      if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch { /* niets */ } }
+      zet(false);
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && doel.classList.contains('groot-scherm')) zet(false);
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape' || !doel.classList.contains('groot-scherm')) return;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+    zet(false);
+  });
+  tekst();
+  return b;
 }

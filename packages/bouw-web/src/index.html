@@ -239,6 +239,31 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 .symbool { width: 16px; height: 21px; flex: none; color: var(--accent); }
 
 
+
+/* Groot scherm (tekenen op het volledige scherm) */
+.groot-scherm { position: fixed !important; inset: 0; z-index: 1000; max-width: none !important; margin: 0 !important; overflow: auto; background: var(--achtergrond); padding: 10px clamp(8px, 1.5vw, 16px) 16px !important; }
+.groot-scherm:fullscreen { background: var(--achtergrond); }
+body.heeft-groot-scherm { overflow: hidden; }
+
+.groot-scherm .planraster { grid-template-columns: 180px minmax(0, 1fr) 290px; gap: 12px; }
+.groot-scherm .gereedschap button { padding: 5px 8px; font-size: .82rem; }
+.groot-scherm .gereedschap kbd, .groot-scherm .links .klein { display: none; }
+.groot-scherm .kaart { padding: 10px 12px; }
+.groot-scherm #pl-canvas svg { width: 100%; height: calc(100vh - 175px); max-height: none; }
+.groot-scherm #pl-hint, .groot-scherm #pl-zoomhint { display: none; }
+@media (max-width: 900px) { .groot-scherm .planraster { grid-template-columns: minmax(0, 1fr); } .groot-scherm #pl-canvas svg { max-height: calc(100vh - 120px); } }
+/* ---------- klantweergave: geen marges, kostprijzen of technische details ---------- */
+.nav .klantknop { border-style: dashed; }
+.nav .klantknop[aria-pressed="true"] { background: var(--goed); border-color: var(--goed); color: #fff; border-style: solid; }
+body.klantmodus .intern, body.klantmodus .stap[data-stap="statiek"],
+body.klantmodus .veld[data-kenmerk="afstandhouder"], body.klantmodus .veld[data-kenmerk="ruimte"], body.klantmodus .veld[data-kenmerk="verdieping"] { display: none !important; }
+body.klantmodus [data-weergave="werf"] { display: none; }
+/* Aanraakschermen: grotere knoppen en keuzes (minstens 44 px). */
+@media (pointer: coarse) {
+  .nav button, .tabs button, .gereedschap button, .acties button, .positieacties button, .knoppenrij button, .zoomknoppen button { min-height: 44px; }
+  .tegel { min-height: 44px; }
+  .schakelaar { min-height: 44px; }
+}
 /* ---------- zoomen ---------- */
 .zoomvlak { position: relative; }
 .zoomvlak { display: grid; gap: 6px; }
@@ -353,6 +378,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
     <button type="button" data-weergave="positie" aria-pressed="false">2 · Configurator</button>
     <button type="button" data-weergave="offerte" aria-pressed="false">3 · Offerte <span class="teller" id="nav-aantal">0</span></button>
     <button type="button" data-weergave="werf" aria-pressed="false">4 · Werf</button>
+    <button type="button" id="klantweergave" class="klantknop" aria-pressed="false" title="Scherm tonen aan de klant: zonder marges, kostprijzen en technische details; prijzen inclusief btw">Klantweergave</button>
   </nav>
 </header>
 <noscript><p class="foutmelding">Deze pagina heeft JavaScript nodig. Open het bestand in een browser (Safari, Chrome, Edge), niet in een voorbeeldweergave.</p></noscript>
@@ -513,11 +539,11 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         <section class="kaart" aria-live="polite">
           <div class="kaartkop"><h2>Prijs</h2><span id="p-status" class="status ok"></span></div>
           <div class="prijs"><span id="p-prijs" class="grote-prijs">€ 0,00</span><span id="p-prijs-sub" class="klein"></span></div>
-          <dl id="p-prijsdetail" class="detail"></dl>
+          <dl id="p-prijsdetail" class="detail intern"></dl>
           <ul id="p-meldingen" class="meldingen" hidden></ul>
           <div class="acties"><button type="button" id="p-kopieer">Kopieer tekst</button><button type="button" id="p-bibliotheek" class="tweede">Bewaar in bibliotheek</button><span id="p-kopieer-melding" class="klein" role="status"></span></div>
         </section>
-        <section class="kaart">
+        <section class="kaart intern">
           <div class="kaartkop"><h2>Technische gegevens</h2></div>
           <dl id="p-techniek" class="detail"></dl>
         </section>
@@ -525,11 +551,11 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <div class="kaartkop"><h2>Wat zit erin</h2><span class="klein">vermijdt discussie over meerwerk</span></div>
           <div class="twee"><div><h3>Inbegrepen</h3><ul id="p-inbegrepen"></ul></div><div><h3>Niet inbegrepen</h3><ul id="p-niet"></ul></div></div>
         </section>
-        <section class="kaart" id="p-glas-kaart">
+        <section class="kaart intern" id="p-glas-kaart">
           <div class="kaartkop"><h2>Glasbestelling</h2><span class="klein">glasmaat = falsmaat − glasspeling</span></div>
           <div class="tabelhouder"><table id="p-glas"><thead><tr><th>Ruit</th><th>Plaats</th><th class="num">Dagmaat</th><th class="num">Falsmaat</th><th class="num">Glasmaat</th><th>Samenstelling</th><th class="num">m²</th><th class="num">Gewicht</th></tr></thead><tbody></tbody></table></div>
         </section>
-        <section class="kaart">
+        <section class="kaart intern">
           <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">maten in mm</span></div>
           <div class="tabelhouder"><table id="p-stuklijst"><thead><tr><th>Omschrijving</th><th>Artikel</th><th class="num">Aantal</th><th class="num">Maat</th><th class="num">Hoeveelheid</th><th class="num">Kost</th></tr></thead><tbody></tbody></table></div>
         </section>
@@ -563,7 +589,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label>korting <input type="number" id="o-korting" min="0" max="50" step="1" style="width:60px"> %</label>
         </div>
       </section>
-      <section class="kaart">
+      <section class="kaart intern">
         <h3>Statiek (voordimensionering)</h3>
         <p class="klein">Winddruk op de gevel volgens NBN EN 1991-1-4 (windzone, terrein, hoogte). Te laten bepalen per project.</p>
         <div class="positieacties">
@@ -581,7 +607,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label><input type="checkbox" id="o-regel-inrichting"> Inrichting (richtprijs)</label>
         </div>
       </section>
-      <section class="kaart">
+      <section class="kaart intern">
         <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">per leverancier</span></div>
         <div id="o-bestellijst"></div>
       </section>
@@ -600,7 +626,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <select id="o-bibliotheek" aria-label="Positie uit de bibliotheek"></select>
         </div>
       </section>
-      <section class="kaart">
+      <section class="kaart intern">
         <div class="kaartkop"><h2>Glasbestelling per ruit</h2><span id="o-glas-totaal" class="klein"></span></div>
         <details>
           <summary>Toon alle ruiten (glasmaat = falsmaat − glasspeling)</summary>
@@ -622,11 +648,11 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         <div class="acties">
           <button type="button" id="o-afdruk">Afdrukken / PDF</button>
           <button type="button" id="o-kopieer" class="tweede">Kopieer offertetekst</button>
-          <button type="button" id="o-export" class="tweede">Export voor ERP (JSON)</button>
+          <button type="button" id="o-export" class="tweede intern">Export voor ERP (JSON)</button>
           <span id="o-melding" class="klein" role="status"></span>
         </div>
-        <h3 style="margin-top:16px">Intern</h3>
-        <dl id="o-intern" class="detail"></dl>
+        <div class="intern"><h3 style="margin-top:16px">Intern</h3>
+        <dl id="o-intern" class="detail"></dl></div>
       </section>
       <section class="kaart">
         <div class="kaartkop"><h2>Akkoord klant</h2></div>

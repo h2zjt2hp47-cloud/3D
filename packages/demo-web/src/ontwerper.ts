@@ -1212,7 +1212,7 @@ export function startOntwerper() {
     const wrap = document.createElement('div');
     wrap.className = 'zoomvlak';
     vlak.before(wrap);
-    wrap.append(vlak, z.knoppen(sel ? { selectie: selectieKader } : {}));
+    wrap.append(vlak, z.knoppen(sel ? { selectie: selectieKader, grootScherm: $('#view-ontwerp') } : { grootScherm: $('#view-ontwerp') }));
   }
   vv.addEventListener('pointerdown', opVoorDown);
   vv.addEventListener('pointermove', opVoorMove);

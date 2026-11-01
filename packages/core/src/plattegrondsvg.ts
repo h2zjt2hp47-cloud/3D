@@ -4,8 +4,10 @@
  */
 import {
   delenVan,
+  meubelAfstanden,
   meubelVoetafdruk,
   muurVanOpening,
+  openingAfstanden,
   muurVlak,
   murenVan,
   ruimteMaten,
@@ -151,6 +153,40 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     const t = plan.buitenmuur / 2;
     uit.push(maatlijn(x1 + t, y1 + t, x0 - t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(x1 - x0 + 2 * t)}`, '#4b5753', k));
     uit.push(maatlijn(x1 + t, y0 - t, x1 + t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(y1 - y0 + 2 * t)}`, '#4b5753', k));
+  }
+
+  // Maatvoering: kettingmaat langs de muur voor de gekozen (of te plaatsen) opening, afstanden tot de muren voor een meubel.
+  const maatKleur = '#1f6fd0';
+  const maatOpening = opties.voorbeeldOpening ?? (sel?.soort === 'opening' ? plan.openingen.find((o) => o.id === sel.id) : undefined);
+  if (maatOpening && !opties.afdruk) {
+    const lijst = opties.voorbeeldOpening ? { ...plan, openingen: [...plan.openingen, opties.voorbeeldOpening] } : plan;
+    const af = openingAfstanden(lijst, maatOpening, muren);
+    if (af) {
+      const m = af.muur, half = m.dikte / 2;
+      const afst = (af.binnenPlus ? -1 : 1) * (half + 34 * k);
+      for (let i = 0; i + 1 < af.ketting.length; i++) {
+        const a = af.ketting[i]!, b = af.ketting[i + 1]!;
+        if (b - a < 0.5) continue;
+        const tekst = `${Math.round(b - a)}`;
+        uit.push(m.as === 'h' ? maatlijn(a, m.lijn, b, m.lijn, afst, tekst, maatKleur, k) : maatlijn(m.lijn, a, m.lijn, b, -afst, tekst, maatKleur, k));
+      }
+    }
+  }
+  if (sel?.soort === 'meubel' && !opties.afdruk) {
+    const mb = plan.meubels.find((x) => x.id === sel.id);
+    const af = mb && meubelAfstanden(plan, mb, muren);
+    if (mb && af) {
+      const v = meubelVoetafdruk(mb), cx = v.x + v.b / 2, cy = v.y + v.d / 2;
+      const lijn = (x1: number, y1: number, x2: number, y2: number, w: number) => {
+        if (w < 0.5) return;
+        uit.push(`<g pointer-events="none" stroke="${maatKleur}" stroke-width="1.5"><line x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}" stroke-dasharray="5 4"/></g>`
+          + `<text x="${n((x1 + x2) / 2 + (y1 === y2 ? 0 : 6 * k))}" y="${n((y1 + y2) / 2 - (y1 === y2 ? 6 * k : 0))}" font-size="${n(15 * k)}" fill="${maatKleur}" text-anchor="${y1 === y2 ? 'middle' : 'start'}" pointer-events="none" font-weight="600">${Math.round(w)}</text>`);
+      };
+      lijn(af.x0, cy, v.x, cy, af.links);
+      lijn(v.x + v.b, cy, af.x1, cy, af.rechts);
+      lijn(cx, af.y0, cx, v.y, af.boven);
+      lijn(cx, v.y + v.d, cx, af.y1, af.onder);
+    }
   }
 
   if (opties.voorbeeldWand) {

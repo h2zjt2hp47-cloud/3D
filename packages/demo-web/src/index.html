@@ -145,6 +145,14 @@ main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
 .gereedschap { align-self: start; display: grid; gap: 4px; }
 .gereedschap h2 { font-size: 1.05rem; margin: 4px 0 6px; }
 .tekenvlak { display: grid; gap: 10px; align-content: start; }
+
+/* Groot scherm (tekenen op het volledige scherm) */
+.groot-scherm { position: fixed !important; inset: 0; z-index: 1000; max-width: none !important; margin: 0 !important; overflow: auto; background: var(--achtergrond); padding: 10px clamp(8px, 1.5vw, 16px) 16px !important; }
+.groot-scherm:fullscreen { background: var(--achtergrond); }
+body.heeft-groot-scherm { overflow: hidden; }
+
+.groot-scherm #o-canvas { max-height: calc(100vh - 130px); aspect-ratio: auto; height: calc(100vh - 130px); }
+.groot-scherm #o-voor { max-height: calc(100vh - 130px); }
 /* Zoomen in de tekenvlakken */
 .zoomvlak { position: relative; }
 .zoomvlak:has(> svg[hidden]) { display: none; }

@@ -327,6 +327,10 @@ export interface VormResultaat {
   lijndikte?: number;
   /** Openingssymbool (zie Vorm.symbool). */
   symbool?: string;
+  /** Materiaalpatroon over de vulling (gevelaanzicht): steen, planken, planken_h, leien, zink, natuursteen. */
+  patroon?: string;
+  /** Lijnkleur van het patroon (bv. de voegkleur). */
+  patroonKleur?: string;
 }
 
 export interface MaatlijnResultaat {

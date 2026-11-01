@@ -169,7 +169,7 @@ function bouwFormulier(p: Positie) {
   velden.clear();
   const model = MODELLEN[p.model].model;
   model.stappen.forEach((stap, n) => {
-    const sectie = el('section', { class: 'stap', 'aria-labelledby': `pst-${stap.code}` });
+    const sectie = el('section', { class: 'stap', 'aria-labelledby': `pst-${stap.code}`, 'data-stap': stap.code });
     const kop = el('h2', { id: `pst-${stap.code}` });
     kop.append(el('span', { class: 'stapnr' }, String(n + 1)), document.createTextNode(stap.label));
     sectie.append(kop);
@@ -335,8 +335,16 @@ export function herbereken() {
   const stuk = r.prijs.brutoprijsExcl;
   $('#p-status').textContent = r.geldig ? 'Klaar voor offerte' : `${r.meldingen.filter((m) => m.ernst === 'fout').length} fout(en)`;
   $('#p-status').className = `status ${r.geldig ? 'ok' : 'fout'}`;
-  $('#p-prijs').textContent = eur(stuk * p.aantal);
-  $('#p-prijs-sub').textContent = p.aantal > 1 ? `${p.aantal} × ${eur(stuk)} excl. btw` : 'excl. btw, per stuk';
+  if (document.body.classList.contains('klantmodus')) {
+    // Voor de klant (particulier): prijs inclusief btw.
+    const btw = toestand().meta.btw;
+    const incl = stuk * (1 - korting / 100) * (1 + btw / 100);
+    $('#p-prijs').textContent = eur(incl * p.aantal);
+    $('#p-prijs-sub').textContent = p.aantal > 1 ? `${p.aantal} × ${eur(incl)} incl. ${btw} % btw` : `incl. ${btw} % btw, per stuk`;
+  } else {
+    $('#p-prijs').textContent = eur(stuk * p.aantal);
+    $('#p-prijs-sub').textContent = p.aantal > 1 ? `${p.aantal} × ${eur(stuk)} excl. btw` : 'excl. btw, per stuk';
+  }
   const regels: [string, string][] = [
     ['Kostprijs per stuk', eur(r.prijs.kostprijs)],
     ['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)} %`],

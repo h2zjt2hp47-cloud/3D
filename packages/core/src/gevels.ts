@@ -12,12 +12,11 @@ import {
   verdiepingenVan,
   vloerHoogte,
   VLOERDIKTE,
+  type GevelKant,
   type Opening,
   type Plattegrond,
 } from './plattegrond.js';
 import type { MaatlijnResultaat, TekeningResultaat, VormResultaat } from './types.js';
-
-export type GevelKant = 'boven' | 'onder' | 'links' | 'rechts';
 
 export interface GevelInfo {
   label?: string;

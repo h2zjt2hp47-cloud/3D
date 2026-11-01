@@ -5,6 +5,8 @@
 import {
   controleerPlan,
   delenVan,
+  meubelAfstanden,
+  openingAfstanden,
   dichtsteMuur,
   gevelAanzichten,
   niveauPlan,
@@ -108,6 +110,9 @@ const plan = () => niveauPlan(toestand().plan, niveau);
 /** Raster volgens de zoom: 10 cm, 5 cm of 1 cm als je ver inzoomt. */
 /** Centimeter per schermpixel voor het huidige beeld (het tekenvlak is 100 % breed, hoogstens 72 % van het scherm hoog). */
 function schaalNu(): number {
+  // Als het tekenvlak er al staat: de echte schaal (ook bij groot scherm met witte randen).
+  const svgNu = document.querySelector('#pl-canvas svg') as SVGSVGElement | null;
+  if (zoom && svgNu?.getScreenCTM()?.a) return zoom.eenhedenPerPixel();
   const houder = document.getElementById('pl-canvas');
   const vb = zoom ? zoom.kijkvak() : passendKader();
   const w = houder?.clientWidth || 900;
@@ -728,6 +733,17 @@ function toonEigenschappen() {
     );
     if (o.soort === 'raam') maten.append(getalVeld('Borstwering', o.borstwering, (w) => zet((x) => { x.borstwering = Math.max(0, w); }), { min: 0, stap: 5, eenheid: 'cm' }));
     vak.append(maten);
+    // Plaats in de muur: vrije muur tot het binnenvlak van de dwarsmuren (intypen verschuift de opening).
+    const af = openingAfstanden(toestand().plan, o);
+    if (af) {
+      const [l1, l2] = o.as === 'h' ? ['Muur links', 'Muur rechts'] : ['Muur boven', 'Muur onder'];
+      const plaats = el('div', { class: 'maten' });
+      plaats.append(
+        getalVeld(l1, af.begin, (w) => zet((x) => { x.midden = af.vlakBegin + Math.max(0, w) + x.breedte / 2; }), { min: 0, stap: 1, eenheid: 'cm' }),
+        getalVeld(l2, af.einde, (w) => zet((x) => { x.midden = af.vlakEinde - Math.max(0, w) - x.breedte / 2; }), { min: 0, stap: 1, eenheid: 'cm' }),
+      );
+      vak.append(el('p', { class: 'klein' }, 'Plaats in de muur (vrije muur tot het binnenvlak; typ een maat om te verschuiven)'), plaats);
+    }
     if (o.soort === 'binnendeur' || o.soort === 'buitendeur') {
       const r = el('div', { class: 'knoppenrij' });
       r.append(
@@ -774,6 +790,8 @@ function toonEigenschappen() {
     const l = el('label', { class: 'eig' });
     l.append(el('span', {}, 'Kleur'), kleur);
     vak.append(l);
+    const af = meubelAfstanden(toestand().plan, m);
+    if (af) vak.append(el('p', { class: 'klein' }, `Tot de muren: links ${getal(af.links)} · rechts ${getal(af.rechts)} · boven ${getal(af.boven)} · onder ${getal(af.onder)} cm`));
     if (t?.prijs) vak.append(el('p', { class: 'klein' }, `Richtprijs ${eur(t.prijs)} (alleen in de offerte als "Inrichting" aan staat).`));
     const r = el('div', { class: 'knoppenrij' });
     r.append(knop('Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
@@ -929,7 +947,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   const vlak = document.createElement('div');
   vlak.className = 'zoomvlak';
   houder.before(vlak);
-  vlak.append(houder, zoom.knoppen({ selectie: selectieKader }));
+  vlak.append(houder, zoom.knoppen({ selectie: selectieKader, grootScherm: $('#view-plan') }));
   houder.addEventListener('pointerdown', naPointerDown);
   houder.addEventListener('pointermove', naPointerMove);
   houder.addEventListener('pointerup', naPointerUp);
@@ -988,6 +1006,6 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
 /** Wordt opgeroepen na elke wijziging in de toestand. */
 export function naWijziging() {
   render();
-  if (!sleep) toonEigenschappen();
+  if (!sleep || sleep.soort === 'meubel' || sleep.soort === 'opening') toonEigenschappen();
   else toonOverzicht();
 }
