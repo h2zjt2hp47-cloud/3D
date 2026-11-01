@@ -25,7 +25,7 @@ import {
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld } from './hulp.js';
-import { momentopname, positieVan, resultaat, toestand, wijzig, type Toestand } from './staat.js';
+import { kanOngedaan, momentopname, ongedaan, positieVan, resultaat, toestand, wijzig, type Toestand } from './staat.js';
 
 type Gereedschap = 'verf' | 'pipet' | 'ramen' | 'raam';
 
@@ -231,6 +231,7 @@ function toonPalet() {
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gv-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gvGereedschap === gereedschap));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gv-bereik]')) b.setAttribute('aria-pressed', String(b.dataset.gvBereik === bereik));
   $('#gv-hint').textContent = GEREEDSCHAP.find((g) => g.code === gereedschap)?.hint ?? '';
+  $<HTMLButtonElement>('#gv-ongedaan').disabled = !kanOngedaan();
   const verven = gereedschap === 'verf' || gereedschap === 'pipet';
   $('#gv-bereik').hidden = gereedschap !== 'verf';
   $('#gv-materialen').hidden = !verven;
@@ -497,6 +498,7 @@ export function startGevels(nav: NonNullable<typeof terug>) {
     b.addEventListener('click', () => { bereik = x.code; toonPalet(); });
     return b;
   }));
+  $('#gv-ongedaan').addEventListener('click', () => ongedaan());
   const houder = $('#gv-canvas');
   zoom = new Zoom({
     doel: houder,
