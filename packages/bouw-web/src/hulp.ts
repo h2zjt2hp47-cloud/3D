@@ -21,8 +21,17 @@ export const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) 
 export function toonFout(waar: string, fout: unknown) {
   const vak = document.getElementById('foutmelding');
   if (!vak) return;
+  const tekst = `${waar}: ${fout instanceof Error ? fout.message : String(fout)}`;
+  console.error(tekst, fout);
+  // Dezelfde melding maar één keer, en een knop om de melding weg te klikken.
+  if ([...vak.querySelectorAll('p')].some((p) => p.textContent === tekst)) return;
+  if (!vak.querySelector('button')) {
+    const sluit = el('button', { type: 'button', class: 'tweede', 'aria-label': 'Melding sluiten' }, 'Sluiten');
+    sluit.addEventListener('click', () => { vak.hidden = true; for (const p of vak.querySelectorAll('p')) p.remove(); });
+    vak.append(sluit);
+  }
   vak.hidden = false;
-  vak.append(el('p', {}, `${waar}: ${fout instanceof Error ? fout.message : String(fout)}`));
+  vak.insertBefore(el('p', {}, tekst), vak.querySelector('button'));
 }
 
 export async function kopieer(tekst: string, melding: HTMLElement) {

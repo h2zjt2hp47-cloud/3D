@@ -10,7 +10,14 @@ import { startWerf, toonWerf } from './werf-ui.js';
 import { startProjecten, toonProjecten } from './projecten-ui.js';
 import { laatstBewaard, opslagProbleem, opWijziging, toestand } from './staat.js';
 
-window.addEventListener('error', (e) => toonFout('Fout', e.error ?? e.message));
+window.addEventListener('error', (e) => {
+  // "Script error." zonder details komt van een script van een ander domein (bv. een browserextensie of de
+  // omgeving waarin de pagina getoond wordt), niet van deze pagina zelf: niet tonen, wel noteren in de console.
+  if (!e.error && /^Script error\.?$/i.test(e.message ?? '')) { console.warn('Fout van buiten deze pagina genegeerd:', e.message); return; }
+  // Onschuldige browserwaarschuwing bij het herschalen van een vak (geen echte fout).
+  if (/ResizeObserver loop/i.test(e.message ?? '')) return;
+  toonFout('Fout', e.error ?? e.message);
+});
 window.addEventListener('unhandledrejection', (e) => toonFout('Fout', e.reason));
 
 type Weergave = 'projecten' | 'plan' | 'offerte' | 'positie' | 'werf';

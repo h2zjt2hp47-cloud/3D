@@ -435,6 +435,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   }
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
+  let laatsteBreedte = 0;
   const viewer: Viewer3D = {
     toon(s: Scene3D) {
       for (const c of [...groep.children]) {
@@ -470,6 +471,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     },
     formaat() {
       const b = houder.clientWidth || 600;
+      laatsteBreedte = b;
       const h = Math.round(b * 0.62);
       renderer.setSize(b, h);
       camera.aspect = b / h;
@@ -477,7 +479,13 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       render();
     },
   };
-  new ResizeObserver(() => viewer.formaat()).observe(houder);
+  // Alleen bij een andere breedte, en pas in de volgende beeldronde: het canvas verandert zelf de hoogte van het
+  // vak, en meteen herschalen gaf de browserwaarschuwing "ResizeObserver loop …" (als rode melding op het scherm).
+  let gepland = 0;
+  new ResizeObserver(() => {
+    if (gepland || !houder.clientWidth || houder.clientWidth === laatsteBreedte) return;
+    gepland = requestAnimationFrame(() => { gepland = 0; viewer.formaat(); });
+  }).observe(houder);
   viewer.formaat();
   return viewer;
 }

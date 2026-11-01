@@ -24,7 +24,7 @@ const lettertypen = existsSync(lettertypenPad) ? readFileSync(lettertypenPad, 'u
 const offline = html
   .replace(/<link rel="preconnect"[^>]*>\n?/g, '')
   .replace(/<link href="https:\/\/fonts\.googleapis\.com[^>]*>/, () => (lettertypen ? `<style>${lettertypen}</style>` : ''))
-  .replace(/<script src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r128\/three\.min\.js"><\/script>/, () =>
+  .replace(/<script src="https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/three\.js\/r128\/three\.min\.js"[^>]*><\/script>/, () =>
     `<script>${readFileSync(threePad, 'utf8').replace(/<\/script/gi, '<\\/script')}</script>`);
 if (/cdnjs\.cloudflare|fonts\.googleapis/.test(offline)) throw new Error('offline-versie verwijst nog naar internet');
 writeFileSync('dist/bouw-configurator-offline.html', offline);

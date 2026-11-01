@@ -47,12 +47,31 @@ function startKlant() {
 function toonFout(waar: string, fout: unknown) {
   const vak = document.getElementById('foutmelding');
   if (!vak) return;
+  const tekst = `${waar}: ${fout instanceof Error ? fout.message : String(fout)}`;
+  console.error(tekst, fout);
+  // Dezelfde melding maar één keer, en een knop om de melding weg te klikken.
+  if ([...vak.querySelectorAll('p')].some((p) => p.textContent === tekst)) return;
+  if (!vak.querySelector('button')) {
+    const sluit = document.createElement('button');
+    sluit.type = 'button';
+    sluit.textContent = 'Sluiten';
+    sluit.setAttribute('aria-label', 'Melding sluiten');
+    sluit.addEventListener('click', () => { vak.hidden = true; for (const p of vak.querySelectorAll('p')) p.remove(); });
+    vak.append(sluit);
+  }
   vak.hidden = false;
   const regel = document.createElement('p');
-  regel.textContent = `${waar}: ${fout instanceof Error ? fout.message : String(fout)}`;
-  vak.append(regel);
+  regel.textContent = tekst;
+  vak.insertBefore(regel, vak.querySelector('button'));
 }
-window.addEventListener('error', (e) => toonFout('Fout', e.error ?? e.message));
+window.addEventListener('error', (e) => {
+  // "Script error." zonder details komt van een script van een ander domein (bv. een browserextensie of de
+  // omgeving waarin de pagina getoond wordt), niet van deze pagina zelf: niet tonen, wel noteren in de console.
+  if (!e.error && /^Script error\.?$/i.test(e.message ?? '')) { console.warn('Fout van buiten deze pagina genegeerd:', e.message); return; }
+  // Onschuldige browserwaarschuwing bij het herschalen van een vak (geen echte fout).
+  if (/ResizeObserver loop/i.test(e.message ?? '')) return;
+  toonFout('Fout', e.error ?? e.message);
+});
 window.addEventListener('unhandledrejection', (e) => toonFout('Fout', e.reason));
 
 /** Start elk onderdeel apart: een fout in één onderdeel houdt de rest niet tegen. */
