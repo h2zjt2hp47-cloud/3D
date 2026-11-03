@@ -217,5 +217,5 @@ Aanleiding: "er kan niet gescrold worden in de configurator fullscreen". Daarna 
 3. **Stof per element in de 3D wisselen** kan via het eigenschappenvak onder de 3D; een snelle stalenstrook rechtstreeks in de 3D (zoals bij de stofkeuze bovenaan) zou nog sneller zijn.
 4. **Sofa op maat** (de configurator per cm) heeft nog geen 3D, alleen de tekening; de vrije ontwerper wel.
 5. **Modellen van de klant** (Kotor, Belize, Pula …) hebben een chaise longue zonder rugleuning, zoals afgeleid uit de foto's. Na te vragen of die chaises bij Corneille & Silence een rug hebben; dan zetten we de nieuwe keuze in het model.
-6. **Delen:** een link naar de configuratie of een AR-weergave op de gsm (zetel op ware grootte in de eigen kamer) bestaat nog niet.
+6. **Delen:** een link naar de configuratie bestaat nog niet. **AR** is er sinds 3/11 (iPhone/iPad via Quick Look, Android via WebXR, anders downloads), maar nog niet getest op een echt toestel; binnen de artifact-pagina werkt de camera-AR meestal niet, het HTML-bestand rechtstreeks openen wel.
 7. **Bestandsgrootte:** door de ingebakken 3D is de demo ±1,8 MB; voor SharePoint blijft handmatig opladen nodig.

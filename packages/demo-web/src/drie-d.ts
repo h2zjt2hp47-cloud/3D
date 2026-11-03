@@ -14,6 +14,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const THREE: any = THREE_;
@@ -40,6 +42,13 @@ export interface Viewer3D {
   instellen?(w: Partial<Weergave3D>): void;
   /** Element in de 3D aanduiden met een kader (null = niets). */
   markeer?(id: string | null): void;
+  /** Alleen de zetel als 3D-bestand, in meter, met het midden van de onderkant als oorsprong (voor AR). */
+  exporteer3D?(formaat: 'glb' | 'usdz'): Promise<Blob | null>;
+  /** AR in de browser (WebXR, Android): `overlay` blijft zichtbaar over het camerabeeld; null = gestart, anders de reden. */
+  startAR?(overlay: HTMLElement, opEinde: () => void): Promise<string | null>;
+  /** Tijdens AR: de zetel draaien (graden) of de sessie stoppen. */
+  arDraai?(graden: number): void;
+  arStop?(): void;
   formaat(): void;
 }
 
@@ -988,7 +997,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   let knijpAfstand = 0;
   let drukStart: { x: number; y: number } | null = null;
   renderer.domElement.addEventListener('pointerdown', (ev: PointerEvent) => {
-    if (bezigMetFoto) return;
+    if (bezigMetFoto || bezigMetAR) return;
     pauzeerDraaien();
     drukStart = aanwijzers.size === 0 ? { x: ev.clientX, y: ev.clientY } : null;
     renderer.domElement.setPointerCapture(ev.pointerId);
@@ -1058,6 +1067,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     draaiLoopt = true;
     if (!bezigMetFoto && performance.now() > draaiPauzeTot && !aanwijzers.size) { hoekH += 0.0035; plaatsCamera(); }
     requestAnimationFrame(draaiLus);
+  }
+  /** Kopie van alleen de zetel (geen vloer, decor, maten of kader), in meter, midden van de onderkant in de oorsprong. */
+  function arModel() {
+    const kopie = groep.clone(true);
+    kopie.position.set(-(kader.x + kader.b / 2), 0, -(kader.z + kader.d / 2));
+    const model = new THREE.Group();
+    model.name = 'zetel';
+    model.add(kopie);
+    model.scale.setScalar(0.01);
+    model.updateMatrixWorld(true);
+    return model;
   }
   /** Maatlijnen in de 3D: breedte vooraan, diepte rechts, hoogte achteraan rechts, met labels in cm. */
   function zetMaten() {
@@ -1149,12 +1169,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // Veel aanvragen kort na elkaar (slepen, schuifregelaar) worden samengevoegd tot één beeld per schermverversing.
   let beeldGepland = 0;
   function render(direct = false) {
-    if (bezigMetFoto) return;
+    if (bezigMetFoto || bezigMetAR) return;
     if (direct) { cancelAnimationFrame(beeldGepland); beeldGepland = 0; tekenNu(true); return; }
     if (!beeldGepland) beeldGepland = requestAnimationFrame(() => { beeldGepland = 0; tekenNu(false); });
   }
   function tekenNu(direct: boolean) {
-    if (bezigMetFoto) return;
+    if (bezigMetFoto || bezigMetAR) return;
     if (!metNabewerking()) { renderer.render(scene, camera); return; }
     if (direct) { clearTimeout(mooiGepland); composer.render(); return; }
     renderer.render(scene, camera);
@@ -1175,6 +1195,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   let pathTracer: any = null;
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
+  /** Tijdens AR tekent de AR-sessie zelf; de gewone weergave staat stil. */
+  let bezigMetAR = false;
+  let arSessie: any = null;
+  let arPlaats: any = null;
+  let arZon: any = null;
   let laatsteBreedte = 0;
   const viewer: Viewer3D = {
     toon(s: Scene3D) {
@@ -1293,6 +1318,106 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         viewer.formaat();
         render(true);
       }
+    },
+    async exporteer3D(formaat) {
+      try {
+        const model = arModel();
+        if (formaat === 'usdz') {
+          const data = await new USDZExporter().parseAsync(model, { quickLookCompatible: true, maxTextureSize: 1024 });
+          return new Blob([data], { type: 'model/vnd.usdz+zip' });
+        }
+        const data = await new GLTFExporter().parseAsync(model, { binary: true, maxTextureSize: 1024 });
+        return new Blob([data], { type: 'model/gltf-binary' });
+      } catch (fout) {
+        console.error('3D-bestand maken mislukt:', fout);
+        return null;
+      }
+    },
+    async startAR(overlay, opEinde) {
+      const xr = (navigator as any).xr;
+      if (!xr) return 'Deze browser kent geen AR (WebXR).';
+      let sessie: any;
+      try {
+        sessie = await xr.requestSession('immersive-ar', { requiredFeatures: ['hit-test'], optionalFeatures: ['dom-overlay'], domOverlay: { root: overlay } });
+      } catch (fout) {
+        return `AR kon niet starten (${(fout as Error)?.message ?? fout}). Open de pagina rechtstreeks in Chrome op een Android-toestel met ARCore.`;
+      }
+      // Aparte AR-scène: alleen de zetel, met licht, een schaduwvanger en een richtcirkel op de vloer.
+      const ar = new THREE.Scene();
+      ar.environment = scene.environment;
+      ar.add(new THREE.HemisphereLight(0xffffff, 0x9a948c, 0.7 * PI));
+      arZon = new THREE.DirectionalLight(0xffffff, 1.1 * PI);
+      arZon.castShadow = true;
+      arZon.shadow.mapSize.set(1024, 1024);
+      Object.assign(arZon.shadow.camera, { left: -2.5, right: 2.5, top: 2.5, bottom: -2.5, near: 0.1, far: 10 });
+      arZon.shadow.radius = 4;
+      ar.add(arZon, arZon.target);
+      arPlaats = new THREE.Group();
+      arPlaats.visible = false;
+      arPlaats.add(arModel());
+      const vanger = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), new THREE.ShadowMaterial({ opacity: 0.32 }));
+      vanger.rotation.x = -Math.PI / 2;
+      vanger.receiveShadow = true;
+      arPlaats.add(vanger);
+      ar.add(arPlaats);
+      const richt = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.16, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
+      richt.matrixAutoUpdate = false;
+      richt.visible = false;
+      ar.add(richt);
+      bezigMetAR = true;
+      arSessie = sessie;
+      clearTimeout(mooiGepland);
+      renderer.xr.enabled = true;
+      renderer.xr.setReferenceSpaceType('local');
+      await renderer.xr.setSession(sessie);
+      renderer.shadowMap.autoUpdate = true;
+      const kijkruimte = await sessie.requestReferenceSpace('viewer');
+      const treffers = await sessie.requestHitTestSource({ space: kijkruimte });
+      // Tikken op de knoppen in de overlay plaatst de zetel niet.
+      overlay.addEventListener('beforexrselect', (ev) => ev.preventDefault());
+      sessie.addEventListener('select', () => {
+        if (!richt.visible) return;
+        arPlaats.position.setFromMatrixPosition(richt.matrix);
+        // Met de voorkant naar de kijker.
+        const cam = renderer.xr.getCamera();
+        arPlaats.rotation.y = Math.atan2(cam.position.x - arPlaats.position.x, cam.position.z - arPlaats.position.z);
+        arPlaats.visible = true;
+        arZon.position.set(arPlaats.position.x + 1.2, arPlaats.position.y + 3, arPlaats.position.z + 1.6);
+        arZon.target.position.copy(arPlaats.position);
+      });
+      renderer.setAnimationLoop((_t: number, frame: any) => {
+        if (frame) {
+          const ref = renderer.xr.getReferenceSpace();
+          const hits = frame.getHitTestResults(treffers);
+          if (hits.length) {
+            richt.visible = true;
+            richt.matrix.fromArray(hits[0].getPose(ref).transform.matrix);
+          } else richt.visible = false;
+        }
+        renderer.render(ar, camera);
+      });
+      sessie.addEventListener('end', () => {
+        treffers?.cancel?.();
+        renderer.setAnimationLoop(null);
+        renderer.xr.enabled = false;
+        renderer.shadowMap.autoUpdate = false;
+        // Alleen wat de AR-scène zelf maakte opruimen; de zetel deelt zijn vormen met de gewone weergave.
+        vanger.geometry.dispose(); richt.geometry.dispose();
+        arZon?.shadow?.map?.dispose();
+        arSessie = arPlaats = arZon = null;
+        bezigMetAR = false;
+        schaduwOpnieuw();
+        viewer.formaat();
+        render(true);
+        opEinde();
+      });
+      return null;
+    },
+    arDraai(graden) {
+      if (arPlaats) arPlaats.rotation.y += (graden * Math.PI) / 180;
+    },
+    arStop() {
+      void arSessie?.end();
     },
     standpunt(naam) {
       if (naam === 'voor') { hoekH = 0; hoekV = 0.12; }

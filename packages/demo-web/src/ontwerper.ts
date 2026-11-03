@@ -625,6 +625,89 @@ function pas3DInstellingenToe() {
 function vul3DStof() {
   materiaalOptiesPerCollectie($<HTMLSelectElement>('#o-3d-stof'), getMaterialen(), ontwerp.hoofdmateriaal);
 }
+// ---------- AR: de zetel in je eigen kamer ----------
+let arUrls: string[] = [];
+let arGepland = 0;
+/** Knop als afbeelding (Apple vereist een <img> in de AR-link). */
+function arKnopBeeld() {
+  const c = document.createElement('canvas');
+  c.width = 520; c.height = 88;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#3f5a52';
+  g.beginPath(); g.roundRect(0, 0, 520, 88, 14); g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 5; g.lineJoin = 'round';
+  // Kubusje (AR-teken)
+  g.beginPath(); g.moveTo(44, 22); g.lineTo(70, 34); g.lineTo(70, 62); g.lineTo(44, 74); g.lineTo(18, 62); g.lineTo(18, 34); g.closePath(); g.moveTo(18, 34); g.lineTo(44, 46); g.lineTo(70, 34); g.moveTo(44, 46); g.lineTo(44, 74); g.stroke();
+  g.fillStyle = '#fff'; g.font = '600 34px system-ui, -apple-system, sans-serif'; g.textBaseline = 'middle';
+  g.fillText('Openen in je kamer (AR)', 92, 46);
+  return c.toDataURL('image/png');
+}
+/** Bestanden voor AR (opnieuw) maken: USDZ voor iPhone/iPad, GLB voor de rest. */
+async function maakArBestanden() {
+  if (!viewer?.exporteer3D) return;
+  const status = $('#o-ar-status');
+  status.textContent = '3D-bestand wordt gemaakt …';
+  for (const u of arUrls) URL.revokeObjectURL(u);
+  arUrls = [];
+  const [usdz, glb] = await Promise.all([viewer.exporteer3D('usdz'), viewer.exporteer3D('glb')]);
+  const ios = $<HTMLAnchorElement>('#o-ar-ios');
+  if (usdz) {
+    const u = URL.createObjectURL(usdz);
+    arUrls.push(u);
+    // Ware grootte: niet laten schalen in Quick Look.
+    ios.href = `${u}#allowsContentScaling=0`;
+    $<HTMLAnchorElement>('#o-ar-usdz').href = u;
+  }
+  if (glb) {
+    const u = URL.createObjectURL(glb);
+    arUrls.push(u);
+    $<HTMLAnchorElement>('#o-ar-glb').href = u;
+  }
+  const kb = (b: Blob | null) => (b ? `${Math.round(b.size / 1024)} kB` : 'mislukt');
+  status.textContent = usdz || glb ? `Klaar (USDZ ${kb(usdz)}, GLB ${kb(glb)}).` : 'Het 3D-bestand kon niet gemaakt worden.';
+  $('#o-ar-usdz').hidden = !usdz;
+  $('#o-ar-glb').hidden = !glb;
+  if (ios.dataset.kan === '1') ios.hidden = !usdz;
+}
+/** Na een wijziging aan het ontwerp: AR-bestanden vernieuwen als het paneel open staat. */
+export function arVerouderd() {
+  if ($('#o-ar').hidden) return;
+  clearTimeout(arGepland);
+  arGepland = window.setTimeout(() => void maakArBestanden(), 700);
+}
+async function startArPaneel() {
+  const knop = $<HTMLButtonElement>('#o-3d-ar');
+  const paneel = $('#o-ar');
+  const ios = $<HTMLAnchorElement>('#o-ar-ios');
+  const kanQuickLook = document.createElement('a').relList?.supports?.('ar') === true;
+  ios.dataset.kan = kanQuickLook ? '1' : '';
+  if (kanQuickLook) ios.replaceChildren(el('img', { src: arKnopBeeld(), alt: 'Openen in je kamer (AR)' }));
+  let kanWebXR = false;
+  try { kanWebXR = !!(await (navigator as unknown as { xr?: { isSessionSupported(m: string): Promise<boolean> } }).xr?.isSessionSupported('immersive-ar')); } catch { kanWebXR = false; }
+  $('#o-ar-start').hidden = !kanWebXR;
+  const inFrame = window.top !== window.self;
+  $('#o-ar-uitleg').textContent =
+    (kanQuickLook ? 'Tik op de knop: de zetel opent in de camera van je iPhone of iPad. Zet hem neer met één vinger, draai met twee. '
+      : kanWebXR ? 'Tik op Start AR, richt op de vloer en tik om de zetel te plaatsen. '
+        : 'Op deze computer kan AR niet: open deze pagina op een gsm of tablet (Safari op iPhone/iPad, Chrome op Android), of stuur de 3D-bestanden door. ') +
+    (inFrame ? 'Werkt AR hier niet? Open het HTML-bestand dan rechtstreeks in Safari of Chrome op het toestel (niet binnen een andere pagina).' : '');
+  knop.addEventListener('click', () => {
+    const open = paneel.hidden;
+    paneel.hidden = !open;
+    knop.setAttribute('aria-expanded', String(open));
+    if (open) void maakArBestanden();
+  });
+  const overlay = $('#o-ar-overlay');
+  $('#o-ar-start').addEventListener('click', async () => {
+    if (!viewer?.startAR) return;
+    overlay.hidden = false;
+    const fout = await viewer.startAR(overlay, () => { overlay.hidden = true; });
+    if (fout) { overlay.hidden = true; $('#o-ar-status').textContent = fout; }
+  });
+  $('#o-ar-draai').addEventListener('click', () => viewer?.arDraai?.(45));
+  $('#o-ar-stop').addEventListener('click', () => viewer?.arStop?.());
+}
+
 function downloadBeeld(url: string, soort: string) {
   const a = el('a', { href: url, download: `zetel-${soort}-${new Date().toISOString().slice(0, 10)}.png` });
   document.body.append(a);
@@ -701,6 +784,7 @@ function start3DInstellingen() {
     if (url) downloadBeeld(url, '3d');
   });
   $('#o-3d-groot').append(grootSchermKnop($('#o-tekenvlak'), () => viewer?.formaat()));
+  void startArPaneel();
   // Fotorealistische foto: path tracing met voortgang en annuleren; meer monsters op een computer dan op een tablet.
   let bezig: AbortController | null = null;
   const voortgang = $('#o-3d-voortgang');
@@ -754,6 +838,7 @@ function toonWeergave() {
   if (weergave === '3d' && viewer) {
     viewer.formaat();
     viewer.toon(bouw3D(ontwerp, getCatalogus(), getMaterialen()));
+    arVerouderd();
   }
 }
 
