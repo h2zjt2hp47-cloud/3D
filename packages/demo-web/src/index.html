@@ -146,18 +146,6 @@ button:disabled { opacity: .45; cursor: default; }
 .drie-d-instellingen select { font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 36px; max-width: 220px; }
 .drie-d-instellingen button { min-height: 36px; }
 #o-tekenvlak.groot-scherm #o-3d { width: 100%; }
-.ar-paneel { flex-basis: 100%; border: 1px solid var(--lijn); border-radius: 8px; background: var(--vlak); padding: 10px 12px; }
-.ar-paneel p { margin: 0 0 6px; }
-.ar-acties { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 4px 0 6px; }
-.ar-acties button, .ar-acties .knop-link, #o-ar-ios { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); text-decoration: none; font-size: 14px; }
-.ar-acties button { background: var(--accent); color: var(--vlak); cursor: pointer; }
-.ar-acties .knop-link { color: var(--accent); background: transparent; }
-#o-ar-ios { padding: 0; border: 0; }
-#o-ar-ios img { display: block; height: 44px; border-radius: 6px; }
-.ar-overlay { position: fixed; left: 0; right: 0; bottom: 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); display: grid; gap: 10px; justify-items: center; background: linear-gradient(transparent, rgba(0,0,0,.55)); color: #fff; font: 16px/1.4 var(--tekst); text-align: center; }
-.ar-overlay p { margin: 0; max-width: 34ch; text-shadow: 0 1px 3px rgba(0,0,0,.6); }
-.ar-overlay div { display: flex; gap: 10px; }
-.ar-overlay button { min-height: 48px; min-width: 120px; border-radius: 999px; border: 0; background: rgba(255,255,255,.92); color: #23262a; font-size: 16px; font-weight: 600; }
 .drie-d-prijs { margin-left: auto; font-weight: 600; font-size: 15px; align-self: center; }
 .drie-d-meer { flex-basis: 100%; border-top: 1px solid var(--lijn); padding-top: 4px; }
 .drie-d-meer > summary { cursor: pointer; font-size: 14px; padding: 6px 0; min-height: 32px; }
@@ -170,8 +158,7 @@ button:disabled { opacity: .45; cursor: default; }
 @media (pointer: coarse) {
   .drie-d-instellingen select, .drie-d-instellingen button, .drie-d-meer-velden select, .drie-d-meer-velden input[type="color"], .drie-d-meer-velden label.vink, #o-3d-knoppen button { min-height: 44px; }
   .drie-d-meer-velden input[type="checkbox"] { width: 22px; height: 22px; }
-  .ar-acties button, .ar-acties .knop-link { min-height: 44px; }
-}
+  }
 #o-3d canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .klein-knop { padding: 3px 9px !important; font-size: .8rem; }
 /* Vrij ontwerp */
@@ -476,21 +463,8 @@ main.catalogus { display: block; }
       <label><span>Kwaliteit</span><select id="o-3d-kwaliteit"><option value="mooi">Mooi</option><option value="snel">Snel (tablet)</option></select></label>
       <button type="button" class="tweede" id="o-3d-foto" title="Het huidige beeld als PNG (meteen)">Foto</button>
       <button type="button" class="tweede" id="o-3d-fotoreal" title="Echte lichtberekening (path tracing): duurt tot ruim een minuut; het beeld wordt al tijdens het rekenen getoond">Fotorealistische foto</button>
-      <button type="button" class="tweede" id="o-3d-ar" aria-expanded="false" aria-controls="o-ar">Bekijk in je kamer (AR)</button>
       <span id="o-3d-groot"></span>
       <span id="o-3d-prijs" class="drie-d-prijs" aria-live="polite"></span>
-      <section id="o-ar" class="ar-paneel" hidden aria-label="Bekijk in je kamer">
-        <p><strong>Bekijk de zetel in je eigen kamer</strong> — op ware grootte, met de camera van je gsm of tablet.</p>
-        <div class="ar-acties">
-          <a id="o-ar-ios" rel="ar" hidden></a>
-          <button type="button" id="o-ar-start" hidden>Start AR</button>
-          <a id="o-ar-usdz" class="knop-link" download="zetel.usdz" hidden>3D-bestand voor iPhone/iPad (.usdz)</a>
-          <a id="o-ar-glb" class="knop-link" download="zetel.glb" hidden>3D-bestand (.glb)</a>
-          <button type="button" id="o-ar-zip" class="tweede" hidden>3D-bestanden downloaden (.zip met .usdz en .glb)</button>
-          <span id="o-ar-status" class="klein" role="status"></span>
-        </div>
-        <p id="o-ar-uitleg" class="klein"></p>
-      </section>
       <details class="drie-d-meer">
         <summary>Meer instellingen</summary>
         <div class="drie-d-meer-velden">
@@ -508,10 +482,6 @@ main.catalogus { display: block; }
           <button type="button" class="tweede" id="o-3d-herstel">Instellingen herstellen</button>
         </div>
       </details>
-    </div>
-    <div id="o-ar-overlay" class="ar-overlay" hidden>
-      <p id="o-ar-tip">Richt de camera op de vloer en tik om de zetel te plaatsen. Tik opnieuw om hem te verplaatsen.</p>
-      <div><button type="button" id="o-ar-draai">Draai 45°</button><button type="button" id="o-ar-stop">Sluiten</button></div>
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>
   </section>
