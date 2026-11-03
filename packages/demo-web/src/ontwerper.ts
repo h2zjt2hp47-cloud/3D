@@ -1192,11 +1192,14 @@ function toonEigenschappen() {
       ['rug-achter', '+ Rugleuning achter'], ['rug-links', '+ Rugleuning links'], ['rug-rechts', '+ Rugleuning rechts'],
       ['rugkussen', '+ Rugkussen'], ['sierkussen', '+ Sierkussen'], ['rolkussen', '+ Rolkussen'],
     ] as const) {
+      // De chaise longue heeft een eigen keuze "Rugleuning" (vast frame, met prijs): geen losse rugleuning erbovenop.
+      if (t.tekenstijl === 'chaise' && wat.startsWith('rug-')) continue;
       const b = el('button', { type: 'button', class: 'tweede klein-knop' }, tekst) as HTMLButtonElement;
       b.addEventListener('click', () => voegOpzetToe(e, wat));
       rij2.append(b);
     }
     vak.append(rij2);
+    if (t.tekenstijl === 'chaise') vak.append(el('p', { class: 'klein' }, 'Een rugleuning voor de chaise kies je hieronder bij "Rugleuning" (achteraan of langs de lange zijde).'));
     delen.push(vak);
   }
   if (elementOpties.childElementCount) delen.push(elementOpties);

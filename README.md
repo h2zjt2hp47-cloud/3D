@@ -58,7 +58,7 @@ packages/
                         - Sofa/Kast op maat: formulier uit het productmodel, live prijs en tekening
                         - Vrij ontwerp: elementen tekenen, slepen (magneet), vergroten, draaien,
                           materiaal en opties per element, aanpassingen voor de hele zetel,
-                          vooraanzicht en 3D (three.js r128 via cdnjs), ongedaan maken,
+                          vooraanzicht en 3D (three.js 0.187, gebundeld), ongedaan maken,
                           ontwerpmodus: vorm van elk element (rugdikte, kussens, zachtheid,
                           rugvorm, houten frame)
                         - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen

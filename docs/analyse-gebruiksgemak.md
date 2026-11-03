@@ -192,3 +192,30 @@ Aanleiding: "er kan niet gescrold worden in de configurator fullscreen". Daarna 
 - **Safari en echte aanraakschermen:** niet getest. Knijpen is alleen getest zoals de code het afhandelt.
 - **Begrip, smaak en vertrouwen:** een script weet niet of een klant de woorden begrijpt of het mooi vindt. Daarvoor blijft de gebruikstest met mensen (hoofdstuk 7) nodig.
 
+
+## 9. Zetel-3D: controle op ontbrekende zaken en gebruiksgemak (3/11/2026)
+
+*Testrun in de browser (computer 1440 px, groot scherm, telefoon 390 px) met de voorbeeldsofa met chaise longue en poef. Alles zonder foutmeldingen.*
+
+### Opgelost in deze ronde
+| Wat ontbrak of stoorde | Nu |
+|---|---|
+| In de 3D kon je niets aanklikken; een element kiezen kon alleen in het bovenaanzicht. | Klik op een deel van de zetel: dat element wordt gekozen (kader in de 3D), de eigenschappen staan eronder, ook in groot scherm. |
+| In groot scherm verdwenen de prijs en de eigenschappen. | Prijs in de 3D-balk; eigenschappen blijven zichtbaar onder de 3D. |
+| Geen standpunt van achteren of op ooghoogte (de knop *Achter* bestond in de code, niet op het scherm). | Knoppen *Achter* en *Ooghoogte* (zoals een staande klant de zetel ziet). |
+| Geen bediening met het toetsenbord. | Pijltjes draaien, + en − zoomen, 0 = standaardbeeld; het 3D-vak is met Tab bereikbaar en heeft een uitleg voor schermlezers. |
+| Geen maten in de 3D. | *Maten tonen*: breedte, diepte en hoogte met labels in cm. |
+| Voor de toonzaal: de zetel stond stil. | *Automatisch draaien*, pauzeert 3 s na elke bediening. |
+| Foto alleen als schermafdruk. | *Fotorealistische foto* met echte lichtberekening, voortgangsbalk en *Annuleren*. |
+| Kleur in 3D week af van de staal. | Gemeten en bijgesteld (Neutral-tonemapping). |
+| Chaise longue: rugleuning kon alleen als los opzet-element, zonder duidelijke prijs. | Keuze *Rugleuning* (zonder, achteraan, lange zijde links of rechts) met meerprijs; de losse knoppen *+ Rugleuning* bij de chaise zijn weg, met een verwijzing naar de keuze. |
+| Selecties en knoppen onder de 3D waren op een tablet 36 px hoog. | 44 px op aanraakschermen. |
+
+### Nog open
+1. **Niet getest op echte toestellen.** *Mooi* (ambient occlusion en zachte schaduwen) en de fotomodus vragen een grafische kaart; in de testomgeving zonder grafische kaart duurt een *Mooi*-beeld ±7 s en een klein fotoproefbeeld ±2 min. Op een tablet staat standaard *Snel*. Graag testen op de toonzaaltablet en een gewone laptop.
+2. **Fotomodus toont geen stofreliëf** (de lichtberekening negeert de reliëfkaarten); kleur en glans kloppen wel. Mogelijke verbetering: het reliëf omzetten naar een normal map.
+3. **Stof per element in de 3D wisselen** kan via het eigenschappenvak onder de 3D; een snelle stalenstrook rechtstreeks in de 3D (zoals bij de stofkeuze bovenaan) zou nog sneller zijn.
+4. **Sofa op maat** (de configurator per cm) heeft nog geen 3D, alleen de tekening; de vrije ontwerper wel.
+5. **Modellen van de klant** (Kotor, Belize, Pula …) hebben een chaise longue zonder rugleuning, zoals afgeleid uit de foto's. Na te vragen of die chaises bij Corneille & Silence een rug hebben; dan zetten we de nieuwe keuze in het model.
+6. **Delen:** een link naar de configuratie of een AR-weergave op de gsm (zetel op ware grootte in de eigen kamer) bestaat nog niet.
+7. **Bestandsgrootte:** door de ingebakken 3D is de demo ±1,8 MB; voor SharePoint blijft handmatig opladen nodig.

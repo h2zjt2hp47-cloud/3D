@@ -158,7 +158,7 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 ## Testen
 - `npm test` en `npm run typecheck` in de root (159 tests op 1/11/2026; `core/test/woning.test.ts`, `werf.test.ts`, `gevel.test.ts`, `maatlijst.test.ts`).
 - Browser: er zijn nu twee knoppen met `data-weergave="offerte"` (Ramenlijst en Offerte); klik in tests op `.nav [data-weergave="offerte"]:not(.alleen-ramen)`. Coördinaten in een tekenvlak pas berekenen ná klikken in het palet (Playwright scrolt het palet in beeld).
-- Browser: Playwright met cdnjs gerouteerd naar `node_modules/three/build/three.min.js`, Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader`. Klik op een opening met `{ force: true }` (de groep bevat ook bogen in de ruimte).
+- Browser: Playwright met Chromium `--use-angle=swiftshader --enable-unsafe-swiftshader` (three.js zit sinds 3/11 in de bundel, geen CDN meer). Klik op een opening met `{ force: true }` (de groep bevat ook bogen in de ruimte).
 
 ## Gebruiksgemak testen
 - Testrun in de browser: `docs/analyse-gebruiksgemak.md`, hoofdstuk 8. Per scherm en schermformaat (desktop, laptop, tablet, telefoon) controleren op aanraakdoelen onder 44 px, een pagina die te breed is, afgekapte tekst en contrast, en de taken doorlopen met een teller voor het aantal handelingen.

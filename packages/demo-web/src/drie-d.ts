@@ -772,7 +772,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   let lichtNaam: LichtNaam = 'studio';
   const kamerDelen: any[] = [];
   const decorMaterialen = new Map<string, any>();
-  const plantMat = new THREE.MeshStandardMaterial({ color: kleur('#4f6b3c'), roughness: 0.8 });
+  let bladVorm: any = null;
   /** Houten structuur met nerf (poten, tafeltjes): fijne lange lijnen in een iets andere tint. */
   const nerven = new Map<string, any>();
   function houtNerf(hex: string) {
@@ -895,17 +895,43 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const px = k.x - 50, pz = k.z + 10;
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(17, 13, 34, 28), new THREE.MeshStandardMaterial({ color: kleur(dc.muur?.soort === 'steen' ? '#6b6560' : '#d9d2c4'), roughness: 0.7 }));
       pot.position.set(px, 17, pz); add(pot);
-      // Blad: een tiental platte, gekantelde ellipsen rond een stam.
-      for (let i = 0; i < 11; i++) {
-        const blad = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 6), plantMat);
-        const hoek = (i / 11) * Math.PI * 2, hoogte = 60 + (i % 4) * 16;
-        blad.scale.set(7, 1.2, 18);
-        blad.position.set(px + Math.cos(hoek) * 14, hoogte, pz + Math.sin(hoek) * 14);
-        blad.rotation.set(0.5 * Math.sin(i), -hoek + Math.PI / 2, 0.6);
-        add(blad);
+      // Blad: gebogen bladvormen (ficus) op drie stammetjes, in twee tinten groen.
+      bladVorm ??= (() => {
+        const v = new THREE.Shape();
+        v.moveTo(0, 0);
+        v.quadraticCurveTo(6.5, 5, 4.5, 13);
+        v.quadraticCurveTo(2.5, 19, 0, 21);
+        v.quadraticCurveTo(-2.5, 19, -4.5, 13);
+        v.quadraticCurveTo(-6.5, 5, 0, 0);
+        const g = new THREE.ShapeGeometry(v, 6);
+        // Licht gebogen in de lengte en gevouwen langs de nerf.
+        const pos = g.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          const x = pos.getX(i), y = pos.getY(i);
+          pos.setZ(i, -0.012 * y * y + Math.abs(x) * 0.25);
+        }
+        g.computeVertexNormals();
+        return g;
+      })();
+      const groen = [new THREE.MeshStandardMaterial({ color: kleur('#3f5f34'), roughness: 0.55, side: THREE.DoubleSide }), new THREE.MeshStandardMaterial({ color: kleur('#55773f'), roughness: 0.6, side: THREE.DoubleSide })];
+      for (let st = 0; st < 3; st++) {
+        const sx = px + (st - 1) * 5, sz = pz + (st % 2 ? 3 : -3), top = 95 + st * 18;
+        for (let i = 0; i < 9; i++) {
+          const blad = new THREE.Mesh(bladVorm, groen[(i + st) % 2]);
+          const hoek = i * 2.4 + st, hoogte = 45 + ((top - 45) * i) / 8;
+          blad.position.set(sx + Math.cos(hoek) * 2, hoogte, sz + Math.sin(hoek) * 2);
+          blad.rotation.set(-0.9 - (i % 3) * 0.25, hoek, 0, 'YXZ');
+          const sch = 0.8 + ((i * 7) % 5) * 0.08;
+          blad.scale.set(sch, sch, sch);
+          add(blad);
+        }
       }
-      const stam = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 70, 8), new THREE.MeshStandardMaterial({ map: houtNerf('#6a4a32'), roughness: 0.8 }));
-      stam.position.set(px, 60, pz); add(stam);
+      for (let st = 0; st < 3; st++) {
+        const top = 95 + st * 18;
+        const stam = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 1.1, top - 30, 6), new THREE.MeshStandardMaterial({ map: houtNerf('#6a4a32'), roughness: 0.8 }));
+        stam.position.set(px + (st - 1) * 5, 30 + (top - 30) / 2, pz + (st % 2 ? 3 : -3));
+        add(stam);
+      }
     }
     scene.add(...kamerDelen);
     zetLicht();

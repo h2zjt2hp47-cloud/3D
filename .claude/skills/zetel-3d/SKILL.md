@@ -8,7 +8,7 @@ description: Bouw, wijzig of debug de 3D-weergave (en boven-/vooraanzicht) van z
 De 3D zit in twee lagen. Houd ze gescheiden:
 
 1. **Motor** (`packages/core/src/ruimtelijk.ts`): `bouw3D(ontwerp, catalogus, materialen)` zet een ontwerp om naar een lijst **blokken** (`Blok`). Geen 3D-bibliotheek, volledig testbaar met vitest.
-2. **Weergave** (`packages/demo-web/src/drie-d.ts`): zet blokken om naar three.js-meshes (r128, globale `THREE` van cdnjs). Alleen presentatie: materialen, licht, camera.
+2. **Weergave** (`packages/demo-web/src/drie-d.ts`): zet blokken om naar three.js-meshes (three 0.187 uit npm, gebundeld; `const THREE: any = THREE_`, typen losjes via `three.d.ts`). Alleen presentatie: materialen, licht, camera, nabewerking, fotomodus.
 
 Boven- en vooraanzicht volgen dezelfde regels: `tekenElement()` in `ontwerp.ts` (bovenaanzicht) en `tekenVooraanzicht()` in `vooraanzicht.ts`. **Een nieuwe vorm hoort in alle drie** (boven, voor, 3D).
 
@@ -59,7 +59,11 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 
 ## Weergave (drie-d.ts)
 - Afgeronde balken: `ExtrudeGeometry` van een afgerond grondvlak met bevel, gedraaid zodat de extrusie naar boven gaat; onderkant op `y = 0` van de mesh.
-- Kleuren zijn sRGB-hex → `new THREE.Color(hex).convertSRGBToLinear()`; `renderer.outputEncoding = sRGBEncoding`, **lineaire** tonemapping, belichting 0,95 (ACES verschoof de tint van stoffen: petrol werd turkoois). Controleer kleurgetrouwheid door canvaspixels te meten tegen de staal.
+- Kleurbeheer staat aan: `new THREE.Color(hex)` zet sRGB zelf om (geen `convertSRGBToLinear` meer); texturen krijgen `colorSpace = SRGBColorSpace`; `tint()` rekent op de sRGB-waarden (niet via THREE.Color). Tonemapping **Neutral** (Khronos PBR Neutral, belichting 1): gemeten het dichtst bij de stalen (ACES maakte petrol turkoois). Lichtsterktes × π (fysische eenheden sinds r155). Controleer kleurgetrouwheid door canvaspixels te meten tegen de staal.
+- **Licht en omgeving:** `LICHTEN` (Studio, Daglicht, Ochtend, Bewolkt, Avond, Toonzaal/spots) met elk een eigen HDR-equirect (`hdrBeeld`: wanden + ronde lichtbronnen, Float32) als `scene.environment`; die dient ook de path tracer. **Decors** `DECORS` (Studio, Woonkamer, Scandinavisch, Loft, Japandi, Klassiek, Toonzaal, Terras) + losse `Weergave3D` (vloer `VLOEREN`, muur, tapijt, spullen, lens, helderheid, zonrichting, maten, draaien) via `instellen()`.
+- **Kwaliteit Mooi** (alleen zetel): `EffectComposer` met `GTAOPass` + `OutputPass` en VSM-schaduwen (2048, blur). Tijdens draaien het gewone beeld, 180 ms na de laatste beweging één keer de nabewerking (`render(direct)`).
+- **Fotomodus:** `fotoRealistisch()` met `WebGLPathTracer` (three-gpu-pathtracer): mist, contactschaduwvlak en hoekpuntkleuren uit (die laatste leest de tracer verkeerd: zwarte vlakken), `environmentIntensity` = OMGEVING × 1,15, synchroon `setScene` (async vraagt een BVH-worker), lus met `renderSample()` tot het aantal stappen. Bump-maps negeert de tracer.
+- **Klikken:** meshes heten `b.code`; `opKlik(elementId)` via raycast bij een klik zonder slepen; `markeer(id)` tekent een `Box3Helper`.
 - Stof krijgt een fijne weefseltextuur (canvas) die met de kleur vermenigvuldigd wordt; hout ruwheid 0,55; metaal metalness 0,85.
 - Bouwmaterialen (ook gebruikt door de bouwdemo): `steen` (baksteen), `planken`, `tegel` (60 × 60), `parket`, `kunststof`, `glas`, `matglas`. Textuur in wereldmaat (cm) via `wereldUV`, zodat stenen en tegels hun echte maat houden.
 - `zijden` op een blok geeft één zijvlak een ander materiaal (bv. baksteen buiten, verf binnen); `plaatsBlokken` (ruimtelijk.ts) draait blokken per 90° en draait `zijden` en `kantel` mee.
@@ -68,7 +72,7 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - Schaduwen via één `DirectionalLight` waarvan het schaduwkader meeschaalt met de zetel. Camera: eigen orbit (slepen, scrollen, knijpen) en vaste standpunten.
 
 ## Testen in de browser
-- three.js komt van cdnjs; in de cloudomgeving kan dat geblokkeerd zijn. Gebruik de lokale kopie (`three@0.128.0` devDependency) met Playwright: `page.route('https://cdnjs.cloudflare.com/**', …)` → `node_modules/three/build/three.min.js`.
+- three.js zit in de bundel (geen CDN). Neem beelden met `canvas.toDataURL()`; *Mooi* (GTAO + VSM) is in swiftshader ±7 s per beeld, dus test met *Snel* of wacht 30–45 s. `window.__zetel3d.fotoRealistisch({ stappen: 6, breedte: 520 })` = snelle proef van de fotomodus.
 - Start Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` voor WebGL zonder GPU.
 
 ## Valkuilen
