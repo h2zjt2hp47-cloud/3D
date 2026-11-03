@@ -1,5 +1,6 @@
+/// <reference path="./three.d.ts" />
 /**
- * 3D-weergave van een vrij ontwerp met three.js (r128, geladen van cdnjs als globale THREE).
+ * 3D-weergave van een vrij ontwerp met three.js (0.187, mee gebundeld in het HTML-bestand).
  * De motor levert de blokken (bouw3D); hier worden ze omgezet naar meshes.
  * Bediening: slepen = draaien, scrollen/knijpen = zoomen, knoppen = vaste standpunten.
  */
@@ -7,9 +8,12 @@ import type { Blok, Scene3D, Weefsel } from '../../core/src/index.js';
 import { wielHint } from './zoom.js';
 import { WEEFSEL_CM, weefselCanvas } from './weefsel.js';
 
-// three.js wordt als globale variabele geladen (zie index.html).
+import * as THREE_ from 'three';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-declare const THREE: any;
+const THREE: any = THREE_;
+/** Lichtsterktes zijn sinds three.js r155 fysisch: × π geeft hetzelfde beeld als de oude waarden. */
+const PI = Math.PI;
 
 export interface Viewer3D {
   toon(scene: Scene3D): void;
@@ -49,10 +53,6 @@ export interface Opties3D {
 }
 
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
-  if (typeof THREE === 'undefined') {
-    houder.textContent = '3D kon niet geladen worden (geen verbinding met de 3D-bibliotheek).';
-    return null;
-  }
   let renderer: any;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -61,7 +61,6 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return null;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.LinearToneMapping;
   renderer.toneMappingExposure = 0.95;
   renderer.shadowMap.enabled = true;
@@ -76,18 +75,18 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // daardoor kunnen de hemel- en vullicht zwakker.
   scene.environment = studioOmgeving();
   let OMGEVING = 0.5;
-  const hemel = new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34);
+  const hemel = new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34 * PI);
   scene.add(hemel);
   // Warme lamp (bij de staanlamp in het decor), alleen aan bij de lichtsfeer "Avond".
-  const lamp = new THREE.PointLight(0xffc58a, 0, 600, 2);
+  const lamp = new THREE.PointLight(0xffc58a, 0, 600, 0);
   lamp.castShadow = false;
   scene.add(lamp);
-  const zon = new THREE.DirectionalLight(0xffffff, 0.8);
+  const zon = new THREE.DirectionalLight(0xffffff, 0.8 * PI);
   zon.castShadow = true;
   zon.shadow.mapSize.set(2048, 2048);
   zon.shadow.bias = -0.0005;
   scene.add(zon, zon.target);
-  const vul = new THREE.DirectionalLight(0xffffff, 0.16);
+  const vul = new THREE.DirectionalLight(0xffffff, 0.16 * PI);
   scene.add(vul);
   const studioVloer = new THREE.MeshStandardMaterial({ color: 0xdcd8d0, roughness: 1, envMapIntensity: 0.4 });
   const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), studioVloer);
@@ -116,16 +115,19 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
 
   const groep = new THREE.Group();
   scene.add(groep);
-  const kleur = (hex: string) => new THREE.Color(hex).convertSRGBToLinear();
+  // Kleurbeheer staat aan: een hex-kleur wordt automatisch van sRGB naar lineair omgezet.
+  const kleur = (hex: string) => new THREE.Color(hex);
   const materialen = new Map<string, any>();
   // ---------- texturen voor bouwmaterialen (in cm via wereld-UV) ----------
   const STEEN = { b: 88, h: 60 }; // 4 stenen van 21 cm + voeg, 10 lagen van 5 cm + voeg
   const PLANK = { b: 48, h: 200 }; // 4 verticale planken van 12 cm
   function tint(hex: string, f: number) {
     // Lichter of donkerder, begrensd op 0–255 per kanaal (anders lopen lichte kleuren over).
-    const c = new THREE.Color(hex);
-    const k = (x: number) => Math.max(0, Math.min(255, Math.round(x * f * 255))).toString(16).padStart(2, '0');
-    return `#${k(c.r)}${k(c.g)}${k(c.b)}`;
+    // Rechtstreeks op de sRGB-waarden (voor canvastekeningen), niet via THREE.Color (die rekent lineair).
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    const [r, g, b] = m ? [m[1], m[2], m[3]].map((x) => parseInt(x!, 16)) : [200, 200, 200];
+    const k = (x: number) => Math.max(0, Math.min(255, Math.round(x * f))).toString(16).padStart(2, '0');
+    return `#${k(r!)}${k(g!)}${k(b!)}`;
   }
   function baksteen(hex: string, voeg = '#cfc8bb') {
     const px = 4, c = document.createElement('canvas');
@@ -143,7 +145,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.encoding = THREE.sRGBEncoding;
+    t.colorSpace = THREE.SRGBColorSpace;
     return t;
   }
   function planken(hex: string) {
@@ -163,7 +165,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.encoding = THREE.sRGBEncoding;
+    t.colorSpace = THREE.SRGBColorSpace;
     return t;
   }
   function tegels(hex: string) {
@@ -179,7 +181,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.encoding = THREE.sRGBEncoding;
+    t.colorSpace = THREE.SRGBColorSpace;
     return t;
   }
   function parket(hex: string) {
@@ -205,7 +207,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.encoding = THREE.sRGBEncoding;
+    t.colorSpace = THREE.SRGBColorSpace;
     return t;
   }
   const TEGEL = { b: 120, h: 120 }, PARKET = { b: 240, h: 80 };
@@ -218,7 +220,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     teken(c.getContext('2d')!, px);
     const t = new THREE.CanvasTexture(c);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.encoding = THREE.sRGBEncoding;
+    t.colorSpace = THREE.SRGBColorSpace;
     return t;
   };
   /** Liggende planken van 15 cm (rabat), met schaduwnaad en hier en daar een kopse naad. */
@@ -326,7 +328,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const w = b.weefsel as Weefsel;
       const t = new THREE.CanvasTexture(weefselCanvas(w, b.kleur));
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
-      t.encoding = THREE.sRGBEncoding;
+      t.colorSpace = THREE.SRGBColorSpace;
       t.anisotropy = 4;
       m = stofMateriaal(w, b.kleur, t, reliefVan(w));
       materialen.set(sleutel, m);
@@ -338,7 +340,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         t = new THREE.TextureLoader().load(b.textuur, () => render());
         // Gespiegeld herhalen: een staalfoto is niet naadloos, zo zie je geen ruitjes op de grenzen.
         t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
-        t.encoding = THREE.sRGBEncoding;
+        t.colorSpace = THREE.SRGBColorSpace;
         t.anisotropy = 4;
         fotoTexturen.set(b.textuur, t);
       }
@@ -389,7 +391,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   /** Stofmateriaal: velours met glans langs de randen (sheen), leder met een zachte toplaag, de rest mat. */
   function stofMateriaal(w: Weefsel, hex: string, map: any, relief: any) {
     const basis = { color: 0xffffff, map, bumpMap: relief, bumpScale: RELIEF[w], envMapIntensity: OMGEVING };
-    if (w === 'velours') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.8, sheen: kleur(tint(hex, 1.3)) });
+    if (w === 'velours') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.8, sheen: 1, sheenColor: kleur(tint(hex, 1.3)), sheenRoughness: 0.55 });
     if (w === 'leder') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.42, clearcoat: 0.25, clearcoatRoughness: 0.5 });
     return new THREE.MeshStandardMaterial({ ...basis, roughness: w === 'chenille' ? 0.85 : 0.95 });
   }
@@ -762,7 +764,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (dc.tapijt) {
       const tapijtTex = new THREE.CanvasTexture(weefselCanvas('wol', dc.tapijt));
       tapijtTex.wrapS = tapijtTex.wrapT = THREE.RepeatWrapping;
-      tapijtTex.encoding = THREE.sRGBEncoding;
+      tapijtTex.colorSpace = THREE.SRGBColorSpace;
       const tb = k.b + 80, td = k.d + 110;
       tapijtTex.repeat.set(tb / 12, td / 12);
       const tapijt = new THREE.Mesh(new THREE.BoxGeometry(tb, 1, td), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: tapijtTex, envMapIntensity: 0.3 }));
@@ -778,7 +780,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const kap = new THREE.Mesh(new THREE.CylinderGeometry(16, 22, 26, 32, 1, true), new THREE.MeshStandardMaterial({ color: kleur('#efe7d8'), roughness: 0.9, side: THREE.DoubleSide, emissive: kleur('#ffd9a8'), emissiveIntensity: lichtNaam === 'avond' ? 0.6 : 0 }));
       kap.position.set(lx, 160, lz); add(kap, false);
       lamp.position.set(lx, 150, lz);
-      lamp.intensity = LICHTEN[lichtNaam].lamp * 1.4;
+      lamp.intensity = LICHTEN[lichtNaam].lamp * 1.4 * PI;
       const px = k.x - 50, pz = k.z + 10;
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(17, 13, 34, 28), new THREE.MeshStandardMaterial({ color: kleur(dc.muur?.soort === 'steen' ? '#6b6560' : '#d9d2c4'), roughness: 0.7 }));
       pot.position.set(px, 17, pz); add(pot);
@@ -800,8 +802,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   function zetLicht() {
     const l = LICHTEN[lichtNaam];
     zon.color.set(l.zon);
-    zon.intensity = l.zonSterkte;
-    hemel.intensity = l.hemel;
+    zon.intensity = l.zonSterkte * PI;
+    hemel.intensity = l.hemel * PI;
     hemel.color.set(l.hemelKleur);
     OMGEVING = l.omgeving;
     // Alle materialen volgen het omgevingslicht van de sfeer.

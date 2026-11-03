@@ -10,6 +10,10 @@
     "test": "echo geen tests"
   },
   "devDependencies": {
-    "three": "^0.128.0"
+    "three": "^0.187.0"
+  },
+  "dependencies": {
+    "three-gpu-pathtracer": "^0.0.28",
+    "three-mesh-bvh": "^0.9.18"
   }
 }
