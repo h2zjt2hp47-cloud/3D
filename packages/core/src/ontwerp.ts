@@ -227,17 +227,50 @@ export function overlapOppervlak(a: OntwerpElement, b: OntwerpElement): number {
   return ox > 0 && oy > 0 ? ox * oy : 0;
 }
 
-/** Het element waarop een opzet-element (rugleuning, kussen) ligt: het basiselement met de grootste overlap. */
+/** Soorten elementen waarop een rugleuning of kussen kan liggen (niet op een arm of houten tussenstuk). */
+export const DRAGER_STIJLEN: Tekenstijl[] = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond', 'kuip', 'poef'];
+/** Deel van een opzet-element dat op zittingen moet liggen; anders "ligt niet op een zitting". */
+const OPZET_MIN_OP_ZITTING = 0.6;
+
+/**
+ * Het element waarop een opzet-element (rugleuning, kussen) ligt: de zitting met de grootste overlap. Het moet voor
+ * meer dan de helft op zittingen liggen: een rugleuning die 1 cm op een zit ligt, zweefde vroeger in de lucht.
+ */
 export function dragerVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): OntwerpElement | undefined {
-  const opzet = new Set(catalogus.typen.filter((t) => t.opzet).map((t) => t.code));
+  const dragers = new Set(catalogus.typen.filter((t) => !t.opzet && DRAGER_STIJLEN.includes(t.tekenstijl)).map((t) => t.code));
   let beste: OntwerpElement | undefined;
   let max = 0;
+  let totaal = 0;
   for (const o of ontwerp.elementen) {
-    if (o === e || opzet.has(o.type)) continue;
+    if (o === e || !dragers.has(o.type)) continue;
     const opp = overlapOppervlak(e, o);
+    totaal += opp;
     if (opp > max) { max = opp; beste = o; }
   }
-  return beste;
+  const eigen = e.breedte * e.diepte;
+  return eigen > 0 && totaal >= OPZET_MIN_OP_ZITTING * eigen ? beste : undefined;
+}
+
+/**
+ * Hoogte (cm) waarop een opzet-element (rugleuning, kussen) rust: de bovenkant van de basis van het element eronder
+ * (bij een poef de bovenkant van de poef), of de poothoogte als het nergens op ligt. Eén bron voor het vooraanzicht,
+ * de 3D en het hoogteveld in de ontwerper.
+ */
+export function draagHoogteVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): number {
+  const h = hoogtesVan(ontwerp, catalogus);
+  const d = dragerVan(ontwerp, catalogus, e);
+  if (!d) return h.poothoogte;
+  if (catalogus.typen.find((t) => t.code === d.type)?.tekenstijl === 'poef') return h.zithoogte - 2;
+  const vaste = gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting';
+  return h.zithoogte - (vaste ? 0 : vormgevingVan(ontwerp, d).kussendikte);
+}
+
+/** Losse rugleuning: minstens zoveel cm boven waar ze op rust. */
+export const RUGLEUNING_MIN_BOVEN = 20;
+
+/** Bovenkant (cm boven de vloer) van een losse rugleuning: de rughoogte, maar minstens 20 cm boven waar ze op rust. */
+export function rugleuningTop(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): number {
+  return Math.max(hoogtesVan(ontwerp, catalogus, e).rughoogte, draagHoogteVan(ontwerp, catalogus, e) + RUGLEUNING_MIN_BOVEN);
 }
 
 /**
@@ -320,6 +353,8 @@ export interface OntwerpResultaat {
 }
 
 const rond = (x: number, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
+/** Getal in een melding: Belgische schrijfwijze (komma) en een echt minteken. */
+const nl = (x: number) => rond(x, 1).toLocaleString('nl-BE', { maximumFractionDigits: 1 }).replace('-', '−');
 
 /** De voetafdruk van een element in het bovenaanzicht (rekening houdend met draaiing). */
 export function voetafdruk(e: Pick<OntwerpElement, 'x' | 'y' | 'breedte' | 'diepte' | 'rotatie'>) {
@@ -374,6 +409,46 @@ export function chaiseRugVan(opties: Map<string, OptieKeuze>): 'achter' | 'links
   const k = opties.get('chaise_rug')?.teken?.kant;
   return k === 'achter' || k === 'links' || k === 'rechts' ? k : null;
 }
+/**
+ * Wat de vormgeving bij dit soort element zichtbaar verandert (en dus aangerekend wordt), volgens de regels van de 3D:
+ * heeft het een rug (rugopties, rughoogte), telt de rugvorm en -dikte, liggen er meerdere zitkussens naast elkaar,
+ * en kan er een houten frame rond. Zo rekenen we niets aan wat de klant niet ziet, en omgekeerd.
+ */
+export interface VormEffect { rug: boolean; rugvorm: boolean; kussens: boolean; houtframe: boolean }
+export function vormEffect(stijl: Tekenstijl, opties: Map<string, OptieKeuze>): VormEffect {
+  switch (stijl) {
+    case 'zit': return { rug: true, rugvorm: true, kussens: true, houtframe: true };
+    case 'hoek': return { rug: true, rugvorm: true, kussens: true, houtframe: false };
+    case 'rond': return { rug: true, rugvorm: true, kussens: false, houtframe: false };
+    case 'zit_zonder_rug': return { rug: false, rugvorm: false, kussens: true, houtframe: true };
+    case 'chaise': {
+      const kant = chaiseRugVan(opties);
+      return { rug: kant !== null, rugvorm: kant !== null, kussens: kant !== 'links' && kant !== 'rechts', houtframe: kant === null || kant === 'achter' };
+    }
+    // De gebogen kuipwand volgt de rughoogte, niet de rugvorm (behalve bij de hoekige fauteuil).
+    case 'kuip': return { rug: true, rugvorm: !kuipParameters(opties.get('kuipvorm')?.teken), kussens: false, houtframe: false };
+    case 'rugleuning': return { rug: true, rugvorm: false, kussens: false, houtframe: false };
+    default: return { rug: false, rugvorm: false, kussens: false, houtframe: false };
+  }
+}
+
+/** Optiegroepen over de rug: niet aan te rekenen op een element zonder rug (chaise longue zonder rugleuning). */
+const RUGGROEPEN = ['rug', 'rughoogte'];
+
+/** Een vrij getekende hoogte vervangt de gekozen maat; voor de prijs telt de keuze met de dichtstbijzijnde hoogte. */
+function keuzeBijHoogte(g: OptieGroep, h: number): OptieKeuze | undefined {
+  let beste: OptieKeuze | undefined;
+  let afstand = Infinity;
+  for (const k of g.keuzes) {
+    const kh = k.teken?.hoogte;
+    if (typeof kh !== 'number') continue;
+    const d = Math.abs(kh - h);
+    // Bij gelijke afstand de hogere keuze (een hogere zetel is nooit goedkoper).
+    if (d < afstand - 1e-9 || (Math.abs(d - afstand) < 1e-9 && kh > Number(beste?.teken?.hoogte))) { beste = k; afstand = d; }
+  }
+  return beste;
+}
+
 /** Rechthoek (lokaal) van de rugleuning van een chaise longue, en het zitvlak dat overblijft. */
 export function chaiseRugVlak(B: number, D: number, R: number, kant: 'achter' | 'links' | 'rechts') {
   if (kant === 'achter') return { rug: { lx: 0, ly: 0, lb: B, ld: R }, zit: { lx: 0, ly: R, lb: B, ld: D - R } };
@@ -620,7 +695,7 @@ export function berekenOntwerp(
     for (const [veld, bereik, label] of [['breedte', t.breedte, 'breedte'], ['diepte', t.diepte, 'diepte']] as const) {
       const w = e[veld];
       if (!Number.isFinite(w) || w < bereik.min || w > bereik.max)
-        meldingen.push({ code: `element.${veld}`, ernst: 'fout', elementId: e.id, melding: `${naam}: ${label} moet tussen ${bereik.min} en ${bereik.max} cm liggen (nu ${rond(w, 1)} cm).` });
+        meldingen.push({ code: `element.${veld}`, ernst: 'fout', elementId: e.id, melding: `${naam}: ${label} moet tussen ${bereik.min} en ${bereik.max} cm liggen (nu ${nl(w)} cm).` });
     }
 
     const groep = m?.groep ?? catalogus.groepen[0]!;
@@ -639,6 +714,8 @@ export function berekenOntwerp(
 
     // Opties die voor dit element gelden: groepen op elementniveau en groepen op zetelniveau die per element tellen.
     const gekozen = gekozenOpties(ontwerp, catalogus, e);
+    const v = vormgevingVan(ontwerp, e);
+    const fx = vormEffect(t.tekenstijl, gekozen);
     let optieBedrag = 0;
     let stofPct = 0;
     for (const g of catalogus.opties ?? []) {
@@ -660,14 +737,20 @@ export function berekenOntwerp(
         }
       }
       if (g.niveau === 'ontwerp' && !g.perElement) continue; // eenmalig, hieronder
-      const bedrag = rond((k.prijs ?? 0) + (k.prijsPerM ?? 0) * meterBreedte + ((k.pct ?? 0) / 100) * prijs);
+      // Rugopties op een element zonder rug (chaise longue zonder rugleuning): niets aan te rekenen.
+      if (!fx.rug && RUGGROEPEN.includes(g.code)) continue;
+      // Een vrij getekende rughoogte wordt per cm aangerekend (hieronder), niet ook nog als gekozen rughoogte.
+      if (g.code === 'rughoogte' && v.rughoogte !== undefined) continue;
+      // Een vrij getekende armhoogte telt als de keuze met de dichtstbijzijnde hoogte.
+      const vrij = g.code === 'armhoogte' ? v.armhoogte : undefined;
+      const kk = vrij !== undefined ? keuzeBijHoogte(g, vrij) ?? k : k;
+      const bedrag = rond((kk.prijs ?? 0) + (kk.prijsPerM ?? 0) * meterBreedte + ((kk.pct ?? 0) / 100) * prijs);
       optieBedrag += bedrag;
-      stofPct += k.stofPct ?? 0;
-      kostprijs += (k.kost ?? 0) + (k.kostPerM ?? 0) * meterBreedte;
-      telOptie(g, k, bedrag);
+      stofPct += kk.stofPct ?? 0;
+      kostprijs += (kk.kost ?? 0) + (kk.kostPerM ?? 0) * meterBreedte;
+      telOptie(g, vrij !== undefined ? { ...kk, code: `${kk.code}.vrij`, label: `${rond(vrij, 1)} cm (op maat)` } : kk, bedrag);
     }
     // Vormgeving (ontwerpmodus): meerprijs en controle van de grenzen.
-    const v = vormgevingVan(ontwerp, e);
     const vp = catalogus.vormgevingPrijzen;
     for (const [veld, b] of Object.entries(VORMGEVING_BEREIK) as [keyof typeof VORMGEVING_BEREIK, { min: number; max: number }][]) {
       const w = v[veld];
@@ -683,8 +766,9 @@ export function berekenOntwerp(
       }
     }
     // Vrij getekende rughoogte: meerprijs en stof per cm boven 80 cm (minder bij een lagere rug).
-    if (v.rughoogte !== undefined && ['zit', 'hoek', 'rond', 'kuip', 'rugleuning'].includes(t.tekenstijl)) {
-      const verschil = v.rughoogte - 80;
+    if (v.rughoogte !== undefined && fx.rug) {
+      // Bij een losse rugleuning telt de echte bovenkant (minstens 20 cm boven waar ze op rust).
+      const verschil = (t.tekenstijl === 'rugleuning' ? rugleuningTop(ontwerp, catalogus, e) : v.rughoogte) - 80;
       const bedrag = rond(((verschil * (verschil > 0 ? 0.5 : 0.25)) / 100) * prijs);
       if (bedrag) {
         optieBedrag += bedrag;
@@ -693,19 +777,31 @@ export function berekenOntwerp(
       stofPct += verschil * 0.7;
     }
     if (vp && ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond', 'kuip'].includes(t.tekenstijl)) {
+      // Alleen wat in de tekening en de 3D ook zichtbaar is (zie vormEffect).
       const vormBedrag = rond(
-        Math.max(0, Math.round(v.zitkussens) - 1) * vp.extraKussen +
-          (t.tekenstijl === 'zit' || t.tekenstijl === 'hoek' || t.tekenstijl === 'rond' || t.tekenstijl === 'kuip'
+        (fx.kussens ? Math.max(0, Math.round(v.zitkussens) - 1) * vp.extraKussen : 0) +
+          (fx.rugvorm
             ? ((v.rugvorm === 'hellend' ? vp.hellendeRugPct : v.rugvorm === 'rond' ? vp.rondeRugPct : 0) / 100) * prijs +
               Math.max(0, v.rugdikte - STANDAARD_VORMGEVING.rugdikte) * vp.dikkereRugPerCmPerM * meterBreedte
             : 0) +
-          (v.houtframe === 'zijkant' ? vp.houtframeZijkant : v.houtframe === 'rondom' ? vp.houtframeRondomPerM * meterBreedte + vp.houtframeZijkant : 0),
+          (fx.houtframe ? (v.houtframe === 'zijkant' ? vp.houtframeZijkant : v.houtframe === 'rondom' ? vp.houtframeRondomPerM * meterBreedte + vp.houtframeZijkant : 0) : 0),
       );
       if (vormBedrag) {
         optieBedrag += vormBedrag;
         telOptie({ code: 'vormgeving', label: 'Vormgeving', niveau: 'element', standaard: '', keuzes: [] }, { code: 'eigen', label: 'eigen vormgeving' }, vormBedrag);
       }
     }
+    // Hoogtes die niet kunnen: een rug die niet boven de zitting uitkomt, een arm onder de zitting, of poten en
+    // zitkussen die geen plaats laten voor de onderbouw.
+    const hg = hoogtesVan(ontwerp, catalogus, e);
+    const kussenDik = gekozen.get('zitting')?.code === 'vaste_zitting' ? 0 : v.kussendikte;
+    if (fx.rug && t.tekenstijl !== 'kuip' && t.tekenstijl !== 'rugleuning' && hg.rughoogte < hg.zithoogte + 20)
+      meldingen.push({ code: 'vorm.rug_te_laag', ernst: 'fout', elementId: e.id, melding: `${naam}: de rug (${nl(hg.rughoogte)} cm) moet minstens 20 cm boven de zitting (${nl(hg.zithoogte)} cm) uitkomen.` });
+    if (t.tekenstijl === 'arm' && hg.armhoogte < hg.zithoogte)
+      meldingen.push({ code: 'vorm.arm_te_laag', ernst: 'fout', elementId: e.id, melding: `${naam}: de arm (${nl(hg.armhoogte)} cm) ligt lager dan de zitting (${nl(hg.zithoogte)} cm).` });
+    if (DRAGER_STIJLEN.includes(t.tekenstijl) && t.tekenstijl !== 'poef' && hg.zithoogte - kussenDik - hg.poothoogte < 5 && !meldingen.some((x) => x.code === 'vorm.geen_onderbouw'))
+      meldingen.push({ code: 'vorm.geen_onderbouw', ernst: 'fout', melding: `Poothoogte (${nl(hg.poothoogte)} cm) en zitkussen (${nl(kussenDik)} cm) laten bij een zithoogte van ${nl(hg.zithoogte)} cm geen plaats voor de onderbouw.` });
+
     prijs = rond(prijs + optieBedrag);
     bruto += prijs;
 
@@ -729,12 +825,19 @@ export function berekenOntwerp(
   const zetelOpties = gekozenOpties(ontwerp, catalogus);
   for (const g of catalogus.opties ?? []) {
     if (g.niveau !== 'ontwerp' || g.perElement) continue;
-    const k = zetelOpties.get(g.code);
-    if (!k || ontwerp.elementen.length === 0) continue;
-    const bedrag = rond((k.prijs ?? 0) + ((k.pct ?? 0) / 100) * basisTotaal);
+    const k0 = zetelOpties.get(g.code);
+    if (!k0 || ontwerp.elementen.length === 0) continue;
+    // Alleen de elementen waarvoor de groep geldt (vaste zitting: −3 % op de zitelementen, niet op poef of console).
+    const voor = g.voorTypen ? elementen.filter((x) => g.voorTypen!.includes(x.type)) : elementen;
+    if (!voor.length) continue;
+    const basis = g.voorTypen ? voor.reduce((som, x) => som + x.prijs, 0) : basisTotaal;
+    // Een getekende zit- of poothoogte vervangt de gekozen maat: de keuze met de dichtstbijzijnde hoogte telt.
+    const vrij = g.code === 'zithoogte' || g.code === 'poothoogte' ? ontwerp.vormgeving?.[g.code] : undefined;
+    const k = vrij !== undefined ? keuzeBijHoogte(g, vrij) ?? k0 : k0;
+    const bedrag = rond((k.prijs ?? 0) + ((k.pct ?? 0) / 100) * basis);
     bruto += bedrag;
     kostprijs += k.kost ?? 0;
-    telOptie(g, k, bedrag);
+    telOptie(g, vrij !== undefined ? { ...k, code: `${k.code}.vrij`, label: `${rond(vrij, 1)} cm (op maat)` } : k, bedrag);
   }
 
   // Stof per materiaal (afgerond op 0,1 m) in de stuklijst.
@@ -773,8 +876,22 @@ export function berekenOntwerp(
   el.forEach((e, n) => {
     if (!isOpzet(e)) return;
     const drager = dragerVan(ontwerp, catalogus, e);
-    if (!drager)
-      meldingen.push({ code: 'opzet.los', ernst: 'fout', elementId: e.id, melding: `Element ${n + 1} (${typen.get(e.type)?.label.toLowerCase()}) ligt niet op een zitting. Sleep het op een element.` });
+    const t = typen.get(e.type)!;
+    if (!drager) {
+      meldingen.push({ code: 'opzet.los', ernst: 'fout', elementId: e.id, melding: `Element ${n + 1} (${t.label.toLowerCase()}) ligt niet op een zitting. Sleep het op een element, zodat het er voor meer dan de helft op ligt.` });
+      return;
+    }
+    // Een losse rugleuning op een element dat al een rug heeft (zitelement, chaise met rugleuning …).
+    const dt = typen.get(drager.type)!;
+    if (t.tekenstijl === 'rugleuning' && dt.tekenstijl !== 'kuip' && vormEffect(dt.tekenstijl, gekozenOpties(ontwerp, catalogus, drager)).rug)
+      meldingen.push({ code: 'opzet.dubbele_rug', ernst: 'waarschuwing', elementId: e.id, melding: `Element ${n + 1} (losse rugleuning) ligt op element ${el.indexOf(drager) + 1}, dat al een rug heeft.` });
+    // Twee dezelfde opzet-elementen (bv. twee rugleuningen) op elkaar.
+    for (let m = n + 1; m < el.length; m++) {
+      const o = el[m]!;
+      if (o.type !== e.type) continue;
+      if (overlapOppervlak(e, o) > 0.5 * Math.min(e.breedte * e.diepte, o.breedte * o.diepte))
+        meldingen.push({ code: 'opzet.op_elkaar', ernst: 'fout', elementId: o.id, melding: `Element ${n + 1} en element ${m + 1} (${t.label.toLowerCase()}) liggen op elkaar. Schuif er één opzij of verwijder het.` });
+    }
   });
 
   // Afmetingen en maatlijnen (opzet-elementen tellen mee als ze buiten de zitting uitsteken).
@@ -796,9 +913,12 @@ export function berekenOntwerp(
 
   kostprijs = rond(kostprijs);
   bruto = rond(bruto);
-  const kortingProcent = opties.kortingProcent ?? 0;
+  // Korting altijd tussen 0 en 100 %; onder de kostprijs een waarschuwing die de klant niet ziet.
+  const kortingProcent = Number.isFinite(opties.kortingProcent) ? Math.min(100, Math.max(0, opties.kortingProcent!)) : 0;
   const excl = rond(bruto * (1 - kortingProcent / 100));
   const btw = rond((excl * catalogus.btwProcent) / 100);
+  if (kortingProcent > 0 && excl < kostprijs)
+    meldingen.push({ code: 'prijs.onder_kostprijs', ernst: 'waarschuwing', intern: true, melding: `Met ${nl(kortingProcent)} % korting ligt de prijs onder de kostprijs (${excl > 0 ? `marge ${nl(((excl - kostprijs) / excl) * 100)} %` : 'gratis'}).` });
 
   return {
     geldig: !meldingen.some((m) => m.ernst === 'fout'),

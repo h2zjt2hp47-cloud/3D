@@ -6,12 +6,19 @@ import {
   berekenOntwerp,
   bouw3D,
   dragerVan,
+  draagHoogteVan,
   gekozenOpties,
   HOOGTE_BEREIK,
+  RUGLEUNING_MIN_BOVEN,
+  rugleuningTop,
   hoogtesVan,
   lokaalNaarWereld,
+  ontwerpOmschrijving,
+  overlapOppervlak,
   VORMGEVING_BEREIK,
   vormgevingVan,
+  vormEffect,
+  type VormEffect,
   type Vormgeving,
   tekenSvg,
   tekenVooraanzicht,
@@ -378,9 +385,19 @@ function draai(id: string, graden: 90 | -90) {
   toonEigenschappen();
   gewijzigd();
 }
+/** De opzet-elementen (rugleuning, kussens) die op dit element liggen. */
+function opzetOp(drager: OntwerpElement): OntwerpElement[] {
+  if (typen.get(drager.type)?.opzet) return [];
+  return ontwerp.elementen.filter((o) => typen.get(o.type)?.opzet && dragerVan(ontwerp, getCatalogus(), o) === drager);
+}
+
 function verwijder(id: string) {
+  const e = elementVan(id);
+  if (!e) return;
   onthoud();
-  ontwerp.elementen = ontwerp.elementen.filter((e) => e.id !== id);
+  // Wat erop ligt (rugleuning, kussens) gaat mee weg: anders bleef het zweven met de fout "ligt niet op een zitting".
+  const weg = new Set([e, ...opzetOp(e)]);
+  ontwerp.elementen = ontwerp.elementen.filter((o) => !weg.has(o));
   geselecteerd = null;
   toonEigenschappen();
   gewijzigd();
@@ -390,10 +407,23 @@ function dupliceer(id: string) {
   if (!e) return;
   onthoud();
   const p = voetafdruk(e);
-  const kopie = { ...e, id: nieuwId(), x: e.x + p.b };
-  const m = magneet(kopie, kopie.x, kopie.y);
-  Object.assign(kopie, m);
+  const opzetten = opzetOp(e);
+  const basis = ontwerp.elementen.filter((o) => !typen.get(o.type)?.opzet);
+  const vrij = (k: OntwerpElement) => basis.every((o) => overlapOppervlak(k, o) < 1);
+  // Een vrije plaats zoeken: rechts, links, eronder, erboven, anders rechts naast de hele zetel.
+  const rechtsVanAlles = Math.max(...basis.map((o) => voetafdruk(o).x + voetafdruk(o).b)) + 20;
+  const kandidaten: [number, number][] = [[e.x + p.b, e.y], [e.x - p.b, e.y], [e.x, e.y + p.h], [e.x, e.y - p.h], [rechtsVanAlles, e.y]];
+  let kopie = { ...e, id: nieuwId(), x: rechtsVanAlles, y: e.y };
+  for (const [x, y] of kandidaten) {
+    const k = { ...e, id: kopie.id, x, y };
+    if (typen.get(e.type)?.opzet) { kopie = k; break; }
+    Object.assign(k, magneet(k, x, y));
+    if (vrij(k)) { kopie = k; break; }
+  }
   ontwerp.elementen.push(kopie);
+  // Rugleuning en kussens die erop liggen, gaan mee naar de kopie.
+  const dx = kopie.x - e.x, dy = kopie.y - e.y;
+  for (const o of opzetten) ontwerp.elementen.push({ ...o, id: nieuwId(), x: o.x + dx, y: o.y + dy });
   geselecteerd = kopie.id;
   toonEigenschappen();
   gewijzigd();
@@ -430,7 +460,8 @@ function kiesGereedschap(code: string) {
 function meerprijs(g: OptieGroep, k: OptieKeuze): string {
   const delen: string[] = [];
   const teken = (x: number) => (x < 0 ? '−' : '+');
-  if (k.prijs) delen.push(`${teken(k.prijs)}€${getal(Math.abs(k.prijs), 0)}${g.perElement || g.niveau === 'element' ? '' : ''}`);
+  // Een keuze voor de hele zetel die per element aangerekend wordt (poten, naden …): "+€12 per element".
+  if (k.prijs) delen.push(`${teken(k.prijs)}€${getal(Math.abs(k.prijs), 0)}${g.niveau === 'ontwerp' && g.perElement ? ' per element' : ''}`);
   if (k.prijsPerM) delen.push(`${teken(k.prijsPerM)}€${getal(Math.abs(k.prijsPerM), 0)}/m`);
   if (k.pct) delen.push(`${teken(k.pct)}${getal(Math.abs(k.pct), 0)}%`);
   return delen.join(' ');
@@ -438,7 +469,9 @@ function meerprijs(g: OptieGroep, k: OptieKeuze): string {
 
 function optieGroepVeld(g: OptieGroep, huidig: string, idVoorvoegsel: string, kies: (code: string) => void): HTMLElement {
   const fs = el('fieldset', { class: 'optiegroep', 'data-groep': g.code });
-  const legende = el('legend', {}, g.label + (g.perElement ? ' (per element)' : ''));
+  // Geen "(per element)" meer achter de naam: dat las als "per element te kiezen", terwijl het één keuze is voor de
+  // hele zetel die per element aangerekend wordt. Dat staat nu bij de meerprijs.
+  const legende = el('legend', {}, g.label);
   fs.append(legende);
   const chips = el('div', { class: 'chips' });
   for (const k of g.keuzes) {
@@ -485,9 +518,13 @@ const KEUZE_LABELS: Record<string, string> = {
  * Bedieningselementen voor de vormgeving. `huidig` is de volledige vormgeving,
  * `pas` past één waarde aan, `eigen` geeft aan welke velden afwijken (voor de markering).
  */
-function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Partial<Vormgeving>, pas: (veld: keyof Vormgeving, w: Vormgeving[keyof Vormgeving]) => void): HTMLElement {
+function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Partial<Vormgeving>, pas: (veld: keyof Vormgeving, w: Vormgeving[keyof Vormgeving]) => void, effect?: VormEffect): HTMLElement {
   const raster = el('div', { class: 'vormraster' });
+  // Voor één element: alleen wat bij dat element zichtbaar is (en aangerekend wordt), zie vormEffect in de motor.
+  const toon = (veld: keyof Vormgeving) =>
+    !effect || ((veld !== 'rugdikte' && veld !== 'rugvorm') || effect.rugvorm) && (veld !== 'zitkussens' || effect.kussens) && (veld !== 'houtframe' || effect.houtframe);
   for (const veld of Object.keys(VORMGEVING_BEREIK) as (keyof typeof VORMGEVING_BEREIK)[]) {
+    if (!toon(veld)) continue;
     const b = VORMGEVING_BEREIK[veld];
     const id = `${idVoorvoegsel}-${veld}`;
     const wrap = el('label', { for: id, class: `vormveld${veld in eigen ? ' afwijkend' : ''}` });
@@ -503,6 +540,7 @@ function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Part
     raster.append(wrap);
   }
   for (const [veld, keuzes] of [['rugvorm', ['recht', 'hellend', 'rond']], ['houtframe', ['geen', 'zijkant', 'rondom']]] as const) {
+    if (!toon(veld)) continue;
     const fs = el('fieldset', { class: `optiegroep${veld in eigen ? ' afwijkend' : ''}` });
     fs.append(el('legend', {}, VORM_LABELS[veld]));
     const chips = el('div', { class: 'chips' });
@@ -1025,27 +1063,56 @@ function plaatsOp(drager: OntwerpElement, type: string, lx: number, ly: number, 
   return { id: nieuwId(), type, x: Math.round(w.x), y: Math.round(w.y), breedte: Math.round(liggend ? w.b : w.h), diepte: Math.round(liggend ? w.h : w.b), rotatie: r };
 }
 
-function voegOpzetToe(drager: OntwerpElement, wat: 'rug-achter' | 'rug-links' | 'rug-rechts' | 'rugkussen' | 'sierkussen' | 'rolkussen') {
+type OpzetSoort = 'rug-achter' | 'rug-links' | 'rug-rechts' | 'rugkussen' | 'sierkussen' | 'rolkussen';
+
+/**
+ * Past er nog een opzet-element van deze soort op het element, en hoe groot wordt het? Kussens van dezelfde soort
+ * liggen naast elkaar en delen de breedte (vroeger kwamen het 2e en 3e kussen op dezelfde plaats, of kreeg een
+ * rol- of rugkussen meteen een maatfout).
+ */
+function opzetMaat(drager: OntwerpElement, wat: OpzetSoort): { past: boolean; b: number; bestaande: OntwerpElement[] } {
+  const B = drager.breedte, D = drager.diepte;
+  const voor = voorkantRug(drager);
+  if (wat === 'rolkussen') {
+    const rk = typen.get('rolkussen')!;
+    const b = Math.floor(Math.min(rk.breedte.standaard, D - voor - 8));
+    return { past: b >= rk.breedte.min, b, bestaande: [] };
+  }
+  if (wat === 'rugkussen' || wat === 'sierkussen') {
+    const k = typen.get(wat)!;
+    const bestaande = opzetOp(drager).filter((o) => o.type === wat);
+    const n = bestaande.length + 1;
+    const b = Math.floor(Math.min(k.breedte.standaard, (B - 4 - (n - 1) * 2) / n));
+    return { past: b >= k.breedte.min, b, bestaande };
+  }
+  const rl = typen.get('rugleuning')!;
+  const lengte = wat === 'rug-achter' ? B : D - voor;
+  return { past: lengte >= rl.breedte.min && lengte <= rl.breedte.max, b: lengte, bestaande: [] };
+}
+
+function voegOpzetToe(drager: OntwerpElement, wat: OpzetSoort) {
   const B = drager.breedte, D = drager.diepte;
   const t = (code: string) => typen.get(code)!;
-  const opDrager = ontwerp.elementen.filter((o) => o !== drager && typen.get(o.type)?.opzet && voetafdrukOverlapt(o, drager));
+  const maat = opzetMaat(drager, wat);
+  if (!maat.past) return;
   const voor = voorkantRug(drager);
+  onthoud();
   let nieuw: OntwerpElement;
   const dik = t('rugleuning').diepte.standaard;
   if (wat === 'rug-achter') nieuw = plaatsOp(drager, 'rugleuning', 0, 0, B, dik, 0);
   else if (wat === 'rug-links') nieuw = plaatsOp(drager, 'rugleuning', 0, voor, dik, D - voor, 270);
   else if (wat === 'rug-rechts') nieuw = plaatsOp(drager, 'rugleuning', B - dik, voor, dik, D - voor, 90);
-  else if (wat === 'rolkussen') {
-    const rk = t('rolkussen');
-    nieuw = plaatsOp(drager, 'rolkussen', 2, voor + 4, rk.diepte.standaard, Math.min(rk.breedte.standaard, D - voor - 8), 270);
-  } else {
+  else if (wat === 'rolkussen') nieuw = plaatsOp(drager, 'rolkussen', 2, voor + 4, t('rolkussen').diepte.standaard, maat.b, 270);
+  else {
+    // Alle kussens van deze soort opnieuw naast elkaar leggen, elk even breed.
     const k = t(wat);
-    const zelfde = opDrager.filter((o) => o.type === wat).length;
-    const b = Math.min(k.breedte.standaard, B - 4);
-    const lx = Math.min(B - b - 2, 2 + zelfde * (b + 2));
-    nieuw = plaatsOp(drager, wat, Math.max(0, lx), voor + (wat === 'sierkussen' ? k.diepte.standaard + 2 : 0), b, k.diepte.standaard, 0);
+    const ly = voor + (wat === 'sierkussen' ? k.diepte.standaard + 2 : 0);
+    maat.bestaande.forEach((o, i) => {
+      const p = plaatsOp(drager, wat, 2 + i * (maat.b + 2), ly, maat.b, o.diepte, 0);
+      Object.assign(o, { x: p.x, y: p.y, breedte: p.breedte, diepte: p.diepte, rotatie: p.rotatie });
+    });
+    nieuw = plaatsOp(drager, wat, 2 + maat.bestaande.length * (maat.b + 2), ly, maat.b, k.diepte.standaard, 0);
   }
-  onthoud();
   ontwerp.elementen.push(nieuw);
   geselecteerd = nieuw.id;
   toonEigenschappen();
@@ -1073,6 +1140,11 @@ function materiaalOpties(select: HTMLSelectElement, gekozen: string | undefined,
 }
 
 let stalenkaart: ReturnType<typeof maakStalenkaart> | null = null;
+
+/** Zit dit materiaal in het huidige ontwerp (hoofdmateriaal of een element)? */
+export function materiaalInOntwerp(code: string): boolean {
+  return ontwerp.hoofdmateriaal === code || ontwerp.elementen.some((e) => e.materiaal === code);
+}
 
 function vulHoofdmateriaal() {
   const s = $<HTMLSelectElement>('#o-hoofdmateriaal');
@@ -1127,6 +1199,24 @@ function toonEigenschappen() {
     wrap.append(el('span', {}, `${label} (cm)`), inp, el('span', { class: 'klein' }, `${bereik.min}–${bereik.max}`));
     rij.append(wrap);
   }
+  // Losse rugleuning: de hoogte (bovenkant vanaf de vloer) rechtstreeks in te vullen. Voordien kon dat alleen met
+  // de greep in het vooraanzicht, die moeilijk te vinden was.
+  if (t.tekenstijl === 'rugleuning') {
+    const min = Math.max(HOOGTE_BEREIK.rughoogte.min, Math.ceil(draagHoogteVan(ontwerp, getCatalogus(), e) + RUGLEUNING_MIN_BOVEN));
+    const max = HOOGTE_BEREIK.rughoogte.max;
+    const wrap = el('label', { for: 'o-rugleuninghoogte', class: 'maatveld' });
+    const inp = el('input', { type: 'number', id: 'o-rugleuninghoogte', min: String(min), max: String(max), step: '1', value: String(Math.round(rugleuningTop(ontwerp, getCatalogus(), e))) }) as HTMLInputElement;
+    inp.addEventListener('change', () => {
+      const w = Number(inp.value);
+      if (!Number.isFinite(w)) return;
+      onthoud();
+      e.vorm = { ...(e.vorm ?? {}), rughoogte: Math.round(Math.min(max, Math.max(min, w))) };
+      toonEigenschappen();
+      gewijzigd();
+    });
+    wrap.append(el('span', {}, 'Hoogte (cm)'), inp, el('span', { class: 'klein' }, `${min}–${max}, bovenkant vanaf de vloer`));
+    rij.append(wrap);
+  }
   const matLabel = el('label', { for: 'o-elementmateriaal', class: 'maatveld breed' });
   const mat = el('select', { id: 'o-elementmateriaal' }) as HTMLSelectElement;
   materiaalOpties(mat, e.materiaal, true);
@@ -1168,6 +1258,7 @@ function toonEigenschappen() {
     ontwerpVak.append(
       vormgevingVelden(`oe-${e.id}-v`, vormgevingVan(ontwerp, e), e.vorm ?? {}, (veld, w) =>
         vormWijziging(() => (e.vorm = { ...(e.vorm ?? {}), [veld]: w })),
+        vormEffect(t.tekenstijl, gekozenOpties(ontwerp, getCatalogus(), e)),
       ),
     );
     const vk = el('div', { class: 'knoppenrij' });
@@ -1200,6 +1291,10 @@ function toonEigenschappen() {
       // De chaise longue heeft een eigen keuze "Rugleuning" (vast frame, met prijs): geen losse rugleuning erbovenop.
       if (t.tekenstijl === 'chaise' && wat.startsWith('rug-')) continue;
       const b = el('button', { type: 'button', class: 'tweede klein-knop' }, tekst) as HTMLButtonElement;
+      if (!opzetMaat(e, wat).past) {
+        b.disabled = true;
+        b.title = 'Past niet (meer) op dit element';
+      }
       b.addEventListener('click', () => voegOpzetToe(e, wat));
       rij2.append(b);
     }
@@ -1228,6 +1323,12 @@ function toonEigenschappen() {
   vak.replaceChildren(...delen);
 }
 
+function elementCel(label: string, stof: string) {
+  const td = el('td', { class: 'elementcel' });
+  td.append(el('span', {}, label), el('span', { class: 'klein' }, stof));
+  return td;
+}
+
 function herbereken(alles = true) {
   resultaat = berekenOntwerp(ontwerp, getCatalogus(), getMaterialen(), { kortingProcent: getKorting() });
   tekenCanvas();
@@ -1241,7 +1342,8 @@ function herbereken(alles = true) {
   // Ook in de 3D-balk (handig in groot scherm, waar de zijbalk weg is).
   $('#o-3d-prijs').textContent = `${eur(r.prijs.verkoopprijsExcl)} excl. btw`;
   $('#o-prijs-incl').textContent = `${eur(r.prijs.verkoopprijsIncl)} incl. ${getCatalogus().btwProcent}% btw`;
-  const regels: [string, string][] = [];
+  // Derde waarde: intern (kostprijs, marge, stofverbruik, artikelcode), verborgen in de klantweergave.
+  const regels: [string, string, boolean?][] = [];
   if (r.prijs.kortingProcent) {
     regels.push(['Brutoprijs', eur(r.prijs.brutoprijsExcl)]);
     regels.push([`Korting ${getal(r.prijs.kortingProcent)}%`, `− ${eur(r.prijs.brutoprijsExcl - r.prijs.verkoopprijsExcl)}`]);
@@ -1252,16 +1354,17 @@ function herbereken(alles = true) {
     for (const o of r.opties.filter((o) => o.bedrag).sort((a, b) => Math.abs(b.bedrag) - Math.abs(a.bedrag)).slice(0, 6))
       regels.push([`  ${o.groepLabel}: ${o.keuzeLabel}`, `${o.bedrag < 0 ? '−' : '+'} ${eur(Math.abs(o.bedrag))}`]);
   }
-  regels.push(['Kostprijs', eur(r.prijs.kostprijs)], ['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)}%`]);
+  regels.push(['Kostprijs', eur(r.prijs.kostprijs), true], ['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)}%`, true]);
   regels.push(['Totale maat', `${getal(r.afmetingen.breedte, 1)} × ${getal(r.afmetingen.diepte, 1)} cm`]);
   for (const s of r.stof) {
-    regels.push([`Stof ${s.naam}`, `${getal(s.meters, 1)} m`]);
+    regels.push([`Stof ${s.naam}`, `${getal(s.meters, 1)} m`, true]);
     const m = getMaterialen().find((x) => x.naam === s.naam);
-    if (m?.artikel) regels.push([m.artikel, m.martindale ? `Martindale ${getal(m.martindale)}` : '']);
+    if (m?.artikel) regels.push([m.artikel, m.martindale ? `Martindale ${getal(m.martindale)}` : '', true]);
   }
-  $('#o-prijsdetail').replaceChildren(...regels.flatMap(([a, b]) => [el('dt', {}, a), el('dd', {}, b)]));
+  $('#o-prijsdetail').replaceChildren(...regels.flatMap(([a, b, intern]) => [el('dt', intern ? { class: 'intern' } : {}, a), el('dd', intern ? { class: 'intern' } : {}, b)]));
   const lijst = $('#o-meldingen');
-  lijst.replaceChildren(...r.meldingen.map((m) => el('li', { class: m.ernst }, m.melding)));
+  // Interne meldingen (bv. onder de kostprijs) zijn verborgen in de klantweergave.
+  lijst.replaceChildren(...r.meldingen.map((m) => el('li', { class: `${m.ernst}${m.intern ? ' intern' : ''}` }, m.melding)));
   lijst.hidden = r.meldingen.length === 0;
   const tbody = $('#o-elementen tbody');
   const mats = new Map(getMaterialen().map((m) => [m.code, m]));
@@ -1270,10 +1373,11 @@ function herbereken(alles = true) {
       const tr = el('tr', { class: x.id === geselecteerd ? 'actief' : '' });
       tr.append(
         el('td', { class: 'num' }, String(n + 1)),
-        el('td', {}, x.label),
+        // Element en stof in één cel (stof eronder): zo past de prijs in de smalle kolom zonder stof over drie regels.
+        elementCel(x.label, `${mats.get(x.materiaal)?.naam ?? '—'} · groep ${x.groep}`),
         el('td', { class: 'num' }, `${getal(x.breedte, 1)} × ${getal(x.diepte, 1)}`),
-        el('td', {}, `${mats.get(x.materiaal)?.naam ?? '—'} (${x.groep})`),
-        el('td', { class: 'num' }, eur(x.prijs)),
+        // Zelfde prijs als bij het gekozen element: na de korting van de interieurinrichter.
+        el('td', { class: 'num' }, eur(x.prijs * (1 - getKorting() / 100))),
       );
       tr.addEventListener('click', () => {
         geselecteerd = x.id;
@@ -1358,16 +1462,9 @@ export function startOntwerper() {
     gewijzigd();
   });
   $('#o-kopieer').addEventListener('click', () => {
-    const mats = new Map(getMaterialen().map((m) => [m.code, m]));
-    const r = resultaat;
-    const tekst = [
-      `Zetel op maat (vrij ontwerp), totaal ${getal(r.afmetingen.breedte, 1)} × ${getal(r.afmetingen.diepte, 1)} cm`,
-      ...r.elementen.map((x, n) => `- ${n + 1}. ${x.label} ${getal(x.breedte, 1)} × ${getal(x.diepte, 1)} cm${x.materiaal ? `, ${mats.get(x.materiaal)?.naam ?? ''}` : ''}`),
-      ...(getCatalogus().opties ?? [])
-        .filter((g) => g.niveau === 'ontwerp')
-        .map((g) => `- ${g.label}: ${g.keuzes.find((k) => k.code === (ontwerp.opties?.[g.code] ?? g.standaard))?.label ?? ''}`),
-      `Prijs: ${eur(r.prijs.verkoopprijsExcl)} excl. btw (${eur(r.prijs.verkoopprijsIncl)} incl. btw)`,
-    ].join('\n');
+    // Volledige omschrijving (ook keuzes per element, getekende hoogtes, vormgeving en korting): zie core/ontwerptekst.ts.
+    const model = getModellen().find((x) => x.code === ontwerp.model);
+    const tekst = ontwerpOmschrijving(ontwerp, getCatalogus(), getMaterialen(), resultaat, { modelNaam: model?.naam, eur }).join('\n');
     void kopieer(tekst, $('#o-kopieer-melding'));
   });
 
@@ -1403,6 +1500,9 @@ export function startOntwerper() {
   s.addEventListener('keydown', opToets);
 
   opWijziging('materialen', () => {
+    // Een verwijderd materiaal: elementen met die stof volgen weer het hoofdmateriaal (en niet een onbekende code).
+    const codes = new Set(getMaterialen().map((m) => m.code));
+    for (const e of ontwerp.elementen) if (e.materiaal && !codes.has(e.materiaal)) delete e.materiaal;
     vulHoofdmateriaal();
     toonEigenschappen();
     herbereken();

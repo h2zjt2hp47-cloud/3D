@@ -14,6 +14,8 @@ import {
   type Weefsel,
 } from '../../core/src/index.js';
 import { kleurStaal, perCollectie } from './stalen.js';
+import { materiaalInSofa } from './configurator.js';
+import { materiaalInOntwerp } from './ontwerper.js';
 import { $, bevestigKnop, el, eur, getal, getMaterialen, groepen, herstelMaterialen, kopieer, opWijziging, setMaterialen } from './staat.js';
 
 let bewerkCode: string | null = null;
@@ -99,7 +101,9 @@ function toonLijst() {
       acties.append(bewerk);
       if (m.eigen) {
         const weg = el('button', { type: 'button', class: 'gevaar klein-knop' }, 'Verwijder') as HTMLButtonElement;
-        bevestigKnop(weg, 'Zeker?', () => {
+        // Waarschuwen als de stof in een ontwerp zit: die wordt dan vervangen door een andere stof (en de prijs verandert).
+        const inGebruik = () => materiaalInOntwerp(m.code) || materiaalInSofa(m.code);
+        bevestigKnop(weg, () => (inGebruik() ? 'In gebruik: toch weg?' : 'Zeker?'), () => {
           setMaterialen(getMaterialen().filter((x) => x.code !== m.code));
           if (bewerkCode === m.code) {
             bewerkCode = null;

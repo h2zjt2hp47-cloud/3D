@@ -138,14 +138,14 @@ export const eur = (x: number) => `€ ${x.toLocaleString('nl-BE', { minimumFrac
 export const getal = (x: number, d = 2) => x.toLocaleString('nl-BE', { maximumFractionDigits: d });
 
 /** Knop die pas bij een tweede klik uitvoert (in plaats van confirm(), dat in de viewer niet werkt). */
-export function bevestigKnop(knop: HTMLButtonElement, vraag: string, actie: () => void) {
+export function bevestigKnop(knop: HTMLButtonElement, vraag: string | (() => string), actie: () => void) {
   const origineel = knop.textContent ?? '';
   let gewapend = false;
   let timer: number | undefined;
   knop.addEventListener('click', () => {
     if (!gewapend) {
       gewapend = true;
-      knop.textContent = vraag;
+      knop.textContent = typeof vraag === 'function' ? vraag() : vraag;
       knop.classList.add('bevestig');
       timer = window.setTimeout(() => {
         gewapend = false;

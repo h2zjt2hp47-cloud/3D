@@ -179,24 +179,25 @@ function herbereken() {
 
   $('#prijs-excl').textContent = eur(r.prijs.verkoopprijsExcl);
   $('#prijs-incl').textContent = `${eur(r.prijs.verkoopprijsIncl)} incl. ${huidig.model.prijs.btwProcent}% btw`;
-  const regels: [string, string][] = [];
+  // Derde waarde: intern (kostprijs, marge …), verborgen in de klantweergave.
+  const regels: [string, string, boolean?][] = [];
   if (r.prijs.kortingProcent) {
     regels.push(['Brutoprijs', eur(r.prijs.brutoprijsExcl)]);
     regels.push([`Korting ${getal(r.prijs.kortingProcent)}%`, `− ${eur(r.prijs.brutoprijsExcl - r.prijs.verkoopprijsExcl)}`]);
   }
-  regels.push(['Kostprijs', eur(r.prijs.kostprijs)]);
-  regels.push(['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)}%`]);
+  regels.push(['Kostprijs', eur(r.prijs.kostprijs), true]);
+  regels.push(['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)}%`, true]);
   if (typeof r.afgeleid.stofverbruik === 'number') {
-    regels.push(['Stofverbruik', `${getal(r.afgeleid.stofverbruik, 1)} m${r.afgeleid.stofverbruik_contrast ? ` + ${getal(r.afgeleid.stofverbruik_contrast as number, 1)} m` : ''}`]);
+    regels.push(['Stofverbruik', `${getal(r.afgeleid.stofverbruik, 1)} m${r.afgeleid.stofverbruik_contrast ? ` + ${getal(r.afgeleid.stofverbruik_contrast as number, 1)} m` : ''}`, true]);
   }
-  regels.push(['Prijsmethode', r.prijs.methode === 'lijstprijs' ? 'prijstabel' : 'kostprijs + opslag']);
+  regels.push(['Prijsmethode', r.prijs.methode === 'lijstprijs' ? 'prijstabel' : 'kostprijs + opslag', true]);
   const dl = $('#prijsdetail');
-  dl.replaceChildren(...regels.flatMap(([a, b]) => [el('dt', {}, a), el('dd', {}, b)]));
+  dl.replaceChildren(...regels.flatMap(([a, b, intern]) => [el('dt', intern ? { class: 'intern' } : {}, a), el('dd', intern ? { class: 'intern' } : {}, b)]));
 
   // Meldingen (niet aan een veld gekoppeld)
   const algemeen = r.meldingen.filter((m) => !m.kenmerk);
   const lijst = $('#meldingen');
-  lijst.replaceChildren(...algemeen.map((m) => el('li', { class: m.ernst }, m.melding)));
+  lijst.replaceChildren(...algemeen.map((m) => el('li', { class: `${m.ernst}${m.intern ? ' intern' : ''}` }, m.melding)));
   lijst.hidden = algemeen.length === 0;
 
   // Samenvatting en stuklijst
@@ -221,8 +222,19 @@ function herbereken() {
 }
 
 /** Toont een product (sofa of kast). Bestaande keuzes blijven behouden als ze nog geldig zijn. */
+/** Is dit materiaal gekozen in de sofa op maat (hoofdstof of stof van de zitkussens)? */
+export function materiaalInSofa(code: string): boolean {
+  const sofa = productCode === 'sofa' ? keuzes : keuzesPerProduct.get('sofa') ?? {};
+  return Object.entries(sofa).some(([k, w]) => k.startsWith('stof') && w === code);
+}
+
+/** De laatste keuzes per product: wie van de sofa naar de kast en terug gaat, vindt beide terug zoals hij ze liet. */
+const keuzesPerProduct = new Map<string, Keuzes>();
+
 export function kiesProduct(code: string, behoudKeuzes = false) {
-  const vorige = keuzes;
+  keuzesPerProduct.set(productCode, keuzes);
+  // Alleen de eigen keuzes van dit product overnemen: de sofa (cm) en de kast (mm) hebben allebei een "breedte".
+  const vorige = keuzesPerProduct.get(code) ?? {};
   productCode = code;
   huidig = maakProduct(code);
   keuzes = standaardKeuzes(huidig.model);

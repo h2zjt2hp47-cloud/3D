@@ -7,7 +7,7 @@
  */
 import { weefselVan, type Materiaal } from './materialen.js';
 import { kuipOpbouw, kuipParameters, type Punt } from './kuip.js';
-import { chaiseRugVan, chaiseRugVlak, dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
+import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
   | 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken'
@@ -312,13 +312,11 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       case 'rugleuning':
       case 'kussen':
       case 'rolkussen': {
-        const d = dragerVan(ontwerp, catalogus, e);
-        const dt = d ? typen.get(d.type) : undefined;
-        const vaste = d ? gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting' : false;
-        const basis = !d ? P : dt?.tekenstijl === 'poef' ? zithoogte - 2 : zithoogte - (vaste ? 0 : vormgevingVan(ontwerp, d).kussendikte);
+        // Waarop het opzet-element rust en hoe hoog een rugleuning komt: zelfde berekening als het vooraanzicht.
+        const basis = draagHoogteVan(ontwerp, catalogus, e);
         const kantelAchter = { graden: t.tekenstijl === 'rugleuning' ? 9 : 14, richting };
         if (t.tekenstijl === 'rugleuning') {
-          const rugTop = Math.max(rugH, basis + 20);
+          const rugTop = rugleuningTop(ontwerp, catalogus, e);
           lokaal('rugleuning', 'stof', 0, 0, B, D, basis, rugTop - basis, stof, { afronding: Math.min(D / 2, 3 + v.zachtheid), ...(v.rugvorm === 'hellend' ? { kantel: kantelAchter } : {}) });
         } else if (t.tekenstijl === 'kussen') {
           const h = t.hoogte ?? Math.round(B * 0.9);
@@ -335,7 +333,11 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const kp = kuipParameters(opt.get('kuipvorm')?.teken);
         if (kp) {
           const opb = kuipOpbouw(B, D, { P, zithoogte, rugH, kussenDik }, kp, losseRug);
-          omtrekBlok('basis', 'stof', opb.basis.onder, opb.basis.boven - opb.basis.onder, donker, opb.plan, { afronding: kp.organisch ? 9 : 4 });
+          // De onderbouw net binnen de wand (0,8 cm): anders vallen de buitenkant van de wand en de zijkant van de onderbouw
+          // samen, en dat gaf vlekken en strepen op de onderbouw (z-fighting). Bij een schelp staat de wand niet op de onderbouw.
+          const krimp = kp.zwevend ? 0 : 0.8;
+          const basisPlan = opb.plan.map(([x, y]) => [B / 2 + (x - B / 2) * (1 - krimp / (B / 2)), D / 2 + (y - D / 2) * (1 - krimp / (D / 2))] as Punt);
+          omtrekBlok('basis', 'stof', opb.basis.onder, opb.basis.boven - opb.basis.onder, donker, basisPlan, { afronding: kp.organisch ? 9 : 4 });
           if (kussenDik) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
           const pad = opb.wand.pad.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
           const xs = pad.map((q) => q[0]), zs = pad.map((q) => q[1]), half = opb.wand.dikte / 2;

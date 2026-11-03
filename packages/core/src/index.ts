@@ -24,6 +24,12 @@ export {
 export {
   berekenOntwerp,
   dragerVan,
+  DRAGER_STIJLEN,
+  vormEffect,
+  type VormEffect,
+  draagHoogteVan,
+  rugleuningTop,
+  RUGLEUNING_MIN_BOVEN,
   gekozenOpties,
   hoogtesVan,
   HOOGTE_BEREIK,
@@ -53,6 +59,7 @@ export {
   type Rotatie,
   type Tekenstijl,
 } from './ontwerp.js';
+export { ontwerpOmschrijving, type OmschrijvingOpties } from './ontwerptekst.js';
 export { tekenVooraanzicht } from './vooraanzicht.js';
 export { bouw3D, blokkenVan, kaderVan, plaatsBlokken, type Blok, type BlokSoort, type BlokZijde, type Scene3D } from './ruimtelijk.js';
 export { controleerCatalogus, maakCode, tekenstijlen } from './catalogus.js';

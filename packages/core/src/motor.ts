@@ -15,6 +15,8 @@ import type {
 } from './types.js';
 
 const rond = (x: number, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
+/** Getal in een melding: Belgische schrijfwijze (komma) en een echt minteken. */
+const nl = (x: number) => rond(x, 1).toLocaleString('nl-BE', { maximumFractionDigits: 1 }).replace('-', '−');
 
 /** Startkeuzes: alle standaardwaarden van het model. */
 export function standaardKeuzes(model: ProductModel): Keuzes {
@@ -200,18 +202,23 @@ export function berekenConfiguratie(
     const v = evalueer(model.prijs.verkoopprijs, g);
     const n = typeof v === 'number' ? v : Number.NaN;
     if (!Number.isFinite(n)) {
-      meldingen.push({ code: 'prijs.niet_gevonden', ernst: 'fout', melding: 'Voor deze combinatie is geen prijs gevonden in de prijstabel.' });
+      // Een maat buiten het bereik staat al als fout bij het veld; de technische melding over de prijstabel is dan ruis.
+      if (!meldingen.some((m) => m.ernst === 'fout' && m.kenmerk))
+        meldingen.push({ code: 'prijs.niet_gevonden', ernst: 'fout', melding: 'Voor deze combinatie is geen prijs gevonden in de prijstabel.' });
       bruto = 0;
     } else bruto = rond(n);
   } else {
     bruto = rond(kostprijs * (1 + model.prijs.opslagProcent / 100));
   }
   if (model.prijs.minimumPrijs !== undefined && bruto > 0) bruto = Math.max(bruto, model.prijs.minimumPrijs);
-  const kortingProcent = opties.kortingProcent ?? 0;
+  // Korting altijd tussen 0 en 100 %; onder de kostprijs een waarschuwing die de klant niet ziet.
+  const kortingProcent = Number.isFinite(opties.kortingProcent) ? Math.min(100, Math.max(0, opties.kortingProcent!)) : 0;
   const excl = rond(bruto * (1 - kortingProcent / 100));
   const btwPct = model.prijs.btw !== undefined ? evalueerGetal(model.prijs.btw, g) : model.prijs.btwProcent;
   const btw = rond((excl * btwPct) / 100);
   const margeProcent = excl > 0 ? rond(((excl - kostprijs) / excl) * 100, 1) : null;
+  if (kortingProcent > 0 && bruto > 0 && excl < kostprijs)
+    meldingen.push({ code: 'prijs.onder_kostprijs', ernst: 'waarschuwing', intern: true, melding: `Met ${nl(kortingProcent)} % korting ligt de prijs onder de kostprijs (${margeProcent === null ? 'gratis' : `marge ${nl(margeProcent)} %`}).` });
 
   const tekening = model.tekening ? bouwTekening(model, g) : undefined;
 

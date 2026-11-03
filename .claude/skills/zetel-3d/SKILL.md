@@ -29,7 +29,7 @@ Boven- en vooraanzicht volgen dezelfde regels: `tekenElement()` in `ontwerp.ts` 
 - Poothoogte `P`: `plint` = 4, `verdekt` ≤ 8; `draaivoet` en `housse` vervangen de poten.
 - Zithoogte standaard uit optie `zithoogte` (42/45/48). Kussendikte, rugdikte, aantal zitkussens, zachtheid, rugvorm en houten frame komen uit **vormgeving**: `vormgevingVan(ontwerp, e)` (standaard ← model ← element).
 - Basis: van `P` tot `zithoogte − kussendikte`; zitkussen daarbovenop. Rug: van `P` tot `rughoogte` (optie `rughoogte`; bij losse rugkussens is de frame-rug 10 cm lager).
-- **Opzet-elementen** (`ElementType.opzet`: rugleuning, rugkussen, sierkussen, rolkussen) liggen op een **drager**: `dragerVan(ontwerp, catalogus, e)` (basiselement met de grootste overlap). Ze rusten op `zithoogte − kussendikte(drager)`, krijgen geen poten, mogen overlappen en nemen standaard het materiaal van de drager (`materiaalVan`).
+- **Opzet-elementen** (`ElementType.opzet`: rugleuning, rugkussen, sierkussen, rolkussen) liggen op een **drager**: `dragerVan(ontwerp, catalogus, e)` = de zitting (`DRAGER_STIJLEN`: zit, hoek, chaise, zit_zonder_rug, rond, kuip, poef; niet arm of console) met de grootste overlap, en alleen als het opzet-element **voor minstens 60 % op zittingen** ligt (anders melding `opzet.los` en in 3D op de vloer). Waarop het rust: **`draagHoogteVan`** (zithoogte − kussendikte van de drager, bij een poef zithoogte − 2). Bovenkant van een losse rugleuning: **`rugleuningTop`** = max(rughoogte, draaghoogte + 20). Vooraanzicht, 3D, prijs en het hoogteveld in de ontwerper gebruiken deze twee; nooit zelf herberekenen. Krijgen geen poten, mogen overlappen (behalve twee dezelfde op elkaar: `opzet.op_elkaar`) en nemen standaard het materiaal van de drager (`materiaalVan`).
 
 ## Opties zichtbaar maken
 Opties komen uit de catalogus (`OptieGroep` → `OptieKeuze`). De tekening leest **alleen `keuze.teken`**:
@@ -38,6 +38,8 @@ Opties komen uit de catalogus (`OptieGroep` → `OptieKeuze`). De tekening leest
 - `armstijl.teken.vorm`: strak, rond, engels, schuin, houtblad, hout. `rug.teken`: `los`, `capitonne`. `naad.teken`: `bies`, `contrast`, `stiksel`.
 - `kuipvorm`, `poefvorm`, `ronde_kant`, `console_uitvoering`, `functie`: `teken.vorm` of `teken.kant`.
 Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, standaard)`. Een nieuwe optie die alleen de prijs beïnvloedt, heeft geen tekencode nodig.
+- **Prijs = tekening (`vormEffect` in `ontwerp.ts`):** per tekenstijl staat wat zichtbaar is: rug (rugopties en rughoogte aanrekenen), rugvorm/rugdikte, meerdere zitkussens, houten frame. Tekent `ruimtelijk.ts` iets nieuws (bv. een houten frame rond een hoekelement), pas dan ook `vormEffect` aan, anders betaalt de klant niet voor wat hij ziet of omgekeerd. De ontwerpmodus in de demo toont per element alleen de velden met effect.
+- **Getekende hoogtes vervangen de keuze** in de prijs: rughoogte per cm, arm-, zit- en poothoogte als de keuze met de dichtstbijzijnde `teken.hoogte` (`keuzeBijHoogte`).
 
 ## Stappenplan: een nieuwe vorm of nieuw element
 1. **Catalogus** (`voorbeelden/vrij-ontwerp.ts` of via de catalogus-editor): `ElementType` met een (nieuwe of bestaande) `tekenstijl`, maten, prijzen. Voeg de tekenstijl toe aan het type `Tekenstijl` en aan `tekenstijlen` in `catalogus.ts`.
@@ -85,3 +87,5 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - Ronde elementen: poten en verdekte voet naar binnen zetten, anders steken ze buiten de ronding uit.
 - Prijs en tekening los houden: de tekening leest `teken`, de prijs leest `prijs/prijsPerM/pct`.
 - Alle maten en prijzen in de voorbeelden zijn demo-waarden (benadering op basis van foto's).
+- Twee vlakken op exact dezelfde plaats geven vlekken en strepen (z-fighting). Voorbeeld: de buitenkant van de kuipwand en de zijkant van de onderbouw. Daarom ligt de onderbouw van een kuip 0,8 cm binnen de wand (`ruimtelijk.ts`, `krimp`). Doe hetzelfde bij elke nieuwe vorm die tegen een andere aanligt.
+- Nieuwe meldingen die alleen voor de verkoper zijn (marge, kostprijs): `intern: true` op de melding; de demo verbergt ze in de klantweergave.

@@ -254,6 +254,13 @@ describe('algemene werking', () => {
     expect(berekenConfiguratie(klein, { b: 150 }, {}).prijs.brutoprijsExcl).toBe(20);
   });
 
+  it('een sofa breder dan toegelaten: fout bij het veld, geen technische melding over de prijstabel', () => {
+    const r = bank({ breedte: 400 });
+    expect(r.geldig).toBe(false);
+    expect(r.meldingen.some((m) => m.kenmerk === 'breedte' && m.ernst === 'fout')).toBe(true);
+    expect(codes(r)).not.toContain('prijs.niet_gevonden');
+  });
+
   it('modelcontrole vindt fouten die een beheerder kan maken', () => {
     const fout: ProductModel = {
       ...klein,

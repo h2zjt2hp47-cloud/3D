@@ -7,7 +7,7 @@ import { startMaterialen } from './materialen-ui.js';
 import { modelOntwerp, startModellen } from './modellen-ui.js';
 import { startCatalogusEditor } from './catalogus-ui.js';
 import { huidigOntwerp, kiesWeergave, laadInOntwerper, startOntwerper } from './ontwerper.js';
-import { $, getKorting, setKorting } from './staat.js';
+import { $, bewaar, getKorting, laad, setKorting } from './staat.js';
 
 const weergaven = ['modellen', 'sofa', 'ontwerp', 'kast', 'materialen', 'catalogus'] as const;
 type Weergave = (typeof weergaven)[number];
@@ -32,16 +32,35 @@ function toon(w: Weergave) {
   }
 }
 
+const SLEUTEL_KLANTWEERGAVE = 'configurator-demo.klantweergave';
+
 function startKlant() {
   const korting = $<HTMLInputElement>('#korting');
   const pas = () => {
     const inrichter = $<HTMLInputElement>('#klant-inrichter').checked;
     korting.disabled = !inrichter;
+    // Het kortingsveld alleen bij een interieurinrichter: een particulier zag "korting 20 %" staan zonder die te krijgen.
+    $('#korting-veld').hidden = !inrichter;
     const k = inrichter ? Math.min(100, Math.max(0, Number(korting.value) || 0)) : 0;
     if (k !== getKorting()) setKorting(k);
   };
   document.querySelectorAll<HTMLInputElement>('input[name="klant"]').forEach((r) => r.addEventListener('change', pas));
   korting.addEventListener('input', pas);
+  pas();
+
+  // Klantweergave: het scherm tonen aan de klant, zonder kostprijs, marge, stuklijst en de beheerschermen.
+  const knop = $<HTMLButtonElement>('#klantweergave');
+  const zet = (aan: boolean) => {
+    document.body.classList.toggle('klantmodus', aan);
+    knop.setAttribute('aria-pressed', String(aan));
+    bewaar(SLEUTEL_KLANTWEERGAVE, aan ? '1' : null);
+  };
+  knop.addEventListener('click', () => {
+    zet(!document.body.classList.contains('klantmodus'));
+    const w = location.hash.slice(1);
+    if (document.body.classList.contains('klantmodus') && (w === 'materialen' || w === 'catalogus')) toon('modellen');
+  });
+  zet(laad(SLEUTEL_KLANTWEERGAVE) === '1');
 }
 
 function toonFout(waar: string, fout: unknown) {
@@ -100,9 +119,10 @@ veilig('Catalogus', () => startCatalogusEditor({ huidigOntwerp, openModel }));
 document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) =>
   b.addEventListener('click', () => veilig('Navigatie', () => toon(b.dataset.weergave as Weergave))),
 );
+const intern = (w: string) => document.body.classList.contains('klantmodus') && (w === 'materialen' || w === 'catalogus');
 const start = location.hash.slice(1) as Weergave;
-veilig('Opstarten', () => toon(weergaven.includes(start) ? start : 'modellen'));
+veilig('Opstarten', () => toon(weergaven.includes(start) && !intern(start) ? start : 'modellen'));
 window.addEventListener('hashchange', () => {
   const w = location.hash.slice(1) as Weergave;
-  if (weergaven.includes(w)) toon(w);
+  if (weergaven.includes(w)) toon(intern(w) ? 'modellen' : w);
 });

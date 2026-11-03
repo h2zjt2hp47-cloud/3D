@@ -219,3 +219,97 @@ Aanleiding: "er kan niet gescrold worden in de configurator fullscreen". Daarna 
 5. **Modellen van de klant** (Kotor, Belize, Pula …) hebben een chaise longue zonder rugleuning, zoals afgeleid uit de foto's. Na te vragen of die chaises bij Corneille & Silence een rug hebben; dan zetten we de nieuwe keuze in het model.
 6. **Delen:** een link naar de configuratie bestaat nog niet. AR is op 3/11 toegevoegd en op vraag weer weggehaald.
 7. **Bestandsgrootte:** door de ingebakken 3D is de demo ±1,8 MB; voor SharePoint blijft handmatig opladen nodig.
+
+## 10. Zetelconfigurator: volledige doorlichting op gebruiksgemak en logica (3/11/2026)
+
+Aanleiding: "losse rugleuning hoogte is niet aanpasbaar" en daarna "graag de volledige configurator doorlopen op gebruiksgemak en logica". De bouwdemo had haar volledige testrun al op 1/11 (hoofdstuk 8); deze ronde gaat over de zeteldemo: **Modellen, Sofa op maat, Vrij ontwerp (boven, voor, 3D), Kast op maat, Materialen en Catalogus**.
+
+**Methode**
+- **Gebruiksgemak:** dezelfde aanpak als hoofdstuk 8. Taken uitgevoerd in een echte browser (Chromium via Playwright), met het aantal handelingen geteld. Daarnaast een audit van elk scherm op vijf formaten: computer 1440 en laptop 1280, tablet liggend en staand, telefoon 390. Gecontroleerd op aanraakdoelen, overlap, afgekapte tekst, contrast, pagina breder dan het scherm, toetsenbord (70 keer Tab) en focusrand.
+- **Logica:** apart controlescripts die ontwerpen opbouwen en doorrekenen, met de vraag: "zou een verkoper of klant dit verwachten?". Doorgerekend zijn:
+  - opzet-elementen en hun drager;
+  - elke optiegroep (`voorTypen`, `alleenMet`, per element);
+  - vrije hoogtes;
+  - stofverbruik en korting;
+  - maten en draaiing;
+  - alle 42 modellen;
+  - de grenzen van Sofa en Kast op maat.
+- **3D:** de vlekken op de onderbouw van de kuipfauteuils uit de schermafbeelding van Jonas.
+
+**Taken** (aantal handelingen, na de aanpassingen)
+
+| Taak | Handelingen | Gelukt |
+|---|---|---|
+| Model kiezen, stof wisselen in de 3D, foto bewaren, offertetekst kopiëren | 4 | ja |
+| Losse rugleuning op een poef zetten en 95 cm hoog maken | 4 (was 5, met een verborgen greep in het vooraanzicht) | ja |
+| Sofa op maat: breedte, opstelling, offertetekst | 3 | ja |
+| Eigen stof toevoegen en gebruiken in het vrij ontwerp | 4 | ja |
+| Huidig ontwerp bewaren als model en terugvinden bij Modellen | 3 | ja |
+
+Er waren geen foutmeldingen in de pagina. Herladen bewaart het ontwerp. *Alles wissen* en *Verwijder* vragen een tweede klik.
+
+### Bevindingen gebruiksgemak en wat ermee gebeurde
+
+| # | Bevinding (wat je ziet) | Ernst | Stand |
+|---|---|---|---|
+| 10.1 | **Kast op maat opende met fouten.** Na de sofa (breedte 230 cm) toonde de kast een breedte van 230 mm en meteen "2 fouten op te lossen". Beide producten hebben een veld "breedte", in cm en in mm. | hoog | **Opgelost:** elk product onthoudt zijn eigen keuzes. Wie heen en weer gaat, vindt beide terug zoals hij ze liet. |
+| 10.2 | **Kostprijs en marge altijd zichtbaar**, ook als je het scherm naar de klant draait. Hetzelfde geldt voor het stofverbruik, de stuklijst en de schermen *Materialen* en *Catalogus* (met kostprijzen per meter). | hoog | **Opgelost:** knop **Klantweergave** in de kop, zoals in de bouwdemo, onthouden in de browser. Die verbergt alles wat intern is; de prijzen blijven. |
+| 10.3 | **Offertetekst onvolledig.** Er stonden geen modelnaam, geen keuzes per element (armstijl, rugleuning van de chaise, vorm van de poef), geen getekende hoogtes, geen vormgeving en geen korting in. Wie de tekst in een offerte plakt, mist wat er gemaakt moet worden. | hoog | **Opgelost:** volledige omschrijving per element, plus de keuzes voor de hele zetel, de vormgeving, de korting en de prijs. Waarop een kussen ligt, staat erbij ("op element 5"). Code: `core/src/ontwerptekst.ts`, met tests. |
+| 10.4 | **Losse rugleuning: hoogte niet in te vullen.** Het kon alleen met een greep in het vooraanzicht, die bijna niemand vindt. | middel | **Opgelost:** veld *Hoogte (cm)* bij het element. Het geldige bereik staat erbij: minstens 20 cm boven waar ze op rust, hoogstens 110 cm. Vooraanzicht, 3D en prijs volgen dezelfde berekening (`draagHoogteVan`, `rugleuningTop`). |
+| 10.5 | **Het menu verspringt.** Naargelang de lengte van de titel ("Modellen" of "Zetel vrij ontwerpen") stond het menu op één of twee regels. Je klikt dan naast de knop die je zocht. | middel | **Opgelost:** het menu staat altijd op dezelfde plaats; titel en klantkeuze staan erboven. De huisstijlversie blijft gecentreerd. |
+| 10.6 | **Dupliceren:** de rugleuning en kussens op een element gingen niet mee. De kopie kwam vaak over een ander element te liggen, met een fout. | middel | **Opgelost:** wat erop ligt gaat mee, en de kopie zoekt een vrije plaats (rechts, links, eronder, erboven, anders naast de zetel). |
+| 10.7 | **Verwijderen van een poef of zitting:** de rugleuning en kussens bleven zweven, met de fout "ligt niet op een zitting". | middel | **Opgelost:** ze gaan mee weg. *Ongedaan maken* zet alles terug. |
+| 10.8 | **"(per element)"** achter *Poten*, *Zitcomfort*, *Rug*, *Rughoogte* en *Naden* las als "per element te kiezen". In werkelijkheid is het één keuze voor de hele zetel, per element aangerekend. | middel | **Opgelost:** de toevoeging is weg en de meerprijs toont "+€12 per element". |
+| 10.9 | **Een stof verwijderen die in je ontwerp zit:** die werd zonder melding vervangen door de eerste stof van de lijst, en de prijs veranderde mee. | middel | **Opgelost:** de knop vraagt "In gebruik: toch weg?". Elementen met die stof volgen daarna weer het hoofdmateriaal. |
+| 10.10 | **Elemententabel:** de prijs per element viel buiten de kolom. Bovendien stond de prijs in de tabel vóór korting, en bij het gekozen element na korting. | middel | **Opgelost:** de stof staat onder de naam, de prijs is zichtbaar, en overal geldt dezelfde prijs (na korting). |
+| 10.11 | **Tablet:** knoppen, keuzes en velden waren 27–39 px hoog (*Bewerk* 27 px, menu 39 px). Op een aanraakscherm moet dat minstens 44 px zijn. | middel | **Opgelost** voor aanraakschermen: alle knoppen, keuzes, velden, stalen, inklapkoppen en zoomknoppen. |
+| 10.12 | **Telefoon:** *Vrij ontwerp* was 31 px breder dan het scherm. De zoomknoppen pasten niet, dus de hele pagina schoof zijwaarts. | middel | **Opgelost:** de zoomknoppen lopen door naar een volgende regel. |
+| 10.13 | **Kussens toevoegen:** het 2e en 3e sierkussen kwamen op dezelfde plaats. Een rol- of rugkussen kreeg op een smal element meteen een maatfout. | middel | **Opgelost:** kussens van dezelfde soort liggen naast elkaar en zijn even breed. Past er geen meer bij, dan staat de knop uit ("past niet meer"). |
+| 10.14 | **Kuipfauteuils:** vlekken en strepen op de onderbouw. De buitenkant van de wand en de zijkant van de onderbouw lagen op exact dezelfde plaats. | middel | **Opgelost:** de onderbouw ligt 0,8 cm binnen de wand. |
+| 10.15 | **Materialenlijst:** de knoppen *Bewerk* en *Verwijder* vielen buiten beeld, ook op een computer. | laag | **Opgelost:** ze blijven rechts in beeld, ook als de tabel zijwaarts schuift. |
+| 10.16 | **Particulier** zag "korting 20 %" staan (grijs) zonder die te krijgen. | laag | **Opgelost:** het veld staat er alleen bij een interieurinrichter. |
+| 10.17 | **Sofa op maat breder dan 340 cm:** naast de fout bij het veld kwam ook "geen prijs gevonden in de prijstabel". | laag | **Opgelost:** alleen nog de fout bij het veld. |
+| 10.18 | **Catalogus:** "gebruikt in een model" zonder aantal, en zonder uitleg waarom het element niet weg kan. | laag | **Opgelost:** bv. "gebruikt in 22 modellen (daarom niet te verwijderen)" bij het zitelement. |
+| 10.19 | **Kleine tekst** "foto website" en "onze benadering" (10,9 px) op de modelkaarten. | laag | **Opgelost** (12 px, donkerder). |
+
+### Bevindingen logica (rekenmotor) en wat ermee gebeurde
+
+| # | Bevinding | Ernst | Stand |
+|---|---|---|---|
+| 10.20 | **Rughoogte dubbel aangerekend.** Wie in het vooraanzicht een rug van 92 cm tekende én de keuze *Hoog* had, betaalde twee keer: +98 € in plaats van +49 €, en ook dubbel stof. | hoog | **Opgelost:** een getekende rughoogte vervangt de keuze en wordt per cm aangerekend. |
+| 10.21 | **Getekende zit-, poot- en armhoogte veranderden de prijs niet.** Een getekende zithoogte van 55 cm kostte niets, de keuze *Hoog (48 cm)* +60 €. | middel | **Opgelost:** een getekende hoogte telt als de keuze met de dichtstbijzijnde hoogte, in de prijsopbouw als "55 cm (op maat)". |
+| 10.22 | **Rugopties op een chaise longue zonder rugleuning.** *Losse rugkussens*, *dons*, *capitonnage* en *rughoogte* werden aangerekend op een chaise die geen rug heeft (geen rug in de tekening, wel in de prijs). Dit raakte de modellen Kotor, Belize, Fréjus en Pula. | hoog | **Opgelost:** geen rugopties zonder rug. Die vier modellen worden daardoor iets goedkoper (de prijzen zijn verzonnen). |
+| 10.23 | **Vormgeving aangerekend zonder zichtbaar effect, en omgekeerd.** <br>• Zonder effect: een houten frame op een hoekelement, afgerond eindelement of fauteuil; 3 zitkussens op een afgerond eindelement; een ronde rug op een fauteuil. Je betaalde, maar de 3D toonde niets. <br>• Omgekeerd: een chaise met rug kreeg rugvorm, rugdikte en rughoogte gratis. | middel | **Opgelost:** prijs en 3D volgen dezelfde tabel (`vormEffect`). De *Ontwerpmodus* toont per element alleen wat bij dat element zichtbaar is. |
+| 10.24 | **Kussens en rugleuningen "lagen" overal op.** <br>• Elke overlap telde: een rugleuning die 1 cm op een zitting lag, zweefde in de 3D. <br>• Een rugleuning op een houten tussenstuk of armleuning werd aanvaard. <br>• Twee rugleuningen op elkaar gaven geen melding. | middel | **Opgelost:** een opzet-element moet voor meer dan de helft op een zitting liggen (niet op een arm of tussenstuk). Twee dezelfde op elkaar geven een fout. Een losse rugleuning op een element dat al een rug heeft, geeft een waarschuwing. |
+| 10.25 | **Korting zonder bewaking.** Bij 25 % korting op het startontwerp was de marge −3,7 %, zonder melding. De motor aanvaardde ook 150 % (een negatieve prijs). | middel | **Opgelost:** onder de kostprijs verschijnt een **interne** waarschuwing, die verborgen is in de klantweergave. De korting ligt altijd tussen 0 en 100 %. |
+| 10.26 | **Keuzes voor de hele zetel** rekenden ook op elementen waarvoor ze niet gelden. Zo telde *Vaste zitting* (−3 %) ook op een poef en een houten tussenstuk. | middel | **Opgelost:** alleen op de elementen waarvoor de keuze geldt. |
+| 10.27 | **Onmogelijke hoogtes aanvaard:** <br>• een rug van 55 cm bij een zithoogte van 55 cm; <br>• een arm onder de zitting; <br>• poten en zitkussen die geen plaats laten voor de onderbouw (de 3D liet die gewoon weg). | middel | **Opgelost:** duidelijke foutmelding, bv. "de rug (55 cm) moet minstens 20 cm boven de zitting (55 cm) uitkomen". |
+
+In orde bevonden:
+- alle 42 modellen zijn geldig, met een prijs groter dan nul;
+- draaiing (0/90/180/270) geeft dezelfde prijs, kost en stof;
+- min/max van de elementen, de 10 cm-klassen en de dieptetoeslag kloppen;
+- de stofberekening klopt: patroonrapport, rolbreedte, eigen stof, afronding op 0,1 m;
+- de `alleenMet`-combinaties kloppen;
+- de grenzen en regels van Sofa en Kast op maat kloppen;
+- korting 0–100 %: excl. + btw = incl.
+
+Nieuwe tests: `test/omschrijving.test.ts` (6) en `test/logica.test.ts` (13), plus 1 in `test/motor.test.ts`. In totaal **197 tests groen**.
+
+### Nog open (met voorstel)
+1. **Studio-decor: harde horizon** waar de vloer overgaat in de achtergrond (schermafbeelding van Jonas). Voorstel: de vloer naar de rand toe laten overlopen in de achtergrondkleur.
+2. **Afgeronde kuipfauteuil: de rug staat als een bult op de armen.** Voorstel: een vlak stuk bovenaan de rug en een zachtere overgang naar de armen. Eerst naast de productfoto's leggen: het blijft een benadering.
+3. **Logica die een keuze of gegevens van de klant vraagt:**
+   - *Sofa op maat:* linnen met een contrast in leder is goedkoper dan volledig leder, want de ledertoeslag van 15 % valt weg. Een contrast in dezelfde stof kost toch +5 %. Na te kijken met de echte prijslijst.
+   - *Kast op maat:* 400 mm hoog met 12 legplanken is geldig (±4 mm tussen de planken). 1201 mm breed geeft 3 draaideuren op 2 vakken. Regels toe te voegen.
+   - Leder wordt geteld in lopende meter, zoals stof: geen m², huiden of snijverlies.
+   - Kleinere punten:
+     - plint of verdekte poten met een getekende poothoogte;
+     - notelaar aangerekend bij een metalen slede, waar geen hout te zien is;
+     - de btw is soms 1 cent lager door afronding per regel;
+     - de leveringswaarschuwing telt een losse poef mee in de breedte;
+     - de Martindale-waarschuwing verschijnt ook als de stof alleen op een sierkussen zit.
+4. **Stalenkaart met het toetsenbord:** 60 stalen betekent 60 keer Tab. Een schermlezer hoort "Mosterd" twee keer, zonder de collectie. Voorstel: pijltjestoetsen binnen de stalenkaart, en de volledige naam.
+5. **Geen "opnieuw"** naast *Ongedaan maken*.
+6. **Eigenschappen** van het gekozen element staan onder de tekening: op een laptop moet je scrollen.
+7. **Niet getest op echte toestellen** (de toonzaaltablet, een iPhone) **en niet met echte gebruikers** (zie hoofdstuk 7).

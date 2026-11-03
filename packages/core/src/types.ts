@@ -245,6 +245,8 @@ export interface Melding {
   melding: string;
   /** Kenmerk waarop de melding slaat, indien van toepassing. */
   kenmerk?: string;
+  /** Alleen voor de verkoper (bv. onder de kostprijs): niet tonen in de klantweergave. */
+  intern?: boolean;
 }
 
 export interface KeuzeStatus {

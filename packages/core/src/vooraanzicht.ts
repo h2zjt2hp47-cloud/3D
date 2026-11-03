@@ -5,7 +5,7 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { chaiseRugVan, chaiseRugVlak, dragerVan, gekozenOpties, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 import { kuipOpbouw, kuipParameters } from './kuip.js';
 
@@ -50,14 +50,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
 
   let maxHoogte = 0;
   /** Hoogte waarop een rugleuning of kussen rust: de bovenkant van de basis van het element eronder. */
-  const draagHoogte = (e: (typeof ontwerp.elementen)[number]) => {
-    const d = dragerVan(ontwerp, catalogus, e);
-    if (!d) return hoogtesVan(ontwerp, catalogus).poothoogte;
-    const dt = typen.get(d.type);
-    const vaste = gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting';
-    if (dt?.tekenstijl === 'poef') return zithoogte - 2;
-    return zithoogte - (vaste ? 0 : vormgevingVan(ontwerp, d).kussendikte);
-  };
+  const draagHoogte = (e: (typeof ontwerp.elementen)[number]) => draagHoogteVan(ontwerp, catalogus, e);
   for (const e of volgorde) {
     const t = typen.get(e.type);
     if (!t) continue;
@@ -174,7 +167,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       case 'rolkussen': {
         const basis = draagHoogte(e);
         if (t.tekenstijl === 'rugleuning') {
-          const rugTop = Math.max(rugH, basis + 20);
+          const rugTop = rugleuningTop(ontwerp, catalogus, e);
           rect(`${e.id}.rugleuning`, x0, top(rugTop), p.b, rugTop - basis, donker, { afronding: 2 + zacht, ...lijn });
           maxHoogte = Math.max(maxHoogte, rugTop);
         } else if (t.tekenstijl === 'kussen') {

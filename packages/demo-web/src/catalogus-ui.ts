@@ -91,7 +91,9 @@ function leegType(): ElementType {
 
 function toonTypeLijst() {
   const lijst = $('#cat-typen');
-  const gebruikt = new Set(getModellen().flatMap((m) => m.ontwerp.elementen.map((e) => e.type)));
+  // Per elementtype: in hoeveel modellen het voorkomt (een element dat in een model zit, kan niet weg).
+  const gebruikt = new Map<string, number>();
+  for (const m of getModellen()) for (const code of new Set(m.ontwerp.elementen.map((e) => e.type))) gebruikt.set(code, (gebruikt.get(code) ?? 0) + 1);
   lijst.replaceChildren(
     ...getCatalogus().typen.map((t) => {
       const rij = el('li', { class: t.code === bewerkType ? 'actief' : '' });
@@ -112,7 +114,10 @@ function toonTypeLijst() {
           toonProblemen($('#cat-type-meldingen'), probeerBewaren(c), `"${t.label}" is verwijderd.`);
         });
         knoppen.append(weg);
-      } else knoppen.append(el('span', { class: 'klein' }, 'gebruikt in een model'));
+      } else {
+        const n = gebruikt.get(t.code)!;
+        knoppen.append(el('span', { class: 'klein' }, `gebruikt in ${n} ${n === 1 ? 'model' : 'modellen'} (daarom niet te verwijderen)`));
+      }
       rij.append(naam, knoppen);
       return rij;
     }),
