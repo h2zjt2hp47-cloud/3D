@@ -28,6 +28,8 @@ export {
   hoogtesVan,
   HOOGTE_BEREIK,
   lokaalNaarWereld,
+  chaiseRugVan,
+  chaiseRugVlak,
   materiaalVan,
   overlapOppervlak,
   voetafdruk,

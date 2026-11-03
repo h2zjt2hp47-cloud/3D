@@ -8,7 +8,7 @@ const g = (a: number, b: number, c: number, eigen: number) => ({ A: a, B: b, C: 
 
 const GESTOFFEERD = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'arm', 'poef', 'rond_einde', 'fauteuil'];
 const ZITTEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'poef', 'rond_einde', 'fauteuil'];
-const MET_RUG = ['zit', 'hoek', 'rond_einde', 'fauteuil'];
+const MET_RUG = ['zit', 'hoek', 'rond_einde', 'fauteuil', 'chaise'];
 /** Opzet-elementen: liggen bovenop een ander element. */
 const OPZET = ['rugleuning', 'rugkussen', 'sierkussen', 'rolkussen'];
 
@@ -127,6 +127,16 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'schuin', label: 'Schuin aflopend', prijs: 20, teken: { vorm: 'schuin' } },
       { code: 'houtblad', label: 'Gestoffeerd met houten blad', prijs: 95, teken: { vorm: 'houtblad' }, kost: 35 },
       { code: 'hout', label: 'Massief houten arm', prijs: 180, teken: { vorm: 'hout' }, kost: 80 },
+    ],
+  },
+  {
+    // Chaise longue met of zonder rugleuning: achteraan (zoals de zitelementen) of langs de lange zijde (méridienne).
+    code: 'chaise_rug', label: 'Rugleuning', niveau: 'element', voorTypen: ['chaise'], standaard: 'geen',
+    keuzes: [
+      { code: 'geen', label: 'Zonder rugleuning', teken: { kant: 'geen' } },
+      { code: 'achter', label: 'Rugleuning achteraan', prijs: 210, stofPct: 18, kost: 60, teken: { kant: 'achter' }, uitleg: 'Zoals de zitelementen: de chaise kan zo ook op het einde van een rij' },
+      { code: 'links', label: 'Rugleuning lange zijde links', prijs: 290, stofPct: 30, kost: 85, teken: { kant: 'links' }, uitleg: 'Méridienne: rug langs de lange kant' },
+      { code: 'rechts', label: 'Rugleuning lange zijde rechts', prijs: 290, stofPct: 30, kost: 85, teken: { kant: 'rechts' }, uitleg: 'Méridienne: rug langs de lange kant' },
     ],
   },
   {

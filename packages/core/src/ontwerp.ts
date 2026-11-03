@@ -368,6 +368,18 @@ export function lokaalNaarWereld(e: OntwerpElement, lx: number, ly: number, lb: 
 
 const RUG = 18;
 
+/** Rugleuning van een chaise longue (optie "chaise_rug"): achteraan, links of rechts (lokaal), of geen. */
+export function chaiseRugVan(opties: Map<string, OptieKeuze>): 'achter' | 'links' | 'rechts' | null {
+  const k = opties.get('chaise_rug')?.teken?.kant;
+  return k === 'achter' || k === 'links' || k === 'rechts' ? k : null;
+}
+/** Rechthoek (lokaal) van de rugleuning van een chaise longue, en het zitvlak dat overblijft. */
+export function chaiseRugVlak(B: number, D: number, R: number, kant: 'achter' | 'links' | 'rechts') {
+  if (kant === 'achter') return { rug: { lx: 0, ly: 0, lb: B, ld: R }, zit: { lx: 0, ly: R, lb: B, ld: D - R } };
+  if (kant === 'links') return { rug: { lx: 0, ly: 0, lb: R, ld: D }, zit: { lx: R, ly: 0, lb: B - R, ld: D } };
+  return { rug: { lx: B - R, ly: 0, lb: R, ld: D }, zit: { lx: 0, ly: 0, lb: B - R, ld: D } };
+}
+
 function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, opties: Map<string, OptieKeuze> = new Map(), v: Vormgeving = STANDAARD_VORMGEVING): VormResultaat[] {
   const B = e.breedte, D = e.diepte;
   const donker = donkerder(kleur);
@@ -398,10 +410,17 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
       delen.push(['rug', 0, 0, B, R, donker, 3], ['rug2', 0, R, R, D - R, donker, 3]);
       kussens(R + 1, R + 1, B - R - 3, D - R - 3);
       break;
-    case 'chaise':
+    case 'chaise': {
       houtrand();
-      kussens(frame + 1, 1, B - 2 * frame - 2, D - 2 - (v.houtframe === 'rondom' ? frame : 0));
+      const kant = chaiseRugVan(opties);
+      if (kant) {
+        const { rug, zit } = chaiseRugVlak(B, D, R, kant);
+        delen.push(['rug', rug.lx, rug.ly, rug.lb, rug.ld, donker, v.rugvorm === 'rond' ? R / 2 : 3]);
+        const fl = kant === 'links' ? 0 : frame, fr = kant === 'rechts' ? 0 : frame;
+        kussens(zit.lx + fl + 1, zit.ly + 1, zit.lb - fl - fr - 2, zit.ld - 2 - (v.houtframe === 'rondom' ? frame : 0));
+      } else kussens(frame + 1, 1, B - 2 * frame - 2, D - 2 - (v.houtframe === 'rondom' ? frame : 0));
       break;
+    }
     case 'arm': {
       const vorm = String(t('armstijl', 'vorm') ?? 'strak');
       const r = vorm === 'rond' || vorm === 'engels' ? Math.min(B, D) / 2 : vorm === 'schuin' ? Math.min(B, D) / 4 : 2;

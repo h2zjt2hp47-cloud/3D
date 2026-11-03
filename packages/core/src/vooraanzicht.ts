@@ -5,7 +5,7 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { chaiseRugVan, chaiseRugVlak, dragerVan, gekozenOpties, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
@@ -200,6 +200,16 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       case 'chaise':
       case 'zit_zonder_rug':
       case 'poef': {
+        // Chaise longue met rugleuning: de rug op zijn plaats in het vooraanzicht (breedte uit de voetafdruk van de rug).
+        const kant = t.tekenstijl === 'chaise' ? chaiseRugVan(opt) : null;
+        if (kant) {
+          const frameRug = losseRug ? rugH - 10 : rugH;
+          const { rug } = chaiseRugVlak(e.breedte, e.diepte, v.rugdikte, kant);
+          const w = lokaalNaarWereld(e, rug.lx, rug.ly, rug.lb, rug.ld);
+          rect(`${e.id}.rug`, w.x, top(frameRug), w.b, frameRug - P, donker, { afronding: 4, ...lijn });
+          if (losseRug && w.b > 40) rect(`${e.id}.rugkussen`, w.x + 3, top(rugH), w.b - 6, rugH - zithoogte + 2, stof, { afronding: 2 + zacht, ...lijn });
+          maxHoogte = Math.max(maxHoogte, rugH);
+        }
         const h = t.tekenstijl === 'poef' ? zithoogte - 2 : zithoogte;
         const dik = t.tekenstijl === 'poef' ? 0 : kussenDik;
         const poefvorm = String(te('poefvorm', 'vorm', 'kiezel'));

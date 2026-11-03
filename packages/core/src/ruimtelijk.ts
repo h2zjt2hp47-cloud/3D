@@ -6,7 +6,7 @@
  * zoals y in het bovenaanzicht), y = hoogte vanaf de vloer.
  */
 import { weefselVan, type Materiaal } from './materialen.js';
-import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
+import { chaiseRugVan, chaiseRugVlak, dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
   | 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken'
@@ -211,7 +211,39 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         if (functie === 'hoofdsteun' || functie === 'relax_hoofdsteun') lokaal('hoofdsteun', 'kussen', 6, 2, B - 12, 14, rugH, 14, stof, { afronding: 5 });
         break;
       }
-      case 'chaise':
+      case 'chaise': {
+        const kant = chaiseRugVan(opt);
+        if (!kant) {
+          lokaal('basis', 'stof', 0, 0, B, D, P, basisH, donker, { afronding: 2 });
+          if (kussenDik) kussens(1, 1, B - 2, D - 2, zithoogte - kussenDik, kussenDik);
+          houtframe(zithoogte + 2);
+          break;
+        }
+        // Met rugleuning: rug achteraan of langs de lange zijde; basis en kussens op de rest.
+        const { rug, zit } = chaiseRugVlak(B, D, RUG, kant);
+        const zij = kant !== 'achter';
+        lokaal('rug', 'stof', rug.lx, rug.ly, rug.lb, rug.ld, P, frameRug - P, stof, zij ? { afronding: rugExtra.afronding } : rugExtra);
+        lokaal('basis', 'stof', zit.lx, zit.ly, zit.lb, zit.ld, P, basisH, donker, { afronding: 2 });
+        if (kussenDik) {
+          if (zij) lokaal('zitkussen', 'kussen', zit.lx + 1, 1, zit.lb - 2, D - 2, zithoogte - kussenDik, kussenDik, stof, { afronding: zacht });
+          else kussens(1, RUG, B - 2, D - RUG - 1, zithoogte - kussenDik, kussenDik);
+        }
+        if (losseRug) {
+          if (zij) lokaal('rugkussen', 'kussen', kant === 'links' ? RUG - 2 : B - RUG - 12, 3, 14, D - 6, zithoogte, rugH - zithoogte, stof, { afronding: 2 + zacht });
+          else lokaal('rugkussen', 'kussen', 2, RUG - 2, B - 4, 14, zithoogte, rugH - zithoogte, stof, { afronding: 2 + zacht, ...(v.rugvorm === 'hellend' ? { kantel: { graden: 9, richting } } : {}) });
+        }
+        if (capitonne && !zij) {
+          const kolommen = Math.max(2, Math.round(B / 18));
+          for (let r = 0; r < 2; r++)
+            for (let k = 0; k < kolommen; k++) {
+              const lx = (B / kolommen) * (k + 0.5) + (r % 2 ? B / kolommen / 2 : 0);
+              if (lx > B - 4) continue;
+              lokaal(`knoop-${r}-${k}`, 'donker', lx - 1, RUG - 0.6, 2, 1.2, zithoogte + 12 + r * 12, 2, donkerder(stof, 0.55), { vorm: 'bol' });
+            }
+        }
+        if (kant === 'achter') houtframe(zithoogte + 2);
+        break;
+      }
       case 'zit_zonder_rug':
         lokaal('basis', 'stof', 0, 0, B, D, P, basisH, donker, { afronding: 2 });
         if (kussenDik) kussens(1, 1, B - 2, D - 2, zithoogte - kussenDik, kussenDik);
