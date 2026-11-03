@@ -2,6 +2,7 @@
 import { SCHADUW_LABEL, standFactor, windstreek, normHoek, type Dakvorm, type Gebouw, type ObstakelSoort, type VlakLegplan } from '../../core/src/zon.js';
 import { el, getal, getalVeld, keuzeVeld, knop, schakelaar, svgUit, tegels, tekstVeld } from './hulp.js';
 import { kompasSvg, legplanSvg } from './tekeningen.js';
+import { adresZoeker } from './adres-ui.js';
 import { resultaat, toestand, wijzig, wijzigVlak } from './staat.js';
 
 const DAKVORMEN: { waarde: Dakvorm; label: string; extra: string }[] = [
@@ -15,7 +16,7 @@ export function toonDak(houder: HTMLElement) {
   const p = toestand();
   const r = resultaat();
   houder.replaceChildren(
-    el('section', { class: 'stap' }, el('h2', {}, el('span', { class: 'stapnr' }, '1'), 'Ligging'), ligging()),
+    el('section', { class: 'stap' }, el('h2', {}, el('span', { class: 'stapnr' }, '1'), 'Ligging'), adresZoeker(() => toonDak(houder)), ligging()),
     ...p.gebouwen.map((g, i) => gebouwKaart(g, i)),
     el('div', { class: 'knoppenrij' }, knop('+ Gebouw toevoegen (bv. garage of bijgebouw)', voegGebouwToe)),
     el('h2', { class: 'tussenkop' }, 'Dakvlakken en legplan'),

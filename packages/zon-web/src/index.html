@@ -98,6 +98,16 @@ fieldset.keuzes legend { width: 100%; }
 .schakelaar input:focus-visible + .schuifje { outline: 2px solid var(--accent); outline-offset: 2px; }
 .knoppenrij { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 
+.adreszoeker { border-bottom: 1px solid var(--lijn); padding-bottom: 12px; margin-bottom: 14px; }
+.zoekrij { display: flex; gap: 8px; }
+.zoekrij input { flex: 1; min-width: 0; padding: 7px 9px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); min-height: 38px; }
+.veldfout { color: var(--fout); font-size: .88rem; margin: 6px 0 0; }
+.kaartvak { padding: 0; overflow: hidden; max-width: 460px; }
+.adreskaart { display: block; width: 100%; height: auto; }
+.adreskaart .gebouw { cursor: pointer; }
+.adreskaart .gebouw:hover { fill-opacity: .35; }
+.gevonden { margin: 10px 0 4px; }
+.bron { font-size: .75rem; color: var(--zacht); margin: 6px 0 0; }
 .ligging { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; align-items: center; }
 @media (max-width: 560px) { .ligging { grid-template-columns: minmax(0, 1fr); } .kompasvak { max-width: 240px; margin: 0 auto; } }
 .ligging p { margin: 0 0 10px; }
