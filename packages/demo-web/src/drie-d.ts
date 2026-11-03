@@ -9,6 +9,11 @@ import { wielHint } from './zoom.js';
 import { WEEFSEL_CM, weefselCanvas } from './weefsel.js';
 
 import * as THREE_ from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { WebGLPathTracer } from 'three-gpu-pathtracer';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const THREE: any = THREE_;
@@ -25,6 +30,11 @@ export interface Viewer3D {
   kwaliteit?(k: Kwaliteit): void;
   /** Foto van het huidige beeld in hoge resolutie (PNG als data-URL). */
   foto?(): string | null;
+  /**
+   * Fotorealistische foto: path tracing (echte lichtweerkaatsing, zachte schaduwen) met `stappen` monsters.
+   * Toont het beeld al tijdens het rekenen; geeft de PNG als data-URL, of null bij annuleren of een fout.
+   */
+  fotoRealistisch?(o: { stappen: number; breedte?: number; opVoortgang?: (deel: number) => void; signaal?: AbortSignal }): Promise<string | null>;
   standpunt(naam: 'schuin' | 'voor' | 'boven' | 'zij' | 'achter'): void;
   formaat(): void;
 }
@@ -40,12 +50,77 @@ export type DecorNaam = keyof typeof DECORS;
 
 /** Lichtsferen: zon (kleur, sterkte, hoogte), hemellicht, omgevingslicht en een warme lamp. */
 export const LICHTEN = {
-  studio: { label: 'Studio', zon: '#ffffff', zonSterkte: 0.8, hoogte: 1.6, hemel: 0.34, hemelKleur: '#ffffff', omgeving: 0.5, lamp: 0 },
-  daglicht: { label: 'Daglicht', zon: '#fff3e2', zonSterkte: 1.05, hoogte: 0.9, hemel: 0.3, hemelKleur: '#dde8ff', omgeving: 0.45, lamp: 0 },
-  avond: { label: 'Avond', zon: '#ffb36e', zonSterkte: 0.35, hoogte: 0.5, hemel: 0.1, hemelKleur: '#8f8aa8', omgeving: 0.22, lamp: 1 },
+  studio: {
+    label: 'Studio', zon: '#ffffff', zonSterkte: 0.8, hoogte: 1.6, hemel: 0.34, hemelKleur: '#ffffff', omgeving: 0.5, lamp: 0,
+    // Omgevingsbeeld (lineaire HDR-waarden): wanden, vloer en lichtbronnen (richting, hoekstraal in graden, sterkte, kleur).
+    hdr: { boven: [0.11, 0.1, 0.095], onder: [0.04, 0.037, 0.034], bronnen: [[[0, 1, 0.1], 28, 2.6, [1, 1, 0.97]], [[-0.95, 0.32, 0.3], 19, 1.6, [1, 1, 0.97]], [[0.95, 0.24, -0.3], 16, 0.8, [1, 1, 0.97]], [[0.1, 0.2, 0.97], 22, 0.9, [1, 1, 0.97]]] },
+  },
+  daglicht: {
+    label: 'Daglicht', zon: '#fff3e2', zonSterkte: 1.05, hoogte: 0.9, hemel: 0.3, hemelKleur: '#dde8ff', omgeving: 0.45, lamp: 0,
+    hdr: { boven: [0.35, 0.45, 0.62], onder: [0.06, 0.05, 0.04], bronnen: [[[-0.8, 0.25, 0.55], 30, 3.2, [1, 0.98, 0.95]], [[0, 1, 0], 45, 0.9, [0.75, 0.85, 1]], [[0.9, 0.2, 0.4], 14, 0.6, [1, 1, 1]]] },
+  },
+  ochtend: {
+    label: 'Ochtend (zacht)', zon: '#ffe2c0', zonSterkte: 0.7, hoogte: 0.55, hemel: 0.36, hemelKleur: '#e6ecff', omgeving: 0.6, lamp: 0,
+    hdr: { boven: [0.3, 0.33, 0.42], onder: [0.06, 0.055, 0.05], bronnen: [[[-0.9, 0.12, 0.4], 34, 2.2, [1, 0.9, 0.78]], [[0, 1, 0], 50, 0.7, [0.85, 0.9, 1]]] },
+  },
+  bewolkt: {
+    label: 'Bewolkt (diffuus)', zon: '#f2f4f7', zonSterkte: 0.25, hoogte: 1.8, hemel: 0.5, hemelKleur: '#eef2f8', omgeving: 0.75, lamp: 0,
+    hdr: { boven: [0.55, 0.57, 0.6], onder: [0.08, 0.08, 0.08], bronnen: [[[0, 1, 0], 70, 1.2, [1, 1, 1]]] },
+  },
+  avond: {
+    label: 'Avond', zon: '#ffb36e', zonSterkte: 0.35, hoogte: 0.5, hemel: 0.1, hemelKleur: '#8f8aa8', omgeving: 0.22, lamp: 1,
+    hdr: { boven: [0.03, 0.025, 0.03], onder: [0.015, 0.012, 0.01], bronnen: [[[0.85, 0.5, -0.2], 18, 2.4, [1, 0.72, 0.45]], [[-0.9, 0.2, 0.3], 22, 0.35, [0.55, 0.62, 0.9]]] },
+  },
+  spots: {
+    label: 'Toonzaal (spots)', zon: '#fff6ea', zonSterkte: 0.95, hoogte: 2.2, hemel: 0.18, hemelKleur: '#fff8f0', omgeving: 0.4, lamp: 0,
+    hdr: { boven: [0.05, 0.048, 0.045], onder: [0.03, 0.028, 0.026], bronnen: [[[-0.3, 0.95, 0.2], 9, 9, [1, 0.95, 0.88]], [[0.35, 0.94, 0.1], 9, 9, [1, 0.95, 0.88]], [[0, 0.3, 1], 30, 0.5, [1, 1, 1]]] },
+  },
 } as const;
 export type LichtNaam = keyof typeof LICHTEN;
 export type Kwaliteit = 'snel' | 'mooi';
+type Hdr = { boven: readonly number[]; onder: readonly number[]; bronnen: readonly (readonly [readonly number[], number, number, readonly number[]])[] };
+
+/**
+ * Omgevingsbeeld als HDR-equirect (lineair, 256 × 128): wanden boven/onder de horizon en zachte ronde lichtbronnen.
+ * Dient de gewone weergave (reflecties, glans) én de fotomodus (path tracing).
+ */
+function hdrBeeld(h: Hdr) {
+  const W = 256, H = 128, data = new Float32Array(W * H * 4);
+  const bronnen = h.bronnen.map(([r, hoek, sterkte, kleur]) => {
+    const l = Math.hypot(r[0]!, r[1]!, r[2]!) || 1;
+    return { d: [r[0]! / l, r[1]! / l, r[2]! / l], cos: Math.cos((hoek * Math.PI) / 180), rand: Math.cos((hoek * 1.35 * Math.PI) / 180), sterkte, kleur };
+  });
+  for (let y = 0; y < H; y++) {
+    const el = ((y + 0.5) / H - 0.5) * Math.PI;
+    for (let x = 0; x < W; x++) {
+      const az = ((x + 0.5) / W - 0.5) * 2 * Math.PI;
+      const d = [Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az)];
+      // Zachte overgang rond de horizon.
+      const t = Math.min(1, Math.max(0, (d[1]! + 0.08) / 0.16));
+      const kleur = [0, 1, 2].map((k) => h.onder[k]! * (1 - t) + h.boven[k]! * t);
+      for (const b of bronnen) {
+        const c = d[0]! * b.d[0]! + d[1]! * b.d[1]! + d[2]! * b.d[2]!;
+        if (c <= b.rand) continue;
+        const f = c >= b.cos ? 1 : (c - b.rand) / (b.cos - b.rand);
+        for (let k = 0; k < 3; k++) kleur[k] = kleur[k]! + b.sterkte * b.kleur[k]! * f * f;
+      }
+      const i = (y * W + x) * 4;
+      data[i] = kleur[0]!; data[i + 1] = kleur[1]!; data[i + 2] = kleur[2]!; data[i + 3] = 1;
+    }
+  }
+  const t = new THREE.DataTexture(data, W, H, THREE.RGBAFormat, THREE.FloatType);
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  t.colorSpace = THREE.LinearSRGBColorSpace;
+  t.magFilter = t.minFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
+const hdrCache = new Map<string, any>();
+function omgevingVoor(naam: LichtNaam) {
+  let t = hdrCache.get(naam);
+  if (!t) { t = hdrBeeld(LICHTEN[naam].hdr as unknown as Hdr); hdrCache.set(naam, t); }
+  return t;
+}
 
 export interface Opties3D {
   /** Zetelweergave: contactschaduw onder de zetel en keuze van decor (niet voor woningen). */
@@ -61,10 +136,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return null;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.toneMapping = THREE.LinearToneMapping;
-  renderer.toneMappingExposure = 0.95;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Zetel: zachte schaduwen (VSM, vervaagd); woning: scherpe PCF-schaduwen zoals voorheen.
+  renderer.shadowMap.type = opties.zetel ? THREE.VSMShadowMap : THREE.PCFSoftShadowMap;
   houder.replaceChildren(renderer.domElement);
   renderer.domElement.style.touchAction = 'none';
 
@@ -73,7 +149,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
   // Studiolicht: een omgevingsbeeld (softboxen in een grijze ruimte) geeft zachte reflecties en glans;
   // daardoor kunnen de hemel- en vullicht zwakker.
-  scene.environment = studioOmgeving();
+  scene.environment = omgevingVoor('studio');
   let OMGEVING = 0.5;
   const hemel = new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34 * PI);
   scene.add(hemel);
@@ -85,6 +161,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   zon.castShadow = true;
   zon.shadow.mapSize.set(2048, 2048);
   zon.shadow.bias = -0.0005;
+  if (opties.zetel) { zon.shadow.radius = 7; zon.shadow.blurSamples = 10; zon.shadow.bias = -0.0002; }
   scene.add(zon, zon.target);
   const vul = new THREE.DirectionalLight(0xffffff, 0.16 * PI);
   scene.add(vul);
@@ -391,9 +468,10 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   /** Stofmateriaal: velours met glans langs de randen (sheen), leder met een zachte toplaag, de rest mat. */
   function stofMateriaal(w: Weefsel, hex: string, map: any, relief: any) {
     const basis = { color: 0xffffff, map, bumpMap: relief, bumpScale: RELIEF[w], envMapIntensity: OMGEVING };
-    if (w === 'velours') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.8, sheen: 1, sheenColor: kleur(tint(hex, 1.3)), sheenRoughness: 0.55 });
+    if (w === 'velours') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.8, sheen: 0.7, sheenColor: kleur(tint(hex, 1.15)), sheenRoughness: 0.5 });
     if (w === 'leder') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.42, clearcoat: 0.25, clearcoatRoughness: 0.5 });
-    return new THREE.MeshStandardMaterial({ ...basis, roughness: w === 'chenille' ? 0.85 : 0.95 });
+    // Geweven stof: matte basis met een lichte, ruwe glans (sheen) zoals vezels die licht opvangen langs de randen.
+    return new THREE.MeshPhysicalMaterial({ ...basis, roughness: w === 'chenille' ? 0.85 : 0.95, sheen: w === 'chenille' ? 0.55 : 0.3, sheenColor: kleur(tint(hex, 1.1)), sheenRoughness: 0.8 });
   }
 
   /**
@@ -614,38 +692,6 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return m;
   }
 
-  /** Omgevingsbeeld: grijze ruimte met softboxen (boven, links, rechts achter, voor), voorgefilterd met PMREM. */
-  function studioOmgeving() {
-    try {
-      const pm = new THREE.PMREMGenerator(renderer);
-      const kamer = new THREE.Scene();
-      const delen: any[] = [];
-      const doos = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0x5e5a54, side: THREE.BackSide }));
-      delen.push(doos);
-      const vloerOmg = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshBasicMaterial({ color: 0x3a3733 }));
-      vloerOmg.rotation.x = -Math.PI / 2;
-      vloerOmg.position.y = -4.9;
-      delen.push(vloerOmg);
-      const paneel = (x: number, y: number, z: number, b: number, h: number, sterkte: number) => {
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(b, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(sterkte, sterkte, sterkte * 0.97), side: THREE.DoubleSide }));
-        m.position.set(x, y, z);
-        m.lookAt(0, 0, 0);
-        delen.push(m);
-      };
-      paneel(0, 4.8, 0.5, 5, 4, 2.6);
-      paneel(-4.8, 1.6, 1.5, 3, 3.5, 1.6);
-      paneel(4.8, 1.2, -1.5, 2.5, 3, 0.8);
-      paneel(0.5, 1, 4.8, 4, 2.5, 0.9);
-      kamer.add(...delen);
-      const t = pm.fromScene(kamer, 0.04).texture;
-      for (const d of delen) { d.geometry.dispose(); d.material.dispose(); }
-      pm.dispose();
-      return t;
-    } catch {
-      return null;
-    }
-  }
-
   // ---------- zetel: contactschaduw en decor ----------
   const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, opacity: 1, color: 0xffffff }));
   contact.rotation.x = -Math.PI / 2;
@@ -806,6 +852,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     hemel.intensity = l.hemel * PI;
     hemel.color.set(l.hemelKleur);
     OMGEVING = l.omgeving;
+    if (opties.zetel) scene.environment = omgevingVoor(lichtNaam);
     // Alle materialen volgen het omgevingslicht van de sfeer.
     scene.traverse((o: any) => {
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
@@ -843,6 +890,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   const aanwijzers = new Map<number, { x: number; y: number }>();
   let knijpAfstand = 0;
   renderer.domElement.addEventListener('pointerdown', (ev: PointerEvent) => {
+    if (bezigMetFoto) return;
     renderer.domElement.setPointerCapture(ev.pointerId);
     aanwijzers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     vorige = { x: ev.clientX, y: ev.clientY };
@@ -872,6 +920,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   renderer.domElement.addEventListener('pointerup', los);
   renderer.domElement.addEventListener('pointercancel', los);
   renderer.domElement.addEventListener('wheel', (ev: WheelEvent) => {
+    if (bezigMetFoto) { ev.preventDefault(); return; }
     // Gewoon scrollen laat de pagina doorscrollen; zoomen met Ctrl/⌘ + wiel (of knijpen), en in het groot scherm met het wiel.
     if (!(ev.ctrlKey || ev.metaKey || document.body.classList.contains('heeft-groot-scherm'))) {
       wielHint(houder, 'Zoomen: houd {sleutel} ingedrukt en scrol, of knijp');
@@ -882,12 +931,40 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     plaatsCamera();
   }, { passive: false });
 
-  function render() {
+  // Nabewerking (alleen zetel, kwaliteit Mooi): ambient occlusion (GTAO) voor schaduw in hoeken, naden en onder kussens.
+  let composer: any = null, gtao: any = null;
+  function maakComposer() {
+    try {
+      const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+      composer = new EffectComposer(renderer, rt);
+      composer.addPass(new RenderPass(scene, camera));
+      gtao = new GTAOPass(scene, camera, 1, 1);
+      gtao.updateGtaoMaterial({ radius: 14, distanceExponent: 1.2, thickness: 8, scale: 1.1, samples: 12, distanceFallOff: 1 });
+      gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
+      gtao.blendIntensity = 0.9;
+      composer.addPass(gtao);
+      composer.addPass(new OutputPass());
+    } catch {
+      composer = null;
+    }
+  }
+  const metNabewerking = () => opties.zetel && kwaliteitNu === 'mooi' && composer;
+  // Tijdens draaien en zoomen: het snelle beeld; 180 ms na de laatste beweging één keer het mooie beeld (met GTAO).
+  let mooiGepland = 0;
+  function render(direct = false) {
+    if (bezigMetFoto) return;
+    if (!metNabewerking()) { renderer.render(scene, camera); return; }
+    if (direct) { clearTimeout(mooiGepland); composer.render(); return; }
     renderer.render(scene, camera);
+    clearTimeout(mooiGepland);
+    mooiGepland = window.setTimeout(() => composer.render(), 180);
   }
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
   let kwaliteitNu: Kwaliteit = 'mooi';
+  let pathTracer: any = null;
+  /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
+  let bezigMetFoto = false;
   let laatsteBreedte = 0;
   const viewer: Viewer3D = {
     toon(s: Scene3D) {
@@ -930,7 +1007,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     kwaliteit(k) {
       kwaliteitNu = k;
       renderer.setPixelRatio(k === 'mooi' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
-      const maat = k === 'mooi' ? 4096 : 1024;
+      // VSM vervaagt de schaduw zelf: 2048 is scherp genoeg en veel lichter dan 4096.
+      const maat = k === 'mooi' ? 2048 : 1024;
       zon.shadow.mapSize.set(maat, maat);
       zon.shadow.map?.dispose();
       zon.shadow.map = null;
@@ -943,12 +1021,55 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         const b = houder.clientWidth || 600;
         renderer.setPixelRatio(Math.max(3, 2400 / b));
         viewer.formaat();
+        render(true);
         const url = renderer.domElement.toDataURL('image/png');
         renderer.setPixelRatio(oud);
         viewer.formaat();
         return url;
       } catch {
         return null;
+      }
+    },
+    async fotoRealistisch({ stappen, breedte = 1800, opVoortgang, signaal }) {
+      const oudRatio = renderer.getPixelRatio();
+      const oudMist = scene.fog, oudContact = contact.visible, oudIntensiteit = scene.environmentIntensity;
+      bezigMetFoto = true;
+      try {
+        pathTracer ??= new WebGLPathTracer(renderer);
+        const pt = pathTracer;
+        pt.renderDelay = 0; pt.fadeDuration = 0; pt.minSamples = 1; pt.bounces = 5; pt.filterGlossyFactor = 0.5;
+        pt.tiles.set(2, 2);
+        // De path tracer kent geen mist, geen hemellicht en geen schaduwvlak (hij rekent echte contactschaduw).
+        scene.fog = null;
+        contact.visible = false;
+        scene.environmentIntensity = OMGEVING * 1.15;
+        // Geen gebakken schaduw in de hoekpunten: de path tracer rekent de echte; en hij leest ze verkeerd (zwart).
+        for (const m of materialen.values()) if (m?.vertexColors) { m.vertexColors = false; m.userData.vcTerug = true; }
+        const b = houder.clientWidth || 600;
+        renderer.setPixelRatio(Math.max(1, breedte / b));
+        viewer.formaat();
+        // Eerst de voortgangsbalk laten tekenen; het opbouwen van de scène (BVH) blokkeert even.
+        await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
+        pt.setScene(scene, camera);
+        while (pt.samples < stappen) {
+          if (signaal?.aborted) return null;
+          await new Promise((r) => requestAnimationFrame(r));
+          pt.renderSample();
+          opVoortgang?.(Math.min(1, pt.samples / stappen));
+        }
+        return renderer.domElement.toDataURL('image/png');
+      } catch (fout) {
+        console.error('Fotomodus mislukt:', fout);
+        return null;
+      } finally {
+        bezigMetFoto = false;
+        for (const m of materialen.values()) if (m?.userData?.vcTerug) { m.vertexColors = true; delete m.userData.vcTerug; m.needsUpdate = true; }
+        scene.fog = oudMist;
+        contact.visible = oudContact;
+        scene.environmentIntensity = oudIntensiteit;
+        renderer.setPixelRatio(oudRatio);
+        viewer.formaat();
+        render(true);
       }
     },
     standpunt(naam) {
@@ -967,6 +1088,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const groot = document.body.classList.contains('heeft-groot-scherm');
       const h = groot ? Math.max(320, Math.min(Math.round(b * 1.1), window.innerHeight - 200)) : Math.round(b * 0.62);
       renderer.setSize(b, h);
+      if (opties.zetel && !composer) maakComposer();
+      if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(b, h); }
       camera.aspect = b / h;
       camera.updateProjectionMatrix();
       render();

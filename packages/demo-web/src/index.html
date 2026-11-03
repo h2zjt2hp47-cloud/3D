@@ -138,6 +138,9 @@ button:disabled { opacity: .45; cursor: default; }
 .knoppenlijst button { text-align: left; }
 .knoppenlijst button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
 #o-3d-instellingen button[aria-pressed="true"] { background: var(--accent-zacht); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.drie-d-vak { position: relative; }
+.drie-d-voortgang { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: color-mix(in srgb, var(--vlak) 92%, transparent); border: 1px solid var(--lijn); border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 18px rgba(0,0,0,.12); font-size: 14px; max-width: calc(100% - 24px); flex-wrap: wrap; justify-content: center; }
+.drie-d-voortgang progress { width: 160px; height: 8px; accent-color: var(--accent); }
 .drie-d-instellingen { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: end; margin-top: 6px; }
 .drie-d-instellingen label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--zacht); }
 .drie-d-instellingen select { font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 36px; max-width: 220px; }
@@ -427,7 +430,9 @@ main.catalogus { display: block; }
     </div>
     <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="o-voor" class="voorvlak" tabindex="0" role="application" aria-label="Vooraanzicht: klik, sleep grepen of teken een element" xmlns="http://www.w3.org/2000/svg" hidden></svg>
-    <div id="o-3d" class="drie-d" hidden></div>
+    <div class="drie-d-vak"><div id="o-3d" class="drie-d" hidden></div>
+      <div id="o-3d-voortgang" class="drie-d-voortgang" role="status" hidden><span class="tekst">Fotorealistische foto wordt berekend …</span><progress max="1" value="0"></progress><button type="button" class="tweede" id="o-3d-annuleer">Annuleren</button></div>
+    </div>
     <div id="o-3d-knoppen" class="knoppenrij" hidden>
       <span class="klein">Standpunt:</span>
       <button type="button" class="tweede" data-standpunt="schuin">Schuin</button>
@@ -441,7 +446,8 @@ main.catalogus { display: block; }
       <label><span>Decor</span><select id="o-3d-decor"></select></label>
       <label><span>Licht</span><select id="o-3d-licht"></select></label>
       <label><span>Kwaliteit</span><select id="o-3d-kwaliteit"><option value="mooi">Mooi</option><option value="snel">Snel (tablet)</option></select></label>
-      <button type="button" class="tweede" id="o-3d-foto">Foto downloaden</button>
+      <button type="button" class="tweede" id="o-3d-foto" title="Het huidige beeld als PNG (meteen)">Foto</button>
+      <button type="button" class="tweede" id="o-3d-fotoreal" title="Echte lichtberekening (path tracing): duurt enkele seconden tot een minuut">Fotorealistische foto</button>
       <span id="o-3d-groot"></span>
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>

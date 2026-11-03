@@ -622,6 +622,12 @@ function pas3DInstellingenToe() {
 function vul3DStof() {
   materiaalOptiesPerCollectie($<HTMLSelectElement>('#o-3d-stof'), getMaterialen(), ontwerp.hoofdmateriaal);
 }
+function downloadBeeld(url: string, soort: string) {
+  const a = el('a', { href: url, download: `zetel-${soort}-${new Date().toISOString().slice(0, 10)}.png` });
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
 function start3DInstellingen() {
   const i = instellingen3D();
   const decor = $<HTMLSelectElement>('#o-3d-decor'), licht = $<HTMLSelectElement>('#o-3d-licht'), kwal = $<HTMLSelectElement>('#o-3d-kwaliteit');
@@ -645,13 +651,27 @@ function start3DInstellingen() {
   });
   $('#o-3d-foto').addEventListener('click', () => {
     const url = viewer?.foto?.();
-    if (!url) return;
-    const a = el('a', { href: url, download: `zetel-3d-${new Date().toISOString().slice(0, 10)}.png` });
-    document.body.append(a);
-    a.click();
-    a.remove();
+    if (url) downloadBeeld(url, '3d');
   });
   $('#o-3d-groot').append(grootSchermKnop($('#o-tekenvlak'), () => viewer?.formaat()));
+  // Fotorealistische foto: path tracing met voortgang en annuleren; meer monsters op een computer dan op een tablet.
+  let bezig: AbortController | null = null;
+  const voortgang = $('#o-3d-voortgang');
+  $('#o-3d-annuleer').addEventListener('click', () => bezig?.abort());
+  $('#o-3d-fotoreal').addEventListener('click', async () => {
+    if (!viewer?.fotoRealistisch || bezig) return;
+    bezig = new AbortController();
+    const balk = voortgang.querySelector('progress')!;
+    balk.value = 0;
+    voortgang.hidden = false;
+    $<HTMLButtonElement>('#o-3d-fotoreal').disabled = true;
+    const tablet = window.matchMedia?.('(pointer: coarse)').matches;
+    const url = await viewer.fotoRealistisch({ stappen: tablet ? 48 : 160, breedte: tablet ? 1400 : 2000, signaal: bezig.signal, opVoortgang: (d) => { balk.value = d; } });
+    voortgang.hidden = true;
+    $<HTMLButtonElement>('#o-3d-fotoreal').disabled = false;
+    bezig = null;
+    if (url) downloadBeeld(url, 'fotorealistisch');
+  });
 }
 
 // ---------- weergave: bovenaanzicht, vooraanzicht, 3D ----------
@@ -667,6 +687,8 @@ export function kiesWeergave(w: typeof weergave) {
   kiesGereedschap(gereedschap);
   if (w === '3d' && viewer === undefined) {
     viewer = maak3D($('#o-3d'), { zetel: true });
+    // Voor geautomatiseerde tests (Playwright): de 3D-weergave rechtstreeks bereikbaar.
+    (window as unknown as { __zetel3d?: unknown }).__zetel3d = viewer;
     pas3DInstellingenToe();
   }
   toonWeergave();
