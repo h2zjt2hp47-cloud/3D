@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { berekenOntwerp, bouw3D, tekenVooraanzicht, vormgevingVan, type Ontwerp } from '../src/index.js';
+import { berekenOntwerp, blokkenVan, bouw3D, tekenVooraanzicht, vormgevingVan, type Ontwerp } from '../src/index.js';
 import { zetelModellen } from '../voorbeelden/modellen.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { startOntwerpen, zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
 const bereken = (o: Ontwerp) => berekenOntwerp(o, zetelCatalogus, standaardMaterialen);
 const codes = (r: { meldingen: { code: string }[] }) => r.meldingen.map((m) => m.code);
+
+describe('chaise longue in de modellen (afgeleid uit de productfoto)', () => {
+  it('Kotor, Belize, Pula en Fréjus: rug loopt door achter de chaise; Azar: open uiteinde', () => {
+    const rugVan = (code: string) => {
+      const m = zetelModellen.find((x) => x.code === code)!;
+      const s = bouw3D(m.ontwerp, zetelCatalogus, standaardMaterialen);
+      return m.ontwerp.elementen.filter((e) => e.type === 'chaise').map((e) => blokkenVan(s, { id: e.id }).some((b) => b.code === `${e.id}.rug`));
+    };
+    for (const code of ['kotor', 'belize', 'pula', 'frejus']) expect(rugVan(code), code).not.toContain(false);
+    expect(rugVan('azar')).toEqual([false]);
+  });
+});
 
 describe('modellen', () => {
   it('alle modellen zijn geldige ontwerpen zonder fouten', () => {

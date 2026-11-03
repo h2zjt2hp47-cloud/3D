@@ -41,6 +41,10 @@ const ZETELBED = 'Zetelbedden';
 const POEF = 'Poufs & hockers';
 const strak = { armstijl: 'strak' };
 const strakLaag = { armstijl: 'strak', armhoogte: 'laag' };
+// Chaise longue: op de foto's van Kotor, Belize, Pula en Fréjus loopt de rug door achter de chaise; bij Azar is
+// de chaise een open uiteinde zonder rug (benadering op basis van de productfoto).
+const metRug = { chaise_rug: 'achter' };
+const zonderRug = { chaise_rug: 'geen' };
 
 export const zetelModellen: ModelDefinitie[] = [
   // ---------------- Sofa's ----------------
@@ -51,7 +55,7 @@ export const zetelModellen: ModelDefinitie[] = [
     elementen: [
       el('e1', 'console', 0, 25, 60, 80, 0, { console_uitvoering: 'bank' }),
       ...rij([['arm', 18, 105, strakLaag], ['zit', 105, 105], ['zit', 105, 105]], 60).map((e, i) => ({ ...e, id: `e${i + 2}` })),
-      el('e5', 'chaise', 288, 0, 95, 170),
+      el('e5', 'chaise', 288, 0, 95, 170, 0, metRug),
       el('e6', 'arm', 383, 0, 18, 170, 0, strakLaag),
     ],
   }),
@@ -81,19 +85,19 @@ export const zetelModellen: ModelDefinitie[] = [
   model('belize', 'Belize', SOFA, 'Ruime U-opstelling met twee chaises longues, losse rugkussens, slanke armen en slanke metalen poten.', {
     hoofdmateriaal: 'linnen_ficelle',
     opties: { poten: 'metaal_staaf', metaal: 'zwart', rug: 'los', comfort: 'veren' },
-    elementen: rij([['arm', 16, 165, strakLaag], ['chaise', 90, 165], ['zit', 90, 95], ['zit', 90, 95], ['zit', 90, 95], ['chaise', 90, 165], ['arm', 16, 165, strakLaag]]),
+    elementen: rij([['arm', 16, 165, strakLaag], ['chaise', 90, 165, metRug], ['zit', 90, 95], ['zit', 90, 95], ['zit', 90, 95], ['chaise', 90, 165, metRug], ['arm', 16, 165, strakLaag]]),
   }),
   model('pula', 'Pula', SOFA, 'Lange, diepe sofa met grote chaise longue rechts, losse rugkussens en brede, lage armen op een verdekte voet.', {
     hoofdmateriaal: 'linnen_brume',
     opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los', comfort: 'dons' },
     vormgeving: { kussendikte: 16, zachtheid: 5 },
-    elementen: rij([['arm', 26, 108, strakLaag], ['zit', 100, 108], ['zit', 100, 108], ['zit', 100, 108], ['chaise', 105, 175], ['arm', 26, 175, strakLaag]]),
+    elementen: rij([['arm', 26, 108, strakLaag], ['zit', 100, 108], ['zit', 100, 108], ['zit', 100, 108], ['chaise', 105, 175, metRug], ['arm', 26, 175, strakLaag]]),
   }),
   model('frejus', 'Fréjus', SOFA, 'Sofa met chaise longue links, zachte losse rugkussens en slanke donkere poten.', {
     hoofdmateriaal: 'linnen_travertin',
     opties: { poten: 'cilinder', hout: 'eik_zwart', rug: 'los_dons', comfort: 'dons' },
     vormgeving: { zachtheid: 7, kussendikte: 16 },
-    elementen: rij([['arm', 18, 165, strakLaag], ['chaise', 90, 165], ['zit', 95, 100], ['zit', 95, 100], ['arm', 18, 100, strakLaag]]),
+    elementen: rij([['arm', 18, 165, strakLaag], ['chaise', 90, 165, metRug], ['zit', 95, 100], ['zit', 95, 100], ['arm', 18, 100, strakLaag]]),
   }),
   model('gozo', 'Gozo', SOFA, 'Modulaire, blokvormige hoeksofa met brede rug- en armblokken, zonder zichtbare poten.', {
     hoofdmateriaal: 'katoen_naturel',
@@ -110,7 +114,7 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'leder_cognac',
     opties: { poten: 'verdekt', poothoogte: 'laag', zithoogte: 'laag', rug: 'vast', comfort: 'schuim' },
     vormgeving: { rugdikte: 24, kussendikte: 18, zachtheid: 2 },
-    elementen: rij([['chaise', 95, 170], ['zit', 100, 100], ['zit', 100, 100], ['arm', 30, 100, strak]]),
+    elementen: rij([['chaise', 95, 170, zonderRug], ['zit', 100, 100], ['zit', 100, 100], ['arm', 30, 100, strak]]),
   }),
   model('amusette', 'Amusette', SOFA, 'Compacte tweezit met brede, strakke armen, één doorlopend zitkussen en een vaste rug.', {
     hoofdmateriaal: 'velours_petrol',

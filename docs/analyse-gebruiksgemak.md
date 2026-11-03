@@ -216,7 +216,7 @@ Aanleiding: "er kan niet gescrold worden in de configurator fullscreen". Daarna 
 2. **Fotomodus toont geen stofreliëf** (de lichtberekening negeert de reliëfkaarten); kleur en glans kloppen wel. Mogelijke verbetering: het reliëf omzetten naar een normal map.
 3. **Stof per element in de 3D wisselen** kan via het eigenschappenvak onder de 3D; een snelle stalenstrook rechtstreeks in de 3D (zoals bij de stofkeuze bovenaan) zou nog sneller zijn.
 4. **Sofa op maat** (de configurator per cm) heeft nog geen 3D, alleen de tekening; de vrije ontwerper wel.
-5. **Modellen van de klant** (Kotor, Belize, Pula …) hebben een chaise longue zonder rugleuning, zoals afgeleid uit de foto's. Na te vragen of die chaises bij Corneille & Silence een rug hebben; dan zetten we de nieuwe keuze in het model.
+5. ~~**Modellen van de klant** (Kotor, Belize, Pula …) hebben een chaise longue zonder rugleuning, zoals afgeleid uit de foto's.~~ Op 3/11 opgelost: op de foto's loopt de rug door achter de chaise; de chaise heeft nu standaard een rugleuning (zie 10.28).
 6. **Delen:** een link naar de configuratie bestaat nog niet. AR is op 3/11 toegevoegd en op vraag weer weggehaald.
 7. **Bestandsgrootte:** door de ingebakken 3D is de demo ±1,8 MB; voor SharePoint blijft handmatig opladen nodig.
 
@@ -278,12 +278,13 @@ Er waren geen foutmeldingen in de pagina. Herladen bewaart het ontwerp. *Alles w
 |---|---|---|---|
 | 10.20 | **Rughoogte dubbel aangerekend.** Wie in het vooraanzicht een rug van 92 cm tekende én de keuze *Hoog* had, betaalde twee keer: +98 € in plaats van +49 €, en ook dubbel stof. | hoog | **Opgelost:** een getekende rughoogte vervangt de keuze en wordt per cm aangerekend. |
 | 10.21 | **Getekende zit-, poot- en armhoogte veranderden de prijs niet.** Een getekende zithoogte van 55 cm kostte niets, de keuze *Hoog (48 cm)* +60 €. | middel | **Opgelost:** een getekende hoogte telt als de keuze met de dichtstbijzijnde hoogte, in de prijsopbouw als "55 cm (op maat)". |
-| 10.22 | **Rugopties op een chaise longue zonder rugleuning.** *Losse rugkussens*, *dons*, *capitonnage* en *rughoogte* werden aangerekend op een chaise die geen rug heeft (geen rug in de tekening, wel in de prijs). Dit raakte de modellen Kotor, Belize, Fréjus en Pula. | hoog | **Opgelost:** geen rugopties zonder rug. Die vier modellen worden daardoor iets goedkoper (de prijzen zijn verzonnen). |
+| 10.22 | **Rugopties op een chaise longue zonder rugleuning.** *Losse rugkussens*, *dons*, *capitonnage* en *rughoogte* werden aangerekend op een chaise die geen rug heeft (geen rug in de tekening, wel in de prijs). Dit raakte de modellen Kotor, Belize, Fréjus en Pula. | hoog | **Opgelost:** geen rugopties zonder rug. Sinds 10.28 hebben Kotor, Belize, Fréjus en Pula wel een rug achter de chaise, dus daar tellen de rugopties terecht. |
 | 10.23 | **Vormgeving aangerekend zonder zichtbaar effect, en omgekeerd.** <br>• Zonder effect: een houten frame op een hoekelement, afgerond eindelement of fauteuil; 3 zitkussens op een afgerond eindelement; een ronde rug op een fauteuil. Je betaalde, maar de 3D toonde niets. <br>• Omgekeerd: een chaise met rug kreeg rugvorm, rugdikte en rughoogte gratis. | middel | **Opgelost:** prijs en 3D volgen dezelfde tabel (`vormEffect`). De *Ontwerpmodus* toont per element alleen wat bij dat element zichtbaar is. |
 | 10.24 | **Kussens en rugleuningen "lagen" overal op.** <br>• Elke overlap telde: een rugleuning die 1 cm op een zitting lag, zweefde in de 3D. <br>• Een rugleuning op een houten tussenstuk of armleuning werd aanvaard. <br>• Twee rugleuningen op elkaar gaven geen melding. | middel | **Opgelost:** een opzet-element moet voor meer dan de helft op een zitting liggen (niet op een arm of tussenstuk). Twee dezelfde op elkaar geven een fout. Een losse rugleuning op een element dat al een rug heeft, geeft een waarschuwing. |
 | 10.25 | **Korting zonder bewaking.** Bij 25 % korting op het startontwerp was de marge −3,7 %, zonder melding. De motor aanvaardde ook 150 % (een negatieve prijs). | middel | **Opgelost:** onder de kostprijs verschijnt een **interne** waarschuwing, die verborgen is in de klantweergave. De korting ligt altijd tussen 0 en 100 %. |
 | 10.26 | **Keuzes voor de hele zetel** rekenden ook op elementen waarvoor ze niet gelden. Zo telde *Vaste zitting* (−3 %) ook op een poef en een houten tussenstuk. | middel | **Opgelost:** alleen op de elementen waarvoor de keuze geldt. |
 | 10.27 | **Onmogelijke hoogtes aanvaard:** <br>• een rug van 55 cm bij een zithoogte van 55 cm; <br>• een arm onder de zitting; <br>• poten en zitkussen die geen plaats laten voor de onderbouw (de 3D liet die gewoon weg). | middel | **Opgelost:** duidelijke foutmelding, bv. "de rug (55 cm) moet minstens 20 cm boven de zitting (55 cm) uitkomen". |
+| 10.28 | **"De chaise longue heeft nog steeds geen rugleuning"** (melding van Jonas na deze ronde). De keuze *Rugleuning* bestond wel bij het element, maar de standaard was *Zonder rugleuning*. Dat gold ook in de modellen en het startontwerp. Op de productfoto's van Kotor, Belize, Pula en Fréjus loopt de rug (met rugkussens) gewoon door achter de chaise, en *Sofa op maat* tekende ze ook zo. | hoog | **Opgelost:** <br>• De chaise longue heeft standaard een rugleuning achteraan, in de basisprijs. <br>• *Zonder rugleuning (open)* is een keuze met minprijs (−210 €); *lange zijde links/rechts* (méridienne) kost +80 €. <br>• Kotor, Belize, Pula en Fréjus hebben een rug achter de chaise. Azar blijft open, want op de foto is de chaise daar een open uiteinde (benadering). <br>• Een catalogus die al in de browser bewaard was met de oude standaard, wordt bijgewerkt. |
 
 In orde bevonden:
 - alle 42 modellen zijn geldig, met een prijs groter dan nul;
@@ -294,7 +295,7 @@ In orde bevonden:
 - de grenzen en regels van Sofa en Kast op maat kloppen;
 - korting 0–100 %: excl. + btw = incl.
 
-Nieuwe tests: `test/omschrijving.test.ts` (6) en `test/logica.test.ts` (13), plus 1 in `test/motor.test.ts`. In totaal **197 tests groen**.
+Nieuwe tests: `test/omschrijving.test.ts` (6) en `test/logica.test.ts` (13), plus 1 in `test/motor.test.ts`, 1 in `test/chaise.test.ts` en 1 in `test/modellen.test.ts` (chaise met of zonder rug per model). In totaal **199 tests groen**.
 
 ### Nog open (met voorstel)
 1. **Studio-decor: harde horizon** waar de vloer overgaat in de achtergrond (schermafbeelding van Jonas). Voorstel: de vloer naar de rand toe laten overlopen in de achtergrondkleur.

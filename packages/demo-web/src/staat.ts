@@ -69,11 +69,28 @@ let korting = 0;
 const luisteraars = { materialen: new Set<() => void>(), korting: new Set<() => void>(), catalogus: new Set<() => void>() };
 
 // ---------- catalogus (elementen, opties) en eigen modellen ----------
+/**
+ * Een bewaarde catalogus met de oude standaard voor de chaise longue (zonder rugleuning, rug +210 €) bijwerken naar
+ * de nieuwe (standaard mét rugleuning achteraan). Alleen als die keuze en de prijs van de chaise nog onveranderd zijn.
+ */
+function metNieuweChaise(c: OntwerpCatalogus): OntwerpCatalogus {
+  const g = c.opties?.find((x) => x.code === 'chaise_rug');
+  if (!g || g.standaard !== 'geen' || g.keuzes.find((k) => k.code === 'achter')?.prijs !== 210) return c;
+  const nieuweGroep = zetelCatalogus.opties?.find((x) => x.code === 'chaise_rug');
+  const nieuwType = zetelCatalogus.typen.find((t) => t.code === 'chaise');
+  if (!nieuweGroep || !nieuwType) return c;
+  return {
+    ...c,
+    opties: c.opties!.map((x) => (x.code === 'chaise_rug' ? structuredClone(nieuweGroep) : x)),
+    typen: c.typen.map((t) => (t.code === 'chaise' && t.prijs.A === 760 ? structuredClone(nieuwType) : t)),
+  };
+}
+
 function startCatalogus(): { catalogus: OntwerpCatalogus; modellen: ModelDefinitie[] } {
   try {
     const c = JSON.parse(lees(SLEUTEL_CATALOGUS) ?? 'null') as OntwerpCatalogus | null;
     const m = JSON.parse(lees(SLEUTEL_MODELLEN) ?? '[]') as ModelDefinitie[];
-    const catalogus = c && Array.isArray(c.typen) ? c : structuredClone(zetelCatalogus);
+    const catalogus = c && Array.isArray(c.typen) ? metNieuweChaise(c) : structuredClone(zetelCatalogus);
     const modellen = Array.isArray(m) ? m : [];
     if (controleerCatalogus(catalogus, [...zetelModellen, ...modellen]).length === 0) return { catalogus, modellen };
   } catch {

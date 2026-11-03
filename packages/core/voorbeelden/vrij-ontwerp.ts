@@ -130,13 +130,15 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
-    // Chaise longue met of zonder rugleuning: achteraan (zoals de zitelementen) of langs de lange zijde (méridienne).
-    code: 'chaise_rug', label: 'Rugleuning', niveau: 'element', voorTypen: ['chaise'], standaard: 'geen',
+    // Chaise longue standaard mét rugleuning achteraan: de rug van de zetel loopt door achter de chaise (zoals op de
+    // foto's van Kotor, Belize, Pula en Fréjus, en zoals Sofa op maat ze tekent). Zonder rugleuning = open uiteinde
+    // (lounge, zoals Azar), of de rug langs de lange zijde (méridienne).
+    code: 'chaise_rug', label: 'Rugleuning', niveau: 'element', voorTypen: ['chaise'], standaard: 'achter',
     keuzes: [
-      { code: 'geen', label: 'Zonder rugleuning', teken: { kant: 'geen' } },
-      { code: 'achter', label: 'Rugleuning achteraan', prijs: 210, stofPct: 18, kost: 60, teken: { kant: 'achter' }, uitleg: 'Zoals de zitelementen: de chaise kan zo ook op het einde van een rij' },
-      { code: 'links', label: 'Rugleuning lange zijde links', prijs: 290, stofPct: 30, kost: 85, teken: { kant: 'links' }, uitleg: 'Méridienne: rug langs de lange kant' },
-      { code: 'rechts', label: 'Rugleuning lange zijde rechts', prijs: 290, stofPct: 30, kost: 85, teken: { kant: 'rechts' }, uitleg: 'Méridienne: rug langs de lange kant' },
+      { code: 'achter', label: 'Rugleuning achteraan', teken: { kant: 'achter' }, uitleg: 'De rug van de zetel loopt door achter de chaise' },
+      { code: 'geen', label: 'Zonder rugleuning (open)', prijs: -210, stofPct: -15, kost: -60, teken: { kant: 'geen' }, uitleg: 'Open uiteinde of lounge-element' },
+      { code: 'links', label: 'Rugleuning lange zijde links', prijs: 80, stofPct: 12, kost: 25, teken: { kant: 'links' }, uitleg: 'Méridienne: rug langs de lange kant' },
+      { code: 'rechts', label: 'Rugleuning lange zijde rechts', prijs: 80, stofPct: 12, kost: 25, teken: { kant: 'rechts' }, uitleg: 'Méridienne: rug langs de lange kant' },
     ],
   },
   {
@@ -246,10 +248,11 @@ export const zetelCatalogus: OntwerpCatalogus = {
       stofVast: 1.2, stofPerM: 3.2, kostVast: 180, kostPerM: 200, uren: 5, urenPerM: 2,
     },
     {
+      // Prijs, stof en kost met de rugleuning achteraan (standaard); "zonder rugleuning" geeft een minprijs.
       code: 'chaise', label: 'Chaise longue', tekenstijl: 'chaise',
       breedte: { min: 70, max: 110, standaard: 85 }, diepte: { min: 140, max: 200, standaard: 165 },
-      prijs: g(760, 850, 970, 690), per10cm: g(30, 34, 40, 26),
-      stofVast: 1.4, stofPerM: 2.4, kostVast: 150, kostPerM: 170, uren: 4, urenPerM: 2,
+      prijs: g(970, 1060, 1180, 900), per10cm: g(30, 34, 40, 26),
+      stofVast: 1.65, stofPerM: 2.83, kostVast: 210, kostPerM: 170, uren: 4, urenPerM: 2,
     },
     {
       code: 'zit_zonder_rug', label: 'Zitbank zonder rug', tekenstijl: 'zit_zonder_rug',
@@ -350,7 +353,7 @@ export const startOntwerpen: Record<string, { label: string; ontwerp: Ontwerp }>
         { id: 'e1', type: 'arm', x: 0, y: 0, breedte: 20, diepte: 95, rotatie: 0 },
         { id: 'e2', type: 'zit', x: 20, y: 0, breedte: 100, diepte: 95, rotatie: 0 },
         { id: 'e3', type: 'zit', x: 120, y: 0, breedte: 100, diepte: 95, rotatie: 0 },
-        { id: 'e4', type: 'chaise', x: 220, y: 0, breedte: 90, diepte: 170, rotatie: 0, materiaal: 'linnen_brume' },
+        { id: 'e4', type: 'chaise', x: 220, y: 0, breedte: 90, diepte: 170, rotatie: 0, materiaal: 'linnen_brume', opties: { chaise_rug: 'achter' } },
         { id: 'e5', type: 'poef', x: 70, y: 115, breedte: 80, diepte: 60, rotatie: 0 },
       ],
     },

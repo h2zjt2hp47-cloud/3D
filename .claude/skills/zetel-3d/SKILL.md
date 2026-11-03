@@ -37,6 +37,7 @@ Opties komen uit de catalogus (`OptieGroep` → `OptieKeuze`). De tekening leest
 - `hout.teken.kleur`, `metaal.teken.kleur`, `zithoogte/poothoogte/rughoogte/armhoogte.teken.hoogte`.
 - `armstijl.teken.vorm`: strak, rond, engels, schuin, houtblad, hout. `rug.teken`: `los`, `capitonne`. `naad.teken`: `bies`, `contrast`, `stiksel`.
 - `kuipvorm`, `poefvorm`, `ronde_kant`, `console_uitvoering`, `functie`: `teken.vorm` of `teken.kant`.
+- `chaise_rug.teken.kant`: achter (**standaard**: de rug loopt door achter de chaise), geen (open uiteinde, minprijs), links/rechts (méridienne). Lees met `chaiseRugVan(opties)`; null = geen rug.
 Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, standaard)`. Een nieuwe optie die alleen de prijs beïnvloedt, heeft geen tekencode nodig.
 - **Prijs = tekening (`vormEffect` in `ontwerp.ts`):** per tekenstijl staat wat zichtbaar is: rug (rugopties en rughoogte aanrekenen), rugvorm/rugdikte, meerdere zitkussens, houten frame. Tekent `ruimtelijk.ts` iets nieuws (bv. een houten frame rond een hoekelement), pas dan ook `vormEffect` aan, anders betaalt de klant niet voor wat hij ziet of omgekeerd. De ontwerpmodus in de demo toont per element alleen de velden met effect.
 - **Getekende hoogtes vervangen de keuze** in de prijs: rughoogte per cm, arm-, zit- en poothoogte als de keuze met de dichtstbijzijnde `teken.hoogte` (`keuzeBijHoogte`).

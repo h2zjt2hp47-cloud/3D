@@ -15,14 +15,19 @@ describe('chaise longue met rugleuning', () => {
   it('catalogus blijft geldig', () => {
     expect(controleerCatalogus(zetelCatalogus)).toEqual([]);
   });
-  it('zonder rugleuning: geen rug, zoals vroeger', () => {
-    expect(blokkenVan(bouw3D(chaise(), zetelCatalogus, standaardMaterialen), { id: 'c' }).some((b) => b.code === 'c.rug')).toBe(false);
+  it('standaard mét rugleuning achteraan (de rug van de zetel loopt door achter de chaise)', () => {
+    expect(blokkenVan(bouw3D(chaise(), zetelCatalogus, standaardMaterialen), { id: 'c' }).some((b) => b.code === 'c.rug')).toBe(true);
+    expect(bereken(chaise()).prijs.brutoprijsExcl).toBe(bereken(chaise('achter')).prijs.brutoprijsExcl);
+  });
+  it('zonder rugleuning (open uiteinde): geen rug en goedkoper', () => {
+    expect(blokkenVan(bouw3D(chaise('geen'), zetelCatalogus, standaardMaterialen), { id: 'c' }).some((b) => b.code === 'c.rug')).toBe(false);
+    expect(bereken(chaise('geen')).prijs.brutoprijsExcl).toBeLessThan(bereken(chaise()).prijs.brutoprijsExcl);
   });
   it('rugleuning achteraan: rug over de breedte, kussens ervoor, meerprijs', () => {
     const b = blokkenVan(bouw3D(chaise('achter'), zetelCatalogus, standaardMaterialen), { id: 'c' });
     expect(b.find((x) => x.code === 'c.rug')).toMatchObject({ x: 0, z: 0, b: 85, d: 18, h: 68 });
     expect(b.find((x) => x.code === 'c.basis')).toMatchObject({ z: 18, d: 147 });
-    expect(bereken(chaise('achter')).prijs.brutoprijsExcl).toBeGreaterThan(bereken(chaise()).prijs.brutoprijsExcl);
+    expect(bereken(chaise('achter')).prijs.brutoprijsExcl).toBeGreaterThan(bereken(chaise('geen')).prijs.brutoprijsExcl);
     expect(bereken(chaise('achter')).geldig).toBe(true);
   });
   it('rugleuning lange zijde links en rechts (méridienne), ook gedraaid', () => {
@@ -45,7 +50,7 @@ describe('chaise longue met rugleuning', () => {
   it('vooraanzicht toont de rug', () => {
     const va = tekenVooraanzicht(chaise('achter'), zetelCatalogus, standaardMaterialen);
     expect(va.vormen.some((v) => v.code === 'c.rug')).toBe(true);
-    expect(tekenVooraanzicht(chaise(), zetelCatalogus, standaardMaterialen).vormen.some((v) => v.code === 'c.rug')).toBe(false);
+    expect(tekenVooraanzicht(chaise('geen'), zetelCatalogus, standaardMaterialen).vormen.some((v) => v.code === 'c.rug')).toBe(false);
   });
   it('voorbeeld met chaise blijft geldig', () => {
     expect(bereken(startOntwerpen.lounge!.ontwerp).geldig).toBe(true);

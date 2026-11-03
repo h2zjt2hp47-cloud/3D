@@ -29,7 +29,7 @@ describe('rugopties alleen op een element met een rug', () => {
   const chaise = (rug: string, chaiseRug?: string) =>
     zetel([{ id: 'c', type: 'chaise', x: 0, y: 0, breedte: 90, diepte: 165, rotatie: 0, ...(chaiseRug ? { opties: { chaise_rug: chaiseRug } } : {}) }], { opties: { rug } });
   it('chaise zonder rugleuning: losse rugkussens kosten niets extra', () => {
-    expect(prijsVan(chaise('los'), 'c')).toBe(prijsVan(chaise('vast'), 'c'));
+    expect(prijsVan(chaise('los', 'geen'), 'c')).toBe(prijsVan(chaise('vast', 'geen'), 'c'));
   });
   it('chaise met rugleuning: wel', () => {
     expect(prijsVan(chaise('los', 'achter'), 'c')).toBeGreaterThan(prijsVan(chaise('vast', 'achter'), 'c'));
