@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configurator zonnepanelen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --achtergrond: #eef0ee;
+  --vlak: #fbfbf9;
+  --inkt: #1f2528;
+  --zacht: #5c666b;
+  --lijn: #d3d9d8;
+  --accent: #23485a;
+  --accent-zacht: #dce8ee;
+  --zon: #e3a23b;
+  --zon-donker: #a8690f;
+  --goed: #2f6b47;
+  --let-op: #8a5d12;
+  --fout: #a1342b;
+  --papier: #ffffff;
+  --display: "Newsreader", Georgia, serif;
+  --tekst: "Figtree", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --achtergrond: #161a1c; --vlak: #1f2427; --inkt: #e7ecee; --zacht: #a0aab0; --lijn: #353e44;
+    --accent: #9cc3d6; --accent-zacht: #26363e; --zon: #e8b25a; --zon-donker: #f0c271; --goed: #7fc79b; --let-op: #e0b25d; --fout: #f08b80; --papier: #f4f4f1;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--achtergrond); color: var(--inkt); font: 15px/1.5 var(--tekst); }
+h1, h2, h3, h4 { font-family: var(--display); font-weight: 500; text-wrap: balance; margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding: 14px clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--lijn); background: var(--vlak); }
+header h1 { font-size: 1.45rem; display: flex; align-items: center; gap: 10px; }
+.logo { width: 28px; height: 28px; flex: none; }
+header p { margin: 2px 0 0; color: var(--zacht); font-size: .85rem; }
+#hd-bewaard.fout { color: var(--fout); }
+.demo { font-size: .75rem; color: var(--let-op); border: 1px solid currentColor; border-radius: 999px; padding: 1px 9px; font-family: var(--tekst); }
+.kopknoppen { display: flex; flex-wrap: wrap; gap: 6px; }
+.kopknoppen button, .knoppenrij button, button.tweede { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: .9rem; min-height: 36px; }
+.kopknoppen button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
+button:disabled { opacity: .45; cursor: default; }
+button.hoofd { background: var(--accent); color: var(--vlak); border: 1px solid var(--accent); border-radius: 6px; padding: 6px 14px; cursor: pointer; min-height: 36px; }
+button.gevaar { border-color: var(--fout); color: var(--fout); }
+button.wis { min-width: 36px; align-self: end; margin-bottom: 14px; }
+
+nav.stappen { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px clamp(16px, 3vw, 32px); background: var(--vlak); border-bottom: 1px solid var(--lijn); position: sticky; top: 0; z-index: 5; }
+nav.stappen button { border: 1px solid var(--lijn); background: transparent; border-radius: 999px; padding: 6px 14px; cursor: pointer; min-height: 38px; }
+nav.stappen button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+nav.stappen .nr { font-variant-numeric: tabular-nums; opacity: .75; }
+
+main { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(340px, 1fr); gap: 24px; padding: 20px clamp(16px, 3vw, 32px) 48px; max-width: 1480px; margin: 0 auto; }
+@media (max-width: 960px) { main { grid-template-columns: minmax(0, 1fr); } .zijkant { position: static !important; } }
+main > *, .zijkant > *, #stap > * { min-width: 0; }
+#stap { display: grid; gap: 16px; align-content: start; }
+.tussenkop { font-size: 1.35rem; margin-top: 8px; }
+.stap, .kaart { background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 16px 18px; }
+.stap > h2 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.stap h3 { font-size: 1.08rem; }
+.stap h4 { font-size: .98rem; margin: 6px 0 8px; }
+.stap.uitgezet { opacity: .8; }
+.stapnr { font-family: var(--tekst); font-size: .8rem; font-weight: 600; width: 24px; height: 24px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--accent-zacht); color: var(--accent); flex: none; }
+.veld { margin-bottom: 12px; min-width: 0; }
+.veld > label, legend { display: block; font-weight: 600; font-size: .86rem; margin-bottom: 5px; padding: 0; }
+.veld input[type="text"], .veld input[type="tel"], .veld input[type="email"], .veld select { width: 100%; padding: 7px 9px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); min-height: 38px; }
+.getalrij { display: flex; align-items: center; gap: 8px; }
+.getalrij input { width: 100%; max-width: 130px; padding: 7px 9px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); text-align: right; font-variant-numeric: tabular-nums; min-height: 38px; }
+.eenheid { color: var(--zacht); font-size: .9rem; white-space: nowrap; }
+.hulp { display: block; font-size: .8rem; color: var(--zacht); margin: 4px 0 0; }
+.klein { font-size: .82rem; color: var(--zacht); }
+.raster2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 16px; }
+.raster3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 14px; }
+fieldset.keuzes { border: 0; margin: 0 0 12px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+fieldset.keuzes legend { width: 100%; }
+.tegel { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--lijn); border-radius: 6px; padding: 8px 12px; cursor: pointer; background: var(--vlak); max-width: 100%; min-height: 44px; position: relative; }
+.tegel input { position: absolute; opacity: 0; pointer-events: none; }
+.tegel-tekst { display: grid; }
+.tegel strong { font-weight: 600; font-size: .92rem; }
+.tegel:has(input:checked) { border-color: var(--accent); background: var(--accent-zacht); box-shadow: inset 0 0 0 1px var(--accent); }
+.tegel:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.schakelaar { display: inline-flex !important; align-items: center; gap: 10px; cursor: pointer; font-weight: 500 !important; min-height: 36px; }
+.schakelaar input { position: absolute; opacity: 0; }
+.schuifje { width: 38px; height: 22px; border-radius: 999px; background: var(--lijn); position: relative; transition: background .15s; flex: none; }
+.schuifje::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--vlak); transition: transform .15s; }
+.schakelaar input:checked + .schuifje { background: var(--accent); }
+.schakelaar input:checked + .schuifje::after { transform: translateX(16px); }
+.schakelaar input:focus-visible + .schuifje { outline: 2px solid var(--accent); outline-offset: 2px; }
+.knoppenrij { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+
+.ligging { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; align-items: center; }
+@media (max-width: 560px) { .ligging { grid-template-columns: minmax(0, 1fr); } .kompasvak { max-width: 240px; margin: 0 auto; } }
+.ligging p { margin: 0 0 10px; }
+.kompas { width: 100%; height: auto; display: block; }
+.kompas .windstreek { cursor: pointer; }
+.kompas .windstreek:focus-visible circle { stroke: var(--accent); stroke-width: 3; }
+.kaartkop { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+.kaartkop h3 .klein { font-family: var(--tekst); }
+.tekening { background: var(--papier); border-radius: 6px; padding: 8px; display: grid; place-items: center; margin-top: 4px; }
+.tekening svg { width: 100%; height: auto; max-height: 460px; }
+.legplan .paneel { cursor: pointer; }
+.legplan .paneel.uit:hover rect { fill-opacity: .55; }
+.legplan .paneel.aan:hover rect { fill: #2c4560; }
+.legplan .paneel:focus-visible rect { stroke: var(--zon); stroke-width: 6; }
+.obstakels { margin-top: 12px; border-top: 1px solid var(--lijn); padding-top: 8px; }
+.obstakelrij { display: grid; grid-template-columns: minmax(120px, 1.3fr) repeat(4, minmax(80px, 1fr)) auto; gap: 0 8px; align-items: start; }
+@media (max-width: 700px) { .obstakelrij { grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px dashed var(--lijn); margin-bottom: 8px; } }
+
+.zijkant { position: sticky; top: 70px; align-self: start; display: grid; gap: 16px; }
+.drie-d { border-radius: 6px; overflow: hidden; background: #dfe8ee; min-height: 260px; color: #333; display: grid; place-items: center; }
+.drie-d canvas { display: block; cursor: grab; }
+.drie-d canvas:active { cursor: grabbing; }
+.kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.kpi div { background: var(--achtergrond); border-radius: 6px; padding: 8px 10px; display: grid; }
+.kpi strong { font-family: var(--display); font-size: 1.45rem; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.prijsrij { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--lijn); }
+.grote-prijs { font-family: var(--display); font-size: 2rem; font-variant-numeric: tabular-nums; }
+.status { font-size: .8rem; font-weight: 600; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.status.ok { color: color-mix(in srgb, var(--goed) 82%, #000); background: color-mix(in srgb, var(--goed) 14%, transparent); }
+.status.let-op { color: var(--let-op); background: color-mix(in srgb, var(--let-op) 14%, transparent); }
+.status.fout { color: var(--fout); background: color-mix(in srgb, var(--fout) 14%, transparent); }
+@media (prefers-color-scheme: dark) { .status.ok { color: var(--goed); } }
+.controles { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.controles li { display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 10px; align-items: baseline; padding: 7px 10px; border-radius: 6px; background: var(--achtergrond); font-size: .9rem; }
+.controles .teken { font-weight: 700; text-align: center; }
+.controles li.ok .teken { color: var(--goed); }
+.controles li.let-op .teken { color: var(--let-op); }
+.controles li.fout { background: color-mix(in srgb, var(--fout) 10%, transparent); }
+.controles li.fout .teken { color: var(--fout); }
+.controles .waarde { font-variant-numeric: tabular-nums; color: var(--zacht); text-align: right; }
+.controles .uitleg { grid-column: 2 / -1; font-size: .8rem; color: var(--zacht); }
+.controles li.ok .uitleg { display: none; }
+
+table.tabel { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.tabel th { text-align: left; font-weight: 600; color: var(--zacht); font-size: .8rem; border-bottom: 1px solid var(--lijn); padding: 6px 8px; }
+.tabel td { padding: 6px 8px; border-bottom: 1px solid var(--lijn); vertical-align: top; }
+.tabel .getal { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tabel tr.groep td { font-weight: 600; background: var(--achtergrond); }
+.tabel tfoot td { border-bottom: 0; padding-top: 4px; padding-bottom: 4px; }
+.tabel tfoot td:first-child { text-align: right; color: var(--zacht); }
+.tabel tfoot tr.eind td { font-weight: 600; font-size: 1.05rem; border-top: 2px solid var(--inkt); color: var(--inkt); }
+dl.detail { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 10px 0 0; font-size: .9rem; }
+dl.detail dt { color: var(--zacht); }
+dl.detail dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+dl.kern { background: var(--achtergrond); padding: 10px 14px; border-radius: 6px; margin: 12px 0; }
+dl.intern { border-top: 1px dashed var(--lijn); padding-top: 8px; }
+.offertekop { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+.offertekop h2 { font-size: 1.5rem; }
+.klantblok { display: grid; text-align: right; font-size: .9rem; }
+.legplannen { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 12px 0; }
+.legplannen figure { margin: 0; background: var(--papier); border-radius: 6px; padding: 6px; }
+.legplannen svg { width: 100%; height: auto; max-height: 260px; }
+.legplannen figcaption { font-size: .8rem; color: #555; text-align: center; }
+.voorwaarden ul { padding-left: 1.2em; margin: 6px 0; font-size: .86rem; color: var(--zacht); }
+.waarschuwing { color: var(--fout); background: color-mix(in srgb, var(--fout) 10%, transparent); padding: 8px 12px; border-radius: 6px; }
+.cijfers { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.cijfer { background: var(--achtergrond); border-radius: 6px; padding: 10px 12px; display: grid; }
+.cijfer strong { font-family: var(--display); font-size: 1.4rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.grafiek { width: 100%; height: auto; }
+.grafiekvak { color: #333; --inkt: #333; --zacht: #666; --lijn: #e3e3e0; --vlak: #fff; }
+.legende { font-size: .82rem; color: var(--zacht); display: flex; align-items: center; gap: 6px; margin: 6px 0 12px; }
+.legende .kleur { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+.legende .kleur.zon { background: var(--zon); }
+.legende .kleur.lijn { height: 2px; background: var(--inkt); margin-left: 10px; }
+.balkrij { display: grid; grid-template-columns: minmax(130px, 1fr) 2fr auto; gap: 10px; align-items: center; font-size: .88rem; margin: 6px 0; }
+.balk { height: 12px; border-radius: 999px; background: var(--achtergrond); overflow: hidden; display: block; }
+.balk span { display: block; height: 100%; border-radius: 999px; }
+.balk .zelf { background: var(--zon); }
+.balk .batterij { background: var(--goed); }
+.balk .net { background: var(--accent); }
+.balk .afname { background: var(--zacht); }
+.balkrij .getal { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+#foutmelding { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--fout); color: #fff; padding: 10px 14px; border-radius: 8px; z-index: 20; max-width: min(92vw, 640px); display: grid; gap: 6px; }
+#foutmelding p { margin: 0; }
+#foutmelding button { color: #fff; border-color: #fff; justify-self: end; }
+.volgende-rij { display: flex; justify-content: flex-end; }
+
+/* Klantweergave: geen kostprijzen, marges, stringplan of bestellijst. */
+body.klantmodus .intern { display: none !important; }
+
+@media print {
+  header, nav.stappen, .zijkant, .geen-afdruk, .volgende-rij, #foutmelding { display: none !important; }
+  body { background: #fff; color: #000; font-size: 12px; }
+  main { display: block; padding: 0; }
+  .stap { border: 0; padding: 0; }
+  .intern { display: none !important; }
+  .legplannen svg { max-height: 180px; }
+  :root { --achtergrond: #f3f3f3; --zacht: #444; --lijn: #ccc; --inkt: #000; }
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+<header>
+  <div>
+    <h1><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="11" r="6" fill="#e3a23b"/><path d="M3 29 L9 17 H23 L29 29 Z" fill="#23485a"/><path d="M10 23 H22 M7 27 H25 M13 17 L11 29 M19 17 L21 29" stroke="#9cc3d6" stroke-width="1.2"/></svg>Zonnepanelen op maat <span class="demo">demo</span></h1>
+    <p><span id="hd-project">Nieuw project</span> · <span id="hd-bewaard">automatisch bewaard in deze browser</span></p>
+  </div>
+  <div class="kopknoppen">
+    <button type="button" id="ongedaan" title="Ongedaan maken (Ctrl+Z)">↶ Ongedaan</button>
+    <button type="button" id="menu-nieuw">Nieuw</button>
+    <button type="button" id="menu-voorbeeld">Voorbeeld</button>
+    <button type="button" id="menu-open">Openen…</button>
+    <button type="button" id="menu-bewaar">Bewaren als bestand</button>
+    <button type="button" id="klantweergave" aria-pressed="false" title="Toon het scherm aan de klant: zonder kostprijzen, marges en bestellijst">Klantweergave</button>
+    <input type="file" id="bestand" accept=".json,application/json" hidden>
+  </div>
+</header>
+<nav class="stappen" aria-label="Stappen">
+  <button type="button" data-stap="dak"><span class="nr">1 · </span><span class="naam">Dak</span></button>
+  <button type="button" data-stap="installatie"><span class="nr">2 · </span><span class="naam">Installatie</span></button>
+  <button type="button" data-stap="opbrengst"><span class="nr">3 · </span><span class="naam">Opbrengst</span></button>
+  <button type="button" data-stap="offerte"><span class="nr">4 · </span><span class="naam">Offerte</span></button>
+</nav>
+<main>
+  <div>
+    <div id="stap"></div>
+    <div class="volgende-rij"><button type="button" class="hoofd" id="volgende" style="margin-top:16px">Verder →</button></div>
+  </div>
+  <aside class="zijkant" aria-label="Overzicht">
+    <section class="kaart">
+      <div class="kaartkop"><h2>3D</h2><div class="knoppenrij" id="standpunten" style="margin:0"></div></div>
+      <div class="drie-d" id="drie-d"></div>
+    </section>
+    <section class="kaart">
+      <div class="kpi">
+        <div><span class="klein">Panelen</span><strong id="k-panelen">0</strong></div>
+        <div><span class="klein">kWp</span><strong id="k-kwp">0</strong></div>
+        <div><span class="klein">kWh per jaar</span><strong id="k-kwh">0</strong></div>
+        <div><span class="klein">Dekt verbruik</span><strong id="k-dekking">0 %</strong></div>
+        <div><span class="klein">Terugverdiend</span><strong id="k-terug">–</strong></div>
+        <div><span class="klein">Zelf verbruikt</span><strong id="k-autarkie">0 %</strong></div>
+      </div>
+      <div class="prijsrij"><div><span class="klein" id="k-prijs-label">Prijs excl. btw</span><div class="grote-prijs" id="k-prijs">€ 0</div></div><span class="klein" id="k-prijs-incl"></span></div>
+    </section>
+    <section class="kaart">
+      <div class="kaartkop"><h2>Controles</h2><span id="controle-status" class="status ok">alles in orde</span></div>
+      <ul class="controles" id="controles"></ul>
+    </section>
+  </aside>
+</main>
+<div id="foutmelding" role="alert" hidden></div>
+<script>/*BUNDEL*/</script>
+</body>
+</html>
