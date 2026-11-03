@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  berekenZon, dakvlakkenVan, legVlak, kiesOmvormer, normHoek, paneelHoeken, richtingenPlat, standFactor,
+  berekenZon, beperkTot, dakvlakkenVan, isVariant, metVariant, opbrengstPerKwp, OPBRENGST_KWP, variantVan, legVlak, kiesOmvormer, normHoek, paneelHoeken, richtingenPlat, standFactor,
   stringGrenzen, verdeelStrings, windstreek, STANDAARD_VLAK, type ZonProject,
 } from '../src/zon.js';
 import { leegZonProject, voorbeeldZonProject, ZON_CATALOGUS } from '../voorbeelden/zon.js';
@@ -17,13 +17,16 @@ describe('zonnepanelen: richting en stand', () => {
     expect(windstreek(-140)).toBe('NO');
   });
 
-  it('standfactor volgt de PVGIS-tabellen ruwweg', () => {
-    expect(standFactor(35, 0)).toBe(1);
-    expect(standFactor(0, 0)).toBeCloseTo(0.88, 2);
-    expect(standFactor(35, -90)).toBeCloseTo(0.83, 2);
-    expect(standFactor(35, 90)).toBe(standFactor(35, -90));
-    expect(standFactor(90, 0)).toBeCloseTo(0.7, 1);
-    expect(standFactor(35, 180)).toBeLessThan(0.7);
+  it('opbrengst volgt de PVGIS-tabel (Midden-België)', () => {
+    expect(opbrengstPerKwp(40, 0)).toBe(OPBRENGST_KWP);
+    expect(opbrengstPerKwp(30, 0)).toBe(1034);
+    expect(opbrengstPerKwp(35, 0)).toBeCloseTo((1034 + 1044) / 2, 6);
+    expect(opbrengstPerKwp(0, 123)).toBe(872);
+    expect(opbrengstPerKwp(30, -90)).toBe(845);
+    expect(opbrengstPerKwp(30, 180)).toBe(opbrengstPerKwp(30, -180));
+    expect(standFactor(35, 0)).toBeGreaterThan(0.99);
+    expect(standFactor(35, 90)).toBeCloseTo(standFactor(35, -90), 1); // oost iets beter dan west (PVGIS)
+    expect(standFactor(35, 180)).toBeLessThan(0.6);
   });
 });
 
@@ -164,5 +167,37 @@ describe('zonnepanelen: project', () => {
     expect(r.aantal).toBe(0);
     expect(r.geldig).toBe(false);
     expect(r.offerte.regels).toHaveLength(0);
+  });
+
+  it('gewenst aantal panelen: de beste plaatsen eerst', () => {
+    const p = voorbeeldZonProject();
+    const alle = berekenZon(p, ZON_CATALOGUS);
+    const r = berekenZon({ ...p, doelAantal: 10 }, ZON_CATALOGUS);
+    expect(r.aantal).toBe(10);
+    expect(r.beschikbaar).toBe(alle.aantal);
+    // Het zuidelijke dak van de woning gaat voor het platte dak van de garage.
+    expect(r.legplan.find((l) => l.vlak.id === 'huis-voor')!.aantal).toBe(10);
+    // Onderste rij eerst.
+    const huis = r.legplan.find((l) => l.vlak.id === 'huis-voor')!;
+    expect(Math.max(...huis.panelen.filter((x) => x.actief).map((x) => x.rij))).toBeLessThanOrEqual(1);
+    expect(berekenZon({ ...p, doelAantal: 999 }, ZON_CATALOGUS).aantal).toBe(alle.aantal);
+  });
+
+  it('beperkTot op een los legplan', () => {
+    const plat = dakvlakkenVan({ id: 'g', naam: 'G', dakvorm: 'plat', breedte: 800, diepte: 800, goothoogte: 300, helling: 0, x: 0, z: 0 }, 0)[0]!;
+    const l = legVlak(plat, { ...STANDAARD_VLAK, bedekking: 'plat' }, paneel, 0);
+    beperkTot([l], 3);
+    expect(l.aantal).toBe(3);
+  });
+
+  it('varianten bewaren, terugzetten en herkennen', () => {
+    const p = voorbeeldZonProject();
+    const v = variantVan(p, 'Met batterij', 'v1');
+    expect(isVariant(p, v)).toBe(true);
+    const zonder = { ...p, batterij: '' };
+    expect(isVariant(zonder, v)).toBe(false);
+    const terug = metVariant(zonder, v);
+    expect(terug.batterij).toBe(p.batterij);
+    expect(isVariant(terug, v)).toBe(true);
   });
 });

@@ -302,6 +302,8 @@ Als de configurator alleen dient om **aan de keukentafel een prijs en een terugv
 - Opmeting, werf en opleverdossier.
 - Server: niet nodig voor één verkoper (bewaren als bestand en de offerte mailen). Wel nodig zodra meerdere verkopers met dezelfde prijzen werken, of als de offerte automatisch in het ERP moet komen.
 
+**Al gedaan (3/11):** opbrengst uit een PVGIS-tabel met voorzichtigheidsmarge, schuifknop voor het aantal panelen, varianten naast elkaar (ook op de afdruk). **Nog te doen:** echte prijzen en pakketten, PDF in de huisstijl met mailen, toeslaglijst en voorbehouden, tablet zonder internet.
+
 **Grootte:** ongeveer een vijfde van de volledige fasering in §7. Grotendeels werk aan de catalogus, de varianten en de PDF; het rekenwerk bestaat al.
 
 **Risico's:** een te optimistische terugverdientijd (bewust voorzichtig rekenen) en een prijs die na de opmeting stijgt (voorbehouden en een vaste toeslaglijst: asbest, extra kabel, nieuwe zekeringkast).

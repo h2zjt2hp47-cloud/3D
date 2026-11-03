@@ -77,6 +77,9 @@ export function leegZonProject(): ZonProject {
     injectieprijs: 0.04,
     prijsstijging: 2,
     korting: 0,
+    opbrengstMarge: 5,
+    doelAantal: null,
+    varianten: [],
   };
 }
 

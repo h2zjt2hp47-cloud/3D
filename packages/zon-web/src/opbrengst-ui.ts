@@ -17,6 +17,7 @@ export function toonOpbrengst(houder: HTMLElement) {
         getalVeld('Extra verbruik in de toekomst', p.extraVerbruik, (w) => wijzig((q) => { q.extraVerbruik = w; }), { min: 0, max: 50000, stap: 100, eenheid: 'kWh', hulp: 'Elektrische wagen ±2 000–3 000 kWh, warmtepomp ±3 000–5 000 kWh.' }),
         getalVeld('Prijs afname', p.afnameprijs, (w) => wijzig((q) => { q.afnameprijs = w; }), { min: 0, max: 2, stap: 0.01, eenheid: '€/kWh', hulp: 'Alles inbegrepen (energie, net, heffingen, btw).' }),
         getalVeld('Vergoeding injectie', p.injectieprijs, (w) => wijzig((q) => { q.injectieprijs = w; }), { min: 0, max: 1, stap: 0.005, eenheid: '€/kWh', hulp: 'Wat de leverancier betaalt voor stroom die je op het net zet.' }),
+        getalVeld('Voorzichtigheidsmarge opbrengst', p.opbrengstMarge, (w) => wijzig((q) => { q.opbrengstMarge = w; }), { min: 0, max: 30, stap: 1, eenheid: '%', hulp: 'Zoveel minder dan PVGIS rekenen, om niet te veel te beloven.' }),
         getalVeld('Stijging energieprijs', p.prijsstijging, (w) => wijzig((q) => { q.prijsstijging = w; }), { min: 0, max: 10, stap: 0.5, eenheid: '% per jaar' }),
       )),
     el('section', { class: 'stap' }, el('h2', {}, el('span', { class: 'stapnr' }, 'B'), 'Opbrengst per maand'),
@@ -40,7 +41,7 @@ export function toonOpbrengst(houder: HTMLElement) {
         cijfer('Terugverdientijd', r.terugverdientijd !== null ? `${getal(r.terugverdientijd, 1)} jaar` : 'meer dan 25 jaar'),
         cijfer('Winst na 25 jaar', eur(r.winst25, 0))),
       el('div', { class: 'tekening grafiekvak' }, svgUit(terugverdienSvg(r.cumulatief, r.terugverdientijd))),
-      el('p', { class: 'hulp' }, `Benadering: ${OPBRENGST_KWP} kWh per kWp in de beste stand (zuid, 35°), aangepast voor richting, helling en schaduw; 0,4 % minder opbrengst per jaar; geen premie (in Vlaanderen geen premie meer voor zonnepanelen). Zelfverbruik is een schatting op basis van het verbruik; met een slimme meter is het werkelijke profiel te gebruiken. Definitieve opbrengst: PVGIS of de software van de installateur.`),
+      el('p', { class: 'hulp' }, `Opbrengst volgens PVGIS (Europese Commissie, Midden-België): ${OPBRENGST_KWP} kWh per kWp in de beste stand (zuid, 40°), per helling en richting, min ${p.opbrengstMarge} % voorzichtigheidsmarge en de schaduw; 0,4 % minder opbrengst per jaar; geen premie (in Vlaanderen geen premie meer voor zonnepanelen). Zelfverbruik is een schatting op basis van het verbruik; met een slimme meter is het werkelijke profiel te gebruiken. Definitieve opbrengst: PVGIS of de software van de installateur.`),
     ),
   );
 }

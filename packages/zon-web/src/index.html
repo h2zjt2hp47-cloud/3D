@@ -130,6 +130,19 @@ fieldset.keuzes legend { width: 100%; }
 .drie-d { border-radius: 6px; overflow: hidden; background: #dfe8ee; min-height: 260px; color: #333; display: grid; place-items: center; }
 .drie-d canvas { display: block; cursor: grab; }
 .drie-d canvas:active { cursor: grabbing; }
+.aantalrij { margin-bottom: 12px; }
+.aantalrij label { display: block; font-weight: 600; font-size: .9rem; }
+.aantalrij strong { font-family: var(--display); font-size: 1.3rem; font-weight: 500; margin: 0 4px; }
+.schuifrij { display: flex; align-items: center; gap: 10px; }
+.schuifrij input { flex: 1; min-width: 0; accent-color: var(--zon-donker); height: 32px; }
+table.varianten { font-size: .85rem; }
+table.varianten th, table.varianten td { text-align: right; white-space: normal; padding: 6px 6px; }
+table.varianten th:first-child, table.varianten td:first-child { text-align: left; color: var(--zacht); }
+table.varianten th.gekozen { color: var(--accent); }
+table.varianten .gekozen-label { display: block; font-size: .72rem; font-weight: 600; color: var(--goed); }
+table.varianten td.knoppen { white-space: nowrap; }
+table.varianten td.knoppen button { margin-left: 4px; }
+.tabelscroll { overflow-x: auto; }
 .kpi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .kpi div { background: var(--achtergrond); border-radius: 6px; padding: 8px 10px; display: grid; }
 .kpi strong { font-family: var(--display); font-size: 1.45rem; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.2; }
@@ -243,6 +256,10 @@ body.klantmodus .intern { display: none !important; }
       <div class="drie-d" id="drie-d"></div>
     </section>
     <section class="kaart">
+      <div class="aantalrij">
+        <label for="k-aantal">Aantal panelen <strong id="k-aantal-waarde">0</strong> <span class="klein" id="k-aantal-max"></span></label>
+        <div class="schuifrij"><input type="range" id="k-aantal" min="0" max="0" step="1"><button type="button" class="tweede" id="k-aantal-alle" title="Alle vrije plaatsen op het dak gebruiken">Hele dak</button></div>
+      </div>
       <div class="kpi">
         <div><span class="klein">Panelen</span><strong id="k-panelen">0</strong></div>
         <div><span class="klein">kWp</span><strong id="k-kwp">0</strong></div>

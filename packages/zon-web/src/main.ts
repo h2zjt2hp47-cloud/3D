@@ -8,7 +8,7 @@ import { toonInstallatie } from './installatie-ui.js';
 import { toonOpbrengst } from './opbrengst-ui.js';
 import { bewaarBestand, toonOfferte } from './offerte-ui.js';
 import { maak3D, type Viewer3D } from './drie-d.js';
-import { kanOngedaan, laatstBewaard, nieuwLeeg, nieuwVoorbeeld, ongedaan, opslagProbleem, opWijziging, resultaat, toestand, vervang } from './staat.js';
+import { wijzig, kanOngedaan, laatstBewaard, nieuwLeeg, nieuwVoorbeeld, ongedaan, opslagProbleem, opWijziging, resultaat, toestand, vervang } from './staat.js';
 import type { ZonProject } from '../../core/src/zon.js';
 
 window.addEventListener('error', (e) => {
@@ -41,6 +41,12 @@ function zijkant() {
   const r = resultaat();
   const p = toestand();
   $('#k-panelen').textContent = `${r.aantal}`;
+  const schuif = $('#k-aantal') as HTMLInputElement;
+  schuif.max = String(r.beschikbaar);
+  if (document.activeElement !== schuif || !schuif.dataset.sleept) schuif.value = String(r.aantal);
+  $('#k-aantal-waarde').textContent = String(r.aantal);
+  $('#k-aantal-max').textContent = `van ${r.beschikbaar} plaatsen · ${getal(r.kwp, 2)} kWp`;
+  ($('#k-aantal-alle') as HTMLButtonElement).disabled = p.doelAantal === null && Object.values(p.vlakken).every((v) => !v.uit.length);
   $('#k-kwp').textContent = getal(r.kwp, 2);
   $('#k-kwh').textContent = getal(r.productie);
   $('#k-dekking').textContent = `${getal(r.dekking)} %`;
@@ -109,6 +115,18 @@ function zetKlantweergave(aan: boolean) {
 $('#klantweergave').addEventListener('click', () => zetKlantweergave(!klantweergave()));
 try { if (localStorage.getItem('zon-demo.klantweergave') === '1') document.body.classList.add('klantmodus'); } catch { /* niets */ }
 $('#klantweergave').setAttribute('aria-pressed', String(klantweergave()));
+
+// Schuifknop: gewenst aantal panelen (de beste plaatsen eerst).
+{
+  const schuif = $('#k-aantal') as HTMLInputElement;
+  schuif.addEventListener('input', () => { schuif.dataset.sleept = '1'; $('#k-aantal-waarde').textContent = schuif.value; });
+  schuif.addEventListener('change', () => {
+    delete schuif.dataset.sleept;
+    const n = Number(schuif.value);
+    wijzig((q) => { q.doelAantal = n >= resultaat().beschikbaar ? null : n; });
+  });
+  $('#k-aantal-alle').addEventListener('click', () => wijzig((q) => { q.doelAantal = null; for (const v of Object.values(q.vlakken)) v.uit = []; }));
+}
 
 // 3D.
 veilig('3D', () => {

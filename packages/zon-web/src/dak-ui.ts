@@ -91,7 +91,19 @@ function vlakKaart(l: VlakLegplan): HTMLElement {
       inst.actief ? `${l.aantal} panelen · ${getal(kwp, 2)} kWp${factor !== null ? ` · ${Math.round(factor * 100)} % zon` : ''}` : 'geen panelen'));
 
   const tekening = svgUit(legplanSvg(l, { klikbaar: inst.actief }));
-  const wissel = (sleutel: string) => zet((v) => { v.uit = v.uit.includes(sleutel) ? v.uit.filter((s) => s !== sleutel) : [...v.uit, sleutel]; });
+  const wissel = (sleutel: string) => {
+    if (toestand().doelAantal === null) {
+      zet((v) => { v.uit = v.uit.includes(sleutel) ? v.uit.filter((s) => s !== sleutel) : [...v.uit, sleutel]; });
+      return;
+    }
+    // Er is een gewenst aantal: de huidige keuze vastleggen per paneel en dan dit paneel omdraaien.
+    wijzig((q) => {
+      for (const x of r.legplan) q.vlakken[x.vlak.id] = { ...structuredClone(x.instelling), uit: x.panelen.filter((y) => !y.actief).map((y) => y.sleutel) };
+      q.doelAantal = null;
+      const v = q.vlakken[vlak.id]!;
+      v.uit = v.uit.includes(sleutel) ? v.uit.filter((s) => s !== sleutel) : [...v.uit, sleutel];
+    });
+  };
   for (const g of tekening.querySelectorAll<SVGGElement>('[data-sleutel]')) {
     g.addEventListener('click', () => wissel(g.dataset.sleutel!));
     g.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') { e.preventDefault(); wissel(g.dataset.sleutel!); } });

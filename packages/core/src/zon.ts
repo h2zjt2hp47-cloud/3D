@@ -172,6 +172,26 @@ export interface ZonProject {
   /** Jaarlijkse stijging van de energieprijs (%). */
   prijsstijging: number;
   korting: number;
+  /** Voorzichtigheidsmarge op de opbrengst van PVGIS (%), bv. 5. */
+  opbrengstMarge: number;
+  /** Gewenst aantal panelen (de beste plaatsen eerst); null = alle plaatsen die aan staan. */
+  doelAantal: number | null;
+  /** Bewaarde varianten om naast elkaar te tonen. */
+  varianten: Variant[];
+}
+
+/** Een variant: dezelfde woning, een andere installatie (panelen, omvormer, batterij, opties). */
+export interface Variant {
+  id: string;
+  naam: string;
+  paneel: string;
+  omvormer: string;
+  batterij: string;
+  optimizers: boolean;
+  laadpaal: boolean;
+  monitoring: boolean;
+  doelAantal: number | null;
+  vlakken: Record<string, DakvlakInstelling>;
 }
 
 /** Een dakvlak zoals afgeleid uit een gebouw, met zijn plaats in 3D. */
@@ -255,6 +275,8 @@ export interface ZonResultaat {
   legplan: VlakLegplan[];
   paneel: Paneel;
   aantal: number;
+  /** Aantal vrije plaatsen op de dakvlakken die aan staan (het maximum voor het gewenste aantal). */
+  beschikbaar: number;
   kwp: number;
   omvormer: Omvormer | null;
   aantalOmvormers: number;
@@ -471,8 +493,25 @@ export function paneelHoeken(vlak: Dakvlak, x: GelegdPaneel): Punt[] {
 
 // ───────────────────────── Opbrengst ─────────────────────────
 
-/** Opbrengst per kWp per jaar in België bij de beste stand (zuid, 35°), na systeemverliezen (benadering). */
-export const OPBRENGST_KWP = 950;
+/**
+ * Opbrengst per kWp per jaar (kWh) volgens PVGIS 5.3 (JRC), Midden-België (50,85° N, 4,35° O),
+ * 14 % systeemverlies, opgevraagd op 3/11/2026. Rijen: helling 0–90° per 10°; kolommen: azimut −180…180° per 15°.
+ * België is klein: tussen kust en Limburg scheelt het enkele procenten.
+ */
+export const PVGIS_TABEL: number[][] = [
+  [872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872, 872],
+  [780, 783, 793, 808, 826, 847, 869, 891, 910, 926, 938, 945, 947, 944, 935, 922, 905, 885, 864, 842, 821, 804, 790, 782, 780],
+  [687, 693, 711, 740, 778, 819, 861, 900, 935, 964, 986, 998, 1002, 996, 980, 956, 925, 889, 849, 808, 768, 732, 706, 691, 687],
+  [595, 605, 632, 675, 730, 788, 845, 899, 946, 985, 1013, 1030, 1034, 1026, 1005, 973, 932, 883, 829, 772, 716, 664, 625, 602, 595],
+  [505, 519, 555, 613, 681, 752, 821, 885, 941, 986, 1020, 1039, 1044, 1034, 1009, 971, 923, 865, 802, 735, 666, 602, 548, 515, 505],
+  [421, 438, 485, 553, 629, 708, 785, 856, 918, 968, 1004, 1026, 1030, 1019, 991, 950, 897, 834, 765, 691, 616, 544, 479, 435, 421],
+  [349, 368, 421, 492, 572, 656, 737, 811, 877, 929, 967, 989, 993, 981, 953, 909, 855, 789, 717, 639, 561, 486, 419, 367, 349],
+  [290, 309, 361, 431, 510, 594, 676, 753, 817, 872, 909, 930, 932, 920, 894, 851, 795, 732, 658, 580, 501, 427, 361, 310, 290],
+  [242, 258, 305, 370, 446, 527, 609, 679, 745, 795, 830, 848, 850, 838, 813, 774, 724, 659, 590, 516, 440, 369, 307, 260, 242],
+  [199, 213, 253, 310, 380, 454, 529, 601, 656, 703, 733, 747, 747, 736, 716, 683, 636, 581, 516, 443, 377, 311, 255, 215, 199],
+];
+/** Hoogste waarde in de tabel (beste stand). */
+export const OPBRENGST_KWP = Math.max(...PVGIS_TABEL.flat());
 /** Verdeling van de opbrengst over de maanden (%), Midden-België. */
 export const MAAND_OPBRENGST = [2.5, 4.5, 8, 11.5, 13.5, 13.5, 13.5, 12, 9, 6.5, 3.5, 2];
 /** Verdeling van het verbruik van een gezin over de maanden (%). */
@@ -481,15 +520,21 @@ export const MAANDEN = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 
 const SCHADUW: Record<Schaduw, number> = { geen: 1, licht: 0.95, matig: 0.85, sterk: 0.7 };
 export const SCHADUW_LABEL: Record<Schaduw, string> = { geen: 'Geen', licht: 'Licht (−5 %)', matig: 'Matig (−15 %)', sterk: 'Sterk (−30 %)' };
 
-/**
- * Opbrengst t.o.v. de beste stand (1 = zuid, 35°), voor helling en azimut.
- * Benadering van de PVGIS-tabellen voor België: plat ≈ 0,88, oost/west 35° ≈ 0,83, zuid verticaal ≈ 0,70.
- */
+/** Opbrengst per kWp per jaar (kWh) voor helling en azimut: tussenwaarden uit de PVGIS-tabel. */
+export function opbrengstPerKwp(helling: number, azimut: number): number {
+  const h = begrens(helling, 0, 90) / 10;
+  const a = (normHoek(azimut) + 180) / 15;
+  const h0 = Math.min(8, Math.floor(h)), a0 = Math.min(23, Math.floor(a));
+  const fh = h - h0, fa = a - a0;
+  const w = (i: number, j: number) => PVGIS_TABEL[i]![j]!;
+  const onder = w(h0, a0) * (1 - fa) + w(h0, a0 + 1) * fa;
+  const boven = w(h0 + 1, a0) * (1 - fa) + w(h0 + 1, a0 + 1) * fa;
+  return onder * (1 - fh) + boven * fh;
+}
+
+/** Opbrengst t.o.v. de beste stand (1 = zuid, ±40°). */
 export function standFactor(helling: number, azimut: number): number {
-  const b = begrens(helling, 0, 90);
-  const kantel = 1 - 0.0001 * (b - 35) ** 2;
-  const k = (0.17 * Math.sin(rad(b))) / Math.sin(rad(35));
-  return rond(begrens(kantel - k * (1 - Math.cos(rad(normHoek(azimut)))), 0.3, 1), 3);
+  return rond(opbrengstPerKwp(helling, azimut) / OPBRENGST_KWP, 3);
 }
 
 /** Aandeel van de productie dat meteen zelf verbruikt wordt, zonder batterij (benadering). */
@@ -542,9 +587,49 @@ const BEDEKKING_LABEL: Record<Bedekking, string> = { pannen: 'pannendak', leien:
 /** Grens voor een monofasige aansluiting in Vlaanderen (C10/11, te controleren bij de netbeheerder). */
 export const MONO_GRENS = 5000;
 
+/**
+ * Houdt alleen de n beste plaatsen aan: eerst het dakvlak met de meeste opbrengst (stand en schaduw),
+ * binnen een vlak de onderste rijen en vanuit het midden, zodat de panelen een mooi blok vormen.
+ */
+export function beperkTot(legplan: VlakLegplan[], n: number) {
+  const kandidaten = legplan.flatMap((l) => {
+    const kolommen = l.panelen.map((x) => x.kolom);
+    const midden = (Math.min(...kolommen) + Math.max(...kolommen)) / 2;
+    return l.panelen.filter((x) => x.actief).map((x) => ({
+      l, x,
+      score: standFactor(x.helling, x.azimut) * SCHADUW[l.instelling.schaduw],
+      rij: x.rij, afstand: Math.abs(x.kolom - midden),
+    }));
+  });
+  kandidaten.sort((a, b) => b.score - a.score || (a.l === b.l ? 0 : legplan.indexOf(a.l) - legplan.indexOf(b.l)) || a.rij - b.rij || a.afstand - b.afstand);
+  kandidaten.forEach((k, i) => { if (i >= n) k.x.actief = false; });
+  for (const l of legplan) l.aantal = l.panelen.filter((x) => x.actief).length;
+}
+
+/** De installatie van een project als variant bewaren. */
+export function variantVan(p: ZonProject, naam: string, id: string): Variant {
+  return {
+    id, naam, paneel: p.paneel, omvormer: p.omvormer, batterij: p.batterij, optimizers: p.optimizers,
+    laadpaal: p.laadpaal, monitoring: p.monitoring, doelAantal: p.doelAantal, vlakken: structuredClone(p.vlakken),
+  };
+}
+
+/** Het project met de installatie van een variant. */
+export function metVariant(p: ZonProject, v: Variant): ZonProject {
+  const { id: _id, naam: _naam, ...installatie } = v;
+  return { ...p, ...structuredClone(installatie) };
+}
+
+/** Is de huidige installatie gelijk aan de variant? */
+export function isVariant(p: ZonProject, v: Variant): boolean {
+  return JSON.stringify(variantVan(p, v.naam, v.id)) === JSON.stringify(v);
+}
+
 export function berekenZon(project: ZonProject, cat: ZonCatalogus): ZonResultaat {
   const paneel = cat.panelen.find((x) => x.code === project.paneel) ?? cat.panelen[0]!;
   const legplan = alleDakvlakken(project).map((v) => legVlak(v, instellingVan(project, v), paneel, project.orientatie));
+  const beschikbaar = legplan.reduce((t, l) => t + l.aantal, 0);
+  if (project.doelAantal !== null && project.doelAantal !== undefined) beperkTot(legplan, Math.max(0, Math.round(project.doelAantal)));
   const aantal = legplan.reduce((t, l) => t + l.aantal, 0);
   const kwp = rond((aantal * paneel.wp) / 1000, 2);
   const controles: Controle[] = [];
@@ -577,7 +662,7 @@ export function berekenZon(project: ZonProject, cat: ZonCatalogus): ZonResultaat
     const azimut = g.panelen[0]!.azimut, helling = g.panelen[0]!.helling;
     let schaduw = SCHADUW[g.vlak.instelling.schaduw];
     if (metOptimizers || micro) schaduw = 1 - (1 - schaduw) / 2;
-    const kwhPerKwp = rond(OPBRENGST_KWP * standFactor(helling, azimut) * schaduw);
+    const kwhPerKwp = rond(opbrengstPerKwp(helling, azimut) * (1 - begrens(project.opbrengstMarge ?? 0, 0, 30) / 100) * schaduw);
     const strings = micro ? [] : verdeelStrings(g.panelen.length, grenzen.nMax);
     const richtingNaam = g.richting ? ` (${windstreek(azimut)})` : '';
     return {
@@ -677,7 +762,7 @@ export function berekenZon(project: ZonProject, cat: ZonCatalogus): ZonResultaat
   if (aantal > 0 && project.korting > 15) controles.push({ code: 'korting', label: 'Korting', status: 'let-op', waarde: `${project.korting} %`, uitleg: 'Hoge korting: controleer de marge.' });
 
   return {
-    legplan, paneel, aantal, kwp, omvormer, aantalOmvormers, omvormerAuto, batterij, groepen,
+    legplan, paneel, aantal, beschikbaar, kwp, omvormer, aantalOmvormers, omvormerAuto, batterij, groepen,
     ...grenzen, dcAc, acVermogen, productie, productiePerMaand, verbruik, verbruikPerMaand,
     zelfverbruik: rond(zelf), zelfverbruikZonderBatterij: rond(zelfZonder), injectie: rond(injectie), afname: rond(afname),
     autarkie: verbruik > 0 ? rond((zelf / verbruik) * 100) : 0,
