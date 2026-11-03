@@ -104,6 +104,15 @@ export interface Vormgeving {
   rugvorm: 'recht' | 'hellend' | 'rond';
   /** Zichtbaar houten frame rond de zitting. */
   houtframe: 'geen' | 'zijkant' | 'rondom';
+  /** Dikte (diepte) van de losse rugkussens in cm. */
+  rugkussendikte: number;
+  /** Aantal losse rugkussens per element; leeg = evenveel als zitkussens (bv. één lang zitkussen met twee rugkussens). */
+  rugkussens?: number;
+  /**
+   * Hoogte van het karkas (rug en armen) bij losse rugkussens, in cm; de rugkussens steken erboven uit tot de
+   * rughoogte. Leeg = 10 cm onder de rughoogte. Bij de modellen van de klant: "totale hoogte corpus" van de website.
+   */
+  karkashoogte?: number;
   /**
    * Vrije hoogtes in cm (bv. getekend in het vooraanzicht). Leeg = volgens de gekozen opties.
    * Rughoogte en armhoogte gelden per element; zithoogte en poothoogte voor de hele zetel.
@@ -116,6 +125,7 @@ export interface Vormgeving {
 
 export const HOOGTE_BEREIK = {
   rughoogte: { min: 55, max: 110 },
+  karkashoogte: { min: 40, max: 95 },
   armhoogte: { min: 40, max: 85 },
   zithoogte: { min: 35, max: 55 },
   poothoogte: { min: 0, max: 30 },
@@ -138,13 +148,14 @@ export function hoogtesVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e?: On
   };
 }
 
-export const STANDAARD_VORMGEVING: Vormgeving = { rugdikte: 18, kussendikte: 14, zitkussens: 1, zachtheid: 4, rugvorm: 'recht', houtframe: 'geen' };
+export const STANDAARD_VORMGEVING: Vormgeving = { rugdikte: 18, kussendikte: 14, zitkussens: 1, zachtheid: 4, rugvorm: 'recht', houtframe: 'geen', rugkussendikte: 14 };
 
 export const VORMGEVING_BEREIK = {
   rugdikte: { min: 10, max: 30 },
   kussendikte: { min: 8, max: 22 },
   zitkussens: { min: 1, max: 3 },
   zachtheid: { min: 0, max: 10 },
+  rugkussendikte: { min: 10, max: 30 },
 } as const;
 
 /** Meerprijzen voor de vormgeving (per element). */
@@ -263,6 +274,18 @@ export function draagHoogteVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e:
   if (catalogus.typen.find((t) => t.code === d.type)?.tekenstijl === 'poef') return h.zithoogte - 2;
   const vaste = gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting';
   return h.zithoogte - (vaste ? 0 : vormgevingVan(ontwerp, d).kussendikte);
+}
+
+/**
+ * Hoogte (cm) van het karkas (de vaste rug achter de kussens). Met losse rugkussens: de karkashoogte uit de vormgeving
+ * (anders 10 cm onder de rughoogte), tussen 5 cm boven de zitting en de rughoogte; de kussens steken erboven uit.
+ * Zonder losse rugkussens is het karkas de rug zelf. Eén bron voor de 3D en het vooraanzicht.
+ */
+export function karkasHoogteVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement, losseRug: boolean): number {
+  const h = hoogtesVan(ontwerp, catalogus, e);
+  if (!losseRug) return h.rughoogte;
+  const v = vormgevingVan(ontwerp, e);
+  return Math.min(h.rughoogte, Math.max(h.zithoogte + 5, v.karkashoogte ?? h.rughoogte - 10));
 }
 
 /** Losse rugleuning: minstens zoveel cm boven waar ze op rust. */

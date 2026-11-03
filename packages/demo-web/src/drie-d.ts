@@ -578,10 +578,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       .map((o) => ({ x0: o.x, x1: o.x + o.b, y0: o.y, y1: o.y + o.h, z0: o.z, z1: o.z + o.d }));
   }
 
-  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1, buren: Doos[] = [], oorsprong = [0, 0, 0]) {
+  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1, buren: Doos[] = [], oorsprong = [0, 0, 0], bolMaat?: number) {
     const maat = [B, H, D];
     const plat = maat.indexOf(Math.min(B, H, D)); // as van de dunste maat: daar bolt het kussen
-    const bol = Math.min(2.2, maat[plat]! * 0.13) * vulling;
+    // Bolling: opgegeven door de opbouw (gevulde rug- en sierkussens), anders bescheiden; nooit meer dan het kussen toelaat.
+    const bol = Math.min(bolMaat ?? Math.min(2.2, maat[plat]! * 0.13), maat[plat]! * 0.4) * vulling;
     const zak = vulling === 1 && plat === 1 && B > 30 && D > 30 ? Math.min(0.9, bol * 0.45) : 0;
     const seg = (l: number) => Math.max(4, Math.min(28, Math.round(l / 3)));
     const geo = new THREE.BoxGeometry(B, H, D, seg(B), seg(H), seg(D));
@@ -1063,7 +1064,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       default:
         // Kussens gevuld en bol; bij de zetel ook de gestoffeerde armen en rug, iets minder bol.
         if (b.afronding && (b.soort === 'kussen' || (opties.zetel && b.soort === 'stof'))) {
-          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz]);
+          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz], b.bol);
           geo = kussen.geo;
           break;
         }

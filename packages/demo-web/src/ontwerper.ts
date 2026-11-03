@@ -505,6 +505,9 @@ const VORM_LABELS: Record<keyof Vormgeving, string> = {
   zachtheid: 'Zachtheid (0 = strak, 10 = heel zacht)',
   rugvorm: 'Rugvorm',
   houtframe: 'Houten frame',
+  rugkussendikte: 'Dikte rugkussens (cm)',
+  rugkussens: 'Rugkussens per element',
+  karkashoogte: 'Hoogte karkas (cm)',
   rughoogte: 'Rughoogte (cm)',
   armhoogte: 'Armhoogte (cm)',
   zithoogte: 'Zithoogte (cm)',
@@ -523,7 +526,7 @@ function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Part
   const raster = el('div', { class: 'vormraster' });
   // Voor één element: alleen wat bij dat element zichtbaar is (en aangerekend wordt), zie vormEffect in de motor.
   const toon = (veld: keyof Vormgeving) =>
-    !effect || ((veld !== 'rugdikte' && veld !== 'rugvorm') || effect.rugvorm) && (veld !== 'zitkussens' || effect.kussens) && (veld !== 'houtframe' || effect.houtframe);
+    !effect || ((veld !== 'rugdikte' && veld !== 'rugvorm') || effect.rugvorm) && (veld !== 'zitkussens' || effect.kussens) && (veld !== 'houtframe' || effect.houtframe) && (veld !== 'rugkussendikte' || effect.rug);
   for (const veld of Object.keys(VORMGEVING_BEREIK) as (keyof typeof VORMGEVING_BEREIK)[]) {
     if (!toon(veld)) continue;
     const b = VORMGEVING_BEREIK[veld];
@@ -1333,7 +1336,7 @@ export function toonOfferte() {
   const r = resultaat;
   const vak = $('#of-inhoud');
   const model = getModellen().find((x) => x.code === ontwerp.model);
-  const regels = ontwerpOmschrijving(ontwerp, getCatalogus(), getMaterialen(), r, { modelNaam: model?.naam, eur });
+  const regels = ontwerpOmschrijving(ontwerp, getCatalogus(), getMaterialen(), r, { modelNaam: model?.naam, eur, modelVormgeving: model?.ontwerp.vormgeving });
   const kaart = el('section', { class: 'kaart offertekaart' });
   // Op papier staat de merknaam bovenaan (de kop van de pagina wordt niet afgedrukt).
   const merk = document.querySelector('header .merk')?.textContent?.trim();
@@ -1555,7 +1558,7 @@ export function startOntwerper() {
   $('#o-kopieer').addEventListener('click', () => {
     // Volledige omschrijving (ook keuzes per element, getekende hoogtes, vormgeving en korting): zie core/ontwerptekst.ts.
     const model = getModellen().find((x) => x.code === ontwerp.model);
-    const tekst = ontwerpOmschrijving(ontwerp, getCatalogus(), getMaterialen(), resultaat, { modelNaam: model?.naam, eur }).join('\n');
+    const tekst = ontwerpOmschrijving(ontwerp, getCatalogus(), getMaterialen(), resultaat, { modelNaam: model?.naam, eur, modelVormgeving: model?.ontwerp.vormgeving }).join('\n');
     void kopieer(tekst, $('#o-kopieer-melding'));
   });
 

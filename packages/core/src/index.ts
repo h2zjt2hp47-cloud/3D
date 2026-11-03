@@ -28,6 +28,7 @@ export {
   vormEffect,
   type VormEffect,
   draagHoogteVan,
+  karkasHoogteVan,
   rugleuningTop,
   RUGLEUNING_MIN_BOVEN,
   gekozenOpties,

@@ -5,7 +5,7 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 import { kuipOpbouw, kuipParameters } from './kuip.js';
 
@@ -134,7 +134,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         // Rug: over de hele breedte (rug achter of voor) of als smalle strook opzij.
         const rugX = rugBoven ? x0 : e.rotatie === 90 ? x1 - 18 : x0;
         const rugB = rugBoven ? p.b : 18;
-        const frameRug = losseRug ? rugH - 10 : rugH;
+        const frameRug = karkasHoogteVan(ontwerp, catalogus, e, losseRug);
         if (v.rugvorm === 'rond' && rugBoven) pad(`${e.id}.rug`, bovenRond(rugX, top(frameRug), rugB, frameRug - P, 14), rugX, top(frameRug), rugB, frameRug - P, donker, lijn);
         else rect(`${e.id}.rug`, rugX, top(frameRug), rugB, frameRug - P, donker, { afronding: 4, ...lijn });
         if (t.tekenstijl === 'hoek') rect(`${e.id}.rug2`, e.rotatie === 0 || e.rotatie === 270 ? x0 : x1 - 18, top(frameRug), 18, frameRug - P, donker, { afronding: 4, ...lijn });
@@ -151,7 +151,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           pad(`${e.id}.capitonne`, knopen.join(' '), x0, top(rugH), p.b, rugH, donkerder(stof, 0.6), { lijndikte: 0.5 });
         }
         if (losseRug && rugBoven) {
-          const n = Math.max(1, Math.round(v.zitkussens));
+          const n = Math.max(1, Math.round(v.rugkussens ?? v.zitkussens));
           for (let i = 0; i < n; i++)
             rect(`${e.id}.rugkussen${n > 1 ? i + 1 : ''}`, x0 + 3 + (i * (p.b - 6)) / n, top(rugH), (p.b - 6) / n - (i < n - 1 ? 0.8 : 0), rugH - zithoogte + 2, stof, { afronding: 2 + zacht, ...lijn });
         }
@@ -254,7 +254,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         // Chaise longue met rugleuning: de rug op zijn plaats in het vooraanzicht (breedte uit de voetafdruk van de rug).
         const kant = t.tekenstijl === 'chaise' ? chaiseRugVan(opt) : null;
         if (kant) {
-          const frameRug = losseRug ? rugH - 10 : rugH;
+          const frameRug = karkasHoogteVan(ontwerp, catalogus, e, losseRug);
           const { rug } = chaiseRugVlak(e.breedte, e.diepte, v.rugdikte, kant);
           const w = lokaalNaarWereld(e, rug.lx, rug.ly, rug.lb, rug.ld);
           rect(`${e.id}.rug`, w.x, top(frameRug), w.b, frameRug - P, donker, { afronding: 4, ...lijn });
@@ -283,7 +283,9 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         };
         if (rugBoven && p.b > rondDeel) {
           const rx = links ? x0 + rondDeel : x0;
-          rect(`${e.id}.rug`, rx, top(rugH), p.b - rondDeel, rugH - P, donker, { afronding: v.rugvorm === 'rond' ? 12 : 4, ...lijn });
+          const karkas = karkasHoogteVan(ontwerp, catalogus, e, losseRug);
+          rect(`${e.id}.rug`, rx, top(karkas), p.b - rondDeel, karkas - P, donker, { afronding: v.rugvorm === 'rond' ? 12 : 4, ...lijn });
+          if (losseRug && p.b - rondDeel > 6) rect(`${e.id}.rugkussen`, rx + 2, top(rugH), p.b - rondDeel - 4, rugH - zithoogte + 2, stof, { afronding: 2 + zacht, ...lijn });
           maxHoogte = Math.max(maxHoogte, rugH);
         }
         pad(`${e.id}.basis`, zijRond(top(zithoogte - kussenDik), zithoogte - kussenDik - P, 18), x0, top(zithoogte - kussenDik), p.b, zithoogte - kussenDik - P, donker, lijn);

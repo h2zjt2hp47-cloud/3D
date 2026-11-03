@@ -107,7 +107,8 @@ describe('ontwerpmodus (vormgeving)', () => {
   it('lage houten bank (Kotor)', () => {
     const kotor = zetelModellen.find((m) => m.code === 'kotor')!.ontwerp;
     const s = bouw3D(kotor, zetelCatalogus, standaardMaterialen);
-    expect(s.blokken.find((b) => b.code === 'e1.bankblad')).toMatchObject({ soort: 'hout', y: 23, h: 5 });
+    // Bovenkant van de bank = zithoogte − 14 (Kotor: zithoogte 44 volgens de productpagina).
+    expect(s.blokken.find((b) => b.code === 'e1.bankblad')).toMatchObject({ soort: 'hout', y: 25, h: 5 });
   });
 });
 

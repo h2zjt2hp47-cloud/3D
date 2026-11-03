@@ -12,6 +12,8 @@ export interface OmschrijvingOpties {
   modelNaam?: string;
   /** Opmaak van een bedrag (de demo geeft "€ 1.234,56" mee). */
   eur?: (x: number) => string;
+  /** Vormgeving van het model: een zit- of poothoogte die daarmee overeenkomt, is geen maatwerk. */
+  modelVormgeving?: Partial<Vormgeving>;
 }
 
 const getal = (x: number) => x.toLocaleString('nl-BE', { maximumFractionDigits: 1 });
@@ -28,6 +30,9 @@ function vormgevingTekst(v: Partial<Vormgeving>): string[] {
   if (v.zachtheid !== undefined) delen.push(`zachtheid ${getal(v.zachtheid)} op 10`);
   if (v.rugvorm !== undefined) delen.push(`rug ${RUGVORM[v.rugvorm] ?? v.rugvorm}`);
   if (v.houtframe !== undefined) delen.push(`houten frame: ${HOUTFRAME[v.houtframe] ?? v.houtframe}`);
+  if (v.rugkussendikte !== undefined) delen.push(`rugkussens ${getal(v.rugkussendikte)} cm dik`);
+  if (v.rugkussens !== undefined) delen.push(`${Math.round(v.rugkussens)} rugkussens per element`);
+  if (v.karkashoogte !== undefined) delen.push(`karkas ${getal(v.karkashoogte)} cm hoog`);
   return delen;
 }
 
@@ -82,7 +87,11 @@ export function ontwerpOmschrijving(
   for (const g of catalogus.opties ?? []) {
     if (g.niveau !== 'ontwerp') continue;
     const maat = getekend[g.code];
-    if (maat !== undefined) { regels.push(`- ${g.label}: ${getal(maat)} cm (op maat)`); continue; }
+    if (maat !== undefined) {
+      const vanModel = opties.modelVormgeving?.[g.code as 'zithoogte' | 'poothoogte'] === maat;
+      regels.push(`- ${g.label}: ${getal(maat)} cm${vanModel ? '' : ' (op maat)'}`);
+      continue;
+    }
     const k = zetel.get(g.code);
     if (k) regels.push(`- ${g.label}: ${k.label}`);
   }
