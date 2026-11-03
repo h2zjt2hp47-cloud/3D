@@ -251,7 +251,13 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'F-Mabel2'),
   model('mabel-meridienne', 'Mabel Meridienne', FAUTEUIL, 'Meridienne met rug en arm aan één kant, bies en slanke donkere poten.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', naad: 'bies', rug: 'vast' },
-    vormgeving: { rugvorm: 'rond' }, elementen: rij([['arm', 14, 80, { armstijl: 'rond' }], ['zit', 80, 80], ['zit_zonder_rug', 90, 80]]),
+    // Eén méridienne zoals op de foto: arm links en een chaise longue met de rug langs de lange zijde (gedraaid).
+    vormgeving: { rugvorm: 'rond' },
+    elementen: [
+      el('e1', 'arm', 0, 0, 14, 80, 0, { armstijl: 'rond' }),
+      el('e2', 'chaise', 14, 0, 80, 170, 90, { chaise_rug: 'links' }),
+      sierkussen('e3', 20, 16, 'vmat_kastanje'),
+    ],
   }, 'F-MabelMeridienne'),
 
   // ---------------- Zetelbedden ----------------

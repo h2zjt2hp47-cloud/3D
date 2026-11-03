@@ -63,6 +63,14 @@ export function ontwerpOmschrijving(
     const gekozen = gekozenOpties(ontwerp, catalogus, e);
     for (const g of catalogus.opties ?? []) {
       if (g.niveau !== 'element' || (g.voorTypen && !g.voorTypen.includes(e.type))) continue;
+      // Armhoogte uit de vormgeving van het model gaat voor op de keuze (zie hoogtesVan); per element getekend staat verder.
+      if (g.code === 'armhoogte' && ontwerp.vormgeving?.armhoogte !== undefined) {
+        if (e.vorm?.armhoogte === undefined) {
+          const h = ontwerp.vormgeving.armhoogte;
+          delen.push(`armhoogte: ${getal(h)} cm${opties.modelVormgeving?.armhoogte === h ? '' : ' (op maat)'}`);
+        }
+        continue;
+      }
       const k = gekozen.get(g.code);
       // "Functie: geen" of "uitvoering: standaard" voegt niets toe; andere keuzes (ook de standaardarm) wel.
       if (!k || (k.code === g.standaard && (k.code === 'geen' || k.code === 'standaard'))) continue;
@@ -83,12 +91,13 @@ export function ontwerpOmschrijving(
 
   // Keuzes voor de hele zetel; een getekende zit- of poothoogte vervangt de gekozen maat.
   const zetel = gekozenOpties(ontwerp, catalogus);
-  const getekend: Record<string, number | undefined> = { zithoogte: ontwerp.vormgeving?.zithoogte, poothoogte: ontwerp.vormgeving?.poothoogte };
+  // Een hoogte in de vormgeving (van het model of getekend) gaat voor op de gekozen maat.
+  const getekend: Record<string, number | undefined> = { zithoogte: ontwerp.vormgeving?.zithoogte, poothoogte: ontwerp.vormgeving?.poothoogte, rughoogte: ontwerp.vormgeving?.rughoogte };
   for (const g of catalogus.opties ?? []) {
     if (g.niveau !== 'ontwerp') continue;
     const maat = getekend[g.code];
     if (maat !== undefined) {
-      const vanModel = opties.modelVormgeving?.[g.code as 'zithoogte' | 'poothoogte'] === maat;
+      const vanModel = opties.modelVormgeving?.[g.code as 'zithoogte' | 'poothoogte' | 'rughoogte'] === maat;
       regels.push(`- ${g.label}: ${getal(maat)} cm${vanModel ? '' : ' (op maat)'}`);
       continue;
     }

@@ -619,17 +619,48 @@ function toonModelNaam() {
   $('#o-model').textContent = m ? `Vertrokken van model ${m.naam}` : 'Eigen ontwerp';
 }
 
+/** Hoogtegroepen die de vormgeving kan vastleggen (maten van het model of getekend in het vooraanzicht). */
+const VASTE_HOOGTES = ['zithoogte', 'poothoogte', 'rughoogte', 'armhoogte'] as const;
+
+/**
+ * Staat deze hoogte vast in de vormgeving, dan doen de keuzes van de groep niets (de vormgeving gaat voor):
+ * de groep grijs tonen, met de maat en een knop om terug te gaan naar de keuzes.
+ */
+function hoogteVastgelegd(veld: HTMLElement, code: string) {
+  if (!(VASTE_HOOGTES as readonly string[]).includes(code)) return veld;
+  const maat = ontwerp.vormgeving?.[code as (typeof VASTE_HOOGTES)[number]];
+  if (maat === undefined) return veld;
+  veld.classList.add('vastgelegd');
+  const model = getModellen().find((x) => x.code === ontwerp.model);
+  const vanModel = model?.ontwerp.vormgeving?.[code as (typeof VASTE_HOOGTES)[number]] === maat;
+  const rij = el('div', { class: 'knoppenrij hoogtemelding' });
+  rij.append(el('span', { class: 'klein' }, `Nu ${getal(maat)} cm ${vanModel ? 'volgens het model' : 'getekend in het vooraanzicht'}; de keuzes hierboven gelden dan niet.`));
+  const terug = el('button', { type: 'button', class: 'tweede klein-knop' }, 'Terug volgens keuzes') as HTMLButtonElement;
+  terug.addEventListener('click', () => {
+    onthoud();
+    const v = { ...(ontwerp.vormgeving ?? {}) };
+    delete v[code as (typeof VASTE_HOOGTES)[number]];
+    ontwerp.vormgeving = v;
+    toonAanpassingen();
+    toonEigenschappen();
+    gewijzigd();
+  });
+  rij.append(terug);
+  veld.append(rij);
+  return veld;
+}
+
 function toonAanpassingen() {
   const vak = $('#o-aanpassingen');
   vak.replaceChildren(
     ...(getCatalogus().opties ?? [])
       .filter((g) => g.niveau === 'ontwerp')
       .map((g) =>
-        optieGroepVeld(g, ontwerp.opties?.[g.code] ?? g.standaard, 'oz', (code) => {
+        hoogteVastgelegd(optieGroepVeld(g, ontwerp.opties?.[g.code] ?? g.standaard, 'oz', (code) => {
           onthoud();
           ontwerp.opties = { ...(ontwerp.opties ?? {}), [g.code]: code };
           gewijzigd();
-        }),
+        }), g.code),
       ),
   );
 }
@@ -1245,11 +1276,11 @@ function toonEigenschappen() {
   const elementOpties = el('div', { class: 'aanpassingen' });
   for (const g of (getCatalogus().opties ?? []).filter((g) => g.niveau === 'element' && (!g.voorTypen || g.voorTypen.includes(e.type)))) {
     elementOpties.append(
-      optieGroepVeld(g, e.opties?.[g.code] ?? g.standaard, `oe-${e.id}`, (code) => {
+      hoogteVastgelegd(optieGroepVeld(g, e.opties?.[g.code] ?? g.standaard, `oe-${e.id}`, (code) => {
         onthoud();
         e.opties = { ...(e.opties ?? {}), [g.code]: code };
         gewijzigd();
-      }),
+      }), g.code),
     );
   }
   const delen: HTMLElement[] = [kop, rij];
