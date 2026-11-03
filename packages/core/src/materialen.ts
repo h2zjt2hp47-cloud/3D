@@ -21,6 +21,48 @@ export interface Materiaal {
   toeslagPct: number;
   /** Door de gebruiker toegevoegd (mag verwijderd worden). */
   eigen?: boolean;
+  // Technische gegevens van de leverancier (stofkaart), allemaal optioneel.
+  /** Merk of leverancier, bv. "Chivasso (JAB Anstoetz)". */
+  merk?: string;
+  /** Artikelnummer van de leverancier met kleur, bv. "CH3112/051". */
+  artikel?: string;
+  /** Kwaliteit, bv. "Meubelstof, geweven, epinglé / frisé". */
+  kwaliteit?: string;
+  /** Samenstelling, bv. "60% polyacryl, 24% polyester, 11% viscose, 5% linnen". */
+  samenstelling?: string;
+  /** Schuurweerstand (Martindale, aantal toeren). */
+  martindale?: number;
+  /** Op de rol te verwerken (railroaded): de breedte van de rol wordt de hoogte, dus lange stukken zonder naad. */
+  opDeRol?: boolean;
+  /** Aantal kleuren van deze stof bij de leverancier. */
+  kleurvarianten?: number;
+}
+
+/**
+ * Gebruiksklasse volgens de schuurweerstand (Martindale). Richtwaarden voor zitmeubelen, te bevestigen met de
+ * maker en de leverancier: onder 10.000 decoratief, 10.000–15.000 licht, 15.000–25.000 normaal huiselijk,
+ * 25.000–40.000 intensief huiselijk, vanaf 40.000 ook projecten (horeca, kantoor).
+ */
+export function gebruiksklasse(martindale: number | undefined): { klasse: string; zitmeubel: boolean } | undefined {
+  if (!martindale || martindale <= 0) return undefined;
+  if (martindale < 10000) return { klasse: 'decoratief (kussens, gordijnen)', zitmeubel: false };
+  if (martindale < 15000) return { klasse: 'licht gebruik', zitmeubel: false };
+  if (martindale < 25000) return { klasse: 'normaal huiselijk gebruik', zitmeubel: true };
+  if (martindale < 40000) return { klasse: 'intensief huiselijk gebruik', zitmeubel: true };
+  return { klasse: 'intensief gebruik, ook projecten (horeca, kantoor)', zitmeubel: true };
+}
+
+/** Korte stofkaart voor op het scherm en de offerte, bv. "Chivasso CH3112/051 · Martindale 50.000 · op de rol". */
+export function stofkaart(m: Materiaal): string {
+  const k = gebruiksklasse(m.martindale);
+  return [
+    [m.merk, m.artikel].filter(Boolean).join(' '),
+    m.samenstelling,
+    m.martindale ? `Martindale ${m.martindale.toLocaleString('nl-BE')}${k ? ` (${k.klasse})` : ''}` : '',
+    `${m.rolbreedte} cm breed`,
+    m.rapport ? `patroon ${m.rapport} cm` : 'effen',
+    m.opDeRol ? 'op de rol te verwerken' : '',
+  ].filter(Boolean).join(' · ');
 }
 
 /** Extra stof voor een patroonrapport (vuistregel, rapport in cm). */
@@ -92,6 +134,13 @@ export function leesMaterialen(json: string, groepen: string[]): { materialen: M
       kostprijsPerM: Number(m.kostprijsPerM ?? 0),
       toeslagPct: Number(m.toeslagPct ?? 0),
       eigen: m.eigen === true,
+      ...(typeof m.merk === 'string' ? { merk: m.merk } : {}),
+      ...(typeof m.artikel === 'string' ? { artikel: m.artikel } : {}),
+      ...(typeof m.kwaliteit === 'string' ? { kwaliteit: m.kwaliteit } : {}),
+      ...(typeof m.samenstelling === 'string' ? { samenstelling: m.samenstelling } : {}),
+      ...(Number(m.martindale) > 0 ? { martindale: Number(m.martindale) } : {}),
+      ...(m.opDeRol === true ? { opDeRol: true } : {}),
+      ...(Number(m.kleurvarianten) > 0 ? { kleurvarianten: Number(m.kleurvarianten) } : {}),
     };
     if (controleerMateriaal(kandidaat, groepen, materialen).length || materialen.some((x) => x.code === kandidaat.code)) overgeslagen++;
     else materialen.push(kandidaat);

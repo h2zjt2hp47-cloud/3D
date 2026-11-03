@@ -27,6 +27,12 @@ export const standaardMaterialen: Materiaal[] = [
   { code: 'velours_petrol', naam: 'Velours Petrol', soort: 'stof', groep: 'C', kleur: '#1f6b75', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
   { code: 'velours_bosgroen', naam: 'Velours Bosgroen', soort: 'stof', groep: 'C', kleur: '#2f4a3a', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
   { code: 'velours_oudroze', naam: 'Velours Oudroze', soort: 'stof', groep: 'C', kleur: '#c98272', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  // Echte stof (gegevens van de stofkaart van de leverancier); kleur benaderd uit de foto, kostprijs en groep verzonnen.
+  {
+    code: 'chill_zone_051', naam: 'Chill Zone 051 (blauwgrijs)', soort: 'stof', groep: 'C', kleur: '#5f7189', rapport: 0, rolbreedte: 140, kostprijsPerM: 48, toeslagPct: 0,
+    merk: 'Chivasso (JAB Anstoetz)', artikel: 'CH3112/051', kwaliteit: 'Meubelstof, geweven, epinglé / frisé',
+    samenstelling: '60% polyacryl, 24% polyester, 11% viscose, 5% linnen', martindale: 50000, opDeRol: true, kleurvarianten: 29,
+  },
   { code: 'wol_grijs', naam: 'Wol Grijs gemêleerd', soort: 'stof', groep: 'B', kleur: '#86888a', rapport: 0, rolbreedte: 140, kostprijsPerM: 44, toeslagPct: 0 },
   { code: 'leder_cognac', naam: 'Leder Cognac', soort: 'leder', groep: 'C', kleur: '#8f4f2c', rapport: 0, rolbreedte: 140, kostprijsPerM: 95, toeslagPct: 15 },
   { code: 'eigen_stof', naam: 'Eigen stof van de klant (COM)', soort: 'stof', groep: 'EIGEN', kleur: '#dcdcdc', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 0 },

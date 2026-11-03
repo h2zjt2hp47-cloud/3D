@@ -6,7 +6,7 @@
  * berekenOntwerp() controleert het ontwerp (maten, overlap, losse elementen) en
  * berekent prijs, stofverbruik per materiaal, stuklijst en tekening.
  */
-import { materiaalArtikel, patroonfactor, type Materiaal } from './materialen.js';
+import { gebruiksklasse, materiaalArtikel, patroonfactor, type Materiaal } from './materialen.js';
 import type { Melding, StuklijstResultaat, TekeningResultaat, VormResultaat } from './types.js';
 
 export type Rotatie = 0 | 90 | 180 | 270;
@@ -515,6 +515,12 @@ export function berekenOntwerp(
   const mats = new Map(materialen.map((m) => [m.code, m]));
   const hoofd = mats.get(ontwerp.hoofdmateriaal);
   if (!hoofd) meldingen.push({ code: 'materiaal.onbekend', ernst: 'fout', melding: 'Kies een hoofdmateriaal.' });
+  // Schuurweerstand: een stof die te zwak is voor een zitting (richtwaarde, zie gebruiksklasse).
+  for (const m of new Set([hoofd, ...ontwerp.elementen.map((e) => (e.materiaal ? mats.get(e.materiaal) : undefined))])) {
+    const k = m && m.soort === 'stof' ? gebruiksklasse(m.martindale) : undefined;
+    if (m && k && !k.zitmeubel)
+      meldingen.push({ code: 'materiaal.martindale', ernst: 'waarschuwing', melding: `${m.naam}: Martindale ${m.martindale!.toLocaleString('nl-BE')} is ${k.klasse}; voor een zitmeubel minstens 15.000 (richtwaarde, te bevestigen met de leverancier).` });
+  }
 
   if (ontwerp.elementen.length === 0)
     meldingen.push({ code: 'ontwerp.leeg', ernst: 'fout', melding: 'Voeg minstens één element toe of teken er een.' });

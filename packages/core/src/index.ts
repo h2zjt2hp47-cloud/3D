@@ -10,6 +10,8 @@ export {
   maakMateriaalCode,
   materiaalArtikel,
   patroonfactor,
+  gebruiksklasse,
+  stofkaart,
   type Materiaal,
 } from './materialen.js';
 export {

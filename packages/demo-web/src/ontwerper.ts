@@ -1088,7 +1088,11 @@ function herbereken(alles = true) {
   }
   regels.push(['Kostprijs', eur(r.prijs.kostprijs)], ['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)}%`]);
   regels.push(['Totale maat', `${getal(r.afmetingen.breedte, 1)} × ${getal(r.afmetingen.diepte, 1)} cm`]);
-  for (const s of r.stof) regels.push([`Stof ${s.naam}`, `${getal(s.meters, 1)} m`]);
+  for (const s of r.stof) {
+    regels.push([`Stof ${s.naam}`, `${getal(s.meters, 1)} m`]);
+    const m = getMaterialen().find((x) => x.naam === s.naam);
+    if (m?.artikel) regels.push([m.artikel, m.martindale ? `Martindale ${getal(m.martindale)}` : '']);
+  }
   $('#o-prijsdetail').replaceChildren(...regels.flatMap(([a, b]) => [el('dt', {}, a), el('dd', {}, b)]));
   const lijst = $('#o-meldingen');
   lijst.replaceChildren(...r.meldingen.map((m) => el('li', { class: m.ernst }, m.melding)));

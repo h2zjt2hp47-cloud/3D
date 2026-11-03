@@ -7,6 +7,7 @@ import {
   leesMaterialen,
   maakMateriaalCode,
   patroonfactor,
+  stofkaart,
   type Materiaal,
 } from '../../core/src/index.js';
 import { $, bevestigKnop, el, eur, getal, getMaterialen, groepen, herstelMaterialen, kopieer, opWijziging, setMaterialen } from './staat.js';
@@ -56,7 +57,8 @@ function voorbeeld() {
   const m = formulierNaarMateriaal();
   const f = patroonfactor(m.rapport) * (140 / (m.rolbreedte || 140));
   $('#m-staal').style.background = /^#[0-9a-f]{6}$/i.test(m.kleur) ? m.kleur : 'transparent';
-  $('#m-voorbeeld').textContent =
+  const bestaand = getMaterialen().find((x) => x.code === bewerkCode);
+  $('#m-voorbeeld').textContent = (bestaand?.artikel ? `${stofkaart({ ...bestaand, ...m })}. ` : '') +
     `Stofverbruik × ${getal(f, 2)} ten opzichte van een effen stof van 140 cm` +
     (m.groep === 'EIGEN' ? '. Eigen materiaal van de klant: geen aankoop, prijs volgens kolom EIGEN.' : `. Prijs volgens prijsgroep ${m.groep}.`);
 }
@@ -71,6 +73,11 @@ function toonLijst() {
       const naam = el('td');
       naam.append(staal, document.createTextNode(` ${m.naam}`));
       if (m.eigen) naam.append(el('span', { class: 'label' }, 'eigen'));
+      if (m.artikel) {
+        // Stofkaart van de leverancier: artikel, samenstelling, Martindale, op de rol.
+        naam.append(el('span', { class: 'label' }, m.artikel));
+        naam.append(el('div', { class: 'klein' }, stofkaart(m)));
+      }
       const acties = el('td', { class: 'acties-cel' });
       const bewerk = el('button', { type: 'button', class: 'tweede klein-knop' }, 'Bewerk') as HTMLButtonElement;
       bewerk.addEventListener('click', () => {
