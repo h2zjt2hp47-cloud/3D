@@ -178,11 +178,19 @@ export interface ZonProject {
   doelAantal: number | null;
   /** Bewaarde varianten om naast elkaar te tonen. */
   varianten: Variant[];
-  /** Buren voor de 3D (contour in cm in de assen van de woning, hoogte in cm), uit de kaart. */
-  omgeving: { ring: [number, number][]; hoogte: number }[];
+  /** Buren voor de 3D (cm, in de assen van de woning), uit de kaart en het hoogtemodel. */
+  omgeving: OmgevingsBlok[];
   /** Luchtfoto als ondergrond in de 3D: vierkant van `grootte` cm rond het midden, gedraaid met `draai` (radialen). */
   luchtfoto: { url: string; grootte: number; draai: number } | null;
 }
+
+/**
+ * Blok in de omgeving (cm, assen van de woning): een volume met een dak (midden x/z, breedte langs de nok,
+ * gedraaid met `draai` radialen rond de verticale as; +z van het blok = voorste dakvlak), of een contour met één hoogte.
+ */
+export type OmgevingsBlok =
+  | { x: number; z: number; breedte: number; diepte: number; draai: number; goot: number; nok: number; dakvorm: Dakvorm }
+  | { ring: [number, number][]; hoogte: number };
 
 /** Een variant: dezelfde woning, een andere installatie (panelen, omvormer, batterij, opties). */
 export interface Variant {
@@ -360,7 +368,8 @@ export function instellingVan(project: ZonProject, vlak: Dakvlak): DakvlakInstel
   const eigen = project.vlakken[vlak.id];
   const basis: DakvlakInstelling = vlak.zijde === 'plat'
     ? { ...STANDAARD_VLAK, bedekking: 'plat', ligging: 'liggend', rand: 80 }
-    : { ...STANDAARD_VLAK, actief: vlak.zijde === 'voor' || Math.abs(normHoek(vlak.azimut)) <= 100 };
+    // Standaard alleen panelen op dakvlakken met minstens 70 % van de beste opbrengst.
+    : { ...STANDAARD_VLAK, actief: standFactor(vlak.helling, vlak.azimut) >= 0.7 };
   return { ...basis, ...eigen, obstakels: eigen?.obstakels ?? [], uit: eigen?.uit ?? [] };
 }
 

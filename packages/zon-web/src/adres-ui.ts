@@ -6,7 +6,7 @@
  * - luchtfoto (WMS): ter controle en als ondergrond in de 3D.
  * Het rekenwerk zit in core/src/ligging.ts en core/src/hoogte.ts.
  */
-import { analyseerDak, gebouwHoogte, leesGeoTiff, naarLokaal, richtingVan, type DakAnalyse, type Raster } from '../../core/src/hoogte.js';
+import { analyseerDak, leesGeoTiff, naarLokaal, omgevingVan, richtingVan, type DakAnalyse, type Raster } from '../../core/src/hoogte.js';
 import { bepaalLigging, ligVoorzijde, ringenUitGeoJson, wegenUitGeoJson, type Ligging, type Ring, type Weg, type XY } from '../../core/src/ligging.js';
 import { windstreek, type Gebouw } from '../../core/src/zon.js';
 import { el, getal, knop } from './hulp.js';
@@ -174,13 +174,8 @@ function overnemen(z: Zoekresultaat) {
     const a = d.aanbouw;
     gebouwen.push({ id: 'aanbouw', naam: 'Aanbouw', dakvorm: 'plat', breedte: cm(a.breedte), diepte: cm(a.diepte), goothoogte: cm(a.hoogte), helling: 0, x: cm(a.x), z: cm(a.z) });
   }
-  // Buren: alle andere gebouwen binnen 60 m, met hun hoogte uit het hoogtemodel.
-  const omgeving = z.dsm && z.dtm
-    ? z.gebouwen.filter((g) => g !== l.gebouw).flatMap((g) => {
-      const h = gebouwHoogte(g, z.dsm!, z.dtm!);
-      return h === null ? [] : [{ ring: g.map((p) => naarLokaal(p, midden, orientatie)), hoogte: Math.round(h * 100) }];
-    })
-    : [];
+  // Buren: alle andere gebouwen binnen 60 m, met hun dak (hoofdvolume en aanbouw) uit het hoogtemodel.
+  const omgeving = z.dsm && z.dtm ? omgevingVan(z.gebouwen.filter((g) => g !== l.gebouw), z.dsm, z.dtm, midden, orientatie, l.azimut) : [];
   // Draaiing van de luchtfoto: het noorden van de foto in de assen van de woning.
   const noord = naarLokaal([midden[0], midden[1] + 1], midden, orientatie);
   const draai = Math.atan2(-noord[0], -noord[1]);

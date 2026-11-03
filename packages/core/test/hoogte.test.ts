@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { analyseerDak, gebouwHoogte, leesGeoTiff, naarLokaal, waardeOp, type Raster } from '../src/hoogte.js';
-import { bepaalLigging, ringenUitGeoJson, wegenUitGeoJson, type Ring } from '../src/ligging.js';
+import { analyseerDak, gebouwHoogte, leesGeoTiff, naarLokaal, omgevingVan, waardeOp, type Raster } from '../src/hoogte.js';
+import { bepaalLigging, kleinsteRechthoek, ringenUitGeoJson, wegenUitGeoJson, type Ring } from '../src/ligging.js';
 
 /** Raster van 1 m met een hoogtefunctie (x = oost, y = noord), grond op 0. */
 function maakRaster(x0: number, y0: number, b: number, h: number, f: (x: number, y: number) => number): Raster {
@@ -85,5 +85,28 @@ describe('dak uit het hoogtemodel', () => {
       expect(z!.helling).toBeGreaterThan(25);
       expect(z!.helling).toBeLessThan(55);
     }
+  });
+
+  it('buren met een hoog huis en een lage achterbouw (Roterijstraat 48, Kuurne)', () => {
+    const lees = (n: string) => leesGeoTiff(new Uint8Array(readFileSync(new URL(`./data/${n}.bin`, import.meta.url))));
+    const dsm = lees('roterijstraat-48-dsm'), dtm = lees('roterijstraat-48-dtm');
+    const data = JSON.parse(readFileSync(new URL('./data/ligging-harelbeke.json', import.meta.url), 'utf8'));
+    const v = data['Roterijstraat 48, 8520 Kuurne'];
+    const ringen = ringenUitGeoJson(v.gebouwen);
+    const l = bepaalLigging(v.punt, ringen, wegenUitGeoJson(v.wegen), v.straat)!;
+    const eigen = analyseerDak(l.gebouw, dsm, dtm, l.azimut)!;
+    expect(eigen.dakvorm).toBe('zadel');
+    expect(eigen.aanbouw!.hoogte).toBeLessThan(3.5);
+    // De twee buren (rijwoningen links en rechts).
+    const buren = ringen.filter((r) => r !== l.gebouw && Math.hypot(kleinsteRechthoek(r).midden[0] - l.rechthoek.midden[0], kleinsteRechthoek(r).midden[1] - l.rechthoek.midden[1]) < 7);
+    expect(buren).toHaveLength(2);
+    const blokken = omgevingVan(buren, dsm, dtm, eigen.midden, eigen.azimut);
+    const huizen = blokken.filter((b) => !('ring' in b) && b.dakvorm === 'zadel');
+    const lage = blokken.filter((b) => !('ring' in b) && b.dakvorm === 'plat');
+    expect(huizen).toHaveLength(2);
+    expect(lage).toHaveLength(2);
+    for (const b of huizen) if (!('ring' in b)) { expect(b.nok).toBeGreaterThan(950); expect(Math.abs(b.z)).toBeLessThan(150); }
+    // De platte achterbouwen zijn laag (zoals die van de woning zelf), niet zo hoog als het dak.
+    for (const b of lage) if (!('ring' in b)) { expect(b.nok).toBeLessThan(400); expect(b.z).toBeLessThan(-600); }
   });
 });

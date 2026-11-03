@@ -167,16 +167,44 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     }
 
     // Buren uit de kaart: grijze blokken met hun echte contour en hoogte (werpen ook schaduw).
-    const buurMat = new THREE.MeshStandardMaterial({ color: 0xa9a7a1, roughness: 1, transparent: true, opacity: 0.45, depthWrite: false });
+    const buurMat = new THREE.MeshStandardMaterial({ color: 0xa9a7a1, roughness: 1, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide });
     for (const b of project.omgeving ?? []) {
-      if (b.ring.length < 3) continue;
-      const vorm = new THREE.Shape(b.ring.map(([x, z]) => new THREE.Vector2(x, -z)));
-      const geo = new THREE.ExtrudeGeometry(vorm, { depth: b.hoogte, bevelEnabled: false });
-      geo.rotateX(-Math.PI / 2);
-      const m = new THREE.Mesh(geo, buurMat);
-      m.castShadow = true;
-      m.renderOrder = 2;
-      groep.add(m);
+      if ('ring' in b) {
+        if (b.ring.length < 3) continue;
+        const vorm = new THREE.Shape(b.ring.map(([x, z]) => new THREE.Vector2(x, -z)));
+        const geo = new THREE.ExtrudeGeometry(vorm, { depth: b.hoogte, bevelEnabled: false });
+        geo.rotateX(-Math.PI / 2);
+        const m = new THREE.Mesh(geo, buurMat);
+        m.castShadow = true;
+        m.renderOrder = 2;
+        groep.add(m);
+        continue;
+      }
+      // Volume met dak: vlakken in de assen van het blok, dan gedraaid en verplaatst.
+      const c = Math.cos(b.draai), sn = Math.sin(b.draai);
+      const w = (x: number, y: number, z: number): Punt => ({ x: b.x + x * c + z * sn, y, z: b.z - x * sn + z * c });
+      const B = b.breedte / 2, D = b.diepte / 2, G = b.goot, N = Math.max(b.goot, b.nok);
+      const vlakken: [number, number, number][][] = [];
+      if (b.dakvorm === 'zadel') {
+        vlakken.push(
+          [[-B, 0, D], [B, 0, D], [B, G, D], [-B, G, D]], [[B, 0, -D], [-B, 0, -D], [-B, G, -D], [B, G, -D]],
+          [[-B, 0, -D], [-B, 0, D], [-B, G, D], [-B, N, 0], [-B, G, -D]], [[B, 0, D], [B, 0, -D], [B, G, -D], [B, N, 0], [B, G, D]],
+          [[-B, G, D], [B, G, D], [B, N, 0], [-B, N, 0]], [[B, G, -D], [-B, G, -D], [-B, N, 0], [B, N, 0]],
+        );
+      } else if (b.dakvorm === 'lessenaar') {
+        vlakken.push(
+          [[-B, 0, D], [B, 0, D], [B, G, D], [-B, G, D]], [[B, 0, -D], [-B, 0, -D], [-B, N, -D], [B, N, -D]],
+          [[-B, 0, -D], [-B, 0, D], [-B, G, D], [-B, N, -D]], [[B, 0, D], [B, 0, -D], [B, N, -D], [B, G, D]],
+          [[-B, G, D], [B, G, D], [B, N, -D], [-B, N, -D]],
+        );
+      } else {
+        vlakken.push(
+          [[-B, 0, D], [B, 0, D], [B, G, D], [-B, G, D]], [[B, 0, -D], [-B, 0, -D], [-B, G, -D], [B, G, -D]],
+          [[-B, 0, -D], [-B, 0, D], [-B, G, D], [-B, G, -D]], [[B, 0, D], [B, 0, -D], [B, G, -D], [B, G, D]],
+          [[-B, G, D], [B, G, D], [B, G, -D], [-B, G, -D]],
+        );
+      }
+      for (const v of vlakken) veelhoek(v.map(([x, y, z]) => w(x, y, z)), buurMat).renderOrder = 2;
     }
 
     // Luchtfoto als ondergrond (als die er is en geladen kan worden), anders gras.
@@ -189,18 +217,20 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       vlak.receiveShadow = true;
       vlak.visible = false;
       groep.add(vlak);
-      new THREE.TextureLoader().load(f.url, (tex: any) => {
+      // De kaartdienst antwoordt soms even niet (503): nog één keer proberen, kleiner. Lukt het niet, dan blijft het gras.
+      const laad = (url: string, opnieuw: boolean) => new THREE.TextureLoader().load(url, (tex: any) => {
         tex.encoding = THREE.sRGBEncoding;
         vlak.material.map = tex;
         vlak.material.needsUpdate = true;
         vlak.visible = true;
         camera_();
-      }, undefined, () => { /* geen internet: gras blijft */ });
+      }, undefined, () => { if (opnieuw) setTimeout(() => laad(url.replace(/WIDTH=\d+&HEIGHT=\d+/, 'WIDTH=640&HEIGHT=640'), false), 1500); });
+      laad(f.url, true);
     }
 
     // Windroos op het gras.
     const ster = new THREE.Group();
-    const buurHoogte = Math.max(0, ...(project.omgeving ?? []).map((b) => b.hoogte));
+    const buurHoogte = Math.max(0, ...(project.omgeving ?? []).map((b) => ('ring' in b ? b.hoogte : b.nok)));
     const R = Math.max(700, maxX + 300);
     // Met een luchtfoto is de ligging duidelijk; anders de windstreken op het gras.
     for (const [a, letter] of (project.luchtfoto ? [] : [[180, 'N'], [0, 'Z'], [-90, 'O'], [90, 'W']]) as [number, string][]) {
@@ -290,14 +320,32 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     gepland = requestAnimationFrame(formaat);
   }).observe(houder);
 
+  let vorigeWoning = '';
+  let beste = 0; // azimut van het dakvlak met de meeste panelen
+  /** Schuin zicht vanaf de kant van het dakvlak met de meeste panelen, een beetje opzij. */
+  function zetSchuin() {
+    const d = richtingVan(beste);
+    draai = Math.atan2(d.x, d.z) + 0.5;
+    hoogte = 0.55;
+    afstand = basis;
+  }
+
   return {
     toon(project, r) {
       bouw(project, r);
+      // Andere woning (gebouwen of ligging gewijzigd): kijk schuin vanaf de kant met de meeste panelen.
+      const sleutel = JSON.stringify([project.orientatie, project.gebouwen]);
+      if (sleutel !== vorigeWoning) {
+        vorigeWoning = sleutel;
+        const best = [...r.legplan].sort((a, b) => b.aantal - a.aantal)[0];
+        beste = best && best.aantal > 0 ? (best.vlak.zijde === 'plat' ? 0 : best.vlak.azimut) : project.orientatie;
+        zetSchuin();
+      }
       formaat();
     },
     standpunt(naam) {
       // Draai 0 = recht op de voorgevel.
-      if (naam === 'schuin') { draai = 0.5; hoogte = 0.55; afstand = basis; }
+      if (naam === 'schuin') zetSchuin();
       if (naam === 'boven') { draai = 0; hoogte = 1.5; afstand = basis * 1.1; }
       if (naam === 'zon') {
         const z = richtingVan(0);

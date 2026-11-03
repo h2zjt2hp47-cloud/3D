@@ -7,7 +7,7 @@
  * Coördinaten in Lambert 72 (meter). Hoogtes in meter boven het maaiveld.
  */
 import { azimutVan, binnen, type Ring, type XY } from './ligging.js';
-import { normHoek } from './zon.js';
+import { normHoek, type OmgevingsBlok } from './zon.js';
 
 export interface Raster {
   breedte: number;
@@ -173,13 +173,18 @@ export function analyseerDak(ring: Ring, dsm: Raster, dtm: Raster, voorkeur: num
     }
     delen.push(lijst);
   });
-  delen.sort((x, y) => y.length - x.length);
+  // Hoofdvolume = het deel met het grootste volume (oppervlakte × hoogte): een hoog huis met een grotere
+  // maar lage achterbouw blijft het huis.
+  const volumeVan = (lijst: number[]) => lijst.length * mediaan(lijst.map((i) => cellen[i]!.h));
+  delen.sort((x, y) => volumeVan(y) - volumeVan(x));
   const hoofdIdx = delen[0];
   if (!hoofdIdx || hoofdIdx.length < 12) return null;
   const hoofdNr = deel[hoofdIdx[0]!]!;
   const hoofd = hoofdIdx.map((i) => cellen[i]!);
   const hoofdNok = percentiel(hoofd.map((c) => c.h), 95);
-  const tweede = delen[1] && delen[1].length >= 8 ? delen[1].map((i) => cellen[i]!) : null;
+  // Aanbouw: het grootste andere deel (in oppervlakte) van minstens 8 m².
+  const rest = delen.slice(1).filter((x) => x.length >= 8).sort((x, y) => y.length - x.length);
+  const tweede = rest[0] ? rest[0].map((i) => cellen[i]!) : null;
   const aanbouwCellen = tweede && mediaan(tweede.map((c) => c.h)) < hoofdNok - 1 ? tweede : null;
 
   // Helling en richting per cel van het hoofdvolume. Alleen waar het dak een vlak is: het verschil met de
@@ -288,8 +293,41 @@ function volume(
   };
 }
 
-/** Hoogte van een gebouw (90e percentiel van het oppervlak boven het maaiveld), voor de buren in 3D. */
-export function gebouwHoogte(ring: Ring, dsm: Raster, dtm: Raster): number | null {
+/**
+ * De buren als blokken voor de 3D, in de assen van de woning (cm). Elk gebouw krijgt dezelfde dakherkenning
+ * als de woning zelf: hoofdvolume met zijn dak en een lage aanbouw (een GRB-contour bevat vaak beide).
+ * Lukt dat niet, dan de contour met de middelste hoogte.
+ */
+export function omgevingVan(ringen: Ring[], dsm: Raster, dtm: Raster, midden: XY, orientatie: number, voorkeur = orientatie): OmgevingsBlok[] {
+  const blokken: OmgevingsBlok[] = [];
+  const cm = (m: number) => Math.round(m * 100);
+  const lokaalHoek = (azimut: number) => {
+    const n = richtingVan(azimut);
+    const [lx, lz] = naarLokaal([midden[0] + n[0], midden[1] + n[1]], midden, orientatie);
+    return Math.round(Math.atan2(lx, lz) * 1000) / 1000;
+  };
+  for (const ring of ringen) {
+    const a = analyseerDak(ring, dsm, dtm, voorkeur);
+    if (a) {
+      const [x, z] = naarLokaal(a.midden, midden, orientatie);
+      const draai = lokaalHoek(a.azimut);
+      blokken.push({ x, z, breedte: cm(a.breedte), diepte: cm(a.diepte), draai, goot: cm(a.goothoogte), nok: cm(a.nokhoogte), dakvorm: a.dakvorm });
+      if (a.aanbouw) {
+        const n = richtingVan(a.azimut), xr: XY = [-n[1], n[0]];
+        const m: XY = [a.midden[0] + xr[0] * a.aanbouw.x + n[0] * a.aanbouw.z, a.midden[1] + xr[1] * a.aanbouw.x + n[1] * a.aanbouw.z];
+        const [ax, az] = naarLokaal(m, midden, orientatie);
+        blokken.push({ x: ax, z: az, breedte: cm(a.aanbouw.breedte), diepte: cm(a.aanbouw.diepte), draai, goot: cm(a.aanbouw.hoogte), nok: cm(a.aanbouw.hoogte), dakvorm: 'plat' });
+      }
+      continue;
+    }
+    const h = gebouwHoogte(ring, dsm, dtm, 50);
+    if (h !== null) blokken.push({ ring: ring.map((p) => naarLokaal(p, midden, orientatie)), hoogte: cm(h) });
+  }
+  return blokken;
+}
+
+/** Hoogte van een gebouw boven het maaiveld (standaard het 90e percentiel van het oppervlak). */
+export function gebouwHoogte(ring: Ring, dsm: Raster, dtm: Raster, p = 90): number | null {
   const h: number[] = [], g: number[] = [];
   const xs = ring.map((p) => p[0]), ys = ring.map((p) => p[1]);
   for (let x = Math.floor(Math.min(...xs)) + 0.5; x < Math.max(...xs); x += dsm.cel) {
@@ -301,7 +339,7 @@ export function gebouwHoogte(ring: Ring, dsm: Raster, dtm: Raster): number | nul
     }
   }
   if (h.length < 3 || !g.length) return null;
-  return rond(Math.max(2.5, percentiel(h, 90) - mediaan(g)), 1);
+  return rond(Math.max(2.5, percentiel(h, p) - mediaan(g)), 1);
 }
 
 /** Lambert 72 → assen van de woning (cm): oorsprong = midden, +z = voorgevel, +x = rechts gezien van buiten. */
