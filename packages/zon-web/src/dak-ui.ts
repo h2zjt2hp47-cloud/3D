@@ -20,7 +20,7 @@ export function toonDak(houder: HTMLElement) {
     ...p.gebouwen.map((g, i) => gebouwKaart(g, i)),
     el('div', { class: 'knoppenrij' }, knop('+ Gebouw toevoegen (bv. garage of bijgebouw)', voegGebouwToe)),
     el('h2', { class: 'tussenkop' }, 'Dakvlakken en legplan'),
-    el('p', { class: 'klein' }, 'Klik op een paneel om het uit of terug aan te zetten. Panelen die een obstakel raken, vallen automatisch weg.'),
+    el('p', { class: 'klein' }, 'Klik op een paneel om het uit of terug aan te zetten. Versleep een obstakel (dakraam, schoorsteen…) naar zijn plaats; panelen die het raken, vallen automatisch weg.'),
     ...r.legplan.map((l) => vlakKaart(l)),
   );
 }
@@ -107,6 +107,58 @@ function vlakKaart(l: VlakLegplan): HTMLElement {
   for (const g of tekening.querySelectorAll<SVGGElement>('[data-sleutel]')) {
     g.addEventListener('click', () => wissel(g.dataset.sleutel!));
     g.addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') { e.preventDefault(); wissel(g.dataset.sleutel!); } });
+  }
+
+  // Obstakels verslepen (muis of vinger) of verplaatsen met de pijltjestoetsen (10 cm, met Shift 50 cm).
+  const svg = tekening as SVGSVGElement;
+  const verplaats = (id: string, dx: number, dy: number) => zet((v) => {
+    const o = v.obstakels.find((x) => x.id === id);
+    if (!o) return;
+    o.x = Math.round(Math.min(Math.max(0, o.x + dx), vlak.breedte - o.b) / 5) * 5;
+    o.y = Math.round(Math.min(Math.max(0, o.y + dy), vlak.lengte - o.h) / 5) * 5;
+  });
+  for (const g of svg.querySelectorAll<SVGGElement>('[data-obstakel]')) {
+    const id = g.dataset.obstakel!;
+    g.style.touchAction = 'none';
+    let start: { x: number; y: number } | null = null;
+    let schuif = { x: 0, y: 0 };
+    const punt = (e: PointerEvent) => {
+      const m = svg.getScreenCTM();
+      if (!m) return { x: 0, y: 0 };
+      const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+      return { x: q.x, y: q.y };
+    };
+    g.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      g.setPointerCapture(e.pointerId);
+      start = punt(e);
+      schuif = { x: 0, y: 0 };
+      g.classList.add('sleept');
+    });
+    g.addEventListener('pointermove', (e) => {
+      if (!start) return;
+      const q = punt(e);
+      schuif = { x: q.x - start.x, y: q.y - start.y };
+      g.setAttribute('transform', `translate(${schuif.x} ${schuif.y})`);
+    });
+    const los = () => {
+      if (!start) return;
+      start = null;
+      g.classList.remove('sleept');
+      // In de tekening loopt y naar beneden; op het dak meten we vanaf de goot (naar boven).
+      if (Math.hypot(schuif.x, schuif.y) >= 2) verplaats(id, schuif.x, -schuif.y);
+      else g.removeAttribute('transform');
+    };
+    g.addEventListener('pointerup', los);
+    g.addEventListener('pointercancel', los);
+    g.addEventListener('keydown', (e) => {
+      const stap = e.shiftKey ? 50 : 10;
+      const d = ({ ArrowLeft: [-stap, 0], ArrowRight: [stap, 0], ArrowUp: [0, stap], ArrowDown: [0, -stap] } as Record<string, [number, number]>)[e.key];
+      if (!d) return;
+      e.preventDefault();
+      verplaats(id, d[0], d[1]);
+      requestAnimationFrame(() => (document.querySelector(`[data-obstakel="${CSS.escape(id)}"]`) as SVGGElement | null)?.focus());
+    });
   }
 
   const instellingen = el('div', { class: 'raster3' },

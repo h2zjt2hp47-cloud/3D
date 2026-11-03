@@ -25,10 +25,13 @@ export function legplanSvg(l: VlakLegplan, o: { klikbaar?: boolean } = {}): stri
   if (vlak.zijde === 'plat') delen.push(`<rect x="-8" y="-8" width="${W + 16}" height="${L + 16}" fill="none" stroke="#777" stroke-width="8"/>`);
   const r = instelling.rand;
   delen.push(`<rect x="${r}" y="${r}" width="${Math.max(0, W - 2 * r)}" height="${Math.max(0, L - 2 * r)}" fill="none" stroke="#fff" stroke-opacity=".7" stroke-dasharray="10 8" stroke-width="2"/>`);
+  // Obstakels bovenop de panelen, zodat je ze altijd kunt vastnemen en verslepen.
+  const obstakels: string[] = [];
   for (const ob of instelling.obstakels) {
     const kleur = ob.soort === 'dakraam' ? '#9fc3d6' : ob.soort === 'schoorsteen' ? '#8d5b46' : ob.soort === 'dakkapel' ? '#d7d2c8' : '#777';
-    delen.push(`<g class="obstakel"><rect x="${ob.x}" y="${r1(y(ob.y + ob.h))}" width="${ob.b}" height="${ob.h}" fill="${kleur}" stroke="#333" stroke-width="2"/>`
-      + `<text x="${ob.x + ob.b / 2}" y="${r1(y(ob.y + ob.h / 2))}" font-size="${Math.min(22, ob.b / 4)}" text-anchor="middle" dominant-baseline="middle" fill="#222">${OBSTAKEL_NAAM[ob.soort]}</text></g>`);
+    const sleep = o.klikbaar ? ` data-obstakel="${esc(ob.id)}" tabindex="0" role="button" aria-label="${OBSTAKEL_NAAM[ob.soort]}: slepen of met de pijltjestoetsen verplaatsen"` : '';
+    obstakels.push(`<g class="obstakel"${sleep}><rect x="${ob.x}" y="${r1(y(ob.y + ob.h))}" width="${ob.b}" height="${ob.h}" fill="${kleur}" stroke="#333" stroke-width="2"/>`
+      + `<text x="${ob.x + ob.b / 2}" y="${r1(y(ob.y + ob.h / 2))}" font-size="${Math.min(22, ob.b / 4)}" text-anchor="middle" dominant-baseline="middle" fill="#222" pointer-events="none">${OBSTAKEL_NAAM[ob.soort]}</text></g>`);
   }
   for (const x of l.panelen) {
     const yy = r1(y(x.v + x.d));
@@ -52,6 +55,7 @@ export function legplanSvg(l: VlakLegplan, o: { klikbaar?: boolean } = {}): stri
       delen.push(`<g class="paneel uit"${attr}><rect x="${x.u + 2}" y="${yy + 2}" width="${x.b - 4}" height="${x.d - 4}" fill="#ffffff" fill-opacity=".25" stroke="#fff" stroke-width="3" stroke-dasharray="8 6"/></g>`);
     }
   }
+  delen.push(...obstakels);
   // Maten en labels.
   const fs = Math.max(20, Math.min(30, W / 28));
   delen.push(`<g font-size="${fs}" fill="#444" text-anchor="middle">`

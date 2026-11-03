@@ -119,6 +119,9 @@ fieldset.keuzes legend { width: 100%; }
 .tekening { background: var(--papier); border-radius: 6px; padding: 8px; display: grid; place-items: center; margin-top: 4px; }
 .tekening svg { width: 100%; height: auto; max-height: 460px; }
 .legplan .paneel { cursor: pointer; }
+.legplan .obstakel[data-obstakel] { cursor: grab; }
+.legplan .obstakel.sleept { cursor: grabbing; opacity: .85; }
+.legplan .obstakel[data-obstakel]:focus-visible rect { stroke: var(--zon); stroke-width: 6; }
 .legplan .paneel.uit:hover rect { fill-opacity: .55; }
 .legplan .paneel.aan:hover rect { fill: #2c4560; }
 .legplan .paneel:focus-visible rect { stroke: var(--zon); stroke-width: 6; }
