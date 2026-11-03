@@ -49,6 +49,11 @@ export interface Blok {
   weefsel?: string;
   /** Kussens: afwerking van de randen (naad, bies of sierstiksel) en de kleur van de bies. */
   naad?: { soort: 'naad' | 'bies' | 'stiksel'; kleur: string };
+  /**
+   * Vorm in het grondvlak als die geen rechthoek is (bv. een rechte zitting met een ronde kant): punten [x, z] in cm,
+   * in wereldcoördinaten, rondom. x/z/b/d blijven het omsluitende kader.
+   */
+  omtrek?: [number, number][];
 }
 
 export interface Scene3D {
@@ -250,20 +255,45 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         houtframe(zithoogte + 2);
         break;
       case 'rond': {
+        // Afgerond eindelement: basis en zitkussen elk uit één stuk, recht met een halve cirkel aan de ronde kant.
         const links = String(te('ronde_kant', 'kant', 'links')) === 'links';
         const r = Math.min(D / 2, B);
         const recht = B - r;
-        const cilinder = (code: string, soort: BlokSoort, y: number, h: number, rr: number, kleur: string) => {
-          const w = lokaalNaarWereld(e, (links ? r : recht) - rr, D / 2 - rr, rr * 2, rr * 2);
-          blokken.push({ code: `${e.id}.${code}`, soort, vorm: 'cilinder', x: r2(w.x), y: r2(y), z: r2(w.y), b: r2(w.b), h: r2(h), d: r2(w.h), kleur });
+        const cx = links ? r : recht;
+        const punt = (lx: number, ly: number): [number, number] => {
+          const w = lokaalNaarWereld(e, lx, ly, 0, 0);
+          return [r2(w.x), r2(w.y)];
         };
-        const rx = links ? r : 0;
-        lokaal('basis', 'stof', rx, 0, recht, D, P, basisH, donker, { afronding: 2 });
-        cilinder('basis-rond', 'stof', P, basisH, r, donker);
+        /** Halve cirkel rond (cx, cz) van hoek a0 tot a1 (graden), in lokale coördinaten. */
+        const boog = (cz: number, straal: number, a0: number, a1: number) => {
+          const uit: [number, number][] = [];
+          for (let i = 0; i <= 24; i++) {
+            const a = ((a0 + ((a1 - a0) * i) / 24) * Math.PI) / 180;
+            uit.push([cx + straal * Math.cos(a), cz + straal * Math.sin(a)]);
+          }
+          return uit;
+        };
+        const blokUit = (code: string, soort: BlokSoort, y: number, h: number, kleur: string, lokaleOmtrek: [number, number][], extra: Partial<Blok>) => {
+          const omtrek = lokaleOmtrek.map(([lx, ly]) => punt(lx, ly));
+          const xs = omtrek.map((q) => q[0]), zs = omtrek.map((q) => q[1]);
+          const x0 = Math.min(...xs), z0 = Math.min(...zs);
+          blokken.push({ code: `${e.id}.${code}`, soort, vorm: 'blok', x: r2(x0), y: r2(y), z: r2(z0), b: r2(Math.max(...xs) - x0), h: r2(h), d: r2(Math.max(...zs) - z0), kleur, omtrek, ...extra });
+        };
+        // Basis: over de hele voetafdruk.
+        const basisOmtrek: [number, number][] = links
+          ? [[B, 0], [B, D], ...boog(D / 2, r, 90, 270)]
+          : [[0, 0], ...boog(D / 2, r, -90, 90), [0, D]];
+        blokUit('basis', 'stof', P, basisH, donker, basisOmtrek, { afronding: 2 });
         if (kussenDik) {
-          lokaal('zitkussen', 'kussen', rx, RUG, recht, D - RUG - 1, zithoogte - kussenDik, kussenDik, stof, { afronding: zacht });
-          cilinder('zitkussen-rond', 'kussen', zithoogte - kussenDik, kussenDik, r - 1, stof);
+          const kr = r - 1;
+          // Bolle vorm (rechthoek + halve cirkel): het rechte deel loopt achter tot onder de rug (daar onzichtbaar),
+          // zo blijft het bovenvlak één gladde welving zonder inham.
+          const kussenOmtrek: [number, number][] = links
+            ? [[B - 0.5, 1], [B - 0.5, D - 1], ...boog(D / 2, kr, 90, 270)]
+            : [[0.5, 1], ...boog(D / 2, kr, -90, 90), [0.5, D - 1]];
+          blokUit('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, kussenOmtrek, { afronding: zacht });
         }
+        const rx = links ? r : 0;
         if (recht > 0) lokaal('rug', 'stof', rx, 0, recht, RUG, P, frameRug - P, stof, rugExtra);
         break;
       }
@@ -351,7 +381,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     const naad: Blok['naad'] = naadTeken?.bies
       ? { soort: 'bies', kleur: naadTeken.contrast ? '#2b2622' : stof }
       : naadTeken?.stiksel ? { soort: 'stiksel', kleur: donkerder(stof, 0.6) } : { soort: 'naad', kleur: donkerder(stof, 0.7) };
-    for (const b of blokken.slice(eersteBlok)) if (b.soort === 'kussen' && b.kleur === stof && (b.vorm ?? 'blok') === 'blok') b.naad = naad;
+    for (const b of blokken.slice(eersteBlok)) if (b.soort === 'kussen' && b.kleur === stof && ((b.vorm ?? 'blok') === 'blok' || (b.vorm === 'cilinder' && !b.as))) b.naad = naad;
     if (m) for (const b of blokken.slice(eersteBlok)) if ((b.soort === 'stof' || b.soort === 'kussen') && b.kleur === stof) {
       if (m.textuur) { b.textuur = m.textuur; b.textuurCm = m.textuurCm ?? 15; }
       else b.weefsel = weefselVan(m);

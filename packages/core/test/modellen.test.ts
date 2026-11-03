@@ -77,7 +77,19 @@ describe('ontwerpmodus (vormgeving)', () => {
     const r = bereken(doha);
     expect(r.tekening.vormen.find((v) => v.code === 'e1.zit')?.pad).toMatch(/^M.* Z$/);
     const s = bouw3D(doha, zetelCatalogus, standaardMaterialen);
-    expect(s.blokken.find((b) => b.code === 'e1.basis-rond')).toMatchObject({ vorm: 'cilinder' });
+    // Basis en zitkussen elk uit één stuk met een ronde kant (omtrek), niet meer een losse cilinder.
+    const basis = s.blokken.find((b) => b.code === 'e1.basis')!;
+    expect(basis.omtrek!.length).toBeGreaterThan(20);
+    expect(s.blokken.some((b) => b.code === 'e1.basis-rond' || b.code === 'e1.zitkussen-rond')).toBe(false);
+    const kussen = s.blokken.find((b) => b.code === 'e1.zitkussen')!;
+    expect(kussen.omtrek!.length).toBeGreaterThan(20);
+    // De omtrek valt binnen het omsluitende kader.
+    for (const [x, z] of kussen.omtrek!) {
+      expect(x).toBeGreaterThanOrEqual(kussen.x - 0.01); expect(x).toBeLessThanOrEqual(kussen.x + kussen.b + 0.01);
+      expect(z).toBeGreaterThanOrEqual(kussen.z - 0.01); expect(z).toBeLessThanOrEqual(kussen.z + kussen.d + 0.01);
+    }
+    // De ronde kant reikt tot de rand van het element (halve cirkel met straal = halve diepte).
+    expect(Math.min(...basis.omtrek!.map((q) => q[0]))).toBeCloseTo(0, 1);
   });
 
   it('lage houten bank (Kotor)', () => {
