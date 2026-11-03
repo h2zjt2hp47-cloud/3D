@@ -145,8 +145,10 @@ export const LICHTEN = {
     hdr: { boven: [0.55, 0.57, 0.6], onder: [0.08, 0.08, 0.08], bronnen: [[[0, 1, 0], 70, 1.2, [1, 1, 1]]] },
   },
   avond: {
-    label: 'Avond', zon: '#ffb36e', zonSterkte: 0.35, hoogte: 0.5, hemel: 0.1, hemelKleur: '#8f8aa8', omgeving: 0.22, lamp: 1,
-    hdr: { boven: [0.05, 0.04, 0.045], onder: [0.02, 0.016, 0.013], bronnen: [[[0.85, 0.5, -0.2], 18, 3, [1, 0.72, 0.45]], [[-0.9, 0.2, 0.3], 22, 0.5, [0.55, 0.62, 0.9]]] },
+    label: 'Avond', zon: '#ffc994', zonSterkte: 0.4, hoogte: 0.5, hemel: 0.18, hemelKleur: '#bcb1a6', omgeving: 0.32, lamp: 1,
+    // Zonder wanden (studio, terras): een donkere, warme achtergrond waarin de vloer wegloopt (gedimde fotostudio).
+    achtergrond: '#2f2925',
+    hdr: { boven: [0.06, 0.05, 0.043], onder: [0.022, 0.018, 0.015], bronnen: [[[0.85, 0.5, -0.2], 18, 3, [1, 0.8, 0.6]], [[-0.9, 0.2, 0.3], 22, 0.3, [0.7, 0.74, 0.9]]] },
   },
   spots: {
     label: 'Toonzaal (spots)', zon: '#fff6ea', zonSterkte: 0.95, hoogte: 2.2, hemel: 0.18, hemelKleur: '#fff8f0', omgeving: 0.4, lamp: 0,
@@ -236,7 +238,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   const hemel = new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34 * PI);
   scene.add(hemel);
   // Warme lamp (bij de staanlamp in het decor), alleen aan bij de lichtsfeer "Avond".
-  const lamp = new THREE.PointLight(0xffc58a, 0, 600, 0);
+  // Lamplicht neemt af met de afstand (verval 1): een lichtplas rond de lamp, zoals in het echt.
+  const lamp = new THREE.PointLight(0xffd2a0, 0, 900, 1);
   lamp.castShadow = false;
   scene.add(lamp);
   const zon = new THREE.DirectionalLight(0xffffff, 0.8 * PI);
@@ -1216,7 +1219,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       tapijt: w.tapijt === 'decor' ? basis.tapijt : w.tapijt === 'geen' ? undefined : { ...(basis.tapijt ?? {}), kleur: w.tapijt },
     };
     if (w.muur === 'geen') dc.wanden = undefined;
-    const bg = opties.zetel ? dc.achtergrond : '#f2f1ed';
+    // Avond zonder wanden: achtergrond donker en warm (anders een lichte lucht boven een donkere vloer: een bruine brij).
+    const lichtBg = (LICHTEN[lichtNaam] as { achtergrond?: string }).achtergrond;
+    const bg = !opties.zetel ? '#f2f1ed' : lichtBg && !dc.wanden ? lichtBg : dc.achtergrond;
     scene.background = new THREE.Color(bg);
     if (opties.zetel) {
       // Mist in de kleur van de achtergrond: de vloer loopt zacht weg, geen harde horizon.
@@ -1224,8 +1229,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       scene.fog.color.set(bg);
     }
     lamp.intensity = 0;
+    const k0 = s?.kader ?? kader;
+    /** Warme lamp net buiten beeld (rechts voor, boven de zetel) als het decor zelf geen lamp heeft. */
+    const virtueleLamp = () => {
+      if (!opties.zetel || !LICHTEN[lichtNaam].lamp) return;
+      lamp.position.set(k0.x + k0.b + 70, 175, k0.z + k0.d + 90);
+      lamp.intensity = LICHTEN[lichtNaam].lamp * 1.7 * PI * 190;
+    };
     if (!opties.zetel || !dc.vloer) {
       vloer.material = studioVloer;
+      virtueleLamp();
       zetLicht();
       return;
     }
@@ -1239,7 +1252,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     kamerDelen.push(...r.delen);
     decorWanden = r.wanden;
     decorMarge = r.schaduwMarge;
-    if (r.lamp) { lamp.position.set(...r.lamp); lamp.intensity = LICHTEN[lichtNaam].lamp * 1.4 * PI; }
+    if (r.lamp) { lamp.position.set(...r.lamp); lamp.intensity = LICHTEN[lichtNaam].lamp * 1.4 * PI * 150; }
+    else virtueleLamp();
     scene.add(...kamerDelen);
     schaduwOpnieuw();
     zetLicht();
