@@ -713,7 +713,7 @@ function start3DInstellingen() {
     voortgang.hidden = false;
     $<HTMLButtonElement>('#o-3d-fotoreal').disabled = true;
     const tablet = window.matchMedia?.('(pointer: coarse)').matches;
-    const url = await viewer.fotoRealistisch({ stappen: tablet ? 48 : 160, breedte: tablet ? 1400 : 2000, signaal: bezig.signal, opVoortgang: (d) => { balk.value = d; } });
+    const url = await viewer.fotoRealistisch({ stappen: tablet ? 32 : 96, breedte: tablet ? 1400 : 2000, signaal: bezig.signal, opVoortgang: (d) => { balk.value = d; } });
     voortgang.hidden = true;
     $<HTMLButtonElement>('#o-3d-fotoreal').disabled = false;
     bezig = null;

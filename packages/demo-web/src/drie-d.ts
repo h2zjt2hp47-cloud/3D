@@ -184,6 +184,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   renderer.shadowMap.enabled = true;
   // Zetel: zachte schaduwen (VSM, vervaagd); woning: scherpe PCF-schaduwen zoals voorheen.
   renderer.shadowMap.type = opties.zetel ? THREE.VSMShadowMap : THREE.PCFSoftShadowMap;
+  // Schaduwen alleen opnieuw berekenen als de scène of het licht verandert, niet bij elke camerabeweging.
+  renderer.shadowMap.autoUpdate = false;
+  const schaduwOpnieuw = () => { renderer.shadowMap.needsUpdate = true; };
   houder.replaceChildren(renderer.domElement);
   renderer.domElement.style.touchAction = 'none';
 
@@ -934,6 +937,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       }
     }
     scene.add(...kamerDelen);
+    schaduwOpnieuw();
     zetLicht();
   }
   function zetLicht() {
@@ -953,6 +957,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     zetZon();
   }
   function zetZon() {
+    schaduwOpnieuw();
     const grootte = Math.max(kader.b, kader.d, 120);
     const h = LICHTEN[lichtNaam].hoogte;
     const a = (weergave.zonRichting * Math.PI) / 180;
@@ -1141,7 +1146,14 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   const metNabewerking = () => opties.zetel && kwaliteitNu === 'mooi' && composer;
   // Tijdens draaien en zoomen: het snelle beeld; 180 ms na de laatste beweging één keer het mooie beeld (met GTAO).
   let mooiGepland = 0;
+  // Veel aanvragen kort na elkaar (slepen, schuifregelaar) worden samengevoegd tot één beeld per schermverversing.
+  let beeldGepland = 0;
   function render(direct = false) {
+    if (bezigMetFoto) return;
+    if (direct) { cancelAnimationFrame(beeldGepland); beeldGepland = 0; tekenNu(true); return; }
+    if (!beeldGepland) beeldGepland = requestAnimationFrame(() => { beeldGepland = 0; tekenNu(false); });
+  }
+  function tekenNu(direct: boolean) {
     if (bezigMetFoto) return;
     if (!metNabewerking()) { renderer.render(scene, camera); return; }
     if (direct) { clearTimeout(mooiGepland); composer.render(); return; }
@@ -1152,8 +1164,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
   let kwaliteitNu: Kwaliteit = 'mooi';
+  /** Grootste beeldbreedte die de grafische kaart aankan (sommige tablets: 4096), met wat marge. */
+  const maxBreedte = () => Math.min(2400, (renderer.capabilities?.maxTextureSize ?? 4096) - 64);
   let weergave: Weergave3D = { ...STANDAARD_WEERGAVE };
   let markeerId: string | null = null;
+  let decorGepland = 0;
   let markeerKader: any = null;
   const matenGroep = new THREE.Group();
   scene.add(matenGroep);
@@ -1169,6 +1184,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       }
       sceneBlokken = s.blokken;
       for (const b of s.blokken) groep.add(mesh(b));
+      schaduwOpnieuw();
       zetContactschaduw(s);
       const nieuw = s.kader;
       const veranderd = Math.abs(nieuw.b - kader.b) > 1 || Math.abs(nieuw.d - kader.d) > 1 || Math.abs(nieuw.x - kader.x) > 1 || Math.abs(nieuw.z - kader.z) > 1;
@@ -1209,6 +1225,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       zon.shadow.mapSize.set(maat, maat);
       zon.shadow.map?.dispose();
       zon.shadow.map = null;
+      schaduwOpnieuw();
       viewer.formaat();
     },
     foto() {
@@ -1216,7 +1233,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       try {
         const oud = renderer.getPixelRatio();
         const b = houder.clientWidth || 600;
-        renderer.setPixelRatio(Math.max(3, 2400 / b));
+        renderer.setPixelRatio(Math.min(Math.max(3, 2400 / b), maxBreedte() / b));
         viewer.formaat();
         render(true);
         const url = renderer.domElement.toDataURL('image/png');
@@ -1230,6 +1247,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     async fotoRealistisch({ stappen, breedte = 1800, opVoortgang, signaal }) {
       const oudRatio = renderer.getPixelRatio();
       const oudMist = scene.fog, oudContact = contact.visible, oudIntensiteit = scene.environmentIntensity;
+      const oudMaten = matenGroep.visible, oudKader = markeerKader?.visible;
       bezigMetFoto = true;
       try {
         pathTracer ??= new WebGLPathTracer(renderer);
@@ -1239,20 +1257,25 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         // De path tracer kent geen mist, geen hemellicht en geen schaduwvlak (hij rekent echte contactschaduw).
         scene.fog = null;
         contact.visible = false;
+        // Maatlijnen en het selectiekader horen niet op de foto.
+        matenGroep.visible = false;
+        if (markeerKader) markeerKader.visible = false;
         scene.environmentIntensity = OMGEVING * 1.15;
         // Geen gebakken schaduw in de hoekpunten: de path tracer rekent de echte; en hij leest ze verkeerd (zwart).
         for (const m of materialen.values()) if (m?.vertexColors) { m.vertexColors = false; m.userData.vcTerug = true; }
         const b = houder.clientWidth || 600;
-        renderer.setPixelRatio(Math.max(1, breedte / b));
+        renderer.setPixelRatio(Math.max(1, Math.min(breedte, maxBreedte()) / b));
         viewer.formaat();
         // Eerst de voortgangsbalk laten tekenen; het opbouwen van de scène (BVH) blokkeert even.
         await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
         pt.setScene(scene, camera);
-        while (pt.samples < stappen) {
+        // Tot het aantal stappen, of na 75 s rekentijd (dan is het beeld al ruim bruikbaar).
+        const start = performance.now();
+        while (pt.samples < stappen && performance.now() - start < 75000) {
           if (signaal?.aborted) return null;
           await new Promise((r) => requestAnimationFrame(r));
           pt.renderSample();
-          opVoortgang?.(Math.min(1, pt.samples / stappen));
+          opVoortgang?.(Math.min(1, Math.max(pt.samples / stappen, (performance.now() - start) / 75000)));
         }
         return renderer.domElement.toDataURL('image/png');
       } catch (fout) {
@@ -1263,6 +1286,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         for (const m of materialen.values()) if (m?.userData?.vcTerug) { m.vertexColors = true; delete m.userData.vcTerug; m.needsUpdate = true; }
         scene.fog = oudMist;
         contact.visible = oudContact;
+        matenGroep.visible = oudMaten;
+        if (markeerKader && oudKader !== undefined) markeerKader.visible = oudKader;
         scene.environmentIntensity = oudIntensiteit;
         renderer.setPixelRatio(oudRatio);
         viewer.formaat();
@@ -1281,18 +1306,25 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       plaatsCamera();
     },
     instellen(w) {
+      // Alleen opnieuw opbouwen wat veranderd is: een schuifregelaar mag het decor niet bij elke stap herbouwen.
       const oud = weergave;
       weergave = { ...weergave, ...w };
-      if (w.lens !== undefined && w.lens !== oud.lens) {
+      if (weergave.lens !== oud.lens) {
         // Zelfde beeldvulling houden bij een andere lens.
         afstand *= Math.tan((oud.lens * Math.PI) / 360) / Math.tan((weergave.lens * Math.PI) / 360);
         camera.fov = weergave.lens;
         camera.updateProjectionMatrix();
       }
       renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
+      if (weergave.zonRichting !== oud.zonRichting) zetZon();
+      if (weergave.maten !== oud.maten) zetMaten();
       if (weergave.draaien && !draaiLoopt) requestAnimationFrame(draaiLus);
-      zetDecor(null);
-      zetMaten();
+      const decorAnders = (['vloer', 'muur', 'tapijt', 'spullen'] as const).some((k) => weergave[k] !== oud[k]) || !Object.keys(w).length;
+      if (decorAnders) {
+        // Kleurkiezers geven veel tussenwaarden: het decor pas na een korte rust herbouwen.
+        clearTimeout(decorGepland);
+        decorGepland = window.setTimeout(() => { zetDecor(null); render(); }, 120);
+      }
       plaatsCamera();
     },
     markeer(id) {
