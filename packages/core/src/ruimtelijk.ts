@@ -42,6 +42,9 @@ export interface Blok {
   zijden?: Partial<Record<BlokZijde, { soort: BlokSoort; kleur: string; voeg?: string }>>;
   /** Voegkleur bij metselwerk (soort steen). */
   voeg?: string;
+  /** Foto als textuur (bv. de stof) en hoeveel cm één tegel ervan is. */
+  textuur?: string;
+  textuurCm?: number;
 }
 
 export interface Scene3D {
@@ -77,6 +80,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     const m = mats.get(materiaalVan(ontwerp, catalogus, e)) || mats.get(ontwerp.hoofdmateriaal);
     const stof = m?.kleur ?? '#cccccc';
     const B = e.breedte, D = e.diepte;
+    const eersteBlok = blokken.length;
 
     /** Blok in lokale coördinaten (lx langs de breedte, ly van rug naar voor) → wereld. */
     const lokaal = (code: string, soort: BlokSoort, lx: number, ly: number, lb: number, ld: number, y: number, h: number, kleur: string, extra: Partial<Blok> = {}) => {
@@ -304,6 +308,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         break;
       }
     }
+    // Stoffoto als textuur op alle stofdelen van dit element (zitting, rug, armen, kussens).
+    if (m?.textuur) for (const b of blokken.slice(eersteBlok)) if ((b.soort === 'stof' || b.soort === 'kussen') && b.kleur === stof) { b.textuur = m.textuur; b.textuurCm = m.textuurCm ?? 15; }
   }
 
   const afdrukken = ontwerp.elementen.map(voetafdruk);

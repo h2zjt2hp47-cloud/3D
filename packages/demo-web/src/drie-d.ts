@@ -274,9 +274,24 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     uv.needsUpdate = true;
   }
 
-  const materiaal = (b: { soort: Blok['soort']; kleur: string; voeg?: string }) => {
-    const sleutel = `${b.soort}:${b.kleur}:${b.voeg ?? ''}`;
+  const fotoTexturen = new Map<string, any>();
+  const materiaal = (b: { soort: Blok['soort']; kleur: string; voeg?: string; textuur?: string }) => {
+    const sleutel = `${b.soort}:${b.kleur}:${b.voeg ?? ''}:${b.textuur ? b.textuur.length + b.textuur.slice(-24) : ''}`;
     let m = materialen.get(sleutel);
+    if (!m && b.textuur) {
+      // Stoffoto: één keer laden, herhalen in wereldmaat (zie wereldUV), opnieuw tekenen zodra ze binnen is.
+      let t = fotoTexturen.get(b.textuur);
+      if (!t) {
+        t = new THREE.TextureLoader().load(b.textuur, () => render());
+        // Gespiegeld herhalen: een staalfoto is niet naadloos, zo zie je geen ruitjes op de grenzen.
+        t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
+        t.encoding = THREE.sRGBEncoding;
+        t.anisotropy = 4;
+        fotoTexturen.set(b.textuur, t);
+      }
+      m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: t });
+      materialen.set(sleutel, m);
+    }
     if (!m) {
       if (b.soort === 'metaal') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), metalness: 0.85, roughness: 0.3 });
       else if (b.soort === 'hout') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.55 });
@@ -358,6 +373,8 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
           if (maten.some(Boolean)) wereldUV(geo, maten, cx, b.y, cz);
         }
     }
+    // Stoffoto: textuur op ware grootte op elk vlak, ook bij afgeronde kussens en cilinders.
+    if (b.textuur) { const tegel = { b: b.textuurCm ?? 15, h: b.textuurCm ?? 15 }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     let mat: any = materiaal(b);
     if (b.zijden && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
       // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z.

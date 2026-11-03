@@ -36,6 +36,10 @@ export interface Materiaal {
   opDeRol?: boolean;
   /** Aantal kleuren van deze stof bij de leverancier. */
   kleurvarianten?: number;
+  /** Foto van de stof als textuur in de 3D (data-URL of webadres). */
+  textuur?: string;
+  /** Hoeveel cm stof de foto toont (één tegel van de textuur), bv. 15. */
+  textuurCm?: number;
 }
 
 /**
