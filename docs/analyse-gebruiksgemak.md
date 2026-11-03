@@ -262,7 +262,7 @@ Er waren geen foutmeldingen in de pagina. Herladen bewaart het ontwerp. *Alles w
 | 10.8 | **"(per element)"** achter *Poten*, *Zitcomfort*, *Rug*, *Rughoogte* en *Naden* las als "per element te kiezen". In werkelijkheid is het één keuze voor de hele zetel, per element aangerekend. | middel | **Opgelost:** de toevoeging is weg en de meerprijs toont "+€12 per element". |
 | 10.9 | **Een stof verwijderen die in je ontwerp zit:** die werd zonder melding vervangen door de eerste stof van de lijst, en de prijs veranderde mee. | middel | **Opgelost:** de knop vraagt "In gebruik: toch weg?". Elementen met die stof volgen daarna weer het hoofdmateriaal. |
 | 10.10 | **Elemententabel:** de prijs per element viel buiten de kolom. Bovendien stond de prijs in de tabel vóór korting, en bij het gekozen element na korting. | middel | **Opgelost:** de stof staat onder de naam, de prijs is zichtbaar, en overal geldt dezelfde prijs (na korting). |
-| 10.11 | **Tablet:** knoppen, keuzes en velden waren 27–39 px hoog (*Bewerk* 27 px, menu 39 px). Op een aanraakscherm moet dat minstens 44 px zijn. | middel | **Opgelost** voor aanraakschermen: alle knoppen, keuzes, velden, stalen, inklapkoppen en zoomknoppen. |
+| 10.11 | **Tablet:** 117 knoppen, keuzes en velden waren 27–39 px hoog (*Bewerk* 27 px, menu 39 px). Op een aanraakscherm moet dat minstens 44 px zijn. | middel | **Opgelost** voor aanraakschermen: alle knoppen, keuzes, velden, stalen, inklapkoppen en zoomknoppen. Bij de laatste audit waren er op tablet en telefoon nog 0 te kleine doelen. |
 | 10.12 | **Telefoon:** *Vrij ontwerp* was 31 px breder dan het scherm. De zoomknoppen pasten niet, dus de hele pagina schoof zijwaarts. | middel | **Opgelost:** de zoomknoppen lopen door naar een volgende regel. |
 | 10.13 | **Kussens toevoegen:** het 2e en 3e sierkussen kwamen op dezelfde plaats. Een rol- of rugkussen kreeg op een smal element meteen een maatfout. | middel | **Opgelost:** kussens van dezelfde soort liggen naast elkaar en zijn even breed. Past er geen meer bij, dan staat de knop uit ("past niet meer"). |
 | 10.14 | **Kuipfauteuils:** vlekken en strepen op de onderbouw. De buitenkant van de wand en de zijkant van de onderbouw lagen op exact dezelfde plaats. | middel | **Opgelost:** de onderbouw ligt 0,8 cm binnen de wand. |
@@ -311,5 +311,6 @@ Nieuwe tests: `test/omschrijving.test.ts` (6) en `test/logica.test.ts` (13), plu
      - de Martindale-waarschuwing verschijnt ook als de stof alleen op een sierkussen zit.
 4. **Stalenkaart met het toetsenbord:** 60 stalen betekent 60 keer Tab. Een schermlezer hoort "Mosterd" twee keer, zonder de collectie. Voorstel: pijltjestoetsen binnen de stalenkaart, en de volledige naam.
 5. **Geen "opnieuw"** naast *Ongedaan maken*.
-6. **Eigenschappen** van het gekozen element staan onder de tekening: op een laptop moet je scrollen.
-7. **Niet getest op echte toestellen** (de toonzaaltablet, een iPhone) **en niet met echte gebruikers** (zie hoofdstuk 7).
+6. **Stalenkaart in de smalle linkerkolom:** de namen onder de stalen zijn 11 px en soms afgekapt. De volledige naam staat wel in de keuzelijst erboven en in de tooltip.
+7. **Eigenschappen** van het gekozen element staan onder de tekening: op een laptop moet je scrollen.
+8. **Niet getest op echte toestellen** (de toonzaaltablet, een iPhone) **en niet met echte gebruikers** (zie hoofdstuk 7).

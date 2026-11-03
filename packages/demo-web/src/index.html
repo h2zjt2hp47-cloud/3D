@@ -180,8 +180,9 @@ button:disabled { opacity: .45; cursor: default; }
   input[type="range"] { min-height: 44px; }
   .klant label { min-height: 44px; }
   .kaartkop button { min-height: 44px; }
-  .zoomknoppen button, .tabs button { min-width: 44px; }
-  summary { padding-block: 10px; }
+  .zoomvlak .zoomknoppen button, .tabs button { min-width: 44px; }
+  summary, .drie-d-meer > summary { min-height: 44px; padding-block: 10px; box-sizing: border-box; }
+  #o-3d-knoppen button { min-width: 44px; }
   .stalen-rij { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)) !important; }
 }
 .klein-knop { padding: 3px 9px !important; font-size: .8rem; }
@@ -241,7 +242,7 @@ body.heeft-groot-scherm { overflow: hidden; }
 /* Element met de stof eronder; die cel mag afbreken, zodat de prijs in de smalle kolom zichtbaar blijft. */
 #o-elementen td.elementcel { white-space: normal; }
 #o-elementen td.elementcel span { display: block; }
-#o-elementen td.elementcel .klein { font-size: .78rem; opacity: .85; }
+#o-elementen td.elementcel .klein { font-size: .78rem; color: var(--inkt); opacity: .8; }
 #o-elementen th, #o-elementen td { padding: 6px 5px; }
 #o-elementen tr.actief td { background: var(--accent-zacht); }
 /* Materialen */

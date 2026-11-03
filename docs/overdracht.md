@@ -47,6 +47,13 @@
 2. **Aparte app**, verkoopbaar op zichzelf, **koppelbaar met Missing Link**.
 3. **TypeScript**.
 4. Sofa's worden **per cm** gemaakt.
+5. **Prijsregels uit de doorlichting van 3/11, door Claude gekozen, nog te bevestigen door Jonas** (zie `docs/analyse-gebruiksgemak.md` hoofdstuk 10):
+   - Chaise longue zonder rugleuning: rugopties (losse rugkussens, dons, capitonnage, rughoogte) worden niet aangerekend. Het alternatief was: rugkussens tekenen.
+   - Een getekende rughoogte wordt per cm aangerekend en vervangt de gekozen rughoogte. Een getekende zit-, poot- of armhoogte telt als de keuze met de dichtstbijzijnde hoogte.
+   - Een rugleuning of kussen moet voor meer dan de helft (60 %) op een zitting liggen, niet op een arm of houten tussenstuk; anders is het "los" (fout).
+   - Keuzes voor de hele zetel die eenmalig tellen (vaste zitting −3 %, poothoogte), alleen op de elementen waarvoor ze gelden.
+   - Vormgeving (houten frame, extra zitkussens, rugvorm en -dikte) alleen aanrekenen waar de 3D ze toont.
+   - Korting altijd tussen 0 en 100 %. Onder de kostprijs: een waarschuwing alleen voor de verkoper, geen blokkering.
 
 ## Collectie van de klant (website gelezen op 31/10)
 De website (www.corneille-silence.be) toont per model alleen **naam + foto**: geen maten, opties of prijzen. Alle 42 modellen staan in `packages/core/voorbeelden/modellen.ts` als **benadering op basis van de foto**:
