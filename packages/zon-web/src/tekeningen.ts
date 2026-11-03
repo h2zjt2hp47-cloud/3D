@@ -56,6 +56,16 @@ export function legplanSvg(l: VlakLegplan, o: { klikbaar?: boolean } = {}): stri
     }
   }
   delen.push(...obstakels);
+  // Grepen om een obstakel groter of kleiner te slepen (rechterbovenhoek; de linkerbenedenhoek blijft staan).
+  if (o.klikbaar) {
+    const g = Math.max(14, Math.min(26, W / 45));
+    for (const ob of instelling.obstakels) {
+      const gx = ob.x + ob.b, gy = r1(y(ob.y + ob.h));
+      delen.push(`<g class="greep" data-greep="${esc(ob.id)}" tabindex="0" role="button" aria-label="${OBSTAKEL_NAAM[ob.soort]} groter of kleiner maken (slepen, of Alt + pijltjestoetsen)">`
+        + `<rect x="${gx - g * 1.5}" y="${gy - g * 1.5}" width="${g * 3}" height="${g * 3}" fill="transparent"/>`
+        + `<rect x="${gx - g / 2}" y="${gy - g / 2}" width="${g}" height="${g}" rx="3" fill="#fff" stroke="#e3a23b" stroke-width="3"/></g>`);
+    }
+  }
   // Maten en labels.
   const fs = Math.max(20, Math.min(30, W / 28));
   delen.push(`<g font-size="${fs}" fill="#444" text-anchor="middle">`

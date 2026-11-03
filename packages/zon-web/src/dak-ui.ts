@@ -10,9 +10,15 @@ const DAKVORMEN: { waarde: Dakvorm; label: string; extra: string }[] = [
   { waarde: 'lessenaar', label: 'Lessenaarsdak', extra: 'één schuin vlak' },
   { waarde: 'plat', label: 'Plat dak', extra: 'panelen op driehoeken' },
 ];
+/** Gekozen obstakel om te plaatsen (klik op het dak). */
+let plaatsen: { vlak: string; soort: ObstakelSoort } | null = null;
+let herteken: () => void = () => {};
+/** Standaardmaat (breedte × hoogte op het dak, cm). */
+const STANDAARDMAAT: Record<ObstakelSoort, [number, number]> = { dakraam: [78, 118], schoorsteen: [60, 60], dakkapel: [250, 160], verluchting: [30, 30] };
 const OBSTAKELS: [ObstakelSoort, string][] = [['dakraam', 'Dakraam'], ['schoorsteen', 'Schoorsteen'], ['dakkapel', 'Dakkapel'], ['verluchting', 'Verluchting']];
 
 export function toonDak(houder: HTMLElement) {
+  herteken = () => toonDak(houder);
   const p = toestand();
   const r = resultaat();
   houder.replaceChildren(
@@ -20,7 +26,7 @@ export function toonDak(houder: HTMLElement) {
     ...p.gebouwen.map((g, i) => gebouwKaart(g, i)),
     el('div', { class: 'knoppenrij' }, knop('+ Gebouw toevoegen (bv. garage of bijgebouw)', voegGebouwToe)),
     el('h2', { class: 'tussenkop' }, 'Dakvlakken en legplan'),
-    el('p', { class: 'klein' }, 'Klik op een paneel om het uit of terug aan te zetten. Versleep een obstakel (dakraam, schoorsteen…) naar zijn plaats; panelen die het raken, vallen automatisch weg.'),
+    el('p', { class: 'klein' }, 'Klik op een paneel om het uit of terug aan te zetten. Versleep een obstakel (dakraam, schoorsteen…) naar zijn plaats en maak het groter of kleiner met de witte greep; panelen die het raken, vallen automatisch weg.'),
     ...r.legplan.map((l) => vlakKaart(l)),
   );
 }
@@ -156,9 +162,85 @@ function vlakKaart(l: VlakLegplan): HTMLElement {
       const d = ({ ArrowLeft: [-stap, 0], ArrowRight: [stap, 0], ArrowUp: [0, stap], ArrowDown: [0, -stap] } as Record<string, [number, number]>)[e.key];
       if (!d) return;
       e.preventDefault();
-      verplaats(id, d[0], d[1]);
+      if (e.altKey) maat(id, d[0], d[1]);
+      else verplaats(id, d[0], d[1]);
       requestAnimationFrame(() => (document.querySelector(`[data-obstakel="${CSS.escape(id)}"]`) as SVGGElement | null)?.focus());
     });
+  }
+
+  // Grootte aanpassen: greep in de rechterbovenhoek slepen, of Alt + pijltjestoetsen (10 cm, met Shift 50 cm).
+  const maat = (id: string, db: number, dh: number) => zet((v) => {
+    const o = v.obstakels.find((x) => x.id === id);
+    if (!o) return;
+    o.b = Math.round(Math.min(Math.max(20, o.b + db), vlak.breedte - o.x) / 5) * 5;
+    o.h = Math.round(Math.min(Math.max(20, o.h + dh), vlak.lengte - o.y) / 5) * 5;
+  });
+  for (const g of svg.querySelectorAll<SVGGElement>('[data-greep]')) {
+    const id = g.dataset.greep!;
+    const obEl = svg.querySelector<SVGGElement>(`[data-obstakel="${CSS.escape(id)}"] rect`);
+    g.style.touchAction = 'none';
+    let start: { x: number; y: number; b: number; h: number; ry: number } | null = null;
+    let nieuw = { b: 0, h: 0 };
+    const punt = (e: PointerEvent) => {
+      const m = svg.getScreenCTM();
+      const q = m ? new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse()) : { x: 0, y: 0 };
+      return { x: q.x, y: q.y };
+    };
+    g.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      g.setPointerCapture(e.pointerId);
+      const q = punt(e);
+      start = { ...q, b: Number(obEl?.getAttribute('width')), h: Number(obEl?.getAttribute('height')), ry: Number(obEl?.getAttribute('y')) };
+      nieuw = { b: start.b, h: start.h };
+    });
+    g.addEventListener('pointermove', (e) => {
+      if (!start || !obEl) return;
+      const q = punt(e);
+      nieuw = { b: Math.max(20, start.b + q.x - start.x), h: Math.max(20, start.h - (q.y - start.y)) };
+      // Voorbeeld tijdens het slepen: de onderkant (kant van de goot) blijft staan.
+      obEl.setAttribute('width', String(nieuw.b));
+      obEl.setAttribute('height', String(nieuw.h));
+      obEl.setAttribute('y', String(start.ry + start.h - nieuw.h));
+      g.setAttribute('transform', `translate(${nieuw.b - start.b} ${start.h - nieuw.h})`);
+    });
+    const los = () => {
+      if (!start) return;
+      const s0 = start;
+      start = null;
+      if (Math.abs(nieuw.b - s0.b) >= 2 || Math.abs(nieuw.h - s0.h) >= 2) maat(id, nieuw.b - s0.b, nieuw.h - s0.h);
+    };
+    g.addEventListener('pointerup', los);
+    g.addEventListener('pointercancel', los);
+    g.addEventListener('keydown', (e) => {
+      const stap = e.shiftKey ? 50 : 10;
+      const d = ({ ArrowLeft: [-stap, 0], ArrowRight: [stap, 0], ArrowUp: [0, stap], ArrowDown: [0, -stap] } as Record<string, [number, number]>)[e.key];
+      if (!d) return;
+      e.preventDefault();
+      maat(id, d[0], d[1]);
+      requestAnimationFrame(() => (document.querySelector(`[data-greep="${CSS.escape(id)}"]`) as SVGGElement | null)?.focus());
+    });
+  }
+  // Plaatsen: kies een soort en klik op het dak.
+  if (plaatsen?.vlak === vlak.id) {
+    svg.classList.add('plaatsen');
+    svg.addEventListener('click', (e) => {
+      const m = svg.getScreenCTM();
+      if (!m || !plaatsen) return;
+      e.stopPropagation();
+      e.preventDefault();
+      const q = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse());
+      const soort = plaatsen.soort;
+      const [b, h] = STANDAARDMAAT[soort];
+      plaatsen = null;
+      zet((v) => {
+        v.obstakels.push({
+          id: `o${Date.now().toString(36)}`, soort,
+          x: Math.round(Math.min(Math.max(0, q.x - b / 2), vlak.breedte - b) / 5) * 5,
+          y: Math.round(Math.min(Math.max(0, vlak.lengte - q.y - h / 2), vlak.lengte - h) / 5) * 5, b, h,
+        });
+      });
+    }, { capture: true });
   }
 
   const instellingen = el('div', { class: 'raster3' },
@@ -182,9 +264,22 @@ function vlakKaart(l: VlakLegplan): HTMLElement {
       knop('×', () => zet((v) => { v.obstakels = v.obstakels.filter((x) => x.id !== ob.id); }), 'tweede wis', 'Obstakel verwijderen'),
     ));
   }
-  obstakels.append(el('div', { class: 'knoppenrij' },
-    knop('+ Obstakel', () => zet((v) => { v.obstakels.push({ id: `o${Date.now().toString(36)}`, soort: 'dakraam', x: Math.round(vlak.breedte / 2 - 39), y: Math.round(vlak.lengte / 2 - 59), b: 78, h: 118 }); })),
+  const kiesPlaats = (soort: ObstakelSoort) => {
+    plaatsen = plaatsen?.vlak === vlak.id && plaatsen.soort === soort ? null : { vlak: vlak.id, soort };
+    herteken();
+  };
+  obstakels.append(el('div', { class: 'knoppenrij plaatsrij' },
+    el('span', { class: 'klein' }, 'Toevoegen: kies en klik op het dak'),
+    ...OBSTAKELS.map(([soort, naam]) => {
+      const b = knop(`+ ${naam}`, () => kiesPlaats(soort), 'tweede');
+      b.setAttribute('aria-pressed', String(plaatsen?.vlak === vlak.id && plaatsen.soort === soort));
+      return b;
+    }),
   ));
+  if (plaatsen?.vlak === vlak.id) {
+    const n = OBSTAKELS.find(([s2]) => s2 === plaatsen!.soort)![1].toLowerCase();
+    obstakels.append(el('p', { class: 'plaatsmelding', role: 'status' }, `Klik op het dak waar ${plaatsen.soort === 'dakraam' ? 'het' : 'de'} ${n} moet komen. Grootte achteraf aanpassen met de witte greep.`));
+  }
 
   const kaart = el('section', { class: `stap vlak${inst.actief ? '' : ' uitgezet'}` }, kop,
     schakelaar('Panelen op dit dakvlak', inst.actief, (w) => zet((v) => { v.actief = w; })),

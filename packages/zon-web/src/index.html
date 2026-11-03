@@ -120,6 +120,11 @@ fieldset.keuzes legend { width: 100%; }
 .tekening svg { width: 100%; height: auto; max-height: 460px; }
 .legplan .paneel { cursor: pointer; }
 .legplan .obstakel[data-obstakel] { cursor: grab; }
+.legplan .greep { cursor: nesw-resize; }
+.legplan .greep:focus-visible rect + rect { stroke-width: 6; }
+.legplan.plaatsen, .legplan.plaatsen * { cursor: crosshair !important; }
+.plaatsrij button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
+.plaatsmelding { margin: 8px 0 0; padding: 8px 12px; border-radius: 6px; background: var(--accent-zacht); color: var(--accent); font-size: .88rem; }
 .legplan .obstakel.sleept { cursor: grabbing; opacity: .85; }
 .legplan .obstakel[data-obstakel]:focus-visible rect { stroke: var(--zon); stroke-width: 6; }
 .legplan .paneel.uit:hover rect { fill-opacity: .55; }
