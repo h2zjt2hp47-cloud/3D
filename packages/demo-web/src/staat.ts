@@ -155,11 +155,19 @@ export const eur = (x: number) => `€ ${x.toLocaleString('nl-BE', { minimumFrac
 export const getal = (x: number, d = 2) => x.toLocaleString('nl-BE', { maximumFractionDigits: d });
 
 /** Knop die pas bij een tweede klik uitvoert (in plaats van confirm(), dat in de viewer niet werkt). */
-export function bevestigKnop(knop: HTMLButtonElement, vraag: string | (() => string), actie: () => void) {
+/**
+ * Knop die een tweede klik vraagt voor hij iets onomkeerbaars doet. Met `nodig` alleen als het moet
+ * (bv. pas bevestigen als er een ontwerp is dat vervangen wordt).
+ */
+export function bevestigKnop(knop: HTMLButtonElement, vraag: string | (() => string), actie: () => void, nodig: () => boolean = () => true) {
   const origineel = knop.textContent ?? '';
   let gewapend = false;
   let timer: number | undefined;
   knop.addEventListener('click', () => {
+    if (!gewapend && !nodig()) {
+      actie();
+      return;
+    }
     if (!gewapend) {
       gewapend = true;
       knop.textContent = typeof vraag === 'function' ? vraag() : vraag;

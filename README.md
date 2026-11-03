@@ -53,15 +53,17 @@ packages/
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
     test/               Automatische tests
-  demo-web/             Klikbare demo, gebundeld tot één HTML-bestand:
-                        - Modellen: kies een model en pas het vrij aan
-                        - Sofa/Kast op maat: formulier uit het productmodel, live prijs en tekening
-                        - Vrij ontwerp: elementen tekenen, slepen (magneet), vergroten, draaien,
+  demo-web/             Klikbare demo, gebundeld tot één HTML-bestand. Menu in drie stappen:
+                        - 1 · Modellen: kies een model en pas het vrij aan
+                        - 2 · Ontwerpen: elementen tekenen, slepen (magneet), vergroten, draaien,
                           materiaal en opties per element, aanpassingen voor de hele zetel,
                           vooraanzicht en 3D (three.js 0.187, gebundeld), ongedaan maken,
                           ontwerpmodus: vorm van elk element (rugdikte, kussens, zachtheid,
                           rugvorm, houten frame)
-                        - Materialen: toevoegen, bewerken, verwijderen, lijst kopiëren/inlezen
+                        - 3 · Offerte: overzicht met tekeningen, omschrijving en prijs; kopiëren, afdrukken/PDF
+                        - Andere configurators: Sofa en Kast op maat (formulier uit het productmodel)
+                        - Beheer: stoffen, elementen, opties, eigen modellen, catalogus delen
+                        - Klantweergave: zonder kostprijs, marge, stuklijst en Beheer
   bouw-web/             Aparte demo voor de bouwsector: plattegrond tekenen (ruimtes, ramen, deuren, meubels),
                         positie configureren (draairichting, zonwering …), offerte (PDF, bestellijst, export)
                         en werf (inmeting op tablet, meerwerkbon met handtekening); verdiepingen en gevels;

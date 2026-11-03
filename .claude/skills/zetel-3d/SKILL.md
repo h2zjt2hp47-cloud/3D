@@ -81,6 +81,7 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 ## Testen in de browser
 - three.js zit in de bundel (geen CDN). Neem beelden met `canvas.toDataURL()`; *Mooi* (GTAO + VSM) is in swiftshader ±7 s per beeld, dus test met *Snel* of wacht 30–45 s. `window.__zetel3d.fotoRealistisch({ stappen: 6, breedte: 520 })` = snelle proef van de fotomodus.
 - Start Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` voor WebGL zonder GPU.
+- Menu (3/11): `[data-weergave]` = modellen, ontwerp, offerte, sofa, kast, beheer (Beheer opent `#materialen` of `#catalogus`; tabbladen `[data-beheer="stoffen"]` en `[data-cat]`). De startopstellingen zitten ingeklapt in `#o-opnieuw` (eerst `open = true`) en vragen een tweede klik als er al een ontwerp is ("Klik nogmaals"). *Alles wissen* bestaat niet meer: dat is *Leeg tekenvlak*.
 
 ## Valkuilen
 - Vergeet de rotatie niet: test elke nieuwe vorm bij 0, 90, 180 en 270.

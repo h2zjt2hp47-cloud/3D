@@ -7,6 +7,7 @@ import {
   bouw3D,
   dragerVan,
   draagHoogteVan,
+  DRAGER_STIJLEN,
   gekozenOpties,
   HOOGTE_BEREIK,
   RUGLEUNING_MIN_BOVEN,
@@ -1323,6 +1324,87 @@ function toonEigenschappen() {
   vak.replaceChildren(...delen);
 }
 
+/**
+ * Stap 3 · Offerte: een overzicht om aan de klant te tonen, te kopiëren of af te drukken. Gebouwd uit dezelfde
+ * gegevens als het ontwerp: omschrijving (core/ontwerptekst.ts), prijs, boven- en vooraanzicht en het 3D-beeld.
+ */
+export function toonOfferte() {
+  herbereken(false);
+  const r = resultaat;
+  const vak = $('#of-inhoud');
+  const model = getModellen().find((x) => x.code === ontwerp.model);
+  const regels = ontwerpOmschrijving(ontwerp, getCatalogus(), getMaterialen(), r, { modelNaam: model?.naam, eur });
+  const kaart = el('section', { class: 'kaart offertekaart' });
+  // Op papier staat de merknaam bovenaan (de kop van de pagina wordt niet afgedrukt).
+  const merk = document.querySelector('header .merk')?.textContent?.trim();
+  if (merk) kaart.append(el('p', { class: 'alleen-afdruk merkregel' }, merk));
+  const kop = el('div', { class: 'kaartkop' });
+  kop.append(el('h2', {}, model ? `Offerte · ${model.naam}` : 'Offerte · eigen ontwerp'), el('span', { class: 'klein' }, new Date().toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })));
+  kaart.append(kop, el('p', { class: 'offertetitel' }, regels[0] ?? ''));
+  if (!ontwerp.elementen.length) {
+    kaart.append(el('p', {}, 'Er is nog geen ontwerp. Kies een model bij 1 · Modellen of teken er een bij 2 · Ontwerpen.'));
+    vak.replaceChildren(kaart);
+    return;
+  }
+  // Beelden: bovenaanzicht, vooraanzicht en (als de 3D al getoond werd) het 3D-beeld zoals het nu staat.
+  const beelden = el('div', { class: 'offertebeelden' });
+  const figuur = (titel: string, inhoud: string | HTMLElement) => {
+    const f = el('figure');
+    if (typeof inhoud === 'string') f.innerHTML = inhoud; else f.append(inhoud);
+    f.append(el('figcaption', {}, titel));
+    beelden.append(f);
+  };
+  const svgOpties = { breedtePx: 520, lijnkleur: '#2b2b28', maatkleur: '#3f5a52' };
+  figuur('Bovenaanzicht (cm)', tekenSvg(r.tekening, svgOpties));
+  figuur('Vooraanzicht (cm)', tekenSvg(tekenVooraanzicht(ontwerp, getCatalogus(), getMaterialen()), svgOpties));
+  const canvas = document.querySelector<HTMLCanvasElement>('#o-3d canvas');
+  if (viewer && canvas) {
+    try { figuur('3D', el('img', { src: canvas.toDataURL('image/jpeg', 0.9), alt: '3D-beeld van de zetel' })); } catch { /* geen 3D-beeld */ }
+  }
+  kaart.append(beelden);
+  // Omschrijving: hoofdstof, de elementen en de keuzes voor de hele zetel.
+  const hoofdstof = regels.find((x) => x.startsWith('Hoofdstof'));
+  if (hoofdstof) kaart.append(el('p', {}, hoofdstof));
+  const lijst = (titel: string, items: string[]) => {
+    if (!items.length) return;
+    const ul = el('ul', { class: 'offertelijst' });
+    for (const x of items) ul.append(el('li', {}, x.replace(/^- /, '')));
+    kaart.append(el('h3', {}, titel), ul);
+  };
+  lijst('Elementen', regels.filter((x) => /^- \d+\. /.test(x)));
+  lijst('Afwerking voor de hele zetel', regels.filter((x) => x.startsWith('- ') && !/^- \d+\. /.test(x)));
+  // Prijs (kostprijs en marge intern: verborgen in de klantweergave).
+  const p = r.prijs;
+  const rijen: [string, string, string?][] = [];
+  if (p.kortingProcent) rijen.push(['Brutoprijs excl. btw', eur(p.brutoprijsExcl)], [`Korting ${getal(p.kortingProcent)} %`, `− ${eur(p.brutoprijsExcl - p.verkoopprijsExcl)}`]);
+  rijen.push(['Prijs excl. btw', eur(p.verkoopprijsExcl)], [`Btw ${getal(getCatalogus().btwProcent)} %`, eur(p.btw)], ['Totaal incl. btw', eur(p.verkoopprijsIncl), 'totaal']);
+  rijen.push(['Kostprijs', eur(p.kostprijs), 'intern'], ['Marge', p.margeProcent === null ? '—' : `${getal(p.margeProcent, 1)} %`, 'intern']);
+  const dl = el('dl', { class: 'prijsdetail offerteprijs' });
+  for (const [a, b, soort] of rijen) dl.append(el('dt', soort ? { class: soort } : {}, a), el('dd', soort ? { class: soort } : {}, b));
+  kaart.append(el('h3', {}, 'Prijs'), dl);
+  // Wat nog niet in orde is.
+  if (r.meldingen.length) {
+    const ul = el('ul', { class: 'meldingen' });
+    for (const m of r.meldingen) ul.append(el('li', { class: `${m.ernst}${m.intern ? ' intern' : ''}` }, m.melding));
+    if (!r.geldig) kaart.append(el('p', { class: 'offertewaarschuwing' }, 'Dit ontwerp heeft nog fouten: los ze op bij 2 · Ontwerpen voor je de offerte doorstuurt.'));
+    kaart.append(ul);
+  }
+  kaart.append(el('p', { class: 'klein' }, 'Demo: prijzen, maten en stofverbruik zijn voorbeelden. Modellen zijn een benadering op basis van de productfoto.'));
+  const knoppen = el('div', { class: 'acties geen-afdruk' });
+  const knop = (tekst: string, f: () => void, klasse = '') => {
+    const b = el('button', { type: 'button', ...(klasse ? { class: klasse } : {}) }, tekst) as HTMLButtonElement;
+    b.addEventListener('click', f);
+    knoppen.append(b);
+  };
+  const melding = el('span', { class: 'klein', role: 'status' });
+  knop('Afdrukken of bewaren als PDF', () => window.print());
+  knop('Kopieer offertetekst', () => void kopieer(regels.join('\n'), melding), 'tweede');
+  knop('← Terug naar ontwerpen', () => { location.hash = 'ontwerp'; }, 'tweede');
+  knoppen.append(melding);
+  kaart.append(knoppen);
+  vak.replaceChildren(kaart);
+}
+
 function elementCel(label: string, stof: string) {
   const td = el('td', { class: 'elementcel' });
   td.append(el('span', {}, label), el('span', { class: 'klein' }, stof));
@@ -1331,6 +1413,8 @@ function elementCel(label: string, stof: string) {
 
 function herbereken(alles = true) {
   resultaat = berekenOntwerp(ontwerp, getCatalogus(), getMaterialen(), { kortingProcent: getKorting() });
+  // Leeg tekenvlak: de startopstellingen tonen (anders blijven ze ingeklapt).
+  if (!ontwerp.elementen.length) $<HTMLDetailsElement>('#o-opnieuw').open = true;
   tekenCanvas();
   if (!alles) return;
   const r = resultaat;
@@ -1374,7 +1458,8 @@ function herbereken(alles = true) {
       tr.append(
         el('td', { class: 'num' }, String(n + 1)),
         // Element en stof in één cel (stof eronder): zo past de prijs in de smalle kolom zonder stof over drie regels.
-        elementCel(x.label, `${mats.get(x.materiaal)?.naam ?? '—'} · groep ${x.groep}`),
+        // Een houten tussenstuk heeft geen stof: dan de houtafwerking.
+        elementCel(x.label, x.materiaal ? `${mats.get(x.materiaal)?.naam ?? '—'} · groep ${x.groep}` : gekozenOpties(ontwerp, getCatalogus()).get('hout')?.label ?? 'hout'),
         el('td', { class: 'num' }, `${getal(x.breedte, 1)} × ${getal(x.diepte, 1)}`),
         // Zelfde prijs als bij het gekozen element: na de korting van de interieurinrichter.
         el('td', { class: 'num' }, eur(x.prijs * (1 - getKorting() / 100))),
@@ -1407,7 +1492,19 @@ export function startOntwerper() {
       balk.append(b);
     };
     knop('selecteren', 'Selecteren en verplaatsen');
-    for (const t of getCatalogus().typen) knop(t.code, `+ ${t.label}`);
+    const groepen: [string, (t: ElementType) => boolean][] = [
+      ['Zittingen', (t) => !t.opzet && DRAGER_STIJLEN.includes(t.tekenstijl)],
+      ['Armen en tussenstukken', (t) => !t.opzet && (t.tekenstijl === 'arm' || t.tekenstijl === 'console')],
+      ['Op een zitting', (t) => t.opzet === true],
+    ];
+    const geplaatst = new Set<string>();
+    const groep = (titel: string, lijst: ElementType[]) => {
+      if (!lijst.length) return;
+      balk.append(el('h3', { class: 'gereedschapkop' }, titel));
+      for (const t of lijst) { knop(t.code, `+ ${t.label}`); geplaatst.add(t.code); }
+    };
+    for (const [titel, hoort] of groepen) groep(titel, getCatalogus().typen.filter((t) => hoort(t)));
+    groep('Overige', getCatalogus().typen.filter((t) => !geplaatst.has(t.code)));
   };
   bouwGereedschap();
   opWijziging('catalogus', () => {
@@ -1422,7 +1519,7 @@ export function startOntwerper() {
   const start = $('#o-start');
   for (const [code, s] of Object.entries(startOntwerpen)) {
     const b = el('button', { type: 'button', class: 'tweede' }, s.label) as HTMLButtonElement;
-    b.addEventListener('click', () => {
+    bevestigKnop(b, 'Klik nogmaals: ontwerp vervangen', () => {
       onthoud();
       ontwerp = structuredClone(s.ontwerp);
       geselecteerd = null;
@@ -1433,7 +1530,7 @@ export function startOntwerper() {
       toonEigenschappen();
       kiesGereedschap(code === 'leeg' ? 'zit' : 'selecteren');
       gewijzigd();
-    });
+    }, () => ontwerp.elementen.length > 0);
     start.append(b);
   }
 
@@ -1454,13 +1551,7 @@ export function startOntwerper() {
     stalenkaart?.ververs();
   });
   $('#o-ongedaan').addEventListener('click', ongedaan);
-  bevestigKnop($<HTMLButtonElement>('#o-wis'), 'Klik nogmaals om alles te wissen', () => {
-    onthoud();
-    ontwerp.elementen = [];
-    geselecteerd = null;
-    toonEigenschappen();
-    gewijzigd();
-  });
+  $('#o-naar-offerte').addEventListener('click', () => { location.hash = 'offerte'; });
   $('#o-kopieer').addEventListener('click', () => {
     // Volledige omschrijving (ook keuzes per element, getekende hoogtes, vormgeving en korting): zie core/ontwerptekst.ts.
     const model = getModellen().find((x) => x.code === ontwerp.model);

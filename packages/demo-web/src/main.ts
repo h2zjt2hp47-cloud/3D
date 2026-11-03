@@ -6,24 +6,40 @@ import { kiesProduct, startConfigurator } from './configurator.js';
 import { startMaterialen } from './materialen-ui.js';
 import { modelOntwerp, startModellen } from './modellen-ui.js';
 import { startCatalogusEditor } from './catalogus-ui.js';
-import { huidigOntwerp, kiesWeergave, laadInOntwerper, startOntwerper } from './ontwerper.js';
+import { huidigOntwerp, kiesWeergave, laadInOntwerper, startOntwerper, toonOfferte } from './ontwerper.js';
 import { $, bewaar, getKorting, laad, setKorting } from './staat.js';
 
-const weergaven = ['modellen', 'sofa', 'ontwerp', 'kast', 'materialen', 'catalogus'] as const;
+const weergaven = ['modellen', 'ontwerp', 'offerte', 'sofa', 'kast', 'materialen', 'catalogus'] as const;
 type Weergave = (typeof weergaven)[number];
+/** Beheer = de stoffen (materialen) en de catalogus, onder één knop met tabbladen. */
+const BEHEER: Weergave[] = ['materialen', 'catalogus'];
+let laatsteBeheer: Weergave = 'materialen';
+const TITELS: Record<Weergave, string> = {
+  modellen: 'Modellen', ontwerp: 'Zetel ontwerpen', offerte: 'Offerte', sofa: 'Sofa op maat', kast: 'Kast op maat', materialen: 'Beheer', catalogus: 'Beheer',
+};
 
 function toon(w: Weergave) {
-  document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.weergave === w)));
+  document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) =>
+    b.setAttribute('aria-pressed', String(b.dataset.weergave === w || (b.dataset.weergave === 'beheer' && BEHEER.includes(w)))),
+  );
   $('#view-config').hidden = !(w === 'sofa' || w === 'kast');
   $('#view-ontwerp').hidden = w !== 'ontwerp';
+  $('#view-offerte').hidden = w !== 'offerte';
   $('#view-materialen').hidden = w !== 'materialen';
   $('#view-modellen').hidden = w !== 'modellen';
   $('#view-catalogus').hidden = w !== 'catalogus';
-  if (w === 'catalogus') $('#productnaam').textContent = 'Catalogus';
-  if (w === 'modellen') $('#productnaam').textContent = 'Modellen';
+  $('#beheer-tabs').hidden = !BEHEER.includes(w);
+  if (BEHEER.includes(w)) {
+    laatsteBeheer = w;
+    $('[data-beheer="stoffen"]').setAttribute('aria-pressed', String(w === 'materialen'));
+    if (w === 'materialen') document.querySelectorAll('[data-cat]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+  }
   if (w === 'sofa' || w === 'kast') kiesProduct(w, true);
-  if (w === 'ontwerp') $('#productnaam').textContent = 'Zetel vrij ontwerpen';
-  if (w === 'materialen') $('#productnaam').textContent = 'Materialen';
+  if (w === 'offerte') toonOfferte();
+  // Sofa en kast zetten zelf hun productnaam (kiesProduct); de andere weergaven hun vaste titel.
+  if (w !== 'sofa' && w !== 'kast') $('#productnaam').textContent = TITELS[w];
+  // Rechtstreeks naar #catalogus (oude link): het eerste tabblad aanduiden als er nog geen gekozen is.
+  if (w === 'catalogus' && !document.querySelector('[data-cat][aria-pressed="true"]')) $<HTMLButtonElement>('[data-cat="elementen"]').click();
   try {
     // Safari staat dit niet toe op een lokaal bestand (file://); dan slaan we het over.
     if (location.hash.slice(1) !== w) history.replaceState(null, '', `#${w}`);
@@ -58,7 +74,7 @@ function startKlant() {
   knop.addEventListener('click', () => {
     zet(!document.body.classList.contains('klantmodus'));
     const w = location.hash.slice(1);
-    if (document.body.classList.contains('klantmodus') && (w === 'materialen' || w === 'catalogus')) toon('modellen');
+    if (document.body.classList.contains('klantmodus') && (BEHEER.includes(w as Weergave) || w === 'beheer')) toon('modellen');
   });
   zet(laad(SLEUTEL_KLANTWEERGAVE) === '1');
 }
@@ -116,13 +132,18 @@ function openModel(code: string) {
 }
 veilig('Modellen', () => startModellen(openModel));
 veilig('Catalogus', () => startCatalogusEditor({ huidigOntwerp, openModel }));
+/** Een adres (#…) naar een weergave; #beheer opent het laatst gebruikte beheerscherm. */
+const naarWeergave = (code: string): Weergave | null => (code === 'beheer' ? laatsteBeheer : weergaven.includes(code as Weergave) ? (code as Weergave) : null);
 document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) =>
-  b.addEventListener('click', () => veilig('Navigatie', () => toon(b.dataset.weergave as Weergave))),
+  b.addEventListener('click', () => veilig('Navigatie', () => toon(naarWeergave(b.dataset.weergave ?? '') ?? 'modellen'))),
 );
-const intern = (w: string) => document.body.classList.contains('klantmodus') && (w === 'materialen' || w === 'catalogus');
-const start = location.hash.slice(1) as Weergave;
-veilig('Opstarten', () => toon(weergaven.includes(start) && !intern(start) ? start : 'modellen'));
+// Tabbladen van Beheer: Stoffen is de materialenlijst, de andere zijn de catalogus (zie catalogus-ui.ts).
+$('[data-beheer="stoffen"]').addEventListener('click', () => veilig('Navigatie', () => toon('materialen')));
+document.querySelectorAll<HTMLButtonElement>('[data-cat]').forEach((b) => b.addEventListener('click', () => veilig('Navigatie', () => toon('catalogus'))));
+const intern = (w: string) => document.body.classList.contains('klantmodus') && (BEHEER.includes(w as Weergave) || w === 'beheer');
+const start = location.hash.slice(1);
+veilig('Opstarten', () => toon(naarWeergave(start) && !intern(start) ? naarWeergave(start)! : 'modellen'));
 window.addEventListener('hashchange', () => {
-  const w = location.hash.slice(1) as Weergave;
-  if (weergaven.includes(w)) toon(intern(w) ? 'modellen' : w);
+  const w = naarWeergave(location.hash.slice(1));
+  if (w) toon(intern(w) ? 'modellen' : w);
 });

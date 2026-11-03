@@ -40,3 +40,15 @@
 :root[data-huisstijl="cs"] .grote-prijs { font-family: "Montserrat", sans-serif; font-weight: 300; letter-spacing: .02em; }
 :root[data-huisstijl="cs"] .tabs button[aria-pressed="true"], :root[data-huisstijl="cs"] .knoppenlijst button[aria-pressed="true"] { background: #003241; border-color: #003241; }
 :root[data-huisstijl="cs"] footer { border-top: 1px solid #ececec; padding-top: 18px; color: #8e8e8e; }
+
+/* Menu in groepen (3/11): gecentreerd, stapnummers zoals de rest van het menu, label in klein kapitaal. */
+:root[data-huisstijl="cs"] .menugroep { gap: 2px; }
+:root[data-huisstijl="cs"] .menugroep.anders, :root[data-huisstijl="cs"] .menugroep.beheer { border-left-color: #c8c8c8; padding-left: 12px; }
+:root[data-huisstijl="cs"] .menulabel { font-family: "Raleway", sans-serif; text-transform: uppercase; letter-spacing: .06em; font-size: .68rem; color: #9a9a9a; }
+:root[data-huisstijl="cs"] .producten { flex-wrap: wrap; }
+@media (max-width: 760px) {
+  /* Smal scherm: de sierlijnen naast het menu vallen anders midden tussen de rijen. */
+  :root[data-huisstijl="cs"] .producten::before, :root[data-huisstijl="cs"] .producten::after { display: none; }
+  :root[data-huisstijl="cs"] .producten { padding: 0; }
+  :root[data-huisstijl="cs"] .producten button { font-size: .7rem; letter-spacing: .03em; padding: 9px 6px; white-space: nowrap; }
+}

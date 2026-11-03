@@ -315,3 +315,47 @@ Nieuwe tests: `test/omschrijving.test.ts` (6) en `test/logica.test.ts` (13), plu
 6. **Stalenkaart in de smalle linkerkolom:** de namen onder de stalen zijn 11 px en soms afgekapt. De volledige naam staat wel in de keuzelijst erboven en in de tooltip.
 7. **Eigenschappen** van het gekozen element staan onder de tekening: op een laptop moet je scrollen.
 8. **Niet getest op echte toestellen** (de toonzaaltablet, een iPhone) **en niet met echte gebruikers** (zie hoofdstuk 7).
+
+
+## 11. Zeteldemo: menustructuur gestroomlijnd (3/11/2026)
+
+Aanleiding: "kunnen we de menustructuur even kritisch bekijken naar overzicht? graag stroomlijnen". Uitgangspunt: alles herschikken voor overzicht en volgorde, niets weglaten. Elke vroegere bestemming blijft bereikbaar in hoogstens twee klikken, en oude adressen (`#materialen`, `#catalogus`, …) werken nog.
+
+**Kritische blik op de oude structuur**
+- Zes gelijke knoppen bovenaan die drie soorten dingen mengden, zonder volgorde en zonder eindpunt:
+  - de verkoop: *Modellen*, *Vrij ontwerp*;
+  - andere configurators: *Sofa op maat*, *Kast op maat* (een ander product);
+  - beheer: *Materialen*, *Catalogus*.
+- *Vrij ontwerp*, linkerkolom:
+  - 14 tekenknoppen zonder groepering;
+  - altijd 5 startopstellingen, ook als je van een model vertrok;
+  - *Ongedaan maken* helemaal onderaan, onder 60 stalen;
+  - *Alles wissen* deed hetzelfde als de startopstelling *Leeg tekenvlak*.
+- Onder de tekening twee aparte kaarten (*Vormgeving van het model* en *Aanpassingen voor de hele zetel*). De ontwerpmodus stond even prominent als de gewone keuzes.
+- De groep "Particulier / Interieurinrichter" had geen titel: niet duidelijk dat ze over de prijs gaat.
+
+**Nieuwe structuur**
+
+| Waar | Vroeger | Nu |
+|---|---|---|
+| Hoofdmenu | Modellen · Sofa op maat · Vrij ontwerp · Kast op maat · Materialen · Catalogus | **1 · Modellen · 2 · Ontwerpen · 3 · Offerte** │ *Andere configurators:* Sofa op maat · Kast op maat │ **Beheer** |
+| Prijs | Particulier / Interieurinrichter | **Prijs voor:** Particulier / Interieurinrichter (korting) · *Klantweergave* |
+| Beheer | twee knoppen in het hoofdmenu | één knop met tabbladen **Stoffen · Elementen · Opties · Modellen · Delen**; onthoudt het laatste tabblad; verborgen in de klantweergave |
+| Ontwerpen, links | Teken (14 knoppen) · Start van (5) · Hoofdmateriaal · Stalenkaart · Ongedaan maken · Alles wissen · Sneltoetsen | modelnaam met **↶ Ongedaan maken** bovenaan · **Elementen** in groepen (*Zittingen*, *Armen en tussenstukken*, *Op een zitting*) · **Stof** (hoofdmateriaal en stalenkaart) · **Opnieuw beginnen met …** (ingeklapt, open bij een leeg tekenvlak, vraagt een tweede klik als er een ontwerp is) · Sneltoetsen |
+| Ontwerpen, onder de tekening | twee kaarten | één kaart *Aanpassingen voor de hele zetel*, met de **ontwerpmodus** ingeklapt onderaan |
+| Ontwerpen, rechts | Prijs · Kopieer offertetekst · Elementen | Prijs · **Naar offerte →** · Kopieer offertetekst · Elementen (een houten tussenstuk toont de houtafwerking) |
+| **3 · Offerte** (nieuw) | — | bovenaanzicht, vooraanzicht en het 3D-beeld; hoofdstof; elementen; afwerking voor de hele zetel; prijs (excl., btw, totaal; kostprijs en marge alleen intern); meldingen; *Afdrukken of bewaren als PDF*, *Kopieer offertetekst*, *← Terug naar ontwerpen*. Op papier staan nooit kostprijs of marge; in de huisstijlversie staat de merknaam bovenaan. |
+
+De groepering van de elementknoppen volgt de soort element (`tekenstijl`). Een zelf toegevoegd element uit de catalogus komt dus vanzelf in de juiste groep, of onder *Overige*.
+
+**Gecontroleerd**
+- Alle weergaven en oude adressen openen het juiste scherm.
+- *Beheer* onthoudt het laatste tabblad.
+- De klantweergave verbergt *Beheer*; `#catalogus` in de klantweergave gaat naar *Modellen*.
+- Audit op vijf formaten: geen pagina breder dan het scherm, geen te kleine aanraakdoelen op tablet en telefoon, alle knoppen met een naam, geen paginafouten.
+- Op de telefoon staan de drie stappen op één rij en de andere knoppen op een tweede rij (ook in de huisstijl).
+- 199 tests groen.
+
+**Beslissingen voor Jonas**
+1. ***Kast op maat*** is geen zetel. Verbergen in de versie in de huisstijl van Corneille & Silence? En *Sofa op maat*, nu het model-gebaseerde ontwerpen het hoofdpad is?
+2. **Offerte:** is dit overzicht wat je bij de klant wil tonen en afdrukken? Volgende stap zou een offertenummer en klantgegevens zijn, en later het doorsturen naar Missing Link.

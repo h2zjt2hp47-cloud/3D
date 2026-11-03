@@ -54,6 +54,23 @@ header .klant { grid-area: klant; justify-content: flex-end; }
 header h1 { font-size: 1.5rem; }
 .demo { font-size: .8rem; color: var(--let-op); border: 1px solid currentColor; border-radius: 999px; padding: 2px 10px; margin-left: 10px; vertical-align: middle; font-family: var(--tekst); }
 .producten { display: flex; gap: 6px; }
+/* Menu in groepen: de verkoopflow in stappen, andere configurators apart, beheer apart. */
+.producten { align-items: center; gap: 10px 18px; }
+.menugroep { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.menugroep.anders, .menugroep.beheer { padding-left: 18px; border-left: 1px solid var(--lijn); }
+.menulabel { font-size: .78rem; color: var(--zacht); margin-right: 2px; }
+.menugroep.anders button, .menugroep.beheer button { font-size: .9rem; }
+.producten .nr { color: inherit; opacity: .7; font-variant-numeric: tabular-nums; }
+.klantlabel { color: var(--zacht); }
+@media (max-width: 760px) {
+  /* Telefoon: de drie stappen op één rij, de andere configurators en Beheer op een tweede rij. */
+  .menugroep.stappen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  .menugroep.stappen button { padding: 7px 4px; font-size: .9rem; }
+  .menugroep.anders, .menugroep.beheer { padding-left: 0; border-left: 0; }
+  .menulabel { display: none; }
+  .menugroep.anders button, .menugroep.beheer button { padding: 6px 10px; }
+  .producten { gap: 8px 6px; }
+}
 .producten button { border: 1px solid var(--lijn); background: transparent; border-radius: 6px; padding: 7px 14px; cursor: pointer; }
 .producten button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
 
@@ -135,7 +152,7 @@ footer { text-align: center; color: var(--zacht); font-size: .8rem; padding: 0 1
 /* Klantweergave: het scherm tonen aan de klant, zonder kostprijs, marge, stuklijst en beheer (materialen, catalogus). */
 .klantknop { border: 1px dashed var(--accent); background: transparent; color: var(--accent); border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
 .klantknop[aria-pressed="true"] { background: var(--goed); border: 1px solid var(--goed); color: var(--vlak); }
-body.klantmodus .intern, body.klantmodus [data-weergave="materialen"], body.klantmodus [data-weergave="catalogus"] { display: none !important; }
+body.klantmodus .intern, body.klantmodus .menugroep.beheer, body.klantmodus #beheer-tabs { display: none !important; }
 body.klantmodus .meldingen:not(:has(li:not(.intern))) { display: none; }
 .producten { flex-wrap: wrap; }
 /* Knoppen algemeen */
@@ -191,6 +208,37 @@ main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
 @media (max-width: 1150px) { main.ontwerp { grid-template-columns: minmax(0, 200px) minmax(0, 1fr); } main.ontwerp > .resultaat { grid-column: 1 / -1; position: static; } }
 @media (max-width: 760px) { main.ontwerp { grid-template-columns: minmax(0, 1fr); } main.ontwerp .midden { order: 1; } main.ontwerp .gereedschap { order: 2; } main.ontwerp > .resultaat { order: 3; } .knoppenlijst { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
 .gereedschap { align-self: start; display: grid; gap: 4px; }
+.modelrij { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.modelrij .modelnaam { margin: 0; }
+.gereedschapkop { grid-column: 1 / -1; font-family: var(--tekst); font-size: .78rem; font-weight: 600; color: var(--zacht); margin: 8px 0 0; text-transform: uppercase; letter-spacing: .04em; }
+.opnieuw { border-top: 1px solid var(--lijn); margin-top: 8px; padding-top: 4px; }
+.opnieuw > summary { cursor: pointer; padding: 6px 0; font-weight: 600; }
+.modelvorm { margin-top: 12px; }
+/* Stap 3 · Offerte */
+main.offerte { grid-template-columns: minmax(0, 1fr); max-width: 980px; }
+.offertekaart h3 { font-size: 1.05rem; margin: 18px 0 6px; }
+.offertetitel { font-size: 1.05rem; margin: 6px 0 12px; }
+.offertebeelden { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 8px 0; }
+.offertebeelden figure { margin: 0; background: var(--papier); border: 1px solid var(--lijn); border-radius: 8px; padding: 8px; display: grid; gap: 4px; align-content: start; }
+.offertebeelden svg, .offertebeelden img { width: 100%; height: auto; display: block; }
+.offertebeelden figcaption { font-size: .8rem; color: var(--zacht); }
+.offertelijst { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.offerteprijs { max-width: 420px; column-gap: 0; }
+.offerteprijs dt { padding-right: 16px; }
+.offerteprijs dt.totaal, .offerteprijs dd.totaal { font-weight: 700; color: var(--inkt); border-top: 1px solid var(--lijn); padding-top: 4px; }
+.offertewaarschuwing { color: var(--fout); font-weight: 600; }
+.alleen-afdruk { display: none; }
+@media print {
+  /* Een afgedrukte offerte toont nooit kostprijs of marge, ook niet buiten de klantweergave. */
+  header, footer, .geen-afdruk, #foutmelding, #beheer-tabs, .intern { display: none !important; }
+  .alleen-afdruk { display: block; }
+  .merkregel { font-size: 1.3rem; letter-spacing: .12em; font-variant: small-caps; margin: 0 0 8px; }
+  body { background: #fff; }
+  main:not(#view-offerte) { display: none !important; }
+  main.offerte { padding: 0; max-width: none; }
+  .offertekaart { border: 0; box-shadow: none; padding: 0; }
+  .offertebeelden figure { break-inside: avoid; }
+}
 .gereedschap h2 { font-size: 1.05rem; margin: 4px 0 6px; }
 .tekenvlak { display: grid; gap: 10px; align-content: start; }
 
@@ -389,19 +437,27 @@ main.catalogus { display: block; }
 <header>
   <!--MERK-->
   <h1><span id="productnaam">Sofa op maat</span><span class="demo">demoprijzen</span></h1>
-  <nav class="producten" aria-label="Weergave">
-    <button type="button" data-weergave="modellen" aria-pressed="true">Modellen</button>
-    <button type="button" data-weergave="sofa" aria-pressed="false">Sofa op maat</button>
-    <button type="button" data-weergave="ontwerp" aria-pressed="false">Vrij ontwerp</button>
-    <button type="button" data-weergave="kast" aria-pressed="false">Kast op maat</button>
-    <button type="button" data-weergave="materialen" aria-pressed="false">Materialen</button>
-    <button type="button" data-weergave="catalogus" aria-pressed="false">Catalogus</button>
+  <nav class="producten" aria-label="Menu">
+    <div class="menugroep stappen" role="group" aria-label="Verkoop: model kiezen, ontwerpen, offerte">
+      <button type="button" data-weergave="modellen" aria-pressed="true"><span class="nr">1 · </span>Modellen</button>
+      <button type="button" data-weergave="ontwerp" aria-pressed="false"><span class="nr">2 · </span>Ontwerpen</button>
+      <button type="button" data-weergave="offerte" aria-pressed="false"><span class="nr">3 · </span>Offerte</button>
+    </div>
+    <div class="menugroep anders" role="group" aria-label="Andere configurators">
+      <span class="menulabel" aria-hidden="true">Andere configurators</span>
+      <button type="button" data-weergave="sofa" aria-pressed="false">Sofa op maat</button>
+      <button type="button" data-weergave="kast" aria-pressed="false">Kast op maat</button>
+    </div>
+    <div class="menugroep beheer" role="group" aria-label="Beheer">
+      <button type="button" data-weergave="beheer" aria-pressed="false" title="Stoffen, elementen, opties en modellen van de catalogus">Beheer</button>
+    </div>
   </nav>
-  <div class="klant" role="radiogroup" aria-label="Klant">
+  <div class="klant" role="radiogroup" aria-label="Prijs voor">
+    <span class="klantlabel" aria-hidden="true">Prijs voor</span>
     <label><input type="radio" name="klant" value="particulier" id="klant-particulier" checked> Particulier</label>
     <label><input type="radio" name="klant" value="inrichter" id="klant-inrichter"> Interieurinrichter</label>
     <label for="korting" id="korting-veld" hidden>korting <input type="number" id="korting" value="20" min="0" max="100" step="1" disabled> %</label>
-    <button type="button" id="klantweergave" class="klantknop" aria-pressed="false" title="Scherm tonen aan de klant: zonder kostprijs, marge, stofverbruik en stuklijst, en zonder de beheerschermen Materialen en Catalogus">Klantweergave</button>
+    <button type="button" id="klantweergave" class="klantknop" aria-pressed="false" title="Scherm tonen aan de klant: zonder kostprijs, marge, stofverbruik en stuklijst, en zonder Beheer">Klantweergave</button>
   </div>
 </header>
 <main id="view-config">
@@ -448,18 +504,17 @@ main.catalogus { display: block; }
 
 <main id="view-ontwerp" class="ontwerp" hidden>
   <aside class="kaart gereedschap" aria-label="Gereedschap">
-    <p id="o-model" class="modelnaam"></p>
-    <h2>Teken</h2>
+    <div class="modelrij"><p id="o-model" class="modelnaam"></p><button type="button" id="o-ongedaan" class="tweede klein-knop" title="Ctrl+Z">↶ Ongedaan maken</button></div>
+    <h2>Elementen</h2>
     <div id="o-gereedschap" class="knoppenlijst" role="group" aria-label="Gereedschap"></div>
     <p id="o-hint" class="klein"></p>
-    <h2>Start van</h2>
-    <div id="o-start" class="knoppenlijst"></div>
+    <h2>Stof</h2>
     <label for="o-hoofdmateriaal" class="maatveld breed"><span>Hoofdmateriaal</span><select id="o-hoofdmateriaal"></select></label>
     <details class="stalen-details" open><summary>Stalenkaart: stof kiezen per collectie</summary><div id="o-stalenplek"></div></details>
-    <div class="knoppenrij">
-      <button type="button" id="o-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button>
-      <button type="button" id="o-wis" class="gevaar">Alles wissen</button>
-    </div>
+    <details class="opnieuw" id="o-opnieuw"><summary>Opnieuw beginnen met …</summary>
+      <p class="klein">Vervangt het huidige ontwerp (terug met <em>Ongedaan maken</em>). Een model kies je bij <em>1 · Modellen</em>.</p>
+      <div id="o-start" class="knoppenlijst"></div>
+    </details>
     <details class="sneltoetsen"><summary>Sneltoetsen</summary>
       <ul class="klein"><li>Pijltjes: 1 cm verplaatsen (Shift: 10 cm)</li><li>R / Shift+R: draaien</li><li>D: dupliceren</li><li>Delete: verwijderen</li><li>Alt tijdens slepen: zonder magneet</li><li>Ctrl+Z: ongedaan maken</li><li>Esc: stoppen met tekenen</li></ul>
     </details>
@@ -518,13 +573,12 @@ main.catalogus { display: block; }
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>
   </section>
-  <section class="kaart">
-    <div class="kaartkop"><h2>Vormgeving van het model</h2><span class="klein">ontwerpmodus · per element aan te passen via het element</span></div>
-    <div id="o-vormgeving"></div>
-  </section>
-  <section class="kaart">
-    <div class="kaartkop"><h2>Aanpassingen voor de hele zetel</h2><span class="klein">poten, hout, comfort, rug, naden …</span></div>
+  <section class="kaart" id="o-aanpassingen-kaart">
+    <div class="kaartkop"><h2>Aanpassingen voor de hele zetel</h2><span class="klein">voor één element: klik erop</span></div>
     <div id="o-aanpassingen" class="aanpassingen"></div>
+    <details class="ontwerpmodus modelvorm"><summary>Ontwerpmodus: vormgeving van het hele model (rugdikte, kussens, zachtheid, rugvorm, houten frame)</summary>
+      <div id="o-vormgeving"></div>
+    </details>
   </section>
   </div>
   <aside class="resultaat" aria-label="Resultaat vrij ontwerp">
@@ -534,7 +588,8 @@ main.catalogus { display: block; }
       <dl id="o-prijsdetail" class="prijsdetail"></dl>
       <ul id="o-meldingen" class="meldingen" hidden></ul>
       <div class="acties">
-        <button type="button" id="o-kopieer">Kopieer offertetekst</button>
+        <button type="button" id="o-naar-offerte">Naar offerte →</button>
+        <button type="button" id="o-kopieer" class="tweede">Kopieer offertetekst</button>
         <span id="o-kopieer-melding" class="klein" role="status"></span>
       </div>
     </section>
@@ -547,6 +602,19 @@ main.catalogus { display: block; }
   </aside>
 </main>
 
+<div id="beheer-tabs" class="beheertabs" hidden>
+  <p class="intro klein">Beheer van de catalogus: stoffen, elementen, opties en eigen modellen. Alles wordt gecontroleerd voor het bewaard wordt en is meteen bruikbaar bij Modellen en Ontwerpen. Bewaard in deze browser; via "Delen" kopieer je de catalogus naar een andere computer.</p>
+  <div class="tabs filter" role="group" aria-label="Beheer">
+    <button type="button" data-beheer="stoffen" aria-pressed="true">Stoffen</button>
+    <button type="button" data-cat="elementen" aria-pressed="false">Elementen</button>
+    <button type="button" data-cat="opties" aria-pressed="false">Opties</button>
+    <button type="button" data-cat="modellen" aria-pressed="false">Modellen</button>
+    <button type="button" data-cat="delen" aria-pressed="false">Delen</button>
+  </div>
+</div>
+<main id="view-offerte" class="offerte" hidden>
+  <div id="of-inhoud"></div>
+</main>
 <main id="view-materialen" class="materialen" hidden>
   <section class="kaart">
     <div class="kaartkop"><h2>Materialen</h2><span id="m-aantal" class="klein"></span></div>
@@ -592,13 +660,6 @@ main.catalogus { display: block; }
   </section>
 </main>
 <main id="view-catalogus" class="catalogus" hidden>
-  <p class="intro klein">Ontwerp hier zelf nieuwe elementen, opties en modellen. Alles wordt gecontroleerd voor het bewaard wordt, en is daarna meteen bruikbaar in "Vrij ontwerp" en bij "Modellen". De catalogus wordt in deze browser bewaard; via "Delen" kopieer je hem naar een andere computer.</p>
-  <div class="tabs filter" role="group" aria-label="Onderdeel">
-    <button type="button" data-cat="elementen" aria-pressed="true">Elementen</button>
-    <button type="button" data-cat="opties" aria-pressed="false">Opties</button>
-    <button type="button" data-cat="modellen" aria-pressed="false">Modellen</button>
-    <button type="button" data-cat="delen" aria-pressed="false">Delen</button>
-  </div>
   <section id="cat-elementen" class="catraster">
     <div class="kaart">
       <div class="kaartkop"><h2>Elementen</h2><button type="button" id="cat-nieuw-type">+ Nieuw element</button></div>
