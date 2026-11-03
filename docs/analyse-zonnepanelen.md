@@ -276,7 +276,37 @@ De omvang is grof ingeschat: S = dagen, M = 1–3 weken, L = meer dan een maand.
 
 ---
 
-## 9. Bekende technische beperkingen in de code
+## 9. Variant: alleen een snelle offerte bij de klant
+
+Als de configurator alleen dient om **aan de keukentafel een prijs en een terugverdientijd** te geven, en de technische uitwerking daarna gebeurt zoals nu (opmeting, tools van de fabrikant en leverancier, ERP), dan wordt de lijst veel korter.
+
+**Uitgangspunt:** *de prijs moet juist zijn, de opbrengst voorzichtig, de rest mag grof.* Een snelle offerte blijft een prijsbelofte; daarom altijd "onder voorbehoud van technische opmeting" erop.
+
+**Blijft nodig**
+
+| Wat | Waarom | Omvang |
+|---|---|---|
+| Echte prijzen en **pakketten** van de installateur, met een minimummarge | De prijs is het enige wat bindend is | M |
+| Opbrengst licht bijsturen: noorddaken lager, basisgetal bewust kiezen (± 1000 kWh/kWp of een PVGIS-tabel) | Niet te veel beloven; ± 10 % volstaat | S |
+| Snelle flow: adres → overnemen → **aantal panelen** (schuif, met het maximum op het dak als controle) → pakket → klantweergave | Het gesprek duurt 15 minuten | S–M |
+| **2 à 3 varianten** naast elkaar (bv. basis / met batterij) | Zo wordt zonne-energie verkocht | M |
+| Offerte als PDF in de huisstijl, meteen te mailen, met de voorbehouden en de btw-verklaring | De klant wil iets mee | M |
+| Grenzen bewaken: max. korting, monofasig 5 kVA, alleen omvormers uit de eigen (goedgekeurde) catalogus | Fouten die later geld kosten | S (bestaat grotendeels) |
+| Werken op een tablet, ook zonder internet (zonder adresopzoeking) | Bereik bij de klant | S |
+
+**Valt weg of mag grof blijven**
+- Stringplan, kabelsectie, eendraad- en situatieschema, aanmelding bij Fluvius: dat doet de installateur na het akkoord met zijn eigen tools.
+- Montage, statiek en ballast: een vaste prijs per paneel per daktype volstaat.
+- Kwartierprofielen, simulatie en capaciteitstarief: de vuistregel volstaat, als die voorzichtig is en de klant ziet dat het een schatting is.
+- Hoogtemodel, schaduw, legplan op de luchtfoto: niet nodig; het legplan dient alleen als controle "past het op het dak".
+- Opmeting, werf en opleverdossier.
+- Server: niet nodig voor één verkoper (bewaren als bestand en de offerte mailen). Wel nodig zodra meerdere verkopers met dezelfde prijzen werken, of als de offerte automatisch in het ERP moet komen.
+
+**Grootte:** ongeveer een vijfde van de volledige fasering in §7. Grotendeels werk aan de catalogus, de varianten en de PDF; het rekenwerk bestaat al.
+
+**Risico's:** een te optimistische terugverdientijd (bewust voorzichtig rekenen) en een prijs die na de opmeting stijgt (voorbehouden en een vaste toeslaglijst: asbest, extra kabel, nieuwe zekeringkast).
+
+## 10. Bekende technische beperkingen in de code
 
 Kort, voor wie verder bouwt:
 
