@@ -54,7 +54,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   let groep = new THREE.Group();
   scene.add(groep);
   const doel = new THREE.Vector3(0, 300, 0);
-  let afstand = 2600, draai = 0.5, hoogte = 0.55; // draai rond de y-as, hoogte = kijkhoek
+  let afstand = 2600, draai = 0.5, hoogte = 0.55, basis = 2600; // draai rond de y-as, hoogte = kijkhoek
   let orient = 0;
 
   const mat = (kleur: string, extra: Record<string, unknown> = {}) => new THREE.MeshStandardMaterial({ color: kleur, roughness: 0.85, side: THREE.DoubleSide, ...extra });
@@ -105,13 +105,9 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     const vlakken = alleDakvlakken(project);
     let maxX = 0, maxY = 0;
     for (const g of project.gebouwen) {
-      const muur = g.id === project.gebouwen[0]?.id ? '#d8c3a8' : '#cfccc4';
+      const muur = g.id === project.gebouwen[0]?.id ? '#e4dccf' : '#d9d5cc';
       const W = g.breedte, D = g.diepte, G = g.goothoogte;
       doos(g.x, 0, g.z, W, G, D, muur);
-      // Deur en ramen op de voorgevel (enkel decor).
-      doos(g.x - W / 4, 0, g.z + D / 2, 100, 215, 3, '#3b3f44');
-      if (G > 450) for (const dx of [-W / 4, W / 4]) doos(g.x + dx, G - 200, g.z + D / 2, 120, 130, 3, '#7f98a8');
-      doos(g.x + W / 4, 90, g.z + D / 2, Math.min(220, W / 3), 130, 3, '#7f98a8');
       const eigen = vlakken.filter((v) => v.gebouw === g.id);
       const s = Math.tan((g.helling * Math.PI) / 180);
       if (g.dakvorm === 'zadel') {
@@ -153,7 +149,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     }
 
     // Panelen: donker glas met een dun kader en een staander op een plat dak.
-    const glas = new THREE.MeshStandardMaterial({ color: 0x15202d, roughness: 0.28, metalness: 0.35, side: THREE.DoubleSide });
+    const glas = new THREE.MeshStandardMaterial({ color: 0x18222e, roughness: 0.5, metalness: 0.1, side: THREE.DoubleSide });
     const kader = new THREE.LineBasicMaterial({ color: 0x0a0d10 });
     for (const l of r.legplan) {
       for (const x of l.panelen) {
@@ -170,10 +166,44 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       }
     }
 
+    // Buren uit de kaart: grijze blokken met hun echte contour en hoogte (werpen ook schaduw).
+    const buurMat = new THREE.MeshStandardMaterial({ color: 0xa9a7a1, roughness: 1, transparent: true, opacity: 0.45, depthWrite: false });
+    for (const b of project.omgeving ?? []) {
+      if (b.ring.length < 3) continue;
+      const vorm = new THREE.Shape(b.ring.map(([x, z]) => new THREE.Vector2(x, -z)));
+      const geo = new THREE.ExtrudeGeometry(vorm, { depth: b.hoogte, bevelEnabled: false });
+      geo.rotateX(-Math.PI / 2);
+      const m = new THREE.Mesh(geo, buurMat);
+      m.castShadow = true;
+      m.renderOrder = 2;
+      groep.add(m);
+    }
+
+    // Luchtfoto als ondergrond (als die er is en geladen kan worden), anders gras.
+    gras.visible = true;
+    if (project.luchtfoto) {
+      const f = project.luchtfoto;
+      const vlak = new THREE.Mesh(new THREE.PlaneGeometry(f.grootte, f.grootte).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 }));
+      vlak.rotation.y = f.draai;
+      vlak.position.y = 1;
+      vlak.receiveShadow = true;
+      vlak.visible = false;
+      groep.add(vlak);
+      new THREE.TextureLoader().load(f.url, (tex: any) => {
+        tex.encoding = THREE.sRGBEncoding;
+        vlak.material.map = tex;
+        vlak.material.needsUpdate = true;
+        vlak.visible = true;
+        camera_();
+      }, undefined, () => { /* geen internet: gras blijft */ });
+    }
+
     // Windroos op het gras.
     const ster = new THREE.Group();
+    const buurHoogte = Math.max(0, ...(project.omgeving ?? []).map((b) => b.hoogte));
     const R = Math.max(700, maxX + 300);
-    for (const [a, letter] of [[180, 'N'], [0, 'Z'], [-90, 'O'], [90, 'W']] as [number, string][]) {
+    // Met een luchtfoto is de ligging duidelijk; anders de windstreken op het gras.
+    for (const [a, letter] of (project.luchtfoto ? [] : [[180, 'N'], [0, 'Z'], [-90, 'O'], [90, 'W']]) as [number, string][]) {
       const d = richtingVan(a);
       const c = document.createElement('canvas');
       c.width = c.height = 128;
@@ -185,7 +215,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       x.fillText(letter, 64, 70);
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthWrite: false }));
       sprite.scale.set(140, 140, 1);
-      sprite.position.set(d.x * R, 70, d.z * R);
+      sprite.position.set(d.x * R, buurHoogte ? buurHoogte + 200 : 70, d.z * R);
       ster.add(sprite);
     }
     groep.add(ster);
@@ -195,6 +225,10 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     zon.position.set(zrichting.x * 3000, 2600, zrichting.z * 3000);
     zon.target.position.set(0, 0, 0);
     doel.set((Math.min(...project.gebouwen.map((g) => g.x - g.breedte / 2)) + Math.max(...project.gebouwen.map((g) => g.x + g.breedte / 2))) / 2, maxY * 0.45, 0);
+    // Afstand van de camera volgens de grootte van de eigen gebouwen.
+    const omvang = Math.max(...project.gebouwen.map((g) => Math.max(Math.abs(g.x) + g.breedte / 2, Math.abs(g.z) + g.diepte / 2))) * 2;
+    const nieuw = Math.max(1600, Math.min(6000, omvang * 2.4 + maxY * 1.2));
+    if (Math.abs(nieuw - basis) > 50) { afstand = afstand * (nieuw / basis); basis = nieuw; }
   }
 
   /** Richting in de wereld voor een azimut (0 = zuid). */
@@ -263,11 +297,11 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     },
     standpunt(naam) {
       // Draai 0 = recht op de voorgevel.
-      if (naam === 'schuin') { draai = 0.5; hoogte = 0.55; afstand = 2600; }
-      if (naam === 'boven') { draai = 0; hoogte = 1.5; afstand = 2800; }
+      if (naam === 'schuin') { draai = 0.5; hoogte = 0.55; afstand = basis; }
+      if (naam === 'boven') { draai = 0; hoogte = 1.5; afstand = basis * 1.1; }
       if (naam === 'zon') {
         const z = richtingVan(0);
-        draai = Math.atan2(z.x, z.z); hoogte = 0.6; afstand = 2600;
+        draai = Math.atan2(z.x, z.z); hoogte = 0.6; afstand = basis;
       }
       camera_();
     },

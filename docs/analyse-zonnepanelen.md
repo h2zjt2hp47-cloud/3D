@@ -100,7 +100,7 @@ De terugverdientijd is wat de klant onthoudt, dus die moet verdedigbaar zijn.
 | Meer dakvormen | M | Schilddak (trapezium- en driehoeksvlakken), wolfseind, L-vormige woning (twee gebouwen in een hoek), dakkapel met eigen dakvlak, bijgebouw in een andere richting (eigen oriëntatie per gebouw). Het legplan moet dan met niet-rechthoekige vlakken overweg kunnen. |
 | Legplan bewerken | M | Rij verschuiven, paneel slepen, gemengd staand en liggend, minimale afstand tot nok en goot volgens het montagesysteem, marge rond obstakels instelbaar. |
 | Legplan op de luchtfoto | S | De luchtfoto en de GRB-contour hebben we al; het legplan in Lambert 72 plaatsen. Dat geeft vertrouwen bij de klant en voorkomt fouten. |
-| **Helling en hoogte uit het hoogtemodel** | S | Uit de DHMV II DSM (1 m) per dakvlak de helling, de richting en de goothoogte schatten. Dezelfde bron als de Zonnekaart; voor de Zonnekaart zelf vonden we geen open dienst per dakvlak. Opgelet: metingen van 2013–2015, dus nieuwbouw ontbreekt. |
+| **Helling en hoogte uit het hoogtemodel** *(eerste versie gebouwd 3/11: dakvorm, helling, goot, nok, aanbouw, buren)* | S | Uit de DHMV II DSM (1 m) per dakvlak de helling, de richting en de goothoogte schatten. Dezelfde bron als de Zonnekaart; voor de Zonnekaart zelf vonden we geen open dienst per dakvlak. Opgelet: metingen van 2013–2015, dus nieuwbouw ontbreekt. |
 | Wallonië en Brussel | C | Andere kaartdiensten (WalOnMap / UrbIS) en andere regels; pas als er klanten zijn. |
 | Hoekhuis en meerdere straten | S | Nu kies je met een knop de andere zijde; beter: alle zijden met hun straat tonen. |
 

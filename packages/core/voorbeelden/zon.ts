@@ -80,6 +80,8 @@ export function leegZonProject(): ZonProject {
     opbrengstMarge: 5,
     doelAantal: null,
     varianten: [],
+    omgeving: [],
+    luchtfoto: null,
   };
 }
 

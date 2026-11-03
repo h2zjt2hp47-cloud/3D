@@ -178,6 +178,10 @@ export interface ZonProject {
   doelAantal: number | null;
   /** Bewaarde varianten om naast elkaar te tonen. */
   varianten: Variant[];
+  /** Buren voor de 3D (contour in cm in de assen van de woning, hoogte in cm), uit de kaart. */
+  omgeving: { ring: [number, number][]; hoogte: number }[];
+  /** Luchtfoto als ondergrond in de 3D: vierkant van `grootte` cm rond het midden, gedraaid met `draai` (radialen). */
+  luchtfoto: { url: string; grootte: number; draai: number } | null;
 }
 
 /** Een variant: dezelfde woning, een andere installatie (panelen, omvormer, batterij, opties). */
