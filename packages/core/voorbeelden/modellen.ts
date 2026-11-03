@@ -146,15 +146,15 @@ export const zetelModellen: ModelDefinitie[] = [
   // ---------------- Fauteuils ----------------
   model('pebble', 'Pebble', FAUTEUIL, 'Zachte, organische fauteuil met hoge, ronde rug, zonder zichtbare poten.', {
     hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt', poothoogte: 'laag', rughoogte: 'hoog', comfort: 'dons' },
-    vormgeving: { zachtheid: 10 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'afgerond' }]]),
+    vormgeving: { zachtheid: 10 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'organisch' }]]),
   }, 'F-Pebble'),
   model('karl', 'Karl', FAUTEUIL, 'Loungestoel met gebogen rug en zitting in bouclé op een houten frame met hoge poten.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', rug: 'vast' },
-    vormgeving: { zachtheid: 6, rugdikte: 12 }, elementen: rij([['fauteuil', 72, 78, { kuipvorm: 'afgerond' }]]),
+    vormgeving: { zachtheid: 6, rugdikte: 12 }, elementen: rij([['fauteuil', 72, 78, { kuipvorm: 'schelp' }]]),
   }, 'F-Karl'),
   model('tumble', 'Tumble', FAUTEUIL, 'Ronde kuipfauteuil in bouclé, op een verdekte voet.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
-    vormgeving: { zachtheid: 9 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'rond' }]]),
+    vormgeving: { zachtheid: 9 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'omhullend' }]]),
   }, 'F-Tumble'),
   model('ross', 'Ross', FAUTEUIL, 'Compacte fauteuil met afgeronde rug op hoge houten poten.', {
     hoofdmateriaal: 'katoen_naturel', opties: { poten: 'cilinder', poothoogte: 'hoog', hout: 'eik_naturel' },
@@ -166,11 +166,11 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'F-Amusette'),
   model('quin', 'Quin', FAUTEUIL, 'Ronde draaifauteuil met losse rugkussens in velours.', {
     hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons' },
-    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 90, 90, { kuipvorm: 'rond' }]]),
+    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 90, 90, { kuipvorm: 'trommel' }]]),
   }, 'F-Quin'),
   model('satie', 'Satie', FAUTEUIL, 'Ronde kuipfauteuil met los rugkussen in velours, op een verdekte voet.', {
     hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los' },
-    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'rond' }]]),
+    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'trommel' }]]),
   }, 'F-Satie'),
   model('mabel-1', 'Mabel 1-zit', FAUTEUIL, 'Afgeronde fauteuil in bouclé op slanke donkere poten.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart' },
@@ -190,7 +190,7 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'F-Milton'),
   model('manon', 'Manon', FAUTEUIL, 'Omhullende, ronde fauteuil op een verdekte voet.', {
     hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag' },
-    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'rond' }]]),
+    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'omhullend' }]]),
   }, 'F-Manon'),
   model('mabel-2', 'Mabel 2-zit', FAUTEUIL, 'Kleine tweezit met afgeronde rug en lage armen op slanke donkere poten.', {
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', rug: 'vast' },

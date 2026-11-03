@@ -183,9 +183,15 @@ export const zetelOpties: OptieGroep[] = [
   {
     code: 'kuipvorm', label: 'Vorm fauteuil', niveau: 'element', voorTypen: ['fauteuil'], standaard: 'afgerond',
     keuzes: [
-      { code: 'rond', label: 'Rond (kuip)', teken: { vorm: 'rond' } },
-      { code: 'afgerond', label: 'Afgerond', teken: { vorm: 'afgerond' } },
-      { code: 'hoekig', label: 'Hoekig', teken: { vorm: 'hoekig' } },
+      // Vormen van de kuip (zie core/src/kuip.ts): grondvlak, wanddikte, hoe ver de wand rond loopt (graden),
+      // hoogte vooraan boven de zitting, vanaf waar de armen vlak lopen. Benaderingen op basis van productfoto's.
+      { code: 'rond', label: 'Rond (kuip)', uitleg: 'Ronde kuip: rug loopt geleidelijk over in de armen', teken: { vorm: 'rond', plan: 'rond', dikte: 15, boog: 138, voorBoven: 12, armVanaf: 1 } },
+      { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug die naar armhoogte zakt en vlak doorloopt', teken: { vorm: 'afgerond', plan: 'afgerond', dikte: 13, boog: 130, voorBoven: 17, armVanaf: 0.6 } },
+      { code: 'omhullend', label: 'Omhullend', uitleg: 'Wand loopt ver rond, armen laag vooraan', teken: { vorm: 'omhullend', plan: 'rond', dikte: 17, boog: 140, voorBoven: 9, armVanaf: 1 } },
+      { code: 'trommel', label: 'Trommel', uitleg: 'Ronde trommel, rondom even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 14, boog: 138, voorBoven: 22, armVanaf: 1, vlak: true } },
+      { code: 'organisch', label: 'Organisch', uitleg: 'Dikke, zachte vorm met hoge rug die naar voren in de zitting overloopt', teken: { vorm: 'organisch', plan: 'rond', dikte: 24, boog: 118, voorBoven: 1, armVanaf: 1, organisch: true } },
+      { code: 'schelp', label: 'Schelp op frame', uitleg: 'Dunne, gebogen rugschaal boven de zitting, op het frame', teken: { vorm: 'schelp', plan: 'afgerond', dikte: 6, boog: 98, voorBoven: 20, armVanaf: 1, zwevend: true } },
+      { code: 'hoekig', label: 'Hoekig', uitleg: 'Rechte rug en armen', teken: { vorm: 'hoekig' } },
     ],
   },
   {

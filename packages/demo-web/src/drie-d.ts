@@ -618,7 +618,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    * `omtrek` in wereldcoördinaten; de vorm komt rond (ox, oz) met de onderkant op y = 0.
    * Geeft ook de ringen op de rand (voor de naad): boven en onder, op 45°.
    */
-  function omtrekGeometrie(omtrek: [number, number][], H: number, rr0: number, bol: number, ox: number, oz: number, buren: Doos[] = [], oy = 0) {
+  function omtrekGeometrie(omtrek: [number, number][], H: number, rr0: number, bol: number, ox: number, oz: number, buren: Doos[] = [], oy = 0, tegel = 0) {
     // 1. Punten rond het midden, tegen de klok in (positieve oppervlakte in x-z).
     let pts = omtrek.map(([x, z]) => [x - ox, z - oz] as [number, number]);
     let opp = 0;
@@ -679,16 +679,29 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const bx = (Math.min(...xs) + Math.max(...xs)) / 2, bz = (Math.min(...zs) + Math.max(...zs)) / 2;
     const hb = (Math.max(...xs) - Math.min(...xs)) / 2 || 1, hd = (Math.max(...zs) - Math.min(...zs)) / 2 || 1;
     // 4. Ringen van onder naar boven: onderkant (plat), onderrand, bovenrand, bovenvlak (bol) tot het midden.
-    const ringen: { inset: number; y: number; s: number }[] = [];
-    ringen.push({ inset: rr, y: 0, s: 0.0001 });
-    for (let k = 0; k <= 4; k++) { const t = (-90 + k * 22.5) * Math.PI / 180; ringen.push({ inset: rr * (1 - Math.cos(t)), y: rr + rr * Math.sin(t), s: 1 }); }
-    for (let k = 0; k <= 4; k++) { const t = (k * 22.5) * Math.PI / 180; ringen.push({ inset: rr * (1 - Math.cos(t)), y: H - rr + rr * Math.sin(t), s: 1 }); }
+    //    Textuur: op de rand langs de omtrek (cm) en in de hoogte; op het bovenvlak en de onderkant plat (x, z).
+    //    Op 45° van de bovenrand ligt de ring dubbel (zelfde plaats, andere textuurmaat): daar zit ook de naad.
+    type Ring = { inset: number; y: number; s: number; plat: boolean };
+    const ringen: Ring[] = [];
+    ringen.push({ inset: rr, y: 0, s: 0.0001, plat: true });
+    for (let k = 0; k <= 4; k++) { const t = (-90 + k * 22.5) * Math.PI / 180; ringen.push({ inset: rr * (1 - Math.cos(t)), y: rr + rr * Math.sin(t), s: 1, plat: k === 0 }); }
+    for (let k = 0; k <= 4; k++) {
+      const t = (k * 22.5) * Math.PI / 180, ring = { inset: rr * (1 - Math.cos(t)), y: H - rr + rr * Math.sin(t), s: 1, plat: k > 2 };
+      ringen.push(ring);
+      if (k === 2) ringen.push({ ...ring, plat: true }); // dubbel op 45°
+    }
     const KAP = 9;
-    for (let k = 1; k <= KAP; k++) ringen.push({ inset: rr, y: H, s: 1 - k / (KAP + 0.5) });
+    for (let k = 1; k <= KAP; k++) ringen.push({ inset: rr, y: H, s: 1 - k / (KAP + 0.5), plat: true });
     const naadOnder = 3, naadBoven = 8; // ringen op 45° (onder- en bovenrand)
-    const pos: number[] = [];
+    // Omtrek met een dubbel eerste punt achteraan (kolom M = kolom 0) voor een doorlopende textuur rondom.
+    const C = M + 1;
+    const omtrekLengte = [0];
+    for (let i = 1; i <= M; i++) omtrekLengte.push(omtrekLengte[i - 1]! + Math.hypot(vorm[i % M]![0] - vorm[i - 1]![0], vorm[i % M]![1] - vorm[i - 1]![1]));
+    const pos: number[] = [], uvs: number[] = [];
+    const t = tegel || 1;
     for (const ring of ringen) {
-      for (let i = 0; i < M; i++) {
+      for (let c = 0; c < C; c++) {
+        const i = c % M;
         const q = vorm[i]!, n = nrm[i]!;
         let x = q[0] - n[0] * ring.inset, z = q[1] - n[1] * ring.inset, y = ring.y;
         if (ring.s < 1) {
@@ -702,36 +715,45 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
           y += bol * f * Math.min(1, (y - (H - rr)) / rr);
         }
         pos.push(x, y, z);
+        if (ring.plat) uvs.push((x + ox) / t, (z + oz) / t);
+        else uvs.push(omtrekLengte[c]! / t, (y + oy) / t);
       }
     }
-    const midOnder = pos.length / 3; pos.push(mx, 0, mz);
+    const midOnder = pos.length / 3; pos.push(mx, 0, mz); uvs.push((mx + ox) / t, (mz + oz) / t);
     const fm = Math.max(0, 1 - ((mx - bx) / hb) ** 2) * Math.max(0, 1 - ((mz - bz) / hd) ** 2);
-    const midBoven = pos.length / 3; pos.push(mx, H + bol * fm, mz);
+    const midBoven = pos.length / 3; pos.push(mx, H + bol * fm, mz); uvs.push((mx + ox) / t, (mz + oz) / t);
     const idx: number[] = [];
     const R = ringen.length;
-    for (let r = 0; r < R - 1; r++)
-      for (let i = 0; i < M; i++) {
-        const a = r * M + i, b2 = r * M + ((i + 1) % M), c = (r + 1) * M + i, d = (r + 1) * M + ((i + 1) % M);
+    for (let r = 0; r < R - 1; r++) {
+      if (r === naadBoven) continue; // tussen de twee kopieën op 45° geen vlak
+      for (let c = 0; c < M; c++) {
+        const a = r * C + c, b2 = r * C + c + 1, cc = (r + 1) * C + c, d = (r + 1) * C + c + 1;
         // Ring 0 → 1 gaat van de onderkant (binnen) naar buiten; draairichting zo dat de normalen naar buiten wijzen.
-        idx.push(a, c, b2, b2, c, d);
+        idx.push(a, cc, b2, b2, cc, d);
       }
-    for (let i = 0; i < M; i++) {
-      idx.push(midOnder, i, (i + 1) % M);
-      const t0 = (R - 1) * M;
-      idx.push(t0 + i, midBoven, t0 + ((i + 1) % M));
+    }
+    for (let c = 0; c < M; c++) {
+      idx.push(midOnder, c, c + 1);
+      const t0 = (R - 1) * C;
+      idx.push(t0 + c, midBoven, t0 + c + 1);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geo.setIndex(idx);
     geo.computeVertexNormals();
+    // Dubbele punten samen dezelfde normaal: de naad rondom (kolom 0 en M) en de dubbele ring op 45°.
+    const paren: number[][] = [];
+    for (let r = 0; r < R; r++) paren.push([r * C, r * C + M]);
+    for (let c = 0; c < C; c++) paren.push(c === 0 || c === M ? [naadBoven * C, naadBoven * C + M, (naadBoven + 1) * C, (naadBoven + 1) * C + M] : [naadBoven * C + c, (naadBoven + 1) * C + c]);
+    gelijkeNormalen(geo, paren);
     // Schaduw onderaan en waar het tegen andere delen ligt (zoals bij de gewone kussens).
     const kleuren = new Float32Array(pos.length);
     for (let i = 0; i < pos.length / 3; i++) {
       const y = pos[i * 3 + 1]!;
       let ao = 0.72 + 0.28 * Math.min(1, Math.max(0, y / (H * 0.6)));
       // Alleen de rand (niet het bovenvlak): anders tekenen de lange driehoeken van het bovenvlak strepen.
-      const ringNr = Math.floor(i / M);
+      const ringNr = Math.floor(i / C);
       if (buren.length && ringNr > 0 && ringNr < ringen.length && ringen[ringNr]!.s === 1) {
         const wx = pos[i * 3]! + ox, wy = y + oy, wz = pos[i * 3 + 2]! + oz;
         let dicht = 0;
@@ -747,11 +769,120 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     geo.setAttribute('color', new THREE.BufferAttribute(kleuren, 3));
     const ringPunten = (r: number) => {
       const uit: any[] = [];
-      for (let i = 0; i < M; i++) uit.push(new THREE.Vector3(pos[(r * M + i) * 3]!, pos[(r * M + i) * 3 + 1]!, pos[(r * M + i) * 3 + 2]!));
+      for (let c = 0; c < M; c++) uit.push(new THREE.Vector3(pos[(r * C + c) * 3]!, pos[(r * C + c) * 3 + 1]!, pos[(r * C + c) * 3 + 2]!));
       return uit;
     };
     return { geo, naadRingen: [ringPunten(naadBoven), ringPunten(naadOnder)] };
   }
+  /** Dubbele punten (naad van de textuur) dezelfde normaal geven, anders ziet men een lijn. */
+  function gelijkeNormalen(geo: any, paren: number[][]) {
+    const n = geo.attributes.normal;
+    for (const groep of paren) {
+      let x = 0, y = 0, z = 0;
+      for (const i of groep) { x += n.getX(i); y += n.getY(i); z += n.getZ(i); }
+      const l = Math.hypot(x, y, z) || 1;
+      for (const i of groep) n.setXYZ(i, x / l, y / l, z / l);
+    }
+    n.needsUpdate = true;
+  }
+  /**
+   * Kuipwand: een gestoffeerde wand langs een gebogen middenlijn (`pad`, wereld x/z), met per punt een eigen
+   * bovenhoogte, een volledig afgeronde bovenrand en afgeronde uiteinden. Vorm rond (ox, oy, oz).
+   */
+  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0) {
+    const w = dikte / 2;
+    const n = pad.length;
+    // Richting en zijwaartse normaal per punt.
+    const zij = pad.map((q, i) => {
+      const a = pad[Math.max(0, i - 1)]!, c = pad[Math.min(n - 1, i + 1)]!;
+      const tx = c[0] - a[0], tz = c[1] - a[1], l = Math.hypot(tx, tz) || 1;
+      return { tx: tx / l, tz: tz / l, nx: tz / l, nz: -tx / l };
+    });
+    // Profiel (dwarsdoorsnede): onderkant, zijkant op, halve cirkel over de top, zijkant neer.
+    const profiel = (hoog: number, breed: number): [number, number][] => {
+      const r = Math.min(breed, Math.max(0.5, hoog - 0.5));
+      const pts: [number, number][] = [[-breed, 0], [-breed, Math.max(0, hoog - r)]];
+      for (let k = 1; k < 12; k++) { const a = Math.PI - (k / 12) * Math.PI; pts.push([Math.cos(a) * breed, hoog - r + Math.sin(a) * r]); }
+      pts.push([breed, Math.max(0, hoog - r)], [breed, 0]);
+      return pts;
+    };
+    // Ringen langs de middenlijn, met afgeronde uiteinden (de breedte loopt als een kwartcirkel af).
+    type Ring = { x: number; z: number; nx: number; nz: number; hoog: number; breed: number };
+    const ringen: Ring[] = [];
+    const eind = (i: number, richting: number) => {
+      const q = pad[i]!, r = zij[i]!, hoog = hoogtes[i]! - onder;
+      const stap = richting < 0 ? [ -r.tx, -r.tz ] : [ r.tx, r.tz ];
+      const reeks: Ring[] = [];
+      for (let k = 5; k >= 1; k--) {
+        const f = k / 5, a = (f * Math.PI) / 2;
+        // Uiteinde: in het grondvlak half rond, de hoogte blijft (geen knik in de arm).
+        reeks.push({ x: q[0] + stap[0]! * w * Math.sin(a), z: q[1] + stap[1]! * w * Math.sin(a), nx: r.nx, nz: r.nz, hoog: Math.max(0.6, hoog), breed: Math.max(0.05, w * Math.cos(a)) });
+      }
+      return reeks;
+    };
+    ringen.push(...eind(0, -1));
+    for (let i = 0; i < n; i++) ringen.push({ x: pad[i]![0], z: pad[i]![1], nx: zij[i]!.nx, nz: zij[i]!.nz, hoog: hoogtes[i]! - onder, breed: w });
+    ringen.push(...eind(n - 1, 1).reverse());
+    // Profiel gesloten met een dubbel eerste punt achteraan (voor een doorlopende textuur rond het profiel).
+    const Q = profiel(10, w).length + 1;
+    const pos: number[] = [], uvs: number[] = [];
+    let langs = 0;
+    ringen.forEach((r, i) => {
+      if (i > 0) langs += Math.hypot(r.x - ringen[i - 1]!.x, r.z - ringen[i - 1]!.z);
+      const pr = profiel(r.hoog, r.breed);
+      pr.push(pr[0]!);
+      // Textuurmaat rond het profiel van de volle wand (ook in de afgeronde uiteinden), anders drukt ze samen tot strepen.
+      const ref = profiel(r.hoog, w);
+      ref.push(ref[0]!);
+      let rond = 0;
+      pr.forEach(([u, y], j) => {
+        if (j > 0) rond += Math.hypot(ref[j]![0] - ref[j - 1]![0], ref[j]![1] - ref[j - 1]![1]);
+        pos.push(r.x + r.nx * u - ox, y, r.z + r.nz * u - oz);
+        // Textuur langs de wand (cm) en rond het profiel (cm), op ware grootte: geen sprongen in de bocht.
+        uvs.push(tegel ? langs / tegel : 0, tegel ? rond / tegel : 0);
+      });
+    });
+    const idx: number[] = [];
+    for (let i = 0; i < ringen.length - 1; i++)
+      for (let j = 0; j < Q - 1; j++) {
+        const a = i * Q + j, b = i * Q + j + 1, c = (i + 1) * Q + j, d = (i + 1) * Q + j + 1;
+        idx.push(a, b, c, b, d, c);
+      }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    gelijkeNormalen(geo, ringen.map((_, i) => [i * Q, i * Q + Q - 1]));
+    // Draairichting nakijken: de normaal bovenop moet omhoog wijzen; anders alle driehoeken omkeren.
+    const midden = Math.floor(ringen.length / 2) * Q + Math.floor(Q / 2);
+    if (geo.attributes.normal.getY(midden) < 0) {
+      for (let t = 0; t < idx.length; t += 3) { const k = idx[t + 1]!; idx[t + 1] = idx[t + 2]!; idx[t + 2] = k; }
+      geo.setIndex(idx);
+      geo.computeVertexNormals();
+      gelijkeNormalen(geo, ringen.map((_, i) => [i * Q, i * Q + Q - 1]));
+    }
+    // Schaduw onderaan en tegen de zitting (zoals bij de kussens).
+    const kleuren = new Float32Array(pos.length);
+    for (let i = 0; i < pos.length / 3; i++) {
+      const y = pos[i * 3 + 1]!;
+      let ao = 0.74 + 0.26 * Math.min(1, y / 30);
+      if (buren.length) {
+        const wx = pos[i * 3]! + ox, wy = y + onder, wz = pos[i * 3 + 2]! + oz;
+        let dicht = 0;
+        for (const q of buren) {
+          const dx = Math.max(q.x0 - wx, 0, wx - q.x1), dy = Math.max(q.y0 - wy, 0, wy - q.y1), dz = Math.max(q.z0 - wz, 0, wz - q.z1);
+          const d = Math.hypot(dx, dy, dz);
+          if (d < 3.5) dicht += (1 - d / 3.5) * 0.25;
+        }
+        ao *= 1 - Math.min(0.35, dicht);
+      }
+      kleuren[i * 3] = kleuren[i * 3 + 1] = kleuren[i * 3 + 2] = ao;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(kleuren, 3));
+    return geo;
+  }
+
   /** Naad als buis langs gegeven ringen (bies, gewone naad of sierstiksel). */
   function naadLangs(b: Blok, ringen: any[][]) {
     if (!b.naad) return [];
@@ -835,6 +966,21 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     let geo: any;
     let kussen: ReturnType<typeof kussenGeometrie> | null = null;
     let vrijeNaden: any[][] | null = null;
+    // Kuipwand van een fauteuil: gebogen, gestoffeerde wand met aflopende hoogte.
+    if (b.vorm === 'kuipwand' && b.pad && b.hoogtes) {
+      const cxo = b.x + b.b / 2, czo = b.z + b.d / 2;
+      const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
+      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm);
+      const base = materiaal(b);
+      const sleutel = `vc:${base.uuid}`;
+      let mat = materialen.get(sleutel);
+      if (!mat) { mat = base.clone(); mat.vertexColors = true; materialen.set(sleutel, mat); }
+      const m = new THREE.Mesh(g, mat);
+      m.name = b.code;
+      m.position.set(cxo, b.y, czo);
+      m.castShadow = m.receiveShadow = true;
+      return m;
+    }
     // Vrije omtrek (zitting met ronde kant) of een staande gestoffeerde cilinder (ronde poef): gevuld kussen met die vorm.
     const staandeCilinder = b.vorm === 'cilinder' && !b.as && (b.soort === 'kussen' || b.soort === 'stof') && opties.zetel && (b.taps ?? 1) === 1;
     if (b.omtrek || staandeCilinder) {
@@ -845,11 +991,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       });
       const rr = b.afronding ?? Math.min(5, b.h / 3);
       const bol = b.soort === 'kussen' ? Math.min(2.2, b.h * 0.13) : Math.min(1, b.h * 0.06);
-      const v = omtrekGeometrie(omtrek, b.h, rr, bol, cxo, czo, opties.zetel ? burenVan(b) : [], b.y);
+      // Zonder eigen weefsel: de fijne standaardstructuur (herhaling 0,12) op ± 8 cm, zoals op de gewone blokken.
+      const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
+      const v = omtrekGeometrie(omtrek, b.h, rr, bol, cxo, czo, opties.zetel ? burenVan(b) : [], b.y, tegelCm);
       geo = v.geo;
       vrijeNaden = b.soort === 'kussen' ? v.naadRingen : null;
-      if (b.weefsel && b.weefsel in WEEFSEL_CM) { const cm = WEEFSEL_CM[b.weefsel as Weefsel]; const tegel = { b: cm, h: cm }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cxo, b.y, czo); }
-      else if (b.textuur) { const tegel = { b: b.textuurCm ?? 15, h: b.textuurCm ?? 15 }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cxo, b.y, czo); }
       const base = materiaal(b);
       const sleutel = `vc:${base.uuid}`;
       let mat = materialen.get(sleutel);

@@ -7,6 +7,7 @@
 import type { Materiaal } from './materialen.js';
 import { chaiseRugVan, chaiseRugVlak, dragerVan, gekozenOpties, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
+import { kuipOpbouw, kuipParameters } from './kuip.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
 const rugBovenOf = (e: { rotatie: number }) => e.rotatie === 0 || e.rotatie === 180;
@@ -186,6 +187,63 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         break;
       }
       case 'kuip': {
+        // Kuip (rond, omhullend, organisch, schelp …): silhouet van de gebogen wand, hoog achteraan en aflopend naar de armen.
+        const kp = kuipParameters(opt.get('kuipvorm')?.teken);
+        if (kp) {
+          const opb = kuipOpbouw(e.breedte, e.diepte, { P, zithoogte, rugH, kussenDik }, kp, losseRug);
+          const wereld = (lx: number, ly: number) => lokaalNaarWereld(e, lx, ly, 0, 0);
+          // Middenlijn fijn bemonsterd (om de ½ cm, hoogte ertussen), anders wordt de bovenlijn golvend of krijgt ze gaten.
+          const pw: { x: number; y: number }[] = [], hw: number[] = [];
+          opb.wand.pad.forEach(([lx, ly], i) => {
+            if (i === 0) { pw.push(wereld(lx, ly)); hw.push(opb.wand.hoogtes[0]!); return; }
+            const [vx, vy] = opb.wand.pad[i - 1]!, n = Math.max(1, Math.ceil(Math.hypot(lx - vx, ly - vy) / 0.5));
+            for (let k = 1; k <= n; k++) {
+              const f = k / n;
+              pw.push(wereld(vx + (lx - vx) * f, vy + (ly - vy) * f));
+              hw.push(opb.wand.hoogtes[i - 1]! + (opb.wand.hoogtes[i]! - opb.wand.hoogtes[i - 1]!) * f);
+            }
+          });
+          const half = opb.wand.dikte / 2;
+          const midZ = voetafdruk(e).y + voetafdruk(e).h / 2;
+          /** Bovenlijn (omhullende) van de wanddelen; alleenVoor = enkel het deel vóór het midden (de armen). */
+          const omhullende = (alleenVoor: boolean) => {
+            const stap = 1, n = Math.ceil(p.b / stap) + 1;
+            const top = new Array<number>(n).fill(-1);
+            pw.forEach((q, i) => {
+              if (alleenVoor && q.y < midZ) return;
+              const hT = hw[i]!;
+              for (let k = 0; k < n; k++) {
+                const dx = x0 + k * stap - q.x;
+                if (Math.abs(dx) > half) continue;
+                top[k] = Math.max(top[k]!, hT - half + Math.sqrt(half * half - dx * dx));
+              }
+            });
+            const pts: string[] = [];
+            let eerste = -1, laatste = -1;
+            top.forEach((t, k) => { if (t > 0) { if (eerste < 0) eerste = k; laatste = k; } });
+            if (eerste < 0) return null;
+            pts.push(`M${rond(x0 + eerste * stap)} ${rond(-opb.wand.onder)}`);
+            for (let k = eerste; k <= laatste; k++) pts.push(`L${rond(x0 + k * stap)} ${rond(-Math.max(top[k]!, opb.wand.onder))}`);
+            pts.push(`L${rond(x0 + laatste * stap)} ${rond(-opb.wand.onder)} Z`);
+            const hMax = Math.max(...top);
+            return { d: pts.join(' '), x: x0 + eerste * stap, b: (laatste - eerste) * stap, hMax };
+          };
+          const achter = omhullende(false);
+          if (achter) pad(`${e.id}.rug`, achter.d, achter.x, top(achter.hMax), achter.b, achter.hMax - opb.wand.onder, donker, lijn);
+          const xs = (pts: [number, number][]) => { const w = pts.map(([lx, ly]) => wereld(lx, ly).x); return [Math.min(...w), Math.max(...w)] as const; };
+          for (const [i, k] of opb.rugkussens.entries()) {
+            const a = wereld(k.lx, k.ly), c = wereld(k.lx + k.lb, k.ly + k.ld);
+            const xa = Math.min(a.x, c.x), xb = Math.max(a.x, c.x);
+            rect(`${e.id}.rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, xa, top(k.y + k.h), xb - xa, k.h, stof, { afronding: 2 + zacht, ...lijn });
+          }
+          const [bx0, bx1] = xs(opb.plan);
+          rect(`${e.id}.basis`, bx0, top(opb.basis.boven), bx1 - bx0, opb.basis.boven - opb.basis.onder, donker, { afronding: kp.plan === 'rond' ? Math.min(14, (opb.basis.boven - opb.basis.onder) / 2) : 6, ...lijn });
+          if (kussenDik) { const [zx0, zx1] = xs(opb.zit); rect(`${e.id}.zitkussen`, zx0, top(zithoogte), zx1 - zx0, kussenDik, stof, { afronding: zacht, ...lijn }); }
+          const voor = kp.zwevend ? null : omhullende(true);
+          if (voor) pad(`${e.id}.arm`, voor.d, voor.x, top(voor.hMax), voor.b, voor.hMax - opb.wand.onder, stof, lijn);
+          maxHoogte = Math.max(maxHoogte, ...opb.wand.hoogtes, ...opb.rugkussens.map((k) => k.y + k.h));
+          break;
+        }
         const kvorm = String(te('kuipvorm', 'vorm', 'afgerond'));
         const armB = Math.max(10, Math.min(20, p.b * 0.16));
         const r = kvorm === 'rond' ? p.b / 2.6 : kvorm === 'afgerond' ? 14 : 4;

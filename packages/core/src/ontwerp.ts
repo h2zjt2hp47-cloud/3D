@@ -7,6 +7,7 @@
  * berekent prijs, stofverbruik per materiaal, stuklijst en tekening.
  */
 import { gebruiksklasse, materiaalArtikel, patroonfactor, type Materiaal } from './materialen.js';
+import { kuipOpbouw, kuipParameters } from './kuip.js';
 import type { Melding, StuklijstResultaat, TekeningResultaat, VormResultaat } from './types.js';
 
 export type Rotatie = 0 | 90 | 180 | 270;
@@ -474,6 +475,38 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
       break;
     }
     case 'kuip': {
+      // Kuip met gebogen wand: grondvlak, zitting en de wand als band met ronde uiteinden (zie kuip.ts).
+      const kp = kuipParameters(opties.get('kuipvorm')?.teken);
+      if (kp) {
+        const opb = kuipOpbouw(B, D, { P: 10, zithoogte: 45, rugH: 80, kussenDik: 12 }, kp, opties.get('rug')?.teken?.los === true);
+        const naarW = (lx: number, ly: number) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return `${rond(w.x)} ${rond(w.y)}`; };
+        const w0 = lokaalNaarWereld(e, 0, 0, B, D);
+        const vorm = (code: string, punten: string[], vulling: string): VormResultaat =>
+          ({ code: `${e.id}.${code}`, x: rond(w0.x), y: rond(w0.y), breedte: rond(w0.b), hoogte: rond(w0.h), vulling, pad: `M${punten.join(' L')} Z` });
+        const uit: VormResultaat[] = [vorm('zit', opb.plan.map(([x, y]) => naarW(x, y)), kleur), vorm('kussen', opb.zit.map(([x, y]) => naarW(x, y)), kleur)];
+        // Wand: buitenkant heen, rond uiteinde, binnenkant terug, rond begin.
+        const p = opb.wand.pad, h = opb.wand.dikte / 2;
+        const nrm = p.map((q, i) => {
+          const a = p[Math.max(0, i - 1)]!, c = p[Math.min(p.length - 1, i + 1)]!;
+          const tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1;
+          return [ty / l, -tx / l, tx / l, ty / l] as const; // normaal (x, y) en richting (x, y)
+        });
+        const kap = (i: number, van: 1 | -1) => {
+          const q = p[i]!, [nx, ny, tx, ty] = nrm[i]!;
+          const pts: string[] = [];
+          for (let k = 1; k < 8; k++) {
+            const a = (k / 8) * Math.PI;
+            const cx = Math.cos(a) * van, sx = Math.sin(a);
+            pts.push(naarW(q[0] + (nx * cx + tx * sx * van) * h, q[1] + (ny * cx + ty * sx * van) * h));
+          }
+          return pts;
+        };
+        const buiten = p.map((q, i) => naarW(q[0] + nrm[i]![0] * h, q[1] + nrm[i]![1] * h));
+        const binnen = p.map((q, i) => naarW(q[0] - nrm[i]![0] * h, q[1] - nrm[i]![1] * h)).reverse();
+        uit.push(vorm('rug', [...buiten, ...kap(p.length - 1, 1), ...binnen, ...kap(0, -1)], donker));
+        opb.rugkussens.forEach((k, i) => delen.push([`rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, k.lx, k.ly, k.lb, k.ld, kleur, 4]));
+        return [...uit, ...naarWereld()];
+      }
       const vorm = String(t('kuipvorm', 'vorm') ?? 'afgerond');
       const armB = Math.max(10, Math.min(20, B * 0.16));
       const uit: VormResultaat[] = [];

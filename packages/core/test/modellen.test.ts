@@ -119,7 +119,19 @@ describe('collectie', () => {
     expect(blokken('husk').some((b) => b.code === 'e2.housse')).toBe(true);
     expect(blokken('husk').some((b) => b.code.includes('.poot-'))).toBe(false);
     expect(blokken('fez').find((b) => b.code === 'e1.poef')).toMatchObject({ vorm: 'cilinder' });
-    expect(blokken('tumble').find((b) => b.code === 'e1.basis')).toMatchObject({ vorm: 'cilinder' });
-    expect(blokken('pebble').some((b) => b.code === 'e1.arm-l')).toBe(true);
+    // Kuipfauteuils: basis en zitting met een ronde omtrek, de rug als gebogen kuipwand die naar voren lager wordt.
+    const tumble = blokken('tumble');
+    expect(tumble.find((b) => b.code === 'e1.basis')!.omtrek!.length).toBeGreaterThan(40);
+    const wand = tumble.find((b) => b.code === 'e1.rug')!;
+    expect(wand.vorm).toBe('kuipwand');
+    const midden = Math.floor(wand.hoogtes!.length / 2);
+    expect(wand.hoogtes![midden]).toBeGreaterThan(wand.hoogtes![0]! + 20); // achteraan hoger dan vooraan
+    expect(blokken('pebble').some((b) => b.code === 'e1.arm-l')).toBe(false);
+    // Schelp (Karl): de rug staat op de zitting, niet op de vloer.
+    expect(blokken('karl').find((b) => b.code === 'e1.rug')!.y).toBeGreaterThan(20);
+    // Hoekige fauteuil houdt rechte rug en armen.
+    const hoekig = structuredClone(zetelModellen.find((m) => m.code === 'tumble')!.ontwerp);
+    hoekig.elementen[0]!.opties = { kuipvorm: 'hoekig' };
+    expect(bouw3D(hoekig, zetelCatalogus, standaardMaterialen).blokken.some((b) => b.code === 'e1.arm-l')).toBe(true);
   });
 });

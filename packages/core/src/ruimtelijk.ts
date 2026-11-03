@@ -6,6 +6,7 @@
  * zoals y in het bovenaanzicht), y = hoogte vanaf de vloer.
  */
 import { weefselVan, type Materiaal } from './materialen.js';
+import { kuipOpbouw, kuipParameters, type Punt } from './kuip.js';
 import { chaiseRugVan, chaiseRugVlak, dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -21,7 +22,7 @@ export interface Blok {
   code: string;
   soort: BlokSoort;
   /** blok = (afgeronde) balk; cilinder/kegel = staand of liggend; bol = knoop. */
-  vorm: 'blok' | 'cilinder' | 'kegel' | 'bol';
+  vorm: 'blok' | 'cilinder' | 'kegel' | 'bol' | 'kuipwand';
   /** Minimumhoek (x, y, z) en afmetingen (b langs x, h langs y, d langs z), in cm. */
   x: number;
   y: number;
@@ -54,6 +55,10 @@ export interface Blok {
    * in wereldcoördinaten, rondom. x/z/b/d blijven het omsluitende kader.
    */
   omtrek?: [number, number][];
+  /** Kuipwand (vorm 'kuipwand'): middenlijn [x, z] in wereldcoördinaten, bovenhoogte (absoluut) per punt en dikte. */
+  pad?: [number, number][];
+  hoogtes?: number[];
+  dikte?: number;
 }
 
 export interface Scene3D {
@@ -116,6 +121,13 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         b: r2(diameterB), h: r2(h), d: r2(diameterD), kleur, ...extra,
       });
     };
+    /** Blok met een vrije omtrek (lokale punten → wereld), met het omsluitende kader als x/z/b/d. */
+    const omtrekBlok = (code: string, soort: BlokSoort, y: number, h: number, kleur: string, lokaleOmtrek: Punt[], extra: Partial<Blok>) => {
+      const omtrek = lokaleOmtrek.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
+      const xs = omtrek.map((q) => q[0]), zs = omtrek.map((q) => q[1]);
+      const x0 = Math.min(...xs), z0 = Math.min(...zs);
+      blokken.push({ code: `${e.id}.${code}`, soort, vorm: 'blok', x: r2(x0), y: r2(y), z: r2(z0), b: r2(Math.max(...xs) - x0), h: r2(h), d: r2(Math.max(...zs) - z0), kleur, omtrek, ...extra });
+    };
     if (t.opzet) {
       // geen poten: ligt op een ander element
     } else if (t.tekenstijl !== 'console' && potVorm === 'draaivoet') {
@@ -147,9 +159,12 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         // Bij een rond element staan de poten aan de ronde kant meer naar binnen.
         const rondL = t.tekenstijl === 'rond' && String(te('ronde_kant', 'kant', 'links')) === 'links';
         const rondR = t.tekenstijl === 'rond' && !rondL;
-        const inL = rondL ? Math.min(D / 2, B) * 0.35 : ins;
-        const inR = rondR ? Math.min(D / 2, B) * 0.35 : ins;
-        const yIn = (rond: boolean) => (rond ? D * 0.2 : ins);
+        // Kuipfauteuil met rond of afgerond grondvlak: poten naar binnen, onder de bolling.
+        const kuipRond = t.tekenstijl === 'kuip' && kuipParameters(opt.get('kuipvorm')?.teken) !== null;
+        const kuipIn = kuipRond ? Math.min(B, D) * (kuipParameters(opt.get('kuipvorm')?.teken)!.plan === 'rond' ? 0.17 : 0.1) : 0;
+        const inL = rondL ? Math.min(D / 2, B) * 0.35 : kuipRond ? kuipIn : ins;
+        const inR = rondR ? Math.min(D / 2, B) * 0.35 : kuipRond ? kuipIn : ins;
+        const yIn = (rond: boolean) => (rond ? D * 0.2 : kuipRond ? kuipIn : ins);
         for (const [k, lx, ly] of [['la', inL, yIn(rondL)], ['ra', B - inR - dik, yIn(rondR)], ['lv', inL, D - yIn(rondL) - dik], ['rv', B - inR - dik, D - yIn(rondR) - dik]] as const) {
           const extra: Partial<Blok> = potVorm === 'blok' ? {} : { vorm: potVorm === 'conisch' ? 'kegel' : 'cilinder', taps: potVorm === 'conisch' ? 0.55 : 1 };
           lokaal(`poot-${k}`, potSoort, lx, ly, dik, dik, 0, P, potKleur, extra);
@@ -260,10 +275,6 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const r = Math.min(D / 2, B);
         const recht = B - r;
         const cx = links ? r : recht;
-        const punt = (lx: number, ly: number): [number, number] => {
-          const w = lokaalNaarWereld(e, lx, ly, 0, 0);
-          return [r2(w.x), r2(w.y)];
-        };
         /** Halve cirkel rond (cx, cz) van hoek a0 tot a1 (graden), in lokale coördinaten. */
         const boog = (cz: number, straal: number, a0: number, a1: number) => {
           const uit: [number, number][] = [];
@@ -273,17 +284,11 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           }
           return uit;
         };
-        const blokUit = (code: string, soort: BlokSoort, y: number, h: number, kleur: string, lokaleOmtrek: [number, number][], extra: Partial<Blok>) => {
-          const omtrek = lokaleOmtrek.map(([lx, ly]) => punt(lx, ly));
-          const xs = omtrek.map((q) => q[0]), zs = omtrek.map((q) => q[1]);
-          const x0 = Math.min(...xs), z0 = Math.min(...zs);
-          blokken.push({ code: `${e.id}.${code}`, soort, vorm: 'blok', x: r2(x0), y: r2(y), z: r2(z0), b: r2(Math.max(...xs) - x0), h: r2(h), d: r2(Math.max(...zs) - z0), kleur, omtrek, ...extra });
-        };
         // Basis: over de hele voetafdruk.
         const basisOmtrek: [number, number][] = links
           ? [[B, 0], [B, D], ...boog(D / 2, r, 90, 270)]
           : [[0, 0], ...boog(D / 2, r, -90, 90), [0, D]];
-        blokUit('basis', 'stof', P, basisH, donker, basisOmtrek, { afronding: 2 });
+        omtrekBlok('basis', 'stof', P, basisH, donker, basisOmtrek, { afronding: 2 });
         if (kussenDik) {
           const kr = r - 1;
           // Bolle vorm (rechthoek + halve cirkel): het rechte deel loopt achter tot onder de rug (daar onzichtbaar),
@@ -291,7 +296,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           const kussenOmtrek: [number, number][] = links
             ? [[B - 0.5, 1], [B - 0.5, D - 1], ...boog(D / 2, kr, 90, 270)]
             : [[0.5, 1], ...boog(D / 2, kr, -90, 90), [0.5, D - 1]];
-          blokUit('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, kussenOmtrek, { afronding: zacht });
+          omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, kussenOmtrek, { afronding: zacht });
         }
         const rx = links ? r : 0;
         if (recht > 0) lokaal('rug', 'stof', rx, 0, recht, RUG, P, frameRug - P, stof, rugExtra);
@@ -326,6 +331,30 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         break;
       }
       case 'kuip': {
+        // Kuip (rond, afgerond, omhullend, organisch, schelp): gebogen wand rond de zitting, zie kuip.ts.
+        const kp = kuipParameters(opt.get('kuipvorm')?.teken);
+        if (kp) {
+          const opb = kuipOpbouw(B, D, { P, zithoogte, rugH, kussenDik }, kp, losseRug);
+          omtrekBlok('basis', 'stof', opb.basis.onder, opb.basis.boven - opb.basis.onder, donker, opb.plan, { afronding: kp.organisch ? 9 : 4 });
+          if (kussenDik) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
+          const pad = opb.wand.pad.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
+          const xs = pad.map((q) => q[0]), zs = pad.map((q) => q[1]), half = opb.wand.dikte / 2;
+          blokken.push({
+            code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
+            x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),
+            y: r2(opb.wand.onder), h: r2(Math.max(...opb.wand.hoogtes) - opb.wand.onder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
+          });
+          if (kp.zwevend) {
+            // Schelp: twee houten dragers achteraan van het frame tot onder de schaal.
+            const mid = Math.floor(opb.wand.pad.length / 2);
+            for (const [k, f] of [['l', 0.28], ['r', 0.72]] as const) {
+              const q = opb.wand.pad[Math.round(mid + (f - 0.5) * opb.wand.pad.length * 0.55)] ?? opb.wand.pad[mid]!;
+              lokaal(`drager-${k}`, 'hout', q[0] - 1.5, q[1] - 1.5, 3, 3, opb.basis.boven - 2, opb.wand.onder - opb.basis.boven + 6, hout, { afronding: 0.8 });
+            }
+          }
+          opb.rugkussens.forEach((k, i) => lokaal(`rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, 'kussen', k.lx, k.ly, k.lb, k.ld, k.y, k.h, stof, { afronding: 2 + zacht, kantel: { graden: 10, richting } }));
+          break;
+        }
         const kv = String(te('kuipvorm', 'vorm', 'afgerond'));
         const p = voetafdruk(e);
         const armB = Math.max(10, Math.min(20, B * 0.16));
