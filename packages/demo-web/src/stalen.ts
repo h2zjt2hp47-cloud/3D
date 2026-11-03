@@ -157,7 +157,10 @@ export function maakStalenkaart(opties: { materialen: () => Materiaal[]; gekozen
 
 /** Kleurnaam onder de staal: de naam zonder het eerste woord van de collectie ("Velours Oker" → "Oker"). */
 function kleurnaam(m: Materiaal, collectie: string): string {
-  const eerste = collectie.split(' ')[0]!.toLowerCase();
+  // Woorden vooraan die ook in de collectienaam staan weglaten ("Velours Mat Salie" in "Velours Mat" → "Salie").
+  const inCollectie = new Set(collectie.toLowerCase().split(/[\s()]+/));
   const woorden = m.naam.split(' ');
-  return woorden.length > 1 && woorden[0]!.toLowerCase() === eerste ? woorden.slice(1).join(' ') : m.naam;
+  let i = 0;
+  while (i < woorden.length - 1 && inCollectie.has(woorden[i]!.toLowerCase())) i++;
+  return woorden.slice(i).join(' ');
 }

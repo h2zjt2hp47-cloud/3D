@@ -21,14 +21,16 @@ describe('stofkaart van de leverancier (Chill Zone CH3112/051)', () => {
 describe('stoffencollecties en stalenkaart', () => {
   it('collecties met meerdere kleuren, elk met een weefsel', () => {
     const stoffen = standaardMaterialen.filter((m) => m.groep !== 'EIGEN');
-    expect(stoffen.length).toBeGreaterThanOrEqual(25);
+    expect(stoffen.length).toBeGreaterThanOrEqual(55);
     const perCollectie = new Map<string, number>();
     for (const m of stoffen) perCollectie.set(collectieVan(m), (perCollectie.get(collectieVan(m)) ?? 0) + 1);
     expect(perCollectie.get('Velours Soft')).toBe(6);
     expect(perCollectie.get('Bouclé Nuage')).toBe(4);
-    expect(perCollectie.get('Chenille Mila')).toBe(3);
-    expect(perCollectie.get('Rib Cord')).toBe(3);
+    expect(perCollectie.get('Chenille Mila')).toBe(6);
+    expect(perCollectie.get('Rib Cord')).toBe(6);
     expect(perCollectie.get('Wol Tweed')).toBe(4);
+    expect(perCollectie.get('Bouclé Teddy')).toBe(4);
+    expect(perCollectie.get('Leder')).toBe(4);
     expect(new Set(standaardMaterialen.map((m) => m.code)).size).toBe(standaardMaterialen.length);
     for (const m of standaardMaterialen) expect(weefselVan(m) in WEEFSELS).toBe(true);
   });
