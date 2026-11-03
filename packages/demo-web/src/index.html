@@ -137,6 +137,7 @@ button:disabled { opacity: .45; cursor: default; }
 .knoppenlijst { display: grid; gap: 6px; margin-bottom: 10px; }
 .knoppenlijst button { text-align: left; }
 .knoppenlijst button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
+#o-3d-knoppen button[aria-pressed="true"] { background: var(--accent-zacht); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .klein-knop { padding: 3px 9px !important; font-size: .8rem; }
 /* Vrij ontwerp */
 main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); align-items: start; }
@@ -427,6 +428,9 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" data-standpunt="voor">Voor</button>
       <button type="button" class="tweede" data-standpunt="zij">Zij</button>
       <button type="button" class="tweede" data-standpunt="boven">Boven</button>
+      <span class="klein">Decor:</span>
+      <button type="button" class="tweede" data-decor="studio" aria-pressed="true">Studio</button>
+      <button type="button" class="tweede" data-decor="kamer" aria-pressed="false">Woonkamer</button>
       <span class="klein">Sleep om te draaien; zoomen met Ctrl (⌘) + scrollen of knijpen.</span>
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>

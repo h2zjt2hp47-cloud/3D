@@ -13,11 +13,18 @@ declare const THREE: any;
 
 export interface Viewer3D {
   toon(scene: Scene3D): void;
+  /** Omgeving rond de zetel: neutrale studio of een woonkamer (parketvloer, muur, tapijt). */
+  decor?(naam: 'studio' | 'kamer'): void;
   standpunt(naam: 'schuin' | 'voor' | 'boven' | 'zij' | 'achter'): void;
   formaat(): void;
 }
 
-export function maak3D(houder: HTMLElement): Viewer3D | null {
+export interface Opties3D {
+  /** Zetelweergave: contactschaduw onder de zetel en keuze van decor (niet voor woningen). */
+  zetel?: boolean;
+}
+
+export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
   if (typeof THREE === 'undefined') {
     houder.textContent = '3D kon niet geladen worden (geen verbinding met de 3D-bibliotheek).';
     return null;
@@ -32,7 +39,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.88;
+  renderer.toneMappingExposure = 0.84;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   houder.replaceChildren(renderer.domElement);
@@ -41,15 +48,20 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#f2f1ed');
   const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.62));
-  const zon = new THREE.DirectionalLight(0xffffff, 0.85);
+  // Studiolicht: een omgevingsbeeld (softboxen in een grijze ruimte) geeft zachte reflecties en glans;
+  // daardoor kunnen de hemel- en vullicht zwakker.
+  scene.environment = studioOmgeving();
+  const OMGEVING = 0.5;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34));
+  const zon = new THREE.DirectionalLight(0xffffff, 0.8);
   zon.castShadow = true;
   zon.shadow.mapSize.set(2048, 2048);
   zon.shadow.bias = -0.0005;
   scene.add(zon, zon.target);
-  const vul = new THREE.DirectionalLight(0xffffff, 0.25);
+  const vul = new THREE.DirectionalLight(0xffffff, 0.16);
   scene.add(vul);
-  const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 1 }));
+  const studioVloer = new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 1, envMapIntensity: 0.4 });
+  const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), studioVloer);
   vloer.rotation.x = -Math.PI / 2;
   vloer.receiveShadow = true;
   scene.add(vloer);
@@ -280,13 +292,14 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     const sleutel = `${b.soort}:${b.kleur}:${b.voeg ?? ''}:${b.textuur ? b.textuur.length + b.textuur.slice(-24) : ''}:${b.weefsel ?? ''}`;
     let m = materialen.get(sleutel);
     if (!m && !b.textuur && b.weefsel && b.weefsel in WEEFSEL_CM) {
-      // Getekend weefsel (velours, bouclé, rib …) in de kleur van de stof, op ware grootte via wereldUV.
-      const t = new THREE.CanvasTexture(weefselCanvas(b.weefsel as Weefsel, b.kleur));
+      // Getekend weefsel (velours, bouclé, rib …) in de kleur van de stof, op ware grootte via wereldUV,
+      // met een reliëfkaart van hetzelfde weefsel (in grijs) zodat draden, lusjes en ribbels licht vangen.
+      const w = b.weefsel as Weefsel;
+      const t = new THREE.CanvasTexture(weefselCanvas(w, b.kleur));
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.encoding = THREE.sRGBEncoding;
       t.anisotropy = 4;
-      const ruwheid = b.weefsel === 'velours' ? 0.62 : b.weefsel === 'leder' ? 0.5 : 0.95;
-      m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: ruwheid, map: t });
+      m = stofMateriaal(w, b.kleur, t, reliefVan(w));
       materialen.set(sleutel, m);
     }
     if (!m && b.textuur) {
@@ -300,7 +313,8 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
         t.anisotropy = 4;
         fotoTexturen.set(b.textuur, t);
       }
-      m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: t });
+      // De foto zelf dient ook als reliëf (lichte delen komen naar voor).
+      m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: t, bumpMap: t, bumpScale: 0.5, envMapIntensity: OMGEVING });
       materialen.set(sleutel, m);
     }
     if (!m) {
@@ -322,10 +336,121 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       else if (b.soort === 'gevel') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.97 });
       else if (b.soort === 'donker') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.9 });
       else m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.95, map: weefsel });
+      if ('envMapIntensity' in m) m.envMapIntensity = OMGEVING;
       materialen.set(sleutel, m);
     }
     return m;
   };
+
+  /** Reliëfkaart per weefsel: hetzelfde patroon in middengrijs (bumpMap leest de helderheid). */
+  const reliefs = new Map<Weefsel, any>();
+  function reliefVan(w: Weefsel) {
+    let t = reliefs.get(w);
+    if (!t) {
+      t = new THREE.CanvasTexture(weefselCanvas(w, '#8c8c8c'));
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      reliefs.set(w, t);
+    }
+    return t;
+  }
+  /** Reliëf per weefsel (hoe diep de structuur lijkt). */
+  const RELIEF: Record<Weefsel, number> = { effen: 0.25, linnen: 0.6, velours: 0.15, boucle: 1.6, chenille: 0.7, wol: 0.6, rib: 1.0, jacquard: 0.5, leder: 0.35 };
+  /** Stofmateriaal: velours met glans langs de randen (sheen), leder met een zachte toplaag, de rest mat. */
+  function stofMateriaal(w: Weefsel, hex: string, map: any, relief: any) {
+    const basis = { color: 0xffffff, map, bumpMap: relief, bumpScale: RELIEF[w], envMapIntensity: OMGEVING };
+    if (w === 'velours') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.8, sheen: kleur(tint(hex, 1.3)) });
+    if (w === 'leder') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.42, clearcoat: 0.25, clearcoatRoughness: 0.5 });
+    return new THREE.MeshStandardMaterial({ ...basis, roughness: w === 'chenille' ? 0.85 : 0.95 });
+  }
+
+  /**
+   * Gevuld kussen: een fijn opgedeelde balk met afgeronde randen, licht bol op de twee grote vlakken
+   * (zitkussen: boven en onder; rugkussen: voor en achter) en iets bol op de zijkanten.
+   * Onderkant op y = 0; normalen analytisch (geen harde lijnen op de randen); onderaan iets donkerder (schaduw tussen kussens).
+   */
+  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1) {
+    const maat = [B, H, D];
+    const plat = maat.indexOf(Math.min(B, H, D)); // as van de dunste maat: daar bolt het kussen
+    const bol = Math.min(2.2, maat[plat]! * 0.13) * vulling;
+    const seg = (l: number) => Math.max(4, Math.min(28, Math.round(l / 3)));
+    const geo = new THREE.BoxGeometry(B, H, D, seg(B), seg(H), seg(D));
+    const half = [B / 2, H / 2, D / 2];
+    const rr = Math.max(0.4, Math.min(r, half[0]! - 0.1, half[1]! - 0.1, half[2]! - 0.1));
+    const binnen = half.map((h) => h - rr);
+    const pos = geo.attributes.position, nrm = geo.attributes.normal;
+    const kleuren = new Float32Array(pos.count * 3);
+    const p = [0, 0, 0], n = [0, 0, 0];
+    for (let i = 0; i < pos.count; i++) {
+      p[0] = pos.getX(i); p[1] = pos.getY(i); p[2] = pos.getZ(i);
+      // Afronden: punt naar het binnenblok trekken en op afstand rr zetten.
+      const c = p.map((v, a) => Math.max(-binnen[a]!, Math.min(binnen[a]!, v)));
+      const d = p.map((v, a) => v - c[a]!);
+      const l = Math.hypot(d[0]!, d[1]!, d[2]!) || 1;
+      for (let a = 0; a < 3; a++) { n[a] = d[a]! / l; p[a] = c[a]! + n[a]! * rr; }
+      // Bol: verschuiving langs elke as, het sterkst midden op het vlak.
+      const u = p.map((v, a) => Math.max(-1, Math.min(1, v / half[a]!)));
+      for (let a = 0; a < 3; a++) {
+        const o1 = (a + 1) % 3, o2 = (a + 2) % 3;
+        const k = (a === plat ? bol : bol * 0.3) * (1 - u[o1]! * u[o1]!) * (1 - u[o2]! * u[o2]!);
+        p[a] = p[a]! + k * u[a]!;
+        // Normaal mee laten hellen met de bolling (helling van het bolle vlak).
+        if (a === plat) {
+          const sterk = Math.abs(n[a]!);
+          n[o1] = n[o1]! + bol * 2 * (u[o1]! / half[o1]!) * (1 - u[o2]! * u[o2]!) * sterk;
+          n[o2] = n[o2]! + bol * 2 * (u[o2]! / half[o2]!) * (1 - u[o1]! * u[o1]!) * sterk;
+        }
+      }
+      const nl = Math.hypot(n[0]!, n[1]!, n[2]!) || 1;
+      pos.setXYZ(i, p[0]!, p[1]! + H / 2, p[2]!);
+      nrm.setXYZ(i, n[0]! / nl, n[1]! / nl, n[2]! / nl);
+      // Schaduw onderaan: van 0,72 (onderkant) naar 1 (bovenste helft).
+      const ao = 0.72 + 0.28 * Math.min(1, Math.max(0, (p[1]! + half[1]!) / (H * 0.6)));
+      kleuren[i * 3] = kleuren[i * 3 + 1] = kleuren[i * 3 + 2] = ao;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(kleuren, 3));
+    pos.needsUpdate = nrm.needsUpdate = true;
+    return { geo, plat, rr, half, bol };
+  }
+
+  /** Naad rond de twee grote vlakken van een kussen: bies (dikke koord), gewone naad of dubbel sierstiksel. */
+  function naden(b: Blok, k: ReturnType<typeof kussenGeometrie>) {
+    if (!b.naad) return [];
+    const { plat, rr, half } = k;
+    const a1 = (plat + 1) % 3, a2 = (plat + 2) % 3;
+    const lijnen: { hoek: number; straal: number }[] =
+      b.naad.soort === 'bies' ? [{ hoek: 45, straal: 0.55 }]
+        : b.naad.soort === 'stiksel' ? [{ hoek: 22, straal: 0.09 }, { hoek: 68, straal: 0.09 }]
+          : [{ hoek: 45, straal: 0.14 }];
+    const mat = b.naad.soort === 'bies'
+      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
+      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+    const uit: any[] = [];
+    for (const kant of [1, -1]) {
+      for (const { hoek, straal } of lijnen) {
+        const rad = (hoek * Math.PI) / 180;
+        const opzij = rr * Math.cos(rad), hoogte = (half[plat]! - rr + rr * Math.sin(rad)) * kant;
+        const h1 = half[a1]! - rr, h2 = half[a2]! - rr;
+        const punten: any[] = [];
+        // Afgeronde rechthoek: per hoek een kwartcirkel rond de hoek van het binnenblok.
+        for (const [s1, s2, start] of [[1, 1, 0], [-1, 1, 90], [-1, -1, 180], [1, -1, 270]] as const) {
+          for (let j = 0; j <= 6; j++) {
+            const t = ((start + j * 15) * Math.PI) / 180;
+            const q = [0, 0, 0];
+            q[a1] = s1 * h1 + Math.cos(t) * opzij;
+            q[a2] = s2 * h2 + Math.sin(t) * opzij;
+            q[plat] = hoogte;
+            punten.push(new THREE.Vector3(q[0], q[1]! + half[1]!, q[2]));
+          }
+        }
+        const curve = new THREE.CatmullRomCurve3(punten, true, 'centripetal');
+        const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(220, punten.length * 6), straal, 6, true), mat);
+        m.castShadow = false;
+        m.receiveShadow = true;
+        uit.push(m);
+      }
+    }
+    return uit;
+  }
 
   /** Afgeronde balk: afgerond grondvlak (b × d), geëxtrudeerd in de hoogte met afgeschuinde randen. */
   function afgerondeBalk(b: number, h: number, d: number, r: number) {
@@ -353,6 +478,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
 
   function mesh(b: Blok) {
     let geo: any;
+    let kussen: ReturnType<typeof kussenGeometrie> | null = null;
     const cx = b.x + b.b / 2, cz = b.z + b.d / 2;
     let y = b.y;
     switch (b.vorm) {
@@ -376,6 +502,12 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
         y = b.y + b.h / 2;
         break;
       default:
+        // Kussens gevuld en bol; bij de zetel ook de gestoffeerde armen en rug, iets minder bol.
+        if (b.afronding && (b.soort === 'kussen' || (opties.zetel && b.soort === 'stof'))) {
+          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5);
+          geo = kussen.geo;
+          break;
+        }
         geo = b.afronding ? afgerondeBalk(b.b, b.h, b.d, b.afronding) : new THREE.BoxGeometry(b.b, b.h, b.d).translate(0, b.h / 2, 0);
         if (!b.afronding) {
           // Textuur in wereldmaat, per vlak de maat van het materiaal op dat vlak.
@@ -394,7 +526,15 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       const kies = (k: keyof NonNullable<Blok['zijden']> | null) => (k && z[k] ? materiaal(z[k]!) : mat);
       mat = [kies('x+'), kies('x-'), kies('y+'), mat, kies('z+'), kies('z-')];
     }
+    if (kussen && !Array.isArray(mat)) {
+      // Schaduw onderaan het kussen via de hoekpuntkleuren (apart materiaal, zelfde stof).
+      const sleutel = `vc:${mat.uuid}`;
+      let vc = materialen.get(sleutel);
+      if (!vc) { vc = mat.clone(); vc.vertexColors = true; materialen.set(sleutel, vc); }
+      mat = vc;
+    }
     const m = new THREE.Mesh(geo, mat);
+    if (kussen) for (const n of naden(b, kussen)) m.add(n);
     m.position.set(cx, y, cz);
     if (b.kantel) {
       // Achterover hellen rond de onderkant: de bovenkant gaat naar de achterkant.
@@ -407,6 +547,108 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     m.castShadow = b.vorm !== 'bol' && b.soort !== 'glas' && b.soort !== 'matglas';
     m.receiveShadow = true;
     return m;
+  }
+
+  /** Omgevingsbeeld: grijze ruimte met softboxen (boven, links, rechts achter, voor), voorgefilterd met PMREM. */
+  function studioOmgeving() {
+    try {
+      const pm = new THREE.PMREMGenerator(renderer);
+      const kamer = new THREE.Scene();
+      const delen: any[] = [];
+      const doos = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 10), new THREE.MeshBasicMaterial({ color: 0x5e5a54, side: THREE.BackSide }));
+      delen.push(doos);
+      const vloerOmg = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshBasicMaterial({ color: 0x3a3733 }));
+      vloerOmg.rotation.x = -Math.PI / 2;
+      vloerOmg.position.y = -4.9;
+      delen.push(vloerOmg);
+      const paneel = (x: number, y: number, z: number, b: number, h: number, sterkte: number) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(b, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(sterkte, sterkte, sterkte * 0.97), side: THREE.DoubleSide }));
+        m.position.set(x, y, z);
+        m.lookAt(0, 0, 0);
+        delen.push(m);
+      };
+      paneel(0, 4.8, 0.5, 5, 4, 2.6);
+      paneel(-4.8, 1.6, 1.5, 3, 3.5, 1.6);
+      paneel(4.8, 1.2, -1.5, 2.5, 3, 0.8);
+      paneel(0.5, 1, 4.8, 4, 2.5, 0.9);
+      kamer.add(...delen);
+      const t = pm.fromScene(kamer, 0.04).texture;
+      for (const d of delen) { d.geometry.dispose(); d.material.dispose(); }
+      pm.dispose();
+      return t;
+    } catch {
+      return null;
+    }
+  }
+
+  // ---------- zetel: contactschaduw en decor ----------
+  const contact = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, opacity: 1, color: 0xffffff }));
+  contact.rotation.x = -Math.PI / 2;
+  contact.renderOrder = 1;
+  contact.visible = false;
+  scene.add(contact);
+  /** Zachte schaduw onder de zetel, getekend uit de voetafdruk van de blokken (volgt ook een hoeksofa). */
+  function zetContactschaduw(s: Scene3D) {
+    if (!opties.zetel || !s.blokken.length) { contact.visible = false; return; }
+    const k = s.kader, rand = 30, B = k.b + 2 * rand, D = k.d + 2 * rand;
+    const c = document.createElement('canvas');
+    const schaal = 256 / Math.max(B, D);
+    c.width = Math.max(16, Math.round(B * schaal));
+    c.height = Math.max(16, Math.round(D * schaal));
+    const g = c.getContext('2d')!;
+    g.shadowColor = 'rgba(0,0,0,0.5)';
+    g.shadowBlur = 9 * schaal * 2;
+    g.shadowOffsetX = 2000;
+    g.fillStyle = '#000';
+    for (const b of s.blokken) {
+      if (b.y > 25) continue;
+      g.fillRect((b.x - k.x + rand) * schaal - 2000, (b.z - k.z + rand) * schaal, b.b * schaal, b.d * schaal);
+    }
+    const oud = contact.material.map;
+    contact.material.map = new THREE.CanvasTexture(c);
+    contact.material.needsUpdate = true;
+    oud?.dispose();
+    contact.scale.set(B, D, 1);
+    contact.position.set(k.x + k.b / 2, 0.15, k.z + k.d / 2);
+    contact.visible = true;
+  }
+
+  let decorNaam: 'studio' | 'kamer' = 'studio';
+  const kamerDelen: any[] = [];
+  let kamerVloer: any = null;
+  function zetDecor(s: Scene3D | null) {
+    for (const d of kamerDelen) { scene.remove(d); d.geometry.dispose(); }
+    kamerDelen.length = 0;
+    if (!opties.zetel || decorNaam === 'studio') {
+      vloer.material = studioVloer;
+      scene.background = new THREE.Color('#f2f1ed');
+      return;
+    }
+    if (!kamerVloer) {
+      const t = parket('#9a7552');
+      t.repeat.set(4000 / PARKET.b, 4000 / PARKET.h);
+      kamerVloer = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, map: t, envMapIntensity: 0.5 });
+    }
+    vloer.material = kamerVloer;
+    scene.background = new THREE.Color('#e7e2da');
+    const k = s?.kader ?? kader;
+    // Muur achter de zetel met plint, en een tapijt eronder.
+    const muurZ = k.z - 35;
+    const muur = new THREE.Mesh(new THREE.PlaneGeometry(1400, 320), new THREE.MeshStandardMaterial({ color: kleur('#e4ded4'), roughness: 0.95, envMapIntensity: 0.4 }));
+    muur.position.set(k.x + k.b / 2, 160, muurZ);
+    muur.receiveShadow = true;
+    const plint = new THREE.Mesh(new THREE.BoxGeometry(1400, 8, 1.5), new THREE.MeshStandardMaterial({ color: kleur('#f3f0ea'), roughness: 0.6 }));
+    plint.position.set(k.x + k.b / 2, 4, muurZ + 0.75);
+    const tapijtTex = new THREE.CanvasTexture(weefselCanvas('wol', '#cfc6b6'));
+    tapijtTex.wrapS = tapijtTex.wrapT = THREE.RepeatWrapping;
+    tapijtTex.encoding = THREE.sRGBEncoding;
+    const tb = k.b + 80, td = k.d + 110;
+    tapijtTex.repeat.set(tb / 12, td / 12);
+    const tapijt = new THREE.Mesh(new THREE.BoxGeometry(tb, 1, td), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: tapijtTex, envMapIntensity: 0.3 }));
+    tapijt.position.set(k.x + k.b / 2, 0.5, k.z + k.d / 2 + 25);
+    tapijt.receiveShadow = true;
+    kamerDelen.push(muur, plint, tapijt);
+    scene.add(...kamerDelen);
   }
 
   // ---------- camera (eenvoudige orbit) ----------
@@ -475,9 +717,10 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     toon(s: Scene3D) {
       for (const c of [...groep.children]) {
         groep.remove(c);
-        c.geometry.dispose();
+        c.traverse((o: any) => o.geometry?.dispose());
       }
       for (const b of s.blokken) groep.add(mesh(b));
+      zetContactschaduw(s);
       const nieuw = s.kader;
       const veranderd = Math.abs(nieuw.b - kader.b) > 1 || Math.abs(nieuw.d - kader.d) > 1 || Math.abs(nieuw.x - kader.x) > 1 || Math.abs(nieuw.z - kader.z) > 1;
       kader = nieuw;
@@ -493,7 +736,13 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
       sc.updateProjectionMatrix();
       vul.position.set(doel.x + grootte, grootte * 0.6, doel.z - grootte);
       if (veranderd) afstand = Math.max(200, grootte * 1.5);
+      if (decorNaam !== 'studio') zetDecor(s);
       plaatsCamera();
+    },
+    decor(naam) {
+      decorNaam = naam;
+      zetDecor(null);
+      render();
     },
     standpunt(naam) {
       if (naam === 'voor') { hoekH = 0; hoekV = 0.12; }

@@ -17,6 +17,17 @@ describe('3D-opbouw', () => {
     expect(zit.find((b) => b.code === 'e2.zitkussen')).toMatchObject({ y: 31, h: 14, soort: 'kussen', kleur: '#c9b48f' });
   });
 
+  it('naden en weefsel op de kussens: gewone naad, bies, contrastbies', () => {
+    const gewoon = blokkenVan(scene(recht), { id: 'e2' }).find((b) => b.code === 'e2.zitkussen')!;
+    expect(gewoon.naad?.soort).toBe('naad');
+    expect(gewoon.weefsel).toBe('linnen');
+    const o: Ontwerp = { ...structuredClone(recht), opties: { naad: 'contrastbies' } };
+    const bies = blokkenVan(scene(o), { id: 'e2' }).find((b) => b.code === 'e2.zitkussen')!;
+    expect(bies.naad).toEqual({ soort: 'bies', kleur: '#2b2622' });
+    // Het frame (rug, armen) krijgt geen naad, alleen de kussens.
+    expect(blokkenVan(scene(o), { id: 'e2' }).find((b) => b.code === 'e2.rug')!.naad).toBeUndefined();
+  });
+
   it('draaiing: rug aan de linkerkant bij 270°', () => {
     const s = scene(startOntwerpen.hoek!.ontwerp);
     const rug = blokkenVan(s, { id: 'e5' }).find((b) => b.code === 'e5.rug')!;

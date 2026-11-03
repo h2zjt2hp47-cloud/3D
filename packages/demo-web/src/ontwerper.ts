@@ -607,7 +607,7 @@ export function kiesWeergave(w: typeof weergave) {
   $('#o-3d-knoppen').hidden = w !== '3d';
   $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'klik een element · sleep de grepen · maten in cm' : 'draai en zoom met muis of vinger';
   kiesGereedschap(gereedschap);
-  if (w === '3d' && viewer === undefined) viewer = maak3D($('#o-3d'));
+  if (w === '3d' && viewer === undefined) viewer = maak3D($('#o-3d'), { zetel: true });
   toonWeergave();
 }
 
@@ -1183,6 +1183,12 @@ export function startOntwerper() {
 
   document.querySelectorAll<HTMLButtonElement>('[data-o-weergave]').forEach((b) =>
     b.addEventListener('click', () => kiesWeergave(b.dataset.oWeergave as typeof weergave)),
+  );
+  document.querySelectorAll<HTMLButtonElement>('[data-decor]').forEach((b) =>
+    b.addEventListener('click', () => {
+      viewer?.decor?.(b.dataset.decor as 'studio' | 'kamer');
+      document.querySelectorAll<HTMLButtonElement>('[data-decor]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    }),
   );
   document.querySelectorAll<HTMLButtonElement>('[data-standpunt]').forEach((b) =>
     b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as 'schuin' | 'voor' | 'boven' | 'zij')),

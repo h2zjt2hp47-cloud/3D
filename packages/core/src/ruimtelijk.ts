@@ -47,6 +47,8 @@ export interface Blok {
   textuurCm?: number;
   /** Soort weefsel van de stof (voor de structuur in de 3D als er geen foto is). */
   weefsel?: string;
+  /** Kussens: afwerking van de randen (naad, bies of sierstiksel) en de kleur van de bies. */
+  naad?: { soort: 'naad' | 'bies' | 'stiksel'; kleur: string };
 }
 
 export interface Scene3D {
@@ -312,6 +314,12 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     }
     // Stoffoto als textuur op alle stofdelen van dit element (zitting, rug, armen, kussens).
     // Zonder foto: het weefsel (velours, bouclé, linnen …) zodat de structuur in de 3D klopt.
+    // Kussens: naad langs de randen volgens de optie "Naden" (bies in dezelfde stof of contrast, sierstiksel).
+    const naadTeken = opt.get('naad')?.teken;
+    const naad: Blok['naad'] = naadTeken?.bies
+      ? { soort: 'bies', kleur: naadTeken.contrast ? '#2b2622' : stof }
+      : naadTeken?.stiksel ? { soort: 'stiksel', kleur: donkerder(stof, 0.6) } : { soort: 'naad', kleur: donkerder(stof, 0.7) };
+    for (const b of blokken.slice(eersteBlok)) if (b.soort === 'kussen' && b.kleur === stof && (b.vorm ?? 'blok') === 'blok') b.naad = naad;
     if (m) for (const b of blokken.slice(eersteBlok)) if ((b.soort === 'stof' || b.soort === 'kussen') && b.kleur === stof) {
       if (m.textuur) { b.textuur = m.textuur; b.textuurCm = m.textuurCm ?? 15; }
       else b.weefsel = weefselVan(m);
