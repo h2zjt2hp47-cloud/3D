@@ -146,7 +146,20 @@ button:disabled { opacity: .45; cursor: default; }
 .drie-d-instellingen select { font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 36px; max-width: 220px; }
 .drie-d-instellingen button { min-height: 36px; }
 #o-tekenvlak.groot-scherm #o-3d { width: 100%; }
-#o-tekenvlak.groot-scherm #o-eigenschappen { display: none; }
+.drie-d-prijs { margin-left: auto; font-weight: 600; font-size: 15px; align-self: center; }
+.drie-d-meer { flex-basis: 100%; border-top: 1px solid var(--lijn); padding-top: 4px; }
+.drie-d-meer > summary { cursor: pointer; font-size: 14px; padding: 6px 0; min-height: 32px; }
+.drie-d-meer-velden { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; padding: 4px 0 6px; }
+.drie-d-meer-velden label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--zacht); }
+.drie-d-meer-velden label.vink { flex-direction: row; align-items: center; gap: 6px; font-size: 14px; color: inherit; min-height: 36px; }
+.drie-d-meer-velden input[type="range"] { width: 140px; accent-color: var(--accent); }
+.drie-d-meer-velden input[type="color"] { width: 56px; height: 36px; padding: 2px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); }
+.drie-d-meer-velden select { font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 36px; }
+@media (pointer: coarse) {
+  .drie-d-instellingen select, .drie-d-instellingen button, .drie-d-meer-velden select, .drie-d-meer-velden input[type="color"], .drie-d-meer-velden label.vink, #o-3d-knoppen button { min-height: 44px; }
+  .drie-d-meer-velden input[type="checkbox"] { width: 22px; height: 22px; }
+}
+#o-3d canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .klein-knop { padding: 3px 9px !important; font-size: .8rem; }
 /* Vrij ontwerp */
 main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); align-items: start; }
@@ -439,7 +452,9 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" data-standpunt="voor">Voor</button>
       <button type="button" class="tweede" data-standpunt="zij">Zij</button>
       <button type="button" class="tweede" data-standpunt="boven">Boven</button>
-      <span class="klein">Sleep om te draaien; zoomen met Ctrl (⌘) + scrollen of knijpen.</span>
+      <button type="button" class="tweede" data-standpunt="achter">Achter</button>
+      <button type="button" class="tweede" data-standpunt="ooghoogte" title="Zoals een staande klant de zetel ziet (155 cm)">Ooghoogte</button>
+      <span class="klein">Sleep om te draaien, klik op een deel om het te kiezen; zoomen met Ctrl (⌘) + scrollen of knijpen; pijltjes en + − met het toetsenbord.</span>
     </div>
     <div id="o-3d-instellingen" class="drie-d-instellingen" hidden>
       <label><span>Stof</span><select id="o-3d-stof"></select></label>
@@ -449,6 +464,24 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" id="o-3d-foto" title="Het huidige beeld als PNG (meteen)">Foto</button>
       <button type="button" class="tweede" id="o-3d-fotoreal" title="Echte lichtberekening (path tracing): duurt enkele seconden tot een minuut">Fotorealistische foto</button>
       <span id="o-3d-groot"></span>
+      <span id="o-3d-prijs" class="drie-d-prijs" aria-live="polite"></span>
+      <details class="drie-d-meer">
+        <summary>Meer instellingen</summary>
+        <div class="drie-d-meer-velden">
+          <label><span>Vloer</span><select id="o-3d-vloer"></select></label>
+          <label><span>Muur</span><select id="o-3d-muur"><option value="decor">Zoals het decor</option><option value="geen">Geen muur</option><option value="steen">Baksteen</option><option value="kleur">Kleur kiezen …</option></select></label>
+          <label id="o-3d-muurkleur-veld" hidden><span>Muurkleur</span><input type="color" id="o-3d-muurkleur" value="#e4ded4"></label>
+          <label><span>Tapijt</span><select id="o-3d-tapijt"><option value="decor">Zoals het decor</option><option value="geen">Geen tapijt</option><option value="kleur">Kleur kiezen …</option></select></label>
+          <label id="o-3d-tapijtkleur-veld" hidden><span>Tapijtkleur</span><input type="color" id="o-3d-tapijtkleur" value="#cfc6b6"></label>
+          <label><span>Lamp en plant</span><select id="o-3d-spullen"><option value="decor">Zoals het decor</option><option value="aan">Tonen</option><option value="uit">Verbergen</option></select></label>
+          <label><span>Lens</span><select id="o-3d-lens"><option value="35">Normaal</option><option value="55">Groothoek</option><option value="24">Tele (vlakker)</option></select></label>
+          <label><span>Helderheid</span><input type="range" id="o-3d-helderheid" min="-1" max="1" step="0.25" value="0"></label>
+          <label><span>Richting zonlicht</span><input type="range" id="o-3d-zon" min="0" max="345" step="15" value="120"></label>
+          <label class="vink"><input type="checkbox" id="o-3d-maten"> Maten tonen</label>
+          <label class="vink"><input type="checkbox" id="o-3d-draaien"> Automatisch draaien</label>
+          <button type="button" class="tweede" id="o-3d-herstel">Instellingen herstellen</button>
+        </div>
+      </details>
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>
   </section>

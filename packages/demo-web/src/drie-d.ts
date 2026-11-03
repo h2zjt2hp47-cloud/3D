@@ -35,9 +35,46 @@ export interface Viewer3D {
    * Toont het beeld al tijdens het rekenen; geeft de PNG als data-URL, of null bij annuleren of een fout.
    */
   fotoRealistisch?(o: { stappen: number; breedte?: number; opVoortgang?: (deel: number) => void; signaal?: AbortSignal }): Promise<string | null>;
-  standpunt(naam: 'schuin' | 'voor' | 'boven' | 'zij' | 'achter'): void;
+  standpunt(naam: Standpunt): void;
+  /** Losse instellingen bovenop decor en licht (vloer, muur, maten, draaien …). */
+  instellen?(w: Partial<Weergave3D>): void;
+  /** Element in de 3D aanduiden met een kader (null = niets). */
+  markeer?(id: string | null): void;
   formaat(): void;
 }
+
+export type Standpunt = 'schuin' | 'voor' | 'boven' | 'zij' | 'achter' | 'ooghoogte';
+
+/** Vloeren die los van het decor te kiezen zijn. */
+export const VLOEREN = {
+  parket_licht: { label: 'Parket licht eiken', soort: 'parket', kleur: '#d6c09a' },
+  parket: { label: 'Parket eiken', soort: 'parket', kleur: '#9a7552' },
+  parket_donker: { label: 'Parket gerookt', soort: 'parket', kleur: '#5f4430' },
+  beton: { label: 'Gepolierde beton', soort: 'beton', kleur: '#a19d96' },
+  tegel: { label: 'Tegel 60 × 60', soort: 'tegel', kleur: '#d9d5cd' },
+  terras: { label: 'Terrasplanken', soort: 'planken', kleur: '#8a6a4c' },
+  effen: { label: 'Effen (studio)', soort: 'effen', kleur: '#dcd8d0' },
+} as const;
+export type VloerNaam = keyof typeof VLOEREN;
+
+/** Instellingen van de 3D bovenop decor en licht; leeg of 'decor' = zoals het decor. */
+export interface Weergave3D {
+  vloer: VloerNaam | 'decor';
+  /** Muur: 'decor', 'geen', 'steen' of een kleur (#rrggbb). */
+  muur: string;
+  /** Tapijt: 'decor', 'geen' of een kleur (#rrggbb). */
+  tapijt: string;
+  spullen: 'decor' | 'aan' | 'uit';
+  maten: boolean;
+  draaien: boolean;
+  /** Kijkhoek in graden (35 = normaal, 55 = groothoek, 24 = tele). */
+  lens: number;
+  /** Helderheid in stops (−1 … +1). */
+  helderheid: number;
+  /** Richting van het zonlicht in graden (rond de zetel). */
+  zonRichting: number;
+}
+export const STANDAARD_WEERGAVE: Weergave3D = { vloer: 'decor', muur: 'decor', tapijt: 'decor', spullen: 'decor', maten: false, draaien: false, lens: 35, helderheid: 0, zonRichting: 120 };
 
 /** Decors voor de zetel: vloer, muur, tapijt en een paar spullen. */
 export const DECORS = {
@@ -45,6 +82,10 @@ export const DECORS = {
   kamer: { label: 'Woonkamer', achtergrond: '#e7e2da', vloer: { soort: 'parket', kleur: '#9a7552' }, muur: { soort: 'verf', kleur: '#e4ded4' }, tapijt: '#cfc6b6', spullen: true },
   scandi: { label: 'Scandinavisch', achtergrond: '#eef0ee', vloer: { soort: 'parket', kleur: '#d6c09a' }, muur: { soort: 'verf', kleur: '#f4f3ef' }, tapijt: '#e8e3d8', spullen: true },
   loft: { label: 'Loft', achtergrond: '#d8d5cf', vloer: { soort: 'beton', kleur: '#a19d96' }, muur: { soort: 'steen', kleur: '#8a4a36' }, tapijt: '#4a4640', spullen: true },
+  japandi: { label: 'Japandi', achtergrond: '#ebe7df', vloer: { soort: 'parket', kleur: '#c9b089' }, muur: { soort: 'verf', kleur: '#c9cbb8' }, tapijt: '#d8cfbf', spullen: true },
+  klassiek: { label: 'Klassiek', achtergrond: '#e2ddd3', vloer: { soort: 'parket', kleur: '#5f4430' }, muur: { soort: 'verf', kleur: '#3f5246' }, tapijt: '#b9a98f', spullen: true },
+  toonzaal: { label: 'Toonzaal', achtergrond: '#e9e9e7', vloer: { soort: 'beton', kleur: '#bdbab4' }, muur: { soort: 'verf', kleur: '#f5f5f2' } },
+  terras: { label: 'Terras', achtergrond: '#cddbe6', vloer: { soort: 'planken', kleur: '#8a6a4c' }, tapijt: '#8f8b80', spullen: 'buiten' },
 } as const;
 export type DecorNaam = keyof typeof DECORS;
 
@@ -69,7 +110,7 @@ export const LICHTEN = {
   },
   avond: {
     label: 'Avond', zon: '#ffb36e', zonSterkte: 0.35, hoogte: 0.5, hemel: 0.1, hemelKleur: '#8f8aa8', omgeving: 0.22, lamp: 1,
-    hdr: { boven: [0.03, 0.025, 0.03], onder: [0.015, 0.012, 0.01], bronnen: [[[0.85, 0.5, -0.2], 18, 2.4, [1, 0.72, 0.45]], [[-0.9, 0.2, 0.3], 22, 0.35, [0.55, 0.62, 0.9]]] },
+    hdr: { boven: [0.05, 0.04, 0.045], onder: [0.02, 0.016, 0.013], bronnen: [[[0.85, 0.5, -0.2], 18, 3, [1, 0.72, 0.45]], [[-0.9, 0.2, 0.3], 22, 0.5, [0.55, 0.62, 0.9]]] },
   },
   spots: {
     label: 'Toonzaal (spots)', zon: '#fff6ea', zonSterkte: 0.95, hoogte: 2.2, hemel: 0.18, hemelKleur: '#fff8f0', omgeving: 0.4, lamp: 0,
@@ -125,6 +166,8 @@ function omgevingVoor(naam: LichtNaam) {
 export interface Opties3D {
   /** Zetelweergave: contactschaduw onder de zetel en keuze van decor (niet voor woningen). */
   zetel?: boolean;
+  /** Klik (zonder slepen) op een deel van de zetel: het id van het element, of null naast de zetel. */
+  opKlik?: (elementId: string | null) => void;
 }
 
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
@@ -677,6 +720,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       mat = vc;
     }
     const m = new THREE.Mesh(geo, mat);
+    m.name = b.code;
     if (kussen) for (const n of naden(b, kussen)) m.add(n);
     m.position.set(cx, y, cz);
     if (b.kantel) {
@@ -753,10 +797,19 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const sleutel = `vloer:${v.soort}:${v.kleur}`;
     let m = decorMaterialen.get(sleutel);
     if (!m) {
-      if (v.soort === 'parket') {
+      if (v.soort === 'effen') m = studioVloer;
+      else if (v.soort === 'parket') {
         const t = parket(v.kleur);
         t.repeat.set(4000 / PARKET.b, 4000 / PARKET.h);
         m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, map: t, envMapIntensity: 0.5 });
+      } else if (v.soort === 'tegel') {
+        const t = tegels(v.kleur);
+        t.repeat.set(4000 / TEGEL.b, 4000 / TEGEL.h);
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, map: t, envMapIntensity: 0.6 });
+      } else if (v.soort === 'planken') {
+        const t = planken(v.kleur);
+        t.repeat.set(4000 / PLANK.b, 4000 / PLANK.h);
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, map: t, envMapIntensity: 0.4 });
       } else {
         // Gepolierde beton: pleistertextuur op grote schaal, iets glanzend.
         const t = pleister(v.kleur);
@@ -778,7 +831,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   function zetDecor(s: Scene3D | null) {
     for (const d of kamerDelen) { scene.remove(d); d.traverse((o: any) => o.geometry?.dispose()); }
     kamerDelen.length = 0;
-    const dc = DECORS[decorNaam] as (typeof DECORS)[DecorNaam] & { vloer?: { soort: string; kleur: string }; muur?: { soort: string; kleur: string }; tapijt?: string; spullen?: boolean };
+    const basis = DECORS[decorNaam] as (typeof DECORS)[DecorNaam] & { vloer?: { soort: string; kleur: string }; muur?: { soort: string; kleur: string }; tapijt?: string; spullen?: boolean | 'buiten' };
+    // Losse instellingen gaan voor op het decor.
+    const w = weergave;
+    const dc = {
+      ...basis,
+      vloer: w.vloer !== 'decor' ? VLOEREN[w.vloer] : basis.vloer,
+      muur: w.muur === 'decor' ? basis.muur : w.muur === 'geen' ? undefined : w.muur === 'steen' ? { soort: 'steen', kleur: '#8a4a36' } : { soort: 'verf', kleur: w.muur },
+      tapijt: w.tapijt === 'decor' ? basis.tapijt : w.tapijt === 'geen' ? undefined : w.tapijt,
+      spullen: w.spullen === 'decor' ? basis.spullen : w.spullen === 'aan' ? (basis.spullen === 'buiten' ? 'buiten' : true) : false,
+    };
     const bg = opties.zetel ? dc.achtergrond : '#f2f1ed';
     scene.background = new THREE.Color(bg);
     if (opties.zetel) {
@@ -817,8 +879,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       tapijt.position.set(midX, 0.5, k.z + k.d / 2 + 25);
       add(tapijt, false);
     }
-    if (dc.spullen) {
-      // Staanlamp rechts, plant in pot links: eenvoudige vormen, alleen voor de sfeer.
+    if (dc.spullen === true) {
+      // Staanlamp rechts: eenvoudige vormen, alleen voor de sfeer (niet op het terras).
       const lx = k.x + k.b + 45, lz = k.z + 15;
       const metaal = new THREE.MeshStandardMaterial({ color: kleur('#2b2b2b'), metalness: 0.7, roughness: 0.35 });
       const voet = new THREE.Mesh(new THREE.CylinderGeometry(14, 15, 2, 28), metaal); voet.position.set(lx, 1, lz); add(voet);
@@ -827,6 +889,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       kap.position.set(lx, 160, lz); add(kap, false);
       lamp.position.set(lx, 150, lz);
       lamp.intensity = LICHTEN[lichtNaam].lamp * 1.4 * PI;
+    }
+    if (dc.spullen) {
+      // Plant in pot links.
       const px = k.x - 50, pz = k.z + 10;
       const pot = new THREE.Mesh(new THREE.CylinderGeometry(17, 13, 34, 28), new THREE.MeshStandardMaterial({ color: kleur(dc.muur?.soort === 'steen' ? '#6b6560' : '#d9d2c4'), roughness: 0.7 }));
       pot.position.set(px, 17, pz); add(pot);
@@ -864,7 +929,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   function zetZon() {
     const grootte = Math.max(kader.b, kader.d, 120);
     const h = LICHTEN[lichtNaam].hoogte;
-    zon.position.set(doel.x - grootte * 0.6, grootte * h, doel.z + grootte * 1.1);
+    const a = (weergave.zonRichting * Math.PI) / 180;
+    zon.position.set(doel.x + Math.cos(a) * grootte * 1.25, grootte * h, doel.z + Math.sin(a) * grootte * 1.25);
     zon.target.position.copy(doel);
   }
 
@@ -889,8 +955,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   let vorige: { x: number; y: number } | null = null;
   const aanwijzers = new Map<number, { x: number; y: number }>();
   let knijpAfstand = 0;
+  let drukStart: { x: number; y: number } | null = null;
   renderer.domElement.addEventListener('pointerdown', (ev: PointerEvent) => {
     if (bezigMetFoto) return;
+    pauzeerDraaien();
+    drukStart = aanwijzers.size === 0 ? { x: ev.clientX, y: ev.clientY } : null;
     renderer.domElement.setPointerCapture(ev.pointerId);
     aanwijzers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
     vorige = { x: ev.clientX, y: ev.clientY };
@@ -913,11 +982,106 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     plaatsCamera();
   });
   const los = (ev: PointerEvent) => {
+    // Klik zonder slepen: het element onder de muis kiezen.
+    if (ev.type === 'pointerup' && drukStart && aanwijzers.size === 1 && Math.hypot(ev.clientX - drukStart.x, ev.clientY - drukStart.y) < 5) kies(ev);
+    drukStart = null;
     aanwijzers.delete(ev.pointerId);
     knijpAfstand = 0;
     vorige = null;
   };
   renderer.domElement.addEventListener('pointerup', los);
+  const straal = new THREE.Raycaster();
+  function kies(ev: PointerEvent) {
+    if (!opties.opKlik) return;
+    const r = renderer.domElement.getBoundingClientRect();
+    straal.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camera);
+    const raak = straal.intersectObjects(groep.children, true).find((h: any) => h.object.name || h.object.parent?.name);
+    const naam: string = raak ? raak.object.name || raak.object.parent.name : '';
+    opties.opKlik(naam ? naam.split('.')[0]! : null);
+  }
+  // Toetsenbord: pijltjes draaien, + en − zoomen, 0 = standaardbeeld.
+  renderer.domElement.tabIndex = 0;
+  renderer.domElement.setAttribute('role', 'application');
+  renderer.domElement.setAttribute('aria-label', '3D-weergave. Pijltjes: draaien. Plus en min: zoomen. 0: standaardbeeld.');
+  renderer.domElement.addEventListener('keydown', (ev: KeyboardEvent) => {
+    if (bezigMetFoto) return;
+    const stap = ev.shiftKey ? 0.3 : 0.1;
+    if (ev.key === 'ArrowLeft') hoekH += stap;
+    else if (ev.key === 'ArrowRight') hoekH -= stap;
+    else if (ev.key === 'ArrowUp') hoekV += stap * 0.6;
+    else if (ev.key === 'ArrowDown') hoekV -= stap * 0.6;
+    else if (ev.key === '+' || ev.key === '=') afstand = Math.max(120, afstand * 0.9);
+    else if (ev.key === '-' || ev.key === '_') afstand = Math.min(2500, afstand * 1.1);
+    else if (ev.key === '0') { viewer.standpunt('schuin'); ev.preventDefault(); return; }
+    else return;
+    ev.preventDefault();
+    pauzeerDraaien();
+    plaatsCamera();
+  });
+  // Automatisch draaien (toonzaal): rustig rond; pauzeert 3 s na bediening.
+  let draaiPauzeTot = 0, draaiLoopt = false;
+  function pauzeerDraaien() { draaiPauzeTot = performance.now() + 3000; }
+  const lensFactor = () => Math.tan((35 * Math.PI) / 360) / Math.tan((weergave.lens * Math.PI) / 360);
+  function draaiLus() {
+    if (!weergave.draaien) { draaiLoopt = false; return; }
+    draaiLoopt = true;
+    if (!bezigMetFoto && performance.now() > draaiPauzeTot && !aanwijzers.size) { hoekH += 0.0035; plaatsCamera(); }
+    requestAnimationFrame(draaiLus);
+  }
+  /** Maatlijnen in de 3D: breedte vooraan, diepte rechts, hoogte achteraan rechts, met labels in cm. */
+  function zetMaten() {
+    for (const c of [...matenGroep.children]) { matenGroep.remove(c); c.geometry?.dispose(); c.material?.map?.dispose(); c.material?.dispose(); }
+    if (!weergave.maten || !opties.zetel) return;
+    const k = kader, lijn = new THREE.MeshBasicMaterial({ color: 0x2b2b28 });
+    const staaf = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number) => {
+      const l = Math.hypot(x1 - x0, y1 - y0, z1 - z0);
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, l, 6), lijn);
+      m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(x1 - x0, y1 - y0, z1 - z0).normalize());
+      matenGroep.add(m);
+    };
+    const label = (tekst: string, x: number, y: number, z: number) => {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 96;
+      const g = c.getContext('2d')!;
+      g.fillStyle = 'rgba(255,255,255,0.92)';
+      g.beginPath(); g.roundRect(8, 14, 240, 68, 18); g.fill();
+      g.fillStyle = '#23262a'; g.font = '600 44px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(tekst, 128, 50);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, toneMapped: false }));
+      const schaal = Math.max(28, Math.max(k.b, k.d) * 0.16);
+      sp.scale.set(schaal, schaal * 0.375, 1);
+      sp.position.set(x, y, z);
+      sp.renderOrder = 10;
+      matenGroep.add(sp);
+    };
+    const voor = k.z + k.d + 18, rechts = k.x + k.b + 18, y = 1.5;
+    staaf(k.x, y, voor, k.x + k.b, y, voor);
+    staaf(k.x, y, voor - 6, k.x, y, voor + 6); staaf(k.x + k.b, y, voor - 6, k.x + k.b, y, voor + 6);
+    label(`${Math.round(k.b)} cm`, k.x + k.b / 2, 14, voor);
+    staaf(rechts, y, k.z, rechts, y, k.z + k.d);
+    staaf(rechts - 6, y, k.z, rechts + 6, y, k.z); staaf(rechts - 6, y, k.z + k.d, rechts + 6, y, k.z + k.d);
+    label(`${Math.round(k.d)} cm`, rechts, 14, k.z + k.d / 2);
+    staaf(rechts, 0, k.z, rechts, k.h, k.z);
+    staaf(rechts - 5, k.h, k.z, rechts + 5, k.h, k.z);
+    label(`${Math.round(k.h)} cm`, rechts + 4, k.h / 2, k.z);
+  }
+  function zetMarkering() {
+    if (markeerKader) { scene.remove(markeerKader); markeerKader.geometry?.dispose(); markeerKader = null; }
+    if (!markeerId) return;
+    const box = new THREE.Box3();
+    for (const c of groep.children) if (c.name.startsWith(`${markeerId}.`)) box.expandByObject(c);
+    if (box.isEmpty()) return;
+    box.expandByScalar(1.5);
+    markeerKader = new THREE.Box3Helper(box, new THREE.Color('#3f5a52'));
+    markeerKader.material.depthTest = false;
+    markeerKader.material.transparent = true;
+    markeerKader.material.opacity = 0.85;
+    markeerKader.renderOrder = 9;
+    scene.add(markeerKader);
+  }
   renderer.domElement.addEventListener('pointercancel', los);
   renderer.domElement.addEventListener('wheel', (ev: WheelEvent) => {
     if (bezigMetFoto) { ev.preventDefault(); return; }
@@ -962,6 +1126,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
   let kwaliteitNu: Kwaliteit = 'mooi';
+  let weergave: Weergave3D = { ...STANDAARD_WEERGAVE };
+  let markeerId: string | null = null;
+  let markeerKader: any = null;
+  const matenGroep = new THREE.Group();
+  scene.add(matenGroep);
   let pathTracer: any = null;
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
@@ -978,6 +1147,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const nieuw = s.kader;
       const veranderd = Math.abs(nieuw.b - kader.b) > 1 || Math.abs(nieuw.d - kader.d) > 1 || Math.abs(nieuw.x - kader.x) > 1 || Math.abs(nieuw.z - kader.z) > 1;
       kader = nieuw;
+      zetMaten();
+      zetMarkering();
       doel = new THREE.Vector3(kader.x + kader.b / 2, Math.min(Math.max(40, kader.h * 0.35), kader.h / 2), kader.z + kader.d / 2);
       const grootte = Math.max(kader.b, kader.d, 120);
       zetZon();
@@ -1078,8 +1249,30 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       if (naam === 'zij') { hoekH = Math.PI / 2; hoekV = 0.15; }
       if (naam === 'schuin') { hoekH = -0.6; hoekV = 0.42; }
       if (naam === 'achter') { hoekH = Math.PI + 0.5; hoekV = 0.3; }
-      afstand = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5);
+      afstand = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5) * lensFactor();
+      // Ooghoogte: recht van voren, zoals een staande klant (camera op 155 cm), iets dichterbij.
+      if (naam === 'ooghoogte') { hoekH = -0.25; afstand *= 0.85; hoekV = Math.asin(Math.max(-0.2, Math.min(0.95, (155 - doel.y) / afstand))); }
       plaatsCamera();
+    },
+    instellen(w) {
+      const oud = weergave;
+      weergave = { ...weergave, ...w };
+      if (w.lens !== undefined && w.lens !== oud.lens) {
+        // Zelfde beeldvulling houden bij een andere lens.
+        afstand *= Math.tan((oud.lens * Math.PI) / 360) / Math.tan((weergave.lens * Math.PI) / 360);
+        camera.fov = weergave.lens;
+        camera.updateProjectionMatrix();
+      }
+      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
+      if (weergave.draaien && !draaiLoopt) requestAnimationFrame(draaiLus);
+      zetDecor(null);
+      zetMaten();
+      plaatsCamera();
+    },
+    markeer(id) {
+      markeerId = id;
+      zetMarkering();
+      render(true);
     },
     formaat() {
       const b = houder.clientWidth || 600;

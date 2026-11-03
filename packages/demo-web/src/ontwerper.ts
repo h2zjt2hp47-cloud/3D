@@ -25,7 +25,7 @@ import {
   type Rotatie,
 } from '../../core/src/index.js';
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
-import { DECORS, LICHTEN, maak3D, type DecorNaam, type Kwaliteit, type LichtNaam, type Viewer3D } from './drie-d.js';
+import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
@@ -599,15 +599,16 @@ function markeerOptieFouten() {
 
 // ---------- 3D-instellingen: stof, decor, licht, kwaliteit, foto, groot scherm ----------
 const SLEUTEL_3D = 'configurator-demo.3d.v1';
-type Instellingen3D = { decor: DecorNaam; licht: LichtNaam; kwaliteit: Kwaliteit };
+type Instellingen3D = { decor: DecorNaam; licht: LichtNaam; kwaliteit: Kwaliteit; weergave: Weergave3D };
 function instellingen3D(): Instellingen3D {
-  const standaard: Instellingen3D = { decor: 'studio', licht: 'studio', kwaliteit: window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi' };
+  const standaard: Instellingen3D = { decor: 'studio', licht: 'studio', kwaliteit: window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi', weergave: { ...STANDAARD_WEERGAVE } };
   try {
     const o = JSON.parse(laad(SLEUTEL_3D) ?? '{}');
     return {
       decor: o.decor in DECORS ? o.decor : standaard.decor,
       licht: o.licht in LICHTEN ? o.licht : standaard.licht,
       kwaliteit: o.kwaliteit === 'snel' || o.kwaliteit === 'mooi' ? o.kwaliteit : standaard.kwaliteit,
+      weergave: { ...STANDAARD_WEERGAVE, ...(o.weergave && typeof o.weergave === 'object' ? o.weergave : {}) },
     };
   } catch {
     return standaard;
@@ -616,8 +617,10 @@ function instellingen3D(): Instellingen3D {
 function pas3DInstellingenToe() {
   const i = instellingen3D();
   viewer?.kwaliteit?.(i.kwaliteit);
+  viewer?.instellen?.(i.weergave);
   viewer?.licht?.(i.licht);
   viewer?.decor?.(i.decor);
+  viewer?.markeer?.(geselecteerd);
 }
 function vul3DStof() {
   materiaalOptiesPerCollectie($<HTMLSelectElement>('#o-3d-stof'), getMaterialen(), ontwerp.hoofdmateriaal);
@@ -634,7 +637,51 @@ function start3DInstellingen() {
   decor.replaceChildren(...Object.entries(DECORS).map(([k, v]) => el('option', { value: k }, v.label)));
   licht.replaceChildren(...Object.entries(LICHTEN).map(([k, v]) => el('option', { value: k }, v.label)));
   decor.value = i.decor; licht.value = i.licht; kwal.value = i.kwaliteit;
-  const bewaarInst = () => bewaar(SLEUTEL_3D, JSON.stringify({ decor: decor.value, licht: licht.value, kwaliteit: kwal.value }));
+  let weergave3D: Weergave3D = i.weergave;
+  const bewaarInst = () => bewaar(SLEUTEL_3D, JSON.stringify({ decor: decor.value, licht: licht.value, kwaliteit: kwal.value, weergave: weergave3D }));
+  // Meer instellingen: vloer, muur, tapijt, spullen, lens, helderheid, zon, maten, draaien.
+  const vloer = $<HTMLSelectElement>('#o-3d-vloer'), muur = $<HTMLSelectElement>('#o-3d-muur'), tapijt = $<HTMLSelectElement>('#o-3d-tapijt');
+  const muurKleur = $<HTMLInputElement>('#o-3d-muurkleur'), tapijtKleur = $<HTMLInputElement>('#o-3d-tapijtkleur');
+  const spullen = $<HTMLSelectElement>('#o-3d-spullen'), lens = $<HTMLSelectElement>('#o-3d-lens');
+  const helder = $<HTMLInputElement>('#o-3d-helderheid'), zonR = $<HTMLInputElement>('#o-3d-zon');
+  const maten = $<HTMLInputElement>('#o-3d-maten'), draaien = $<HTMLInputElement>('#o-3d-draaien');
+  vloer.replaceChildren(el('option', { value: 'decor' }, 'Zoals het decor'), ...Object.entries(VLOEREN).map(([k, v]) => el('option', { value: k }, v.label)));
+  const toonVelden = () => {
+    const w = weergave3D;
+    vloer.value = w.vloer;
+    muur.value = /^#/.test(w.muur) ? 'kleur' : w.muur;
+    if (/^#/.test(w.muur)) muurKleur.value = w.muur;
+    tapijt.value = /^#/.test(w.tapijt) ? 'kleur' : w.tapijt;
+    if (/^#/.test(w.tapijt)) tapijtKleur.value = w.tapijt;
+    $('#o-3d-muurkleur-veld').hidden = muur.value !== 'kleur';
+    $('#o-3d-tapijtkleur-veld').hidden = tapijt.value !== 'kleur';
+    spullen.value = w.spullen; lens.value = String(w.lens);
+    helder.value = String(w.helderheid); zonR.value = String(w.zonRichting);
+    maten.checked = w.maten; draaien.checked = w.draaien;
+  };
+  const leesVelden = () => {
+    weergave3D = {
+      vloer: vloer.value as Weergave3D['vloer'],
+      muur: muur.value === 'kleur' ? muurKleur.value : muur.value,
+      tapijt: tapijt.value === 'kleur' ? tapijtKleur.value : tapijt.value,
+      spullen: spullen.value as Weergave3D['spullen'],
+      lens: Number(lens.value), helderheid: Number(helder.value), zonRichting: Number(zonR.value),
+      maten: maten.checked, draaien: draaien.checked,
+    };
+    $('#o-3d-muurkleur-veld').hidden = muur.value !== 'kleur';
+    $('#o-3d-tapijtkleur-veld').hidden = tapijt.value !== 'kleur';
+    viewer?.instellen?.(weergave3D);
+    bewaarInst();
+  };
+  toonVelden();
+  for (const v of [vloer, muur, tapijt, spullen, lens, maten, draaien]) v.addEventListener('change', leesVelden);
+  for (const v of [muurKleur, tapijtKleur, helder, zonR]) v.addEventListener('input', leesVelden);
+  $('#o-3d-herstel').addEventListener('click', () => {
+    weergave3D = { ...STANDAARD_WEERGAVE };
+    toonVelden();
+    viewer?.instellen?.(weergave3D);
+    bewaarInst();
+  });
   decor.addEventListener('change', () => { viewer?.decor?.(decor.value as DecorNaam); bewaarInst(); });
   licht.addEventListener('change', () => { viewer?.licht?.(licht.value as LichtNaam); bewaarInst(); });
   kwal.addEventListener('change', () => { viewer?.kwaliteit?.(kwal.value as Kwaliteit); bewaarInst(); });
@@ -686,7 +733,15 @@ export function kiesWeergave(w: typeof weergave) {
   $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'klik een element · sleep de grepen · maten in cm' : 'draai en zoom met muis of vinger';
   kiesGereedschap(gereedschap);
   if (w === '3d' && viewer === undefined) {
-    viewer = maak3D($('#o-3d'), { zetel: true });
+    viewer = maak3D($('#o-3d'), {
+      zetel: true,
+      // Klik op een deel van de zetel in 3D: dat element kiezen (eigenschappen, stof per element).
+      opKlik: (id) => {
+        geselecteerd = id && elementVan(id) ? id : null;
+        toonEigenschappen();
+        tekenCanvas();
+      },
+    });
     // Voor geautomatiseerde tests (Playwright): de 3D-weergave rechtstreeks bereikbaar.
     (window as unknown as { __zetel3d?: unknown }).__zetel3d = viewer;
     pas3DInstellingenToe();
@@ -1041,6 +1096,8 @@ function vulHoofdmateriaal() {
 function toonEigenschappen() {
   const vak = $('#o-eigenschappen');
   const e = elementVan(geselecteerd);
+  // Het gekozen element ook in de 3D aanduiden.
+  if (weergave === '3d') viewer?.markeer?.(e ? e.id : null);
   if (!e) {
     vak.replaceChildren(el('p', { class: 'klein' }, 'Klik op een element om het aan te passen, of kies links een element om te tekenen.'));
     return;
@@ -1173,6 +1230,8 @@ function herbereken(alles = true) {
   status.textContent = r.geldig ? 'Klaar voor offerte' : `${fouten} ${fouten === 1 ? 'fout' : 'fouten'} op te lossen`;
   status.className = `status ${r.geldig ? 'ok' : 'fout'}`;
   $('#o-prijs-excl').textContent = eur(r.prijs.verkoopprijsExcl);
+  // Ook in de 3D-balk (handig in groot scherm, waar de zijbalk weg is).
+  $('#o-3d-prijs').textContent = `${eur(r.prijs.verkoopprijsExcl)} excl. btw`;
   $('#o-prijs-incl').textContent = `${eur(r.prijs.verkoopprijsIncl)} incl. ${getCatalogus().btwProcent}% btw`;
   const regels: [string, string][] = [];
   if (r.prijs.kortingProcent) {
@@ -1271,7 +1330,7 @@ export function startOntwerper() {
   );
   start3DInstellingen();
   document.querySelectorAll<HTMLButtonElement>('[data-standpunt]').forEach((b) =>
-    b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as 'schuin' | 'voor' | 'boven' | 'zij')),
+    b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as Standpunt)),
   );
 
   const hoofd = $<HTMLSelectElement>('#o-hoofdmateriaal');
