@@ -38,7 +38,16 @@ export async function bewaarBestand(naam: string, data: Blob): Promise<'bewaard'
   return 'bewaard';
 }
 
-/** Data-URL (bv. een foto van de 3D) naar een Blob. */
-export async function dataUrlNaarBlob(url: string): Promise<Blob> {
-  return (await fetch(url)).blob();
+/**
+ * Data-URL (bv. een foto van de 3D) naar een Blob, zelf gedecodeerd: `fetch(dataUrl)` mag niet in de
+ * weergave op claude.ai ("Failed to fetch").
+ */
+export function dataUrlNaarBlob(url: string): Blob {
+  const komma = url.indexOf(',');
+  const kop = url.slice(0, komma);
+  const type = /^data:([^;,]+)/.exec(kop)?.[1] ?? 'application/octet-stream';
+  const ruw = kop.includes(';base64') ? atob(url.slice(komma + 1)) : decodeURIComponent(url.slice(komma + 1));
+  const bytes = new Uint8Array(ruw.length);
+  for (let i = 0; i < ruw.length; i++) bytes[i] = ruw.charCodeAt(i);
+  return new Blob([bytes], { type });
 }

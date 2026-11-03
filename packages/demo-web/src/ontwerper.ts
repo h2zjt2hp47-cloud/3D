@@ -725,7 +725,8 @@ async function startArPaneel() {
 }
 
 function downloadBeeld(url: string, soort: string) {
-  void dataUrlNaarBlob(url).then((b) => bewaarBestand(`zetel-${soort}-${new Date().toISOString().slice(0, 10)}.png`, b));
+  // Fouten hier niet als rode melding: de foto staat al in beeld, enkel het bewaren lukte niet.
+  bewaarBestand(`zetel-${soort}-${new Date().toISOString().slice(0, 10)}.png`, dataUrlNaarBlob(url)).catch((fout) => console.error('Foto bewaren mislukt:', fout));
 }
 function start3DInstellingen() {
   const i = instellingen3D();
