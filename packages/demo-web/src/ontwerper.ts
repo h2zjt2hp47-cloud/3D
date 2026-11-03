@@ -25,8 +25,8 @@ import {
   type Rotatie,
 } from '../../core/src/index.js';
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
-import { maak3D, type Viewer3D } from './drie-d.js';
-import { Zoom } from './zoom.js';
+import { DECORS, LICHTEN, maak3D, type DecorNaam, type Kwaliteit, type LichtNaam, type Viewer3D } from './drie-d.js';
+import { grootSchermKnop, Zoom } from './zoom.js';
 import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
@@ -597,6 +597,63 @@ function markeerOptieFouten() {
   document.querySelectorAll<HTMLElement>('.optiegroep').forEach((f) => f.classList.toggle('fout', fout.has(f.dataset.groep ?? '')));
 }
 
+// ---------- 3D-instellingen: stof, decor, licht, kwaliteit, foto, groot scherm ----------
+const SLEUTEL_3D = 'configurator-demo.3d.v1';
+type Instellingen3D = { decor: DecorNaam; licht: LichtNaam; kwaliteit: Kwaliteit };
+function instellingen3D(): Instellingen3D {
+  const standaard: Instellingen3D = { decor: 'studio', licht: 'studio', kwaliteit: window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi' };
+  try {
+    const o = JSON.parse(laad(SLEUTEL_3D) ?? '{}');
+    return {
+      decor: o.decor in DECORS ? o.decor : standaard.decor,
+      licht: o.licht in LICHTEN ? o.licht : standaard.licht,
+      kwaliteit: o.kwaliteit === 'snel' || o.kwaliteit === 'mooi' ? o.kwaliteit : standaard.kwaliteit,
+    };
+  } catch {
+    return standaard;
+  }
+}
+function pas3DInstellingenToe() {
+  const i = instellingen3D();
+  viewer?.kwaliteit?.(i.kwaliteit);
+  viewer?.licht?.(i.licht);
+  viewer?.decor?.(i.decor);
+}
+function vul3DStof() {
+  materiaalOptiesPerCollectie($<HTMLSelectElement>('#o-3d-stof'), getMaterialen(), ontwerp.hoofdmateriaal);
+}
+function start3DInstellingen() {
+  const i = instellingen3D();
+  const decor = $<HTMLSelectElement>('#o-3d-decor'), licht = $<HTMLSelectElement>('#o-3d-licht'), kwal = $<HTMLSelectElement>('#o-3d-kwaliteit');
+  decor.replaceChildren(...Object.entries(DECORS).map(([k, v]) => el('option', { value: k }, v.label)));
+  licht.replaceChildren(...Object.entries(LICHTEN).map(([k, v]) => el('option', { value: k }, v.label)));
+  decor.value = i.decor; licht.value = i.licht; kwal.value = i.kwaliteit;
+  const bewaarInst = () => bewaar(SLEUTEL_3D, JSON.stringify({ decor: decor.value, licht: licht.value, kwaliteit: kwal.value }));
+  decor.addEventListener('change', () => { viewer?.decor?.(decor.value as DecorNaam); bewaarInst(); });
+  licht.addEventListener('change', () => { viewer?.licht?.(licht.value as LichtNaam); bewaarInst(); });
+  kwal.addEventListener('change', () => { viewer?.kwaliteit?.(kwal.value as Kwaliteit); bewaarInst(); });
+  // Stof kiezen zonder de zijbalk (handig in groot scherm); blijft gelijk met "Hoofdmateriaal".
+  const stof = $<HTMLSelectElement>('#o-3d-stof');
+  vul3DStof();
+  stof.addEventListener('change', () => {
+    if (stof.value === ontwerp.hoofdmateriaal) return;
+    onthoud();
+    ontwerp.hoofdmateriaal = stof.value;
+    $<HTMLSelectElement>('#o-hoofdmateriaal').value = stof.value;
+    gewijzigd();
+    stalenkaart?.ververs();
+  });
+  $('#o-3d-foto').addEventListener('click', () => {
+    const url = viewer?.foto?.();
+    if (!url) return;
+    const a = el('a', { href: url, download: `zetel-3d-${new Date().toISOString().slice(0, 10)}.png` });
+    document.body.append(a);
+    a.click();
+    a.remove();
+  });
+  $('#o-3d-groot').append(grootSchermKnop($('#o-tekenvlak'), () => viewer?.formaat()));
+}
+
 // ---------- weergave: bovenaanzicht, vooraanzicht, 3D ----------
 export function kiesWeergave(w: typeof weergave) {
   weergave = w;
@@ -605,9 +662,13 @@ export function kiesWeergave(w: typeof weergave) {
   $('#o-voor').toggleAttribute('hidden', w !== 'voor');
   $('#o-3d').hidden = w !== '3d';
   $('#o-3d-knoppen').hidden = w !== '3d';
+  $('#o-3d-instellingen').hidden = w !== '3d';
   $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'klik een element · sleep de grepen · maten in cm' : 'draai en zoom met muis of vinger';
   kiesGereedschap(gereedschap);
-  if (w === '3d' && viewer === undefined) viewer = maak3D($('#o-3d'), { zetel: true });
+  if (w === '3d' && viewer === undefined) {
+    viewer = maak3D($('#o-3d'), { zetel: true });
+    pas3DInstellingenToe();
+  }
   toonWeergave();
 }
 
@@ -935,6 +996,7 @@ function vulHoofdmateriaal() {
   const s = $<HTMLSelectElement>('#o-hoofdmateriaal');
   if (!getMaterialen().some((m) => m.code === ontwerp.hoofdmateriaal)) ontwerp.hoofdmateriaal = getMaterialen()[0]?.code ?? '';
   materiaalOpties(s, ontwerp.hoofdmateriaal, false);
+  vul3DStof();
   // Stalenkaart onder de keuzelijst: alle stoffen per collectie, met filters.
   if (!stalenkaart) {
     stalenkaart = maakStalenkaart({
@@ -946,6 +1008,7 @@ function vulHoofdmateriaal() {
         onthoud();
         ontwerp.hoofdmateriaal = code;
         s.value = code;
+        $<HTMLSelectElement>('#o-3d-stof').value = code;
         gewijzigd();
       },
     });
@@ -1184,12 +1247,7 @@ export function startOntwerper() {
   document.querySelectorAll<HTMLButtonElement>('[data-o-weergave]').forEach((b) =>
     b.addEventListener('click', () => kiesWeergave(b.dataset.oWeergave as typeof weergave)),
   );
-  document.querySelectorAll<HTMLButtonElement>('[data-decor]').forEach((b) =>
-    b.addEventListener('click', () => {
-      viewer?.decor?.(b.dataset.decor as 'studio' | 'kamer');
-      document.querySelectorAll<HTMLButtonElement>('[data-decor]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    }),
-  );
+  start3DInstellingen();
   document.querySelectorAll<HTMLButtonElement>('[data-standpunt]').forEach((b) =>
     b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as 'schuin' | 'voor' | 'boven' | 'zij')),
   );
@@ -1198,6 +1256,7 @@ export function startOntwerper() {
   hoofd.addEventListener('change', () => {
     onthoud();
     ontwerp.hoofdmateriaal = hoofd.value;
+    $<HTMLSelectElement>('#o-3d-stof').value = hoofd.value;
     gewijzigd();
     stalenkaart?.ververs();
   });

@@ -13,11 +13,35 @@ declare const THREE: any;
 
 export interface Viewer3D {
   toon(scene: Scene3D): void;
-  /** Omgeving rond de zetel: neutrale studio of een woonkamer (parketvloer, muur, tapijt). */
-  decor?(naam: 'studio' | 'kamer'): void;
+  /** Omgeving rond de zetel (zie DECORS). */
+  decor?(naam: DecorNaam): void;
+  /** Lichtsfeer (zie LICHTEN). */
+  licht?(naam: LichtNaam): void;
+  /** Snel (lichter voor tablets) of mooi (scherper beeld en schaduwen). */
+  kwaliteit?(k: Kwaliteit): void;
+  /** Foto van het huidige beeld in hoge resolutie (PNG als data-URL). */
+  foto?(): string | null;
   standpunt(naam: 'schuin' | 'voor' | 'boven' | 'zij' | 'achter'): void;
   formaat(): void;
 }
+
+/** Decors voor de zetel: vloer, muur, tapijt en een paar spullen. */
+export const DECORS = {
+  studio: { label: 'Studio', achtergrond: '#f2f1ed' },
+  kamer: { label: 'Woonkamer', achtergrond: '#e7e2da', vloer: { soort: 'parket', kleur: '#9a7552' }, muur: { soort: 'verf', kleur: '#e4ded4' }, tapijt: '#cfc6b6', spullen: true },
+  scandi: { label: 'Scandinavisch', achtergrond: '#eef0ee', vloer: { soort: 'parket', kleur: '#d6c09a' }, muur: { soort: 'verf', kleur: '#f4f3ef' }, tapijt: '#e8e3d8', spullen: true },
+  loft: { label: 'Loft', achtergrond: '#d8d5cf', vloer: { soort: 'beton', kleur: '#a19d96' }, muur: { soort: 'steen', kleur: '#8a4a36' }, tapijt: '#4a4640', spullen: true },
+} as const;
+export type DecorNaam = keyof typeof DECORS;
+
+/** Lichtsferen: zon (kleur, sterkte, hoogte), hemellicht, omgevingslicht en een warme lamp. */
+export const LICHTEN = {
+  studio: { label: 'Studio', zon: '#ffffff', zonSterkte: 0.8, hoogte: 1.6, hemel: 0.34, hemelKleur: '#ffffff', omgeving: 0.5, lamp: 0 },
+  daglicht: { label: 'Daglicht', zon: '#fff3e2', zonSterkte: 1.05, hoogte: 0.9, hemel: 0.3, hemelKleur: '#dde8ff', omgeving: 0.45, lamp: 0 },
+  avond: { label: 'Avond', zon: '#ffb36e', zonSterkte: 0.35, hoogte: 0.5, hemel: 0.1, hemelKleur: '#8f8aa8', omgeving: 0.22, lamp: 1 },
+} as const;
+export type LichtNaam = keyof typeof LICHTEN;
+export type Kwaliteit = 'snel' | 'mooi';
 
 export interface Opties3D {
   /** Zetelweergave: contactschaduw onder de zetel en keuze van decor (niet voor woningen). */
@@ -38,8 +62,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.84;
+  renderer.toneMapping = THREE.LinearToneMapping;
+  renderer.toneMappingExposure = 0.95;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   houder.replaceChildren(renderer.domElement);
@@ -51,8 +75,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // Studiolicht: een omgevingsbeeld (softboxen in een grijze ruimte) geeft zachte reflecties en glans;
   // daardoor kunnen de hemel- en vullicht zwakker.
   scene.environment = studioOmgeving();
-  const OMGEVING = 0.5;
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34));
+  let OMGEVING = 0.5;
+  const hemel = new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34);
+  scene.add(hemel);
+  // Warme lamp (bij de staanlamp in het decor), alleen aan bij de lichtsfeer "Avond".
+  const lamp = new THREE.PointLight(0xffc58a, 0, 600, 2);
+  lamp.castShadow = false;
+  scene.add(lamp);
   const zon = new THREE.DirectionalLight(0xffffff, 0.8);
   zon.castShadow = true;
   zon.shadow.mapSize.set(2048, 2048);
@@ -60,7 +89,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   scene.add(zon, zon.target);
   const vul = new THREE.DirectionalLight(0xffffff, 0.16);
   scene.add(vul);
-  const studioVloer = new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 1, envMapIntensity: 0.4 });
+  const studioVloer = new THREE.MeshStandardMaterial({ color: 0xdcd8d0, roughness: 1, envMapIntensity: 0.4 });
   const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), studioVloer);
   vloer.rotation.x = -Math.PI / 2;
   vloer.receiveShadow = true;
@@ -319,7 +348,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     if (!m) {
       if (b.soort === 'metaal') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), metalness: 0.85, roughness: 0.3 });
-      else if (b.soort === 'hout') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.55 });
+      else if (b.soort === 'hout') m = opties.zetel
+        ? new THREE.MeshStandardMaterial({ color: 0xffffff, map: houtNerf(b.kleur), roughness: 0.45 })
+        : new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.55 });
       else if (b.soort === 'planken') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: planken(b.kleur) });
       else if (b.soort === 'steen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.92, map: baksteen(b.kleur, b.voeg) });
       else if (b.soort === 'planken_h') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.62, map: plankenLiggend(b.kleur) });
@@ -368,10 +399,23 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    * (zitkussen: boven en onder; rugkussen: voor en achter) en iets bol op de zijkanten.
    * Onderkant op y = 0; normalen analytisch (geen harde lijnen op de randen); onderaan iets donkerder (schaduw tussen kussens).
    */
-  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1) {
+  /** Blokken van de huidige scène (voor de schaduw waar een kussen tegen een ander deel ligt). */
+  let sceneBlokken: Blok[] = [];
+  type Doos = { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number };
+  /** Andere stofdelen vlak naast dit blok (binnen 4 cm), in wereldmaat. */
+  function burenVan(b: Blok): Doos[] {
+    const m = 4;
+    return sceneBlokken
+      .filter((o) => o !== b && (o.soort === 'stof' || o.soort === 'kussen' || o.soort === 'hout') && o.y < b.y + b.h + m && o.y + o.h > b.y - m &&
+        o.x < b.x + b.b + m && o.x + o.b > b.x - m && o.z < b.z + b.d + m && o.z + o.d > b.z - m)
+      .map((o) => ({ x0: o.x, x1: o.x + o.b, y0: o.y, y1: o.y + o.h, z0: o.z, z1: o.z + o.d }));
+  }
+
+  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1, buren: Doos[] = [], oorsprong = [0, 0, 0]) {
     const maat = [B, H, D];
     const plat = maat.indexOf(Math.min(B, H, D)); // as van de dunste maat: daar bolt het kussen
     const bol = Math.min(2.2, maat[plat]! * 0.13) * vulling;
+    const zak = vulling === 1 && plat === 1 && B > 30 && D > 30 ? Math.min(0.9, bol * 0.45) : 0;
     const seg = (l: number) => Math.max(4, Math.min(28, Math.round(l / 3)));
     const geo = new THREE.BoxGeometry(B, H, D, seg(B), seg(H), seg(D));
     const half = [B / 2, H / 2, D / 2];
@@ -400,11 +444,30 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
           n[o2] = n[o2]! + bol * 2 * (u[o2]! / half[o2]!) * (1 - u[o1]! * u[o1]!) * sterk;
         }
       }
+      // Zitkuil: een lichte indruk midden op een zitkussen (alleen bovenop, bij een liggend kussen).
+      if (zak > 0 && u[1]! > 0) {
+        const e = Math.exp(-2.2 * (u[0]! * u[0]! + u[2]! * u[2]!)) * Math.max(0, u[1]!);
+        p[1] = p[1]! - zak * e;
+        const sterk = Math.max(0, n[1]!);
+        n[0] = n[0]! - 2 * 2.2 * zak * e * (u[0]! / half[0]!) * sterk;
+        n[2] = n[2]! - 2 * 2.2 * zak * e * (u[2]! / half[2]!) * sterk;
+      }
       const nl = Math.hypot(n[0]!, n[1]!, n[2]!) || 1;
       pos.setXYZ(i, p[0]!, p[1]! + H / 2, p[2]!);
       nrm.setXYZ(i, n[0]! / nl, n[1]! / nl, n[2]! / nl);
       // Schaduw onderaan: van 0,72 (onderkant) naar 1 (bovenste helft).
-      const ao = 0.72 + 0.28 * Math.min(1, Math.max(0, (p[1]! + half[1]!) / (H * 0.6)));
+      let ao = 0.72 + 0.28 * Math.min(1, Math.max(0, (p[1]! + half[1]!) / (H * 0.6)));
+      // Waar het kussen tegen een ander deel ligt (rug, arm, onderbouw): donkerder, zoals in het echt.
+      if (buren.length) {
+        const wx = p[0]! + oorsprong[0]!, wy = p[1]! + H / 2 + oorsprong[1]!, wz = p[2]! + oorsprong[2]!;
+        let dicht = 0;
+        for (const q of buren) {
+          const dx = Math.max(q.x0 - wx, 0, wx - q.x1), dy = Math.max(q.y0 - wy, 0, wy - q.y1), dz = Math.max(q.z0 - wz, 0, wz - q.z1);
+          const d = Math.hypot(dx, dy, dz);
+          if (d < 3.5) dicht += (1 - d / 3.5) * 0.3;
+        }
+        ao *= 1 - Math.min(0.42, dicht);
+      }
       kleuren[i * 3] = kleuren[i * 3 + 1] = kleuren[i * 3 + 2] = ao;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(kleuren, 3));
@@ -504,7 +567,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       default:
         // Kussens gevuld en bol; bij de zetel ook de gestoffeerde armen en rug, iets minder bol.
         if (b.afronding && (b.soort === 'kussen' || (opties.zetel && b.soort === 'stof'))) {
-          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5);
+          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz]);
           geo = kussen.geo;
           break;
         }
@@ -613,42 +676,147 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     contact.visible = true;
   }
 
-  let decorNaam: 'studio' | 'kamer' = 'studio';
+  let decorNaam: DecorNaam = 'studio';
+  let lichtNaam: LichtNaam = 'studio';
   const kamerDelen: any[] = [];
-  let kamerVloer: any = null;
+  const decorMaterialen = new Map<string, any>();
+  const plantMat = new THREE.MeshStandardMaterial({ color: kleur('#4f6b3c'), roughness: 0.8 });
+  /** Houten structuur met nerf (poten, tafeltjes): fijne lange lijnen in een iets andere tint. */
+  const nerven = new Map<string, any>();
+  function houtNerf(hex: string) {
+    let t = nerven.get(hex);
+    if (!t) {
+      t = canvasTextuur(16, 32, 8, (g, px) => {
+        g.fillStyle = hex;
+        g.fillRect(0, 0, 16 * px, 32 * px);
+        for (let n = 0; n < 60; n++) {
+          const x = Math.random() * 16 * px, w = 0.4 + Math.random() * 1.6;
+          g.globalAlpha = 0.35 + Math.random() * 0.3;
+          g.fillStyle = tint(hex, Math.random() < 0.5 ? 0.82 : 1.1);
+          g.fillRect(x, 0, w, 32 * px);
+          g.globalAlpha = 1;
+        }
+      });
+      nerven.set(hex, t);
+    }
+    return t;
+  }
+  function vloerMateriaal(v: { soort: string; kleur: string }) {
+    const sleutel = `vloer:${v.soort}:${v.kleur}`;
+    let m = decorMaterialen.get(sleutel);
+    if (!m) {
+      if (v.soort === 'parket') {
+        const t = parket(v.kleur);
+        t.repeat.set(4000 / PARKET.b, 4000 / PARKET.h);
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, map: t, envMapIntensity: 0.5 });
+      } else {
+        // Gepolierde beton: pleistertextuur op grote schaal, iets glanzend.
+        const t = pleister(v.kleur);
+        t.repeat.set(4000 / 160, 4000 / 160);
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, map: t, envMapIntensity: 0.6 });
+      }
+      decorMaterialen.set(sleutel, m);
+    }
+    return m;
+  }
+  function muurMateriaal(w: { soort: string; kleur: string }, breed: number, hoog: number) {
+    if (w.soort === 'steen') {
+      const t = baksteen(w.kleur, '#c7bfb2');
+      t.repeat.set(breed / STEEN.b, hoog / STEEN.h);
+      return new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: t, envMapIntensity: 0.4 });
+    }
+    return new THREE.MeshStandardMaterial({ color: kleur(w.kleur), roughness: 0.95, envMapIntensity: 0.4 });
+  }
   function zetDecor(s: Scene3D | null) {
-    for (const d of kamerDelen) { scene.remove(d); d.geometry.dispose(); }
+    for (const d of kamerDelen) { scene.remove(d); d.traverse((o: any) => o.geometry?.dispose()); }
     kamerDelen.length = 0;
-    if (!opties.zetel || decorNaam === 'studio') {
+    const dc = DECORS[decorNaam] as (typeof DECORS)[DecorNaam] & { vloer?: { soort: string; kleur: string }; muur?: { soort: string; kleur: string }; tapijt?: string; spullen?: boolean };
+    const bg = opties.zetel ? dc.achtergrond : '#f2f1ed';
+    scene.background = new THREE.Color(bg);
+    if (opties.zetel) {
+      // Mist in de kleur van de achtergrond: de vloer loopt zacht weg, geen harde horizon.
+      if (!scene.fog) scene.fog = new THREE.Fog(bg, 600, 1800);
+      scene.fog.color.set(bg);
+    }
+    lamp.intensity = 0;
+    if (!opties.zetel || !dc.vloer) {
       vloer.material = studioVloer;
-      scene.background = new THREE.Color('#f2f1ed');
+      zetLicht();
       return;
     }
-    if (!kamerVloer) {
-      const t = parket('#9a7552');
-      t.repeat.set(4000 / PARKET.b, 4000 / PARKET.h);
-      kamerVloer = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, map: t, envMapIntensity: 0.5 });
-    }
-    vloer.material = kamerVloer;
-    scene.background = new THREE.Color('#e7e2da');
+    vloer.material = vloerMateriaal(dc.vloer);
     const k = s?.kader ?? kader;
-    // Muur achter de zetel met plint, en een tapijt eronder.
+    const midX = k.x + k.b / 2;
     const muurZ = k.z - 35;
-    const muur = new THREE.Mesh(new THREE.PlaneGeometry(1400, 320), new THREE.MeshStandardMaterial({ color: kleur('#e4ded4'), roughness: 0.95, envMapIntensity: 0.4 }));
-    muur.position.set(k.x + k.b / 2, 160, muurZ);
-    muur.receiveShadow = true;
-    const plint = new THREE.Mesh(new THREE.BoxGeometry(1400, 8, 1.5), new THREE.MeshStandardMaterial({ color: kleur('#f3f0ea'), roughness: 0.6 }));
-    plint.position.set(k.x + k.b / 2, 4, muurZ + 0.75);
-    const tapijtTex = new THREE.CanvasTexture(weefselCanvas('wol', '#cfc6b6'));
-    tapijtTex.wrapS = tapijtTex.wrapT = THREE.RepeatWrapping;
-    tapijtTex.encoding = THREE.sRGBEncoding;
-    const tb = k.b + 80, td = k.d + 110;
-    tapijtTex.repeat.set(tb / 12, td / 12);
-    const tapijt = new THREE.Mesh(new THREE.BoxGeometry(tb, 1, td), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: tapijtTex, envMapIntensity: 0.3 }));
-    tapijt.position.set(k.x + k.b / 2, 0.5, k.z + k.d / 2 + 25);
-    tapijt.receiveShadow = true;
-    kamerDelen.push(muur, plint, tapijt);
+    const add = (m: any, schaduw = true) => { m.castShadow = schaduw; m.receiveShadow = true; kamerDelen.push(m); };
+    if (dc.muur) {
+      const muur = new THREE.Mesh(new THREE.PlaneGeometry(1400, 320), muurMateriaal(dc.muur, 1400, 320));
+      muur.position.set(midX, 160, muurZ);
+      add(muur, false);
+      if (dc.muur.soort !== 'steen') {
+        const plint = new THREE.Mesh(new THREE.BoxGeometry(1400, 8, 1.5), new THREE.MeshStandardMaterial({ color: kleur('#f3f0ea'), roughness: 0.6 }));
+        plint.position.set(midX, 4, muurZ + 0.75);
+        add(plint, false);
+      }
+    }
+    if (dc.tapijt) {
+      const tapijtTex = new THREE.CanvasTexture(weefselCanvas('wol', dc.tapijt));
+      tapijtTex.wrapS = tapijtTex.wrapT = THREE.RepeatWrapping;
+      tapijtTex.encoding = THREE.sRGBEncoding;
+      const tb = k.b + 80, td = k.d + 110;
+      tapijtTex.repeat.set(tb / 12, td / 12);
+      const tapijt = new THREE.Mesh(new THREE.BoxGeometry(tb, 1, td), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: tapijtTex, envMapIntensity: 0.3 }));
+      tapijt.position.set(midX, 0.5, k.z + k.d / 2 + 25);
+      add(tapijt, false);
+    }
+    if (dc.spullen) {
+      // Staanlamp rechts, plant in pot links: eenvoudige vormen, alleen voor de sfeer.
+      const lx = k.x + k.b + 45, lz = k.z + 15;
+      const metaal = new THREE.MeshStandardMaterial({ color: kleur('#2b2b2b'), metalness: 0.7, roughness: 0.35 });
+      const voet = new THREE.Mesh(new THREE.CylinderGeometry(14, 15, 2, 28), metaal); voet.position.set(lx, 1, lz); add(voet);
+      const stang = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 150, 10), metaal); stang.position.set(lx, 76, lz); add(stang);
+      const kap = new THREE.Mesh(new THREE.CylinderGeometry(16, 22, 26, 32, 1, true), new THREE.MeshStandardMaterial({ color: kleur('#efe7d8'), roughness: 0.9, side: THREE.DoubleSide, emissive: kleur('#ffd9a8'), emissiveIntensity: lichtNaam === 'avond' ? 0.6 : 0 }));
+      kap.position.set(lx, 160, lz); add(kap, false);
+      lamp.position.set(lx, 150, lz);
+      lamp.intensity = LICHTEN[lichtNaam].lamp * 1.4;
+      const px = k.x - 50, pz = k.z + 10;
+      const pot = new THREE.Mesh(new THREE.CylinderGeometry(17, 13, 34, 28), new THREE.MeshStandardMaterial({ color: kleur(dc.muur?.soort === 'steen' ? '#6b6560' : '#d9d2c4'), roughness: 0.7 }));
+      pot.position.set(px, 17, pz); add(pot);
+      // Blad: een tiental platte, gekantelde ellipsen rond een stam.
+      for (let i = 0; i < 11; i++) {
+        const blad = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 6), plantMat);
+        const hoek = (i / 11) * Math.PI * 2, hoogte = 60 + (i % 4) * 16;
+        blad.scale.set(7, 1.2, 18);
+        blad.position.set(px + Math.cos(hoek) * 14, hoogte, pz + Math.sin(hoek) * 14);
+        blad.rotation.set(0.5 * Math.sin(i), -hoek + Math.PI / 2, 0.6);
+        add(blad);
+      }
+      const stam = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 70, 8), new THREE.MeshStandardMaterial({ map: houtNerf('#6a4a32'), roughness: 0.8 }));
+      stam.position.set(px, 60, pz); add(stam);
+    }
     scene.add(...kamerDelen);
+    zetLicht();
+  }
+  function zetLicht() {
+    const l = LICHTEN[lichtNaam];
+    zon.color.set(l.zon);
+    zon.intensity = l.zonSterkte;
+    hemel.intensity = l.hemel;
+    hemel.color.set(l.hemelKleur);
+    OMGEVING = l.omgeving;
+    // Alle materialen volgen het omgevingslicht van de sfeer.
+    scene.traverse((o: any) => {
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of ms) if ('envMapIntensity' in m && m !== studioVloer) m.envMapIntensity = l.omgeving;
+    });
+    for (const m of materialen.values()) if (m && 'envMapIntensity' in m) m.envMapIntensity = l.omgeving;
+    zetZon();
+  }
+  function zetZon() {
+    const grootte = Math.max(kader.b, kader.d, 120);
+    const h = LICHTEN[lichtNaam].hoogte;
+    zon.position.set(doel.x - grootte * 0.6, grootte * h, doel.z + grootte * 1.1);
+    zon.target.position.copy(doel);
   }
 
   // ---------- camera (eenvoudige orbit) ----------
@@ -662,6 +830,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       doel.z + afstand * Math.cos(hoekV) * Math.cos(hoekH),
     );
     camera.lookAt(doel);
+    if (scene.fog) {
+      const g = Math.max(kader.b, kader.d, 120);
+      scene.fog.near = afstand + g * 0.9;
+      scene.fog.far = afstand + g * 4.5;
+    }
     render();
   };
   let vorige: { x: number; y: number } | null = null;
@@ -712,6 +885,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
+  let kwaliteitNu: Kwaliteit = 'mooi';
   let laatsteBreedte = 0;
   const viewer: Viewer3D = {
     toon(s: Scene3D) {
@@ -719,6 +893,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         groep.remove(c);
         c.traverse((o: any) => o.geometry?.dispose());
       }
+      sceneBlokken = s.blokken;
       for (const b of s.blokken) groep.add(mesh(b));
       zetContactschaduw(s);
       const nieuw = s.kader;
@@ -726,8 +901,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       kader = nieuw;
       doel = new THREE.Vector3(kader.x + kader.b / 2, Math.min(Math.max(40, kader.h * 0.35), kader.h / 2), kader.z + kader.d / 2);
       const grootte = Math.max(kader.b, kader.d, 120);
-      zon.position.set(doel.x - grootte * 0.6, grootte * 1.6, doel.z + grootte * 1.1);
-      zon.target.position.copy(doel);
+      zetZon();
       const sc = zon.shadow.camera;
       sc.left = sc.bottom = -grootte;
       sc.right = sc.top = grootte;
@@ -736,13 +910,44 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       sc.updateProjectionMatrix();
       vul.position.set(doel.x + grootte, grootte * 0.6, doel.z - grootte);
       if (veranderd) afstand = Math.max(200, grootte * 1.5);
-      if (decorNaam !== 'studio') zetDecor(s);
+      if (decorNaam !== 'studio' || !scene.fog) zetDecor(s);
       plaatsCamera();
     },
     decor(naam) {
+      if (!(naam in DECORS)) return;
       decorNaam = naam;
       zetDecor(null);
       render();
+    },
+    licht(naam) {
+      if (!(naam in LICHTEN)) return;
+      lichtNaam = naam;
+      zetDecor(null);
+      render();
+    },
+    kwaliteit(k) {
+      kwaliteitNu = k;
+      renderer.setPixelRatio(k === 'mooi' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
+      const maat = k === 'mooi' ? 4096 : 1024;
+      zon.shadow.mapSize.set(maat, maat);
+      zon.shadow.map?.dispose();
+      zon.shadow.map = null;
+      viewer.formaat();
+    },
+    foto() {
+      // Even renderen op hoge resolutie (3× of minstens 2400 px breed), beeld nemen, terugzetten.
+      try {
+        const oud = renderer.getPixelRatio();
+        const b = houder.clientWidth || 600;
+        renderer.setPixelRatio(Math.max(3, 2400 / b));
+        viewer.formaat();
+        const url = renderer.domElement.toDataURL('image/png');
+        renderer.setPixelRatio(oud);
+        viewer.formaat();
+        return url;
+      } catch {
+        return null;
+      }
     },
     standpunt(naam) {
       if (naam === 'voor') { hoekH = 0; hoekV = 0.12; }

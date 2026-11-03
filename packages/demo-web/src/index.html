@@ -137,7 +137,13 @@ button:disabled { opacity: .45; cursor: default; }
 .knoppenlijst { display: grid; gap: 6px; margin-bottom: 10px; }
 .knoppenlijst button { text-align: left; }
 .knoppenlijst button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
-#o-3d-knoppen button[aria-pressed="true"] { background: var(--accent-zacht); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#o-3d-instellingen button[aria-pressed="true"] { background: var(--accent-zacht); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.drie-d-instellingen { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: end; margin-top: 6px; }
+.drie-d-instellingen label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--zacht); }
+.drie-d-instellingen select { font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 36px; max-width: 220px; }
+.drie-d-instellingen button { min-height: 36px; }
+#o-tekenvlak.groot-scherm #o-3d { width: 100%; }
+#o-tekenvlak.groot-scherm #o-eigenschappen { display: none; }
 .klein-knop { padding: 3px 9px !important; font-size: .8rem; }
 /* Vrij ontwerp */
 main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px); align-items: start; }
@@ -410,7 +416,7 @@ main.catalogus { display: block; }
     </details>
   </aside>
   <div class="midden">
-  <section class="kaart tekenvlak">
+  <section class="kaart tekenvlak" id="o-tekenvlak">
     <div class="kaartkop">
       <div class="tabs" role="group" aria-label="Weergave van het ontwerp">
         <button type="button" data-o-weergave="boven" aria-pressed="true">Tekenen (bovenaanzicht)</button>
@@ -428,10 +434,15 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" data-standpunt="voor">Voor</button>
       <button type="button" class="tweede" data-standpunt="zij">Zij</button>
       <button type="button" class="tweede" data-standpunt="boven">Boven</button>
-      <span class="klein">Decor:</span>
-      <button type="button" class="tweede" data-decor="studio" aria-pressed="true">Studio</button>
-      <button type="button" class="tweede" data-decor="kamer" aria-pressed="false">Woonkamer</button>
       <span class="klein">Sleep om te draaien; zoomen met Ctrl (⌘) + scrollen of knijpen.</span>
+    </div>
+    <div id="o-3d-instellingen" class="drie-d-instellingen" hidden>
+      <label><span>Stof</span><select id="o-3d-stof"></select></label>
+      <label><span>Decor</span><select id="o-3d-decor"></select></label>
+      <label><span>Licht</span><select id="o-3d-licht"></select></label>
+      <label><span>Kwaliteit</span><select id="o-3d-kwaliteit"><option value="mooi">Mooi</option><option value="snel">Snel (tablet)</option></select></label>
+      <button type="button" class="tweede" id="o-3d-foto">Foto downloaden</button>
+      <span id="o-3d-groot"></span>
     </div>
     <div id="o-eigenschappen" class="eigenschappen"></div>
   </section>

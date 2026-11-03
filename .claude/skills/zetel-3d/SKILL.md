@@ -59,12 +59,12 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 
 ## Weergave (drie-d.ts)
 - Afgeronde balken: `ExtrudeGeometry` van een afgerond grondvlak met bevel, gedraaid zodat de extrusie naar boven gaat; onderkant op `y = 0` van de mesh.
-- Kleuren zijn sRGB-hex → `new THREE.Color(hex).convertSRGBToLinear()`; `renderer.outputEncoding = sRGBEncoding`, ACES-tonemapping, belichting ≈ 0,88.
+- Kleuren zijn sRGB-hex → `new THREE.Color(hex).convertSRGBToLinear()`; `renderer.outputEncoding = sRGBEncoding`, **lineaire** tonemapping, belichting 0,95 (ACES verschoof de tint van stoffen: petrol werd turkoois). Controleer kleurgetrouwheid door canvaspixels te meten tegen de staal.
 - Stof krijgt een fijne weefseltextuur (canvas) die met de kleur vermenigvuldigd wordt; hout ruwheid 0,55; metaal metalness 0,85.
 - Bouwmaterialen (ook gebruikt door de bouwdemo): `steen` (baksteen), `planken`, `tegel` (60 × 60), `parket`, `kunststof`, `glas`, `matglas`. Textuur in wereldmaat (cm) via `wereldUV`, zodat stenen en tegels hun echte maat houden.
 - `zijden` op een blok geeft één zijvlak een ander materiaal (bv. baksteen buiten, verf binnen); `plaatsBlokken` (ruimtelijk.ts) draait blokken per 90° en draait `zijden` en `kantel` mee.
 - **Realisme (3/11):** `scene.environment` = studio-omgevingsbeeld (eigen kamer met softboxen via `PMREMGenerator`, `OMGEVING` = envMapIntensity). Stof met weefsel: `stofMateriaal()` (bumpMap = `weefselCanvas` in grijs, `RELIEF` per weefsel; velours `MeshPhysicalMaterial` met `sheen`, leder met `clearcoat`). Blokken `kussen` (en bij `zetel: true` ook `stof`) met `afronding` → `kussenGeometrie()`: fijn opgedeeld, bol langs de dunste as, analytische normalen, hoekpuntkleuren als schaduw onderaan. `Blok.naad` (uit optie `naad`, gezet in `ruimtelijk.ts`) → `naden()`: buizen rond de twee grote vlakken (bies, naad, sierstiksel) als kinderen van de kussenmesh. Bij opruimen: `traverse` voor `geometry.dispose()`.
-- `maak3D(houder, { zetel: true })` (alleen ontwerper): contactschaduw (canvas uit de voetafdruk van de lage blokken) en `decor('studio' | 'kamer')`.
+- `maak3D(houder, { zetel: true })` (alleen ontwerper): contactschaduw, mist in de achtergrondkleur, houtnerf, buren-schaduw op kussens (`burenVan`), en de instellingen `decor()` / `licht()` / `kwaliteit()` / `foto()` met presets `DECORS` en `LICHTEN` (gegevens; `zetDecor` en `zetLicht` passen ze toe). UI in `ontwerper.ts` (`start3DInstellingen`), groot scherm via `grootSchermKnop($('#o-tekenvlak'))`.
 - Schaduwen via één `DirectionalLight` waarvan het schaduwkader meeschaalt met de zetel. Camera: eigen orbit (slepen, scrollen, knijpen) en vaste standpunten.
 
 ## Testen in de browser
