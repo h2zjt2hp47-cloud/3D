@@ -12,6 +12,13 @@ export {
   patroonfactor,
   gebruiksklasse,
   stofkaart,
+  weefselVan,
+  collectieVan,
+  kleurfamilie,
+  WEEFSELS,
+  KLEURFAMILIES,
+  type Kleurfamilie,
+  type Weefsel,
   type Materiaal,
 } from './materialen.js';
 export {

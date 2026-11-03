@@ -5,7 +5,7 @@
  * Assen: x = zoals het bovenaanzicht (links → rechts), z = diepte (achter → voor,
  * zoals y in het bovenaanzicht), y = hoogte vanaf de vloer.
  */
-import type { Materiaal } from './materialen.js';
+import { weefselVan, type Materiaal } from './materialen.js';
 import { dragerVan, gekozenOpties, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -45,6 +45,8 @@ export interface Blok {
   /** Foto als textuur (bv. de stof) en hoeveel cm één tegel ervan is. */
   textuur?: string;
   textuurCm?: number;
+  /** Soort weefsel van de stof (voor de structuur in de 3D als er geen foto is). */
+  weefsel?: string;
 }
 
 export interface Scene3D {
@@ -309,7 +311,11 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       }
     }
     // Stoffoto als textuur op alle stofdelen van dit element (zitting, rug, armen, kussens).
-    if (m?.textuur) for (const b of blokken.slice(eersteBlok)) if ((b.soort === 'stof' || b.soort === 'kussen') && b.kleur === stof) { b.textuur = m.textuur; b.textuurCm = m.textuurCm ?? 15; }
+    // Zonder foto: het weefsel (velours, bouclé, linnen …) zodat de structuur in de 3D klopt.
+    if (m) for (const b of blokken.slice(eersteBlok)) if ((b.soort === 'stof' || b.soort === 'kussen') && b.kleur === stof) {
+      if (m.textuur) { b.textuur = m.textuur; b.textuurCm = m.textuurCm ?? 15; }
+      else b.weefsel = weefselVan(m);
+    }
   }
 
   const afdrukken = ontwerp.elementen.map(voetafdruk);

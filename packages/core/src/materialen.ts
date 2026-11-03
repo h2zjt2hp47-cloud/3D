@@ -40,6 +40,73 @@ export interface Materiaal {
   textuur?: string;
   /** Hoeveel cm stof de foto toont (één tegel van de textuur), bv. 15. */
   textuurCm?: number;
+  /** Collectie (stoffamilie) waartoe deze kleur hoort, bv. "Velours Soft". Zo staan de kleuren van één stof samen. */
+  collectie?: string;
+  /** Soort weefsel: bepaalt hoe de stof eruitziet op de staal en in de 3D. */
+  weefsel?: Weefsel;
+}
+
+/** Soorten weefsel met hun uitleg (voor filter en staal). */
+export const WEEFSELS = {
+  effen: 'Effen (fijn geweven)',
+  linnen: 'Linnen (onregelmatige draad)',
+  velours: 'Velours (zacht, met glans)',
+  boucle: 'Bouclé (lusjes)',
+  chenille: 'Chenille (zacht, ribbelig)',
+  wol: 'Wol (gemêleerd)',
+  rib: 'Rib (ribfluweel)',
+  jacquard: 'Jacquard (patroon)',
+  leder: 'Leder',
+} as const;
+export type Weefsel = keyof typeof WEEFSELS;
+
+/** Weefsel van een materiaal: opgegeven, of afgeleid uit soort en naam. */
+export function weefselVan(m: Pick<Materiaal, 'soort' | 'naam' | 'weefsel'>): Weefsel {
+  if (m.weefsel && m.weefsel in WEEFSELS) return m.weefsel;
+  if (m.soort === 'leder') return 'leder';
+  const n = m.naam.toLowerCase();
+  for (const [sleutel, woord] of [['linnen', 'linnen'], ['velours', 'velours'], ['boucle', 'bouclé'], ['boucle', 'boucle'], ['chenille', 'chenille'], ['wol', 'wol'], ['rib', 'rib'], ['jacquard', 'jacquard']] as const) {
+    if (n.includes(woord)) return sleutel;
+  }
+  return 'effen';
+}
+
+/** Collectie van een materiaal: opgegeven, anders "Eigen materiaal", het weefsel of "Overige". */
+export function collectieVan(m: Materiaal): string {
+  if (m.collectie) return m.collectie;
+  if (m.groep === 'EIGEN') return 'Eigen materiaal van de klant';
+  if (m.eigen) return 'Zelf toegevoegd';
+  const w = weefselVan(m);
+  return w === 'effen' ? 'Overige' : WEEFSELS[w].split(' (')[0]!;
+}
+
+/** Kleurfamilies voor de filter op de stalenkaart. */
+export const KLEURFAMILIES = ['wit & beige', 'geel & oker', 'bruin & camel', 'rood & roze', 'groen', 'blauw', 'grijs', 'zwart'] as const;
+export type Kleurfamilie = (typeof KLEURFAMILIES)[number];
+
+/** Kleurfamilie van een kleur (#rrggbb), afgeleid uit tint, verzadiging en lichtheid. */
+export function kleurfamilie(hex: string): Kleurfamilie {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+  if (!m) return 'grijs';
+  const [r, g, b] = [m[1], m[2], m[3]].map((x) => parseInt(x!, 16) / 255) as [number, number, number];
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  let h = 0;
+  if (d > 0) {
+    if (max === r) h = 60 * (((g - b) / d) % 6);
+    else if (max === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+    if (h < 0) h += 360;
+  }
+  if (l < 0.2) return 'zwart';
+  if (s < 0.12 || (s < 0.2 && l < 0.4)) return l > 0.8 ? 'wit & beige' : 'grijs';
+  if (h < 15 || h >= 330) return 'rood & roze';
+  if (h < 70 && l > 0.65 && s < 0.5) return 'wit & beige';
+  if (h < 35) return 'bruin & camel';
+  if (h < 70) return s > 0.45 && l > 0.3 ? 'geel & oker' : 'bruin & camel';
+  if (h < 170) return 'groen';
+  if (h < 260) return 'blauw';
+  return 'rood & roze';
 }
 
 /**
@@ -145,6 +212,10 @@ export function leesMaterialen(json: string, groepen: string[]): { materialen: M
       ...(Number(m.martindale) > 0 ? { martindale: Number(m.martindale) } : {}),
       ...(m.opDeRol === true ? { opDeRol: true } : {}),
       ...(Number(m.kleurvarianten) > 0 ? { kleurvarianten: Number(m.kleurvarianten) } : {}),
+      ...(typeof m.textuur === 'string' && /^(data:image\/|https:\/\/)/.test(m.textuur) ? { textuur: m.textuur } : {}),
+      ...(Number(m.textuurCm) > 0 ? { textuurCm: Number(m.textuurCm) } : {}),
+      ...(typeof m.collectie === 'string' && m.collectie.trim() ? { collectie: m.collectie.trim() } : {}),
+      ...(typeof m.weefsel === 'string' && m.weefsel in WEEFSELS ? { weefsel: m.weefsel } : {}),
     };
     if (controleerMateriaal(kandidaat, groepen, materialen).length || materialen.some((x) => x.code === kandidaat.code)) overgeslagen++;
     else materialen.push(kandidaat);

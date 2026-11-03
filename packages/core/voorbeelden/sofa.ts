@@ -13,33 +13,50 @@
  * - een 2D-bovenaanzicht met maatlijnen in de stofkleur.
  */
 import { CHILL_ZONE_051 } from './stoftexturen.js';
-import { materiaalArtikel, type Keuzewaarde, type Materiaal, type Prijslijst, type Prijstabel, type ProductModel } from '../src/index.js';
+import { collectieVan, materiaalArtikel, weefselVan, type Keuzewaarde, type Materiaal, type Prijslijst, type Prijstabel, type ProductModel } from '../src/index.js';
 
 export const STOFGROEPEN = ['A', 'B', 'C', 'EIGEN'];
 
 /** Standaardmaterialen (demo). De gebruiker kan er zelf bij maken. */
 export const standaardMaterialen: Materiaal[] = [
-  { code: 'katoen_naturel', naam: 'Katoen Naturel', soort: 'stof', groep: 'A', kleur: '#e9e2d3', rapport: 0, rolbreedte: 140, kostprijsPerM: 26, toeslagPct: 0 },
-  { code: 'linnen_ficelle', naam: 'Linnen Ficelle', soort: 'stof', groep: 'B', kleur: '#c9b48f', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
-  { code: 'linnen_travertin', naam: 'Linnen Travertin', soort: 'stof', groep: 'B', kleur: '#d8d2c6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
-  { code: 'linnen_brume', naam: 'Linnen Brume', soort: 'stof', groep: 'B', kleur: '#a9b3a6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
-  { code: 'boucle_belize', naam: 'Bouclé Écru', soort: 'stof', groep: 'C', kleur: '#ece6da', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
-  { code: 'jacquard_ruit', naam: 'Jacquard ruit (patroon 32 cm)', soort: 'stof', groep: 'C', kleur: '#b9a58a', rapport: 32, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
-  { code: 'velours_petrol', naam: 'Velours Petrol', soort: 'stof', groep: 'C', kleur: '#1f6b75', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
-  { code: 'velours_bosgroen', naam: 'Velours Bosgroen', soort: 'stof', groep: 'C', kleur: '#2f4a3a', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
-  { code: 'velours_oudroze', naam: 'Velours Oudroze', soort: 'stof', groep: 'C', kleur: '#c98272', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  // Collecties en kleuren zijn DEMO (verzonnen namen, kleuren en prijzen), behalve Chill Zone (echte stofkaart).
+  { code: 'katoen_naturel', naam: 'Katoen Naturel', collectie: 'Katoen Basic', weefsel: 'effen', soort: 'stof', groep: 'A', kleur: '#e9e2d3', rapport: 0, rolbreedte: 140, kostprijsPerM: 26, toeslagPct: 0 },
+  { code: 'linnen_ficelle', naam: 'Linnen Ficelle', collectie: 'Linnen Lino', weefsel: 'linnen', soort: 'stof', groep: 'B', kleur: '#c9b48f', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
+  { code: 'linnen_travertin', naam: 'Linnen Travertin', collectie: 'Linnen Lino', weefsel: 'linnen', soort: 'stof', groep: 'B', kleur: '#d8d2c6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
+  { code: 'linnen_brume', naam: 'Linnen Brume', collectie: 'Linnen Lino', weefsel: 'linnen', soort: 'stof', groep: 'B', kleur: '#a9b3a6', rapport: 0, rolbreedte: 140, kostprijsPerM: 38, toeslagPct: 0 },
+  { code: 'boucle_belize', naam: 'Bouclé Écru', collectie: 'Bouclé Nuage', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#ece6da', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
+  { code: 'jacquard_ruit', naam: 'Jacquard ruit (patroon 32 cm)', collectie: 'Jacquard', weefsel: 'jacquard', soort: 'stof', groep: 'C', kleur: '#b9a58a', rapport: 32, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
+  { code: 'velours_petrol', naam: 'Velours Petrol', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#1f6b75', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'velours_bosgroen', naam: 'Velours Bosgroen', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#2f4a3a', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'velours_oudroze', naam: 'Velours Oudroze', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#c98272', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
   // Echte stof (gegevens van de stofkaart van de leverancier); kleur = gemiddelde van de staalfoto, kostprijs en groep verzonnen.
   {
-    code: 'chill_zone_051', naam: 'Chill Zone 051 (blauwgrijs)', soort: 'stof', groep: 'C', kleur: '#687281', rapport: 0, rolbreedte: 140, kostprijsPerM: 48, toeslagPct: 0,
+    code: 'chill_zone_051', naam: 'Chill Zone 051 (blauwgrijs)', collectie: 'Chill Zone (Chivasso)', weefsel: 'effen', soort: 'stof', groep: 'C', kleur: '#687281', rapport: 0, rolbreedte: 140, kostprijsPerM: 48, toeslagPct: 0,
     merk: 'Chivasso (JAB Anstoetz)', artikel: 'CH3112/051', kwaliteit: 'Meubelstof, geweven, epinglé / frisé',
     samenstelling: '60% polyacryl, 24% polyester, 11% viscose, 5% linnen', martindale: 50000, opDeRol: true, kleurvarianten: 29,
     // Staalfoto als textuur; de foto toont ongeveer 15 cm stof (benadering).
     textuur: CHILL_ZONE_051, textuurCm: 15,
   },
-  { code: 'wol_grijs', naam: 'Wol Grijs gemêleerd', soort: 'stof', groep: 'B', kleur: '#86888a', rapport: 0, rolbreedte: 140, kostprijsPerM: 44, toeslagPct: 0 },
-  { code: 'leder_cognac', naam: 'Leder Cognac', soort: 'leder', groep: 'C', kleur: '#8f4f2c', rapport: 0, rolbreedte: 140, kostprijsPerM: 95, toeslagPct: 15 },
-  { code: 'eigen_stof', naam: 'Eigen stof van de klant (COM)', soort: 'stof', groep: 'EIGEN', kleur: '#dcdcdc', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 0 },
-  { code: 'eigen_leder', naam: 'Eigen leder van de klant (COL)', soort: 'leder', groep: 'EIGEN', kleur: '#8a6a4f', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 10 },
+  { code: 'wol_grijs', naam: 'Wol Grijs gemêleerd', collectie: 'Wol Tweed', weefsel: 'wol', soort: 'stof', groep: 'B', kleur: '#86888a', rapport: 0, rolbreedte: 140, kostprijsPerM: 44, toeslagPct: 0 },
+  // Uitbreiding: 15 stoffen in 5 collecties (DEMO).
+  { code: 'velours_mosterd', naam: 'Velours Mosterd', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#c08a2e', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'velours_terracotta', naam: 'Velours Terracotta', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#a8533a', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'velours_antraciet', naam: 'Velours Antraciet', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#3a3c40', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  { code: 'boucle_zand', naam: 'Bouclé Zand', collectie: 'Bouclé Nuage', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#d2bfa0', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
+  { code: 'boucle_kiezel', naam: 'Bouclé Kiezel', collectie: 'Bouclé Nuage', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#9c9890', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
+  { code: 'boucle_mos', naam: 'Bouclé Mos', collectie: 'Bouclé Nuage', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#7d8160', rapport: 0, rolbreedte: 140, kostprijsPerM: 55, toeslagPct: 0 },
+  { code: 'chenille_camel', naam: 'Chenille Camel', collectie: 'Chenille Mila', weefsel: 'chenille', soort: 'stof', groep: 'B', kleur: '#b08a5e', rapport: 0, rolbreedte: 140, kostprijsPerM: 42, toeslagPct: 0 },
+  { code: 'chenille_steengrijs', naam: 'Chenille Steengrijs', collectie: 'Chenille Mila', weefsel: 'chenille', soort: 'stof', groep: 'B', kleur: '#7b7a76', rapport: 0, rolbreedte: 140, kostprijsPerM: 42, toeslagPct: 0 },
+  { code: 'chenille_nachtblauw', naam: 'Chenille Nachtblauw', collectie: 'Chenille Mila', weefsel: 'chenille', soort: 'stof', groep: 'B', kleur: '#2b3a55', rapport: 0, rolbreedte: 140, kostprijsPerM: 42, toeslagPct: 0 },
+  { code: 'wol_havermout', naam: 'Wol Havermout', collectie: 'Wol Tweed', weefsel: 'wol', soort: 'stof', groep: 'B', kleur: '#cdbfa8', rapport: 0, rolbreedte: 140, kostprijsPerM: 44, toeslagPct: 0 },
+  { code: 'wol_bordeaux', naam: 'Wol Bordeaux', collectie: 'Wol Tweed', weefsel: 'wol', soort: 'stof', groep: 'B', kleur: '#6e2a33', rapport: 0, rolbreedte: 140, kostprijsPerM: 44, toeslagPct: 0 },
+  { code: 'wol_oceaan', naam: 'Wol Oceaan', collectie: 'Wol Tweed', weefsel: 'wol', soort: 'stof', groep: 'B', kleur: '#3f6178', rapport: 0, rolbreedte: 140, kostprijsPerM: 44, toeslagPct: 0 },
+  { code: 'rib_cognac', naam: 'Rib Cognac', collectie: 'Rib Cord', weefsel: 'rib', soort: 'stof', groep: 'B', kleur: '#9a5a2e', rapport: 0, rolbreedte: 140, kostprijsPerM: 46, toeslagPct: 0 },
+  { code: 'rib_salie', naam: 'Rib Salie', collectie: 'Rib Cord', weefsel: 'rib', soort: 'stof', groep: 'B', kleur: '#9aa58c', rapport: 0, rolbreedte: 140, kostprijsPerM: 46, toeslagPct: 0 },
+  { code: 'rib_inkt', naam: 'Rib Inkt', collectie: 'Rib Cord', weefsel: 'rib', soort: 'stof', groep: 'B', kleur: '#252a35', rapport: 0, rolbreedte: 140, kostprijsPerM: 46, toeslagPct: 0 },
+  { code: 'leder_cognac', naam: 'Leder Cognac', collectie: 'Leder', weefsel: 'leder', soort: 'leder', groep: 'C', kleur: '#8f4f2c', rapport: 0, rolbreedte: 140, kostprijsPerM: 95, toeslagPct: 15 },
+  { code: 'eigen_stof', naam: 'Eigen stof van de klant (COM)', collectie: 'Eigen materiaal van de klant', soort: 'stof', groep: 'EIGEN', kleur: '#dcdcdc', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 0 },
+  { code: 'eigen_leder', naam: 'Eigen leder van de klant (COL)', collectie: 'Eigen materiaal van de klant', weefsel: 'leder', soort: 'leder', groep: 'EIGEN', kleur: '#8a6a4f', rapport: 0, rolbreedte: 140, kostprijsPerM: 0, toeslagPct: 10 },
 ];
 
 const groepnr = (g: string) => (g === 'EIGEN' ? 9 : STOFGROEPEN.indexOf(g) + 1);
@@ -51,6 +68,7 @@ function naarKeuze(m: Materiaal): Keuzewaarde {
     eigenschappen: {
       groep: m.groep, groepnr: groepnr(m.groep), kleur: m.kleur, rapport: m.rapport,
       rolbreedte: m.rolbreedte, artikel: materiaalArtikel(m), toeslag_pct: m.toeslagPct,
+      collectie: collectieVan(m), weefsel: weefselVan(m),
     },
   };
   if (m.groep === 'EIGEN') {

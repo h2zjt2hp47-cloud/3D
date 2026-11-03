@@ -8,8 +8,12 @@ import {
   maakMateriaalCode,
   patroonfactor,
   stofkaart,
+  weefselVan,
+  WEEFSELS,
   type Materiaal,
+  type Weefsel,
 } from '../../core/src/index.js';
+import { kleurStaal, perCollectie } from './stalen.js';
 import { $, bevestigKnop, el, eur, getal, getMaterialen, groepen, herstelMaterialen, kopieer, opWijziging, setMaterialen } from './staat.js';
 
 let bewerkCode: string | null = null;
@@ -32,6 +36,10 @@ function formulierNaarMateriaal(): Materiaal {
     kostprijsPerM: Number(v('kostprijs')),
     toeslagPct: Number(v('toeslag')),
     eigen: bestaand ? bestaand.eigen : true,
+    ...(v('collectie').trim() ? { collectie: v('collectie').trim() } : {}),
+    weefsel: $<HTMLSelectElement>('#m-weefsel').value as Weefsel,
+    // Gegevens van de leverancier en de foto blijven behouden bij bewerken.
+    ...(bestaand ? Object.fromEntries(Object.entries(bestaand).filter(([k]) => ['merk', 'artikel', 'kwaliteit', 'samenstelling', 'martindale', 'opDeRol', 'kleurvarianten', 'textuur', 'textuurCm'].includes(k))) : {}),
   };
 }
 
@@ -40,6 +48,8 @@ function vulFormulier(m: Materiaal) {
   $<HTMLInputElement>('#m-soort-stof').checked = m.soort === 'stof';
   $<HTMLInputElement>('#m-soort-leder').checked = m.soort === 'leder';
   $<HTMLSelectElement>('#m-groep').value = m.groep;
+  $<HTMLInputElement>('#m-collectie').value = m.collectie ?? '';
+  $<HTMLSelectElement>('#m-weefsel').value = weefselVan(m);
   $<HTMLInputElement>('#m-kleur').value = m.kleur;
   $<HTMLInputElement>('#m-kleurcode').value = m.kleur;
   $<HTMLInputElement>('#m-rapport').value = String(m.rapport);
@@ -56,7 +66,9 @@ function vulFormulier(m: Materiaal) {
 function voorbeeld() {
   const m = formulierNaarMateriaal();
   const f = patroonfactor(m.rapport) * (140 / (m.rolbreedte || 140));
-  $('#m-staal').style.background = /^#[0-9a-f]{6}$/i.test(m.kleur) ? m.kleur : 'transparent';
+  const staal = $('#m-staal');
+  staal.style.background = 'transparent';
+  if (/^#[0-9a-f]{6}$/i.test(m.kleur)) kleurStaal(staal, m);
   const bestaand = getMaterialen().find((x) => x.code === bewerkCode);
   $('#m-voorbeeld').textContent = (bestaand?.artikel ? `${stofkaart({ ...bestaand, ...m })}. ` : '') +
     `Stofverbruik × ${getal(f, 2)} ten opzichte van een effen stof van 140 cm` +
@@ -65,11 +77,10 @@ function voorbeeld() {
 
 function toonLijst() {
   const lijst = $('#m-lijst tbody');
-  lijst.replaceChildren(
-    ...getMaterialen().map((m) => {
+  const rij = (m: Materiaal) => {
       const tr = el('tr');
       const staal = el('span', { class: 'staal', 'aria-hidden': 'true' });
-      staal.style.background = m.kleur;
+      kleurStaal(staal, m);
       const naam = el('td');
       naam.append(staal, document.createTextNode(` ${m.naam}`));
       if (m.eigen) naam.append(el('span', { class: 'label' }, 'eigen'));
@@ -99,7 +110,7 @@ function toonLijst() {
       }
       tr.append(
         naam,
-        el('td', {}, m.soort),
+        el('td', {}, WEEFSELS[weefselVan(m)].split(' (')[0]!),
         el('td', {}, m.groep),
         el('td', { class: 'num' }, m.rapport ? `${getal(m.rapport)} cm` : 'effen'),
         el('td', { class: 'num' }, `${getal(m.rolbreedte)} cm`),
@@ -108,13 +119,26 @@ function toonLijst() {
         acties,
       );
       return tr;
+  };
+  // Per collectie een kopregel, zodat de kleuren van één stof samen staan.
+  lijst.replaceChildren(
+    ...perCollectie(getMaterialen()).flatMap(([collectie, stoffen]) => {
+      const kop = el('tr', { class: 'groepkop' });
+      const td = el('td', { colspan: '8' }, collectie);
+      td.append(el('span', { class: 'klein' }, ` · ${stoffen.length} ${stoffen.length === 1 ? 'kleur' : 'kleuren'}`));
+      kop.append(td);
+      return [kop, ...stoffen.map(rij)];
     }),
   );
+  const collecties = $('#m-collecties');
+  collecties.replaceChildren(...perCollectie(getMaterialen()).map(([c]) => el('option', { value: c })));
   $('#m-aantal').textContent = `${getMaterialen().length} materialen, waarvan ${getMaterialen().filter((m) => m.eigen).length} zelf toegevoegd`;
 }
 
 export function startMaterialen() {
   const groep = $<HTMLSelectElement>('#m-groep');
+  const weefsel = $<HTMLSelectElement>('#m-weefsel');
+  for (const [w, uitleg] of Object.entries(WEEFSELS)) weefsel.append(el('option', { value: w }, uitleg));
   for (const g of groepen) groep.append(el('option', { value: g }, g === 'EIGEN' ? 'EIGEN (materiaal van de klant)' : `Groep ${g}`));
 
   const formulier = $<HTMLFormElement>('#m-formulier');

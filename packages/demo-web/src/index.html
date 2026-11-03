@@ -206,6 +206,40 @@ textarea { width: 100%; font: .85rem ui-monospace, monospace; }
 .staal.groot { width: 34px; height: 34px; border-radius: 6px; }
 .label { font-size: .7rem; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent-zacht); color: var(--accent); vertical-align: middle; }
 td .staal { display: inline-block; vertical-align: -3px; }
+/* Stalenkaart: stoffen per collectie, met filters */
+.stalen-details { margin: 6px 0 10px; border: 1px solid var(--lijn); border-radius: 8px; background: var(--vlak); }
+.stalen-details > summary { cursor: pointer; padding: 8px 10px; font-weight: 600; }
+.stalenkaart { padding: 0 10px 10px; }
+.stalen-filter { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+.stalen-filter select { flex: 1 1 120px; font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; max-width: 100%; }
+.stalen-telling { color: var(--zacht); margin-left: auto; }
+.stalen-gekozen { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; margin: 4px 0 8px; }
+.stalen-gekozen .stalen-uitleg { grid-column: 1 / -1; color: var(--zacht); }
+.stalen-gekozen .staal { background-size: 64px 64px; }
+.stalen-lijst { max-height: 420px; overflow-y: auto; padding-right: 2px; }
+.stalen-collectie h3 { font-size: 13px; margin: 10px 0 4px; font-family: var(--tekst); }
+.stalen-collectie h3 .klein { font-weight: 400; color: var(--zacht); }
+.stalen-rij { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 4px; }
+.stalen-knop { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 2px; border: 1px solid transparent; border-radius: 8px; background: none; color: inherit; cursor: pointer; font: inherit; font-size: 11px; line-height: 1.15; min-height: 44px; min-width: 0; }
+.stalen-knop:hover { border-color: var(--lijn); }
+.stalen-knop[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-zacht); box-shadow: inset 0 0 0 1px var(--accent); }
+.stalen-knop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stalen-staal { width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(0,0,0,.2); background-size: 64px 64px; box-shadow: inset 0 -6px 10px rgba(0,0,0,.12); }
+.stalen-naam { text-align: center; overflow-wrap: anywhere; }
+.keuzes .keuzegroep-kop { flex-basis: 100%; font-size: 13px; font-weight: 600; margin: 8px 0 0; color: var(--zacht); }
+.keuzes .keuzegroep-kop:first-of-type { margin-top: 0; }
+.tegel .staal { background-size: 48px 48px; }
+#m-lijst tr.groepkop td { background: var(--accent-zacht); font-weight: 600; font-size: 13px; padding-top: 6px; padding-bottom: 6px; }
+#m-lijst tr.groepkop .klein { font-weight: 400; color: var(--zacht); }
+#m-lijst .staal { width: 22px; height: 22px; background-size: 40px 40px; }
+#m-lijst td .klein { white-space: normal; max-width: 380px; }
+/* In de smalle zijbalk: alleen de stalen, de naam staat bij "gekozen" en in de tooltip. */
+.stalenkaart { container-type: inline-size; }
+@container (max-width: 260px) {
+  .stalen-rij { grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); }
+  .stalen-naam { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .stalen-knop { padding: 3px; min-height: 0; }
+}
 .acties-cel { display: flex; gap: 6px; justify-content: flex-end; }
 
 .midden { display: grid; gap: 16px; align-content: start; min-width: 0; }
@@ -365,6 +399,7 @@ main.catalogus { display: block; }
     <h2>Start van</h2>
     <div id="o-start" class="knoppenlijst"></div>
     <label for="o-hoofdmateriaal" class="maatveld breed"><span>Hoofdmateriaal</span><select id="o-hoofdmateriaal"></select></label>
+    <details class="stalen-details" open><summary>Stalenkaart: stof kiezen per collectie</summary><div id="o-stalenplek"></div></details>
     <div class="knoppenrij">
       <button type="button" id="o-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button>
       <button type="button" id="o-wis" class="gevaar">Alles wissen</button>
@@ -429,7 +464,7 @@ main.catalogus { display: block; }
   <section class="kaart">
     <div class="kaartkop"><h2>Materialen</h2><span id="m-aantal" class="klein"></span></div>
     <div class="tabelhouder">
-      <table id="m-lijst"><thead><tr><th>Naam</th><th>Soort</th><th>Groep</th><th class="num">Patroon</th><th class="num">Rolbreedte</th><th class="num">Kost/m</th><th class="num">Toeslag</th><th></th></tr></thead><tbody></tbody></table>
+      <table id="m-lijst"><thead><tr><th>Naam</th><th>Weefsel</th><th>Groep</th><th class="num">Patroon</th><th class="num">Rolbreedte</th><th class="num">Kost/m</th><th class="num">Toeslag</th><th></th></tr></thead><tbody></tbody></table>
     </div>
     <h3>Lijst delen of inlezen</h3>
     <p class="klein">Kopieer de lijst om ze te bewaren of in een andere browser te plakken. Je kunt ook een lijst plakken (bv. van een leverancier, omgezet naar hetzelfde formaat).</p>
@@ -450,6 +485,8 @@ main.catalogus { display: block; }
           <label class="inline"><input type="radio" name="m-soort" id="m-soort-stof" checked> Stof</label>
           <label class="inline"><input type="radio" name="m-soort" id="m-soort-leder"> Leder</label>
         </fieldset>
+        <label class="maatveld" for="m-collectie"><span>Collectie (stoffamilie)</span><input id="m-collectie" type="text" maxlength="60" list="m-collecties" placeholder="bv. Velours Soft" autocomplete="off"><datalist id="m-collecties"></datalist></label>
+        <label class="maatveld" for="m-weefsel"><span>Weefsel (uitzicht staal en 3D)</span><select id="m-weefsel"></select></label>
         <label class="maatveld" for="m-groep"><span>Prijsgroep</span><select id="m-groep"></select></label>
         <label class="maatveld" for="m-kleur"><span>Kleur</span><span class="kleurrij"><input id="m-kleur" type="color" value="#b8a88a"><input id="m-kleurcode" type="text" maxlength="7" aria-label="Kleurcode"></span></label>
         <label class="maatveld" for="m-rapport"><span>Patroonrapport (cm, 0 = effen)</span><input id="m-rapport" type="number" min="0" max="300" step="1"></label>

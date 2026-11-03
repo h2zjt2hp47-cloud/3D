@@ -3,8 +3,9 @@
  * De motor levert de blokken (bouw3D); hier worden ze omgezet naar meshes.
  * Bediening: slepen = draaien, scrollen/knijpen = zoomen, knoppen = vaste standpunten.
  */
-import type { Blok, Scene3D } from '../../core/src/index.js';
+import type { Blok, Scene3D, Weefsel } from '../../core/src/index.js';
 import { wielHint } from './zoom.js';
+import { WEEFSEL_CM, weefselCanvas } from './weefsel.js';
 
 // three.js wordt als globale variabele geladen (zie index.html).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -275,9 +276,19 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
   }
 
   const fotoTexturen = new Map<string, any>();
-  const materiaal = (b: { soort: Blok['soort']; kleur: string; voeg?: string; textuur?: string }) => {
-    const sleutel = `${b.soort}:${b.kleur}:${b.voeg ?? ''}:${b.textuur ? b.textuur.length + b.textuur.slice(-24) : ''}`;
+  const materiaal = (b: { soort: Blok['soort']; kleur: string; voeg?: string; textuur?: string; weefsel?: string }) => {
+    const sleutel = `${b.soort}:${b.kleur}:${b.voeg ?? ''}:${b.textuur ? b.textuur.length + b.textuur.slice(-24) : ''}:${b.weefsel ?? ''}`;
     let m = materialen.get(sleutel);
+    if (!m && !b.textuur && b.weefsel && b.weefsel in WEEFSEL_CM) {
+      // Getekend weefsel (velours, bouclé, rib …) in de kleur van de stof, op ware grootte via wereldUV.
+      const t = new THREE.CanvasTexture(weefselCanvas(b.weefsel as Weefsel, b.kleur));
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.encoding = THREE.sRGBEncoding;
+      t.anisotropy = 4;
+      const ruwheid = b.weefsel === 'velours' ? 0.62 : b.weefsel === 'leder' ? 0.5 : 0.95;
+      m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: ruwheid, map: t });
+      materialen.set(sleutel, m);
+    }
     if (!m && b.textuur) {
       // Stoffoto: één keer laden, herhalen in wereldmaat (zie wereldUV), opnieuw tekenen zodra ze binnen is.
       let t = fotoTexturen.get(b.textuur);
@@ -375,6 +386,7 @@ export function maak3D(houder: HTMLElement): Viewer3D | null {
     }
     // Stoffoto: textuur op ware grootte op elk vlak, ook bij afgeronde kussens en cilinders.
     if (b.textuur) { const tegel = { b: b.textuurCm ?? 15, h: b.textuurCm ?? 15 }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
+    else if (b.weefsel && b.weefsel in WEEFSEL_CM) { const cm = WEEFSEL_CM[b.weefsel as Weefsel]; const tegel = { b: cm, h: cm }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     let mat: any = materiaal(b);
     if (b.zijden && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
       // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z.

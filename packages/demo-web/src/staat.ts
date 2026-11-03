@@ -31,12 +31,34 @@ export function laad(sleutel: string): string | null {
   return lees(sleutel);
 }
 
+/**
+ * Bewaarde lijst aanvullen met standaardstoffen die er later bijgekomen zijn (bv. nieuwe collecties),
+ * en per standaardstof de foto, collectie en het weefsel terugzetten als die ontbreken.
+ */
+function metNieuweStandaard(bewaard: Materiaal[]): Materiaal[] {
+  const lijst = bewaard.map((m) => {
+    const std = standaardMaterialen.find((x) => x.code === m.code);
+    if (!std || m.eigen) return m;
+    return { ...m, textuur: m.textuur ?? std.textuur, textuurCm: m.textuurCm ?? std.textuurCm, collectie: m.collectie ?? std.collectie, weefsel: m.weefsel ?? std.weefsel };
+  });
+  for (const std of standaardMaterialen) {
+    if (lijst.some((m) => m.code === std.code)) continue;
+    // Invoegen na de laatste stof van dezelfde collectie, anders vóór het eigen materiaal van de klant.
+    const na = lijst.map((m) => m.collectie).lastIndexOf(std.collectie);
+    const eigen = lijst.findIndex((m) => m.groep === 'EIGEN');
+    const plaats = na >= 0 ? na + 1 : eigen >= 0 ? eigen : lijst.length;
+    lijst.splice(plaats, 0, structuredClone(std));
+  }
+  return lijst;
+}
+
 function startMaterialen(): Materiaal[] {
   const opgeslagen = lees(SLEUTEL_MATERIALEN);
   if (!opgeslagen) return structuredClone(standaardMaterialen);
   try {
     const { materialen } = leesMaterialen(opgeslagen, STOFGROEPEN);
-    return materialen.length ? materialen : structuredClone(standaardMaterialen);
+    if (!materialen.length) return structuredClone(standaardMaterialen);
+    return metNieuweStandaard(materialen);
   } catch {
     return structuredClone(standaardMaterialen);
   }

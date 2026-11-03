@@ -27,6 +27,7 @@ import {
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
 import { maak3D, type Viewer3D } from './drie-d.js';
 import { Zoom } from './zoom.js';
+import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
@@ -924,19 +925,32 @@ function voetafdrukOverlapt(a: OntwerpElement, b: OntwerpElement) {
 
 // ---------- panelen ----------
 function materiaalOpties(select: HTMLSelectElement, gekozen: string | undefined, metHoofd: boolean) {
-  select.replaceChildren();
-  if (metHoofd) select.append(el('option', { value: '' }, 'Zelfde als hoofdmateriaal'));
-  for (const m of getMaterialen()) {
-    const o = el('option', { value: m.code }, `${m.naam} (groep ${m.groep})`);
-    if (m.code === gekozen) o.selected = true;
-    select.append(o);
-  }
+  // Per collectie gegroepeerd, zodat de kleuren van één stof samen staan.
+  materiaalOptiesPerCollectie(select, getMaterialen(), gekozen, metHoofd ? (el('option', { value: '' }, 'Zelfde als hoofdmateriaal') as HTMLOptionElement) : undefined);
 }
+
+let stalenkaart: ReturnType<typeof maakStalenkaart> | null = null;
 
 function vulHoofdmateriaal() {
   const s = $<HTMLSelectElement>('#o-hoofdmateriaal');
   if (!getMaterialen().some((m) => m.code === ontwerp.hoofdmateriaal)) ontwerp.hoofdmateriaal = getMaterialen()[0]?.code ?? '';
   materiaalOpties(s, ontwerp.hoofdmateriaal, false);
+  // Stalenkaart onder de keuzelijst: alle stoffen per collectie, met filters.
+  if (!stalenkaart) {
+    stalenkaart = maakStalenkaart({
+      id: 'o-stalenkaart',
+      materialen: getMaterialen,
+      gekozen: () => ontwerp.hoofdmateriaal,
+      opKies: (code) => {
+        if (code === ontwerp.hoofdmateriaal) return;
+        onthoud();
+        ontwerp.hoofdmateriaal = code;
+        s.value = code;
+        gewijzigd();
+      },
+    });
+    $('#o-stalenplek').append(stalenkaart.kaart);
+  } else stalenkaart.ververs();
 }
 
 function toonEigenschappen() {
@@ -1179,6 +1193,7 @@ export function startOntwerper() {
     onthoud();
     ontwerp.hoofdmateriaal = hoofd.value;
     gewijzigd();
+    stalenkaart?.ververs();
   });
   $('#o-ongedaan').addEventListener('click', ongedaan);
   bevestigKnop($<HTMLButtonElement>('#o-wis'), 'Klik nogmaals om alles te wissen', () => {

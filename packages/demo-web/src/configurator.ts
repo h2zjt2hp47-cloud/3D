@@ -16,6 +16,7 @@ import {
 import { demoPrijslijst, maatkast } from '../../core/voorbeelden/maatkast.js';
 import { maakSofa, maakSofaPrijslijst } from '../../core/voorbeelden/sofa.js';
 import { $, el, eur, getal, getKorting, getMaterialen, kopieer, opWijziging } from './staat.js';
+import { kleurStaal } from './stalen.js';
 
 interface Product {
   model: ProductModel;
@@ -92,7 +93,14 @@ function bouwVeld(k: Kenmerk): HTMLElement {
     const groep = el('fieldset', { class: 'keuzes' });
     groep.append(el('legend', {}, k.label));
     const knoppen = new Map<string, { knop: HTMLInputElement; tegel: HTMLElement; reden: HTMLElement }>();
+    let vorigeCollectie = '';
     for (const kz of k.keuzes) {
+      // Stoffen: een tussenkop per collectie, zodat de kleuren van één stof samen staan.
+      const collectie = kz.eigenschappen?.collectie;
+      if (typeof collectie === 'string' && collectie !== vorigeCollectie) {
+        groep.append(el('div', { class: 'keuzegroep-kop' }, collectie));
+        vorigeCollectie = collectie;
+      }
       const kid = `${id}-${kz.code}`;
       const tegel = el('label', { class: 'tegel', for: kid });
       const knop = el('input', { type: 'radio', name: id, id: kid, value: kz.code }) as HTMLInputElement;
@@ -104,7 +112,9 @@ function bouwVeld(k: Kenmerk): HTMLElement {
       const kleur = kz.eigenschappen?.kleur;
       if (typeof kleur === 'string') {
         const staal = el('span', { class: 'staal', 'aria-hidden': 'true' });
-        staal.style.background = kleur;
+        const m = getMaterialen().find((x) => x.code === kz.code);
+        if (m) kleurStaal(staal, m);
+        else staal.style.background = kleur;
         tegel.append(staal);
       }
       const tekst = el('span', { class: 'tegeltekst' }, kz.label);
