@@ -12,6 +12,7 @@ import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
 import { controles, inbegrepen } from './positie-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
+import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
 const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'inrichting'] as const;
@@ -303,11 +304,8 @@ function exportJson(): string {
 }
 
 function download(naam: string, inhoud: string, type: string) {
-  const a = el('a', { download: naam });
-  a.href = URL.createObjectURL(new Blob([inhoud], { type }));
-  document.body.append(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  // Via de gedeelde helper: werkt ook in de weergave op claude.ai (toelating "downloads").
+  void bewaarBestand(naam, new Blob([inhoud], { type }));
 }
 
 /** Vult het afdrukblad en opent het afdrukvenster (bewaren als PDF kan daar). */

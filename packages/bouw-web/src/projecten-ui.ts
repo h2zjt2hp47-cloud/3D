@@ -27,6 +27,7 @@ import {
   wijzig,
   type Toestand,
 } from './staat.js';
+import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 
 let naarPlan: () => void = () => {};
 
@@ -42,11 +43,8 @@ function totaal(x: Toestand): number {
 }
 
 export function download(naam: string, inhoud: string, type: string) {
-  const a = el('a', { download: naam });
-  a.href = URL.createObjectURL(new Blob([inhoud], { type }));
-  document.body.append(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  // Via de gedeelde helper: werkt ook in de weergave op claude.ai (toelating "downloads").
+  void bewaarBestand(naam, new Blob([inhoud], { type }));
 }
 
 const bestandsnaam = (x: Toestand) => `${(x.meta.project || 'project').replace(/[^\p{L}\p{N} _-]+/gu, '').trim().replace(/\s+/g, '-')}-${x.meta.nummer}.woning.json`;

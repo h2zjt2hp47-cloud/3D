@@ -28,6 +28,8 @@ import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
 import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
+import { bewaarBestand, dataUrlNaarBlob, inClaudeWeergave } from './bewaren.js';
+import { zipSync } from 'three/addons/libs/fflate.module.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
@@ -627,6 +629,15 @@ function vul3DStof() {
 }
 // ---------- AR: de zetel in je eigen kamer ----------
 let arUrls: string[] = [];
+let arBlobs: { usdz: Blob | null; glb: Blob | null } = { usdz: null, glb: null };
+async function bewaarArZip() {
+  const delen: Record<string, Uint8Array> = {};
+  if (arBlobs.usdz) delen['zetel.usdz'] = new Uint8Array(await arBlobs.usdz.arrayBuffer());
+  if (arBlobs.glb) delen['zetel.glb'] = new Uint8Array(await arBlobs.glb.arrayBuffer());
+  const zip = zipSync(delen, { level: 0 });
+  const r = await bewaarBestand('zetel-3d.zip', new Blob([zip], { type: 'application/zip' }));
+  if (r === 'niet') $('#o-ar-status').textContent = 'Downloaden kan hier niet: open het HTML-bestand rechtstreeks in de browser.';
+}
 let arGepland = 0;
 /** Knop als afbeelding (Apple vereist een <img> in de AR-link). */
 function arKnopBeeld() {
@@ -663,10 +674,14 @@ async function maakArBestanden() {
     arUrls.push(u);
     $<HTMLAnchorElement>('#o-ar-glb').href = u;
   }
+  arBlobs = { usdz, glb };
   const kb = (b: Blob | null) => (b ? `${Math.round(b.size / 1024)} kB` : 'mislukt');
   status.textContent = usdz || glb ? `Klaar (USDZ ${kb(usdz)}, GLB ${kb(glb)}).` : 'Het 3D-bestand kon niet gemaakt worden.';
-  $('#o-ar-usdz').hidden = !usdz;
-  $('#o-ar-glb').hidden = !glb;
+  // In de weergave op claude.ai mogen .usdz en .glb niet rechtstreeks: daar samen in één zip.
+  const viaZip = inClaudeWeergave();
+  $('#o-ar-usdz').hidden = viaZip || !usdz;
+  $('#o-ar-glb').hidden = viaZip || !glb;
+  $('#o-ar-zip').hidden = !viaZip || !(usdz || glb);
   if (ios.dataset.kan === '1') ios.hidden = !usdz;
 }
 /** Na een wijziging aan het ontwerp: AR-bestanden vernieuwen als het paneel open staat. */
@@ -705,14 +720,12 @@ async function startArPaneel() {
     if (fout) { overlay.hidden = true; $('#o-ar-status').textContent = fout; }
   });
   $('#o-ar-draai').addEventListener('click', () => viewer?.arDraai?.(45));
+  $('#o-ar-zip').addEventListener('click', () => void bewaarArZip());
   $('#o-ar-stop').addEventListener('click', () => viewer?.arStop?.());
 }
 
 function downloadBeeld(url: string, soort: string) {
-  const a = el('a', { href: url, download: `zetel-${soort}-${new Date().toISOString().slice(0, 10)}.png` });
-  document.body.append(a);
-  a.click();
-  a.remove();
+  void dataUrlNaarBlob(url).then((b) => bewaarBestand(`zetel-${soort}-${new Date().toISOString().slice(0, 10)}.png`, b));
 }
 function start3DInstellingen() {
   const i = instellingen3D();
