@@ -188,7 +188,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
         if (dc.raam.kader === '#1f1f1f') for (const f of [0.33, 0.66]) blok(8, 2.5, rb, xR + 2, borst + rh * f, raamZ, km, true, zijde);
         blok(16, 3, rb + 24, xR - 4, borst - 3, raamZ, mat(dc.afwerking?.kleur ?? '#f1ede6', 0.5), true, zijde);
         // Glas: licht en bijna onzichtbaar.
-        const glas = new T.Mesh(new T.PlaneGeometry(rb, rh), new T.MeshStandardMaterial({ color: 0xdfe9ef, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.12, depthWrite: false, envMapIntensity: 1 }));
+        const glas = new T.Mesh(new T.PlaneGeometry(rb, rh), new T.MeshPhysicalMaterial({ color: 0xf2f7f9, roughness: 0.03, metalness: 0, transmission: 1, ior: 1.5, thickness: 0.6, envMapIntensity: 1 }));
         glas.rotation.y = -Math.PI / 2;
         glas.position.set(xR + 3, borst + rh / 2, raamZ);
         zijde.add(glas);

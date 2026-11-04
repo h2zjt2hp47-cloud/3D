@@ -297,6 +297,14 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // ---------- texturen voor bouwmaterialen (in cm via wereld-UV) ----------
   const STEEN = { b: 88, h: 60 }; // 4 stenen van 21 cm + voeg, 10 lagen van 5 cm + voeg
   const PLANK = { b: 48, h: 200 }; // 4 verticale planken van 12 cm
+  /**
+   * Kleur van glas met transmission: de kleur kleurt het licht dat erdoor gaat, dus halfweg naar wit (de glaskleuren
+   * werden gekozen voor half doorzichtig glas). Gewoon glas blijft licht blauwgroen, zonwerend glas duidelijk donkerder.
+   */
+  function glasTint(hex: string) {
+    const c = kleur(hex);
+    return c.clone().lerp(new THREE.Color(0xffffff), 0.55);
+  }
   function tint(hex: string, f: number) {
     // Lichter of donkerder, begrensd op 0–255 per kanaal (anders lopen lichte kleuren over).
     // Rechtstreeks op de sRGB-waarden (voor canvastekeningen), niet via THREE.Color (die rekent lineair).
@@ -536,8 +544,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       else if (b.soort === 'zink') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.42, metalness: 0.45, map: zink(b.kleur) });
       else if (b.soort === 'natuursteen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, map: natuursteen(b.kleur) });
       else if (b.soort === 'pleister') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.98, map: pleister(b.kleur) });
-      else if (b.soort === 'glas') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), transparent: true, opacity: 0.28, roughness: 0.05, metalness: 0.15, depthWrite: false });
-      else if (b.soort === 'matglas') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), transparent: true, opacity: 0.82, roughness: 0.6, depthWrite: false });
+      // Glas met transmission (proef 04-11): het licht gaat erdoor en de spiegeling blijft volledig. Met opacity werd
+      // de hele uitkomst, spiegeling inbegrepen, met de alfa weggeschreven (bij 0,28 bleef ±28 % van de spiegeling over).
+      // Matglas: dezelfde breking met een ruw oppervlak, dus een wazige achtergrond. De fotomodus rekent dit natuurgetrouw.
+      else if (b.soort === 'glas') m = new THREE.MeshPhysicalMaterial({ color: glasTint(b.kleur), metalness: 0, roughness: 0.03, transmission: 1, ior: 1.5, thickness: 1 });
+      else if (b.soort === 'matglas') m = new THREE.MeshPhysicalMaterial({ color: glasTint(b.kleur), metalness: 0, roughness: 0.55, transmission: 1, ior: 1.5, thickness: 1 });
       else if (b.soort === 'tegel') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, map: tegels(b.kleur) });
       else if (b.soort === 'parket') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: parket(b.kleur) });
       else if (b.soort === 'kunststof') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.35 });
