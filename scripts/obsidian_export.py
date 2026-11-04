@@ -29,6 +29,7 @@ NOTITIES = {
     'docs/3d-technieken.md': ('3D-technieken - kennisbank', ['configurator', '3d', 'kennis', 'zetels', 'bouw'], 'alle'),
     'docs/zachte-vormen.md': ('Zachte vormen - zetels in 3D', ['configurator', 'zetels', '3d'], ZETELS),
     'docs/echte-3d-modellen.md': ('Echte 3D-modellen - proef', ['configurator', 'zetels', '3d', 'onderzoek'], ZETELS),
+    'docs/proeven/3d-motor-proeven-0411.md': ('Proeven 3D-motor (WebGPU, glas, weefsel)', ['configurator', '3d', 'proef', 'webgpu'], 'alle'),
     'docs/onderzoek-bouw-ramen-deuren.md': ('Onderzoek bouw - pijnpunten ramen en deuren', ['configurator', 'bouw', 'onderzoek'], BOUW),
     'docs/analyse-bouw-woning-demo.md': ('Analyse bouw - woningconfigurator', ['configurator', 'bouw', 'analyse'], BOUW),
     'docs/begrippen-bouw.md': ('Begrippenlijst bouw', ['configurator', 'bouw', 'begrippen'], BOUW),
@@ -232,6 +233,7 @@ Eigen productconfigurator, als aparte app **koppelbaar met Missing Link**. Eén 
 
 ## 3D-kennis (voor beide cases)
 - [[3D-technieken - kennisbank]]: welke techniek waarvoor (blokken, eigen doorsnede, zachte vormen, doorlopende opbouw, boog, echt 3D-bestand, weergave), de lessen, een werkwijze voor een nieuw model en het advies voor ramen en deuren
+- [[Proeven 3D-motor (WebGPU, glas, weefsel)]]: de proeven van 4/11 en de overstap naar WebGPU
 
 ## Case 1: zitmeubelen (Corneille & Silence)
 - **Demo:** [Configurator demo]({DEMO}): 1 · Modellen · 2 · Ontwerpen (boven- en vooraanzicht, 3D) · 3 · Offerte · Sofa en Kast op maat · Beheer
