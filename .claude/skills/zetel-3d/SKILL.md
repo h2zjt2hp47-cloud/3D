@@ -94,13 +94,16 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 
   `echt3dPlaatsing()` controleert opstelling, opzet-elementen erop, één stof, keuzes, vormgeving, breedte, diepte, zithoogte, poothoogte en het hoogste punt (rug of arm). `bouw3D(o, c, m, { echt3d })` zet `scene.echt` (kader, stof zoals op de blokken, pootafwerking, de elementen met hun x-stuk) of `scene.echtNiet` (reden in gewone taal). **De blokken blijven altijd in de scène**: terugval, schakelaar *Benadering*, contactschaduw, tests. Prijs, tekeningen en offerte lezen `echt3d` niet.
 - **Weergave (`drie-d.ts`):**
-  - `echtModelVan(bestand)` laadt `window.__MODELLEN3D[bestand]` (data-URL) met `GLTFLoader.parseAsync`, één keer. Daarna volgt opnieuw `toon(laatsteScene)`; tot dan de blokken.
+  - `echtModelVan(bestand)` laadt `window.__MODELLEN3D[bestand]` (data-URL) één keer met `GLTFLoader.parseAsync`. Daarna volgt opnieuw `toon(laatsteScene)`; tot dan de blokken.
+    - Het base64 decodeert de weergave zelf, zonder `fetch` van de data-URL: de artifact-pagina kan dat blokkeren (connect-src).
+    - Afbeeldingen in het bestand gaan via de plugin `afbeeldingenViaDataUrl` (data-URL + TextureLoader, zoals de stoffoto's) in plaats van blob-adressen. Getest met een strenge CSP: geen connect, geen blob, alleen `img-src data:`.
   - `echtGroep()` kloont per beeld de geometrie (`toon()` gooit geometrie weg) en schaalt de groep per richting tot het kader (meter → cm, normalen kloppen via de normalMatrix).
   - Delen met *fabric/stof* in de naam krijgen `echtStof()`: kloon van het blokmateriaal, weefsel of foto herhaald met `cmPerUV / tegelmaat`, de AO-textuur van het bestand (kanaal 0, zoals GLTFLoader die zet). Delen met *leg/poot* krijgen de pootafwerking; de rest blijft zoals in het bestand.
   - De blokken van de elementen onder het model worden niet getekend.
   - Klikken kiest het element via `userData.echt` en `raak.point.x`; `zetMarkering` tekent het stuk van dat element.
   - De contactschaduw tekent de driehoeken van het model van boven (alle in dezelfde draairichting, één vulling).
-  - `Weergave3D.echtModel` (false = benadering) via `instellen()`; `opEcht(plaatsing | null)` meldt na elke opbouw wat in beeld staat (de naamsvermelding onderaan).
+  - `Weergave3D.echtModel` (false = benadering) via `instellen()`.
+  - `opEcht(plaatsing | null, toestand)` meldt na elke opbouw wat in beeld staat: getoond, laden, benadering, fout of geen. De ontwerper toont de naamsvermelding en de passende uitleg, ook na het laden of bij een fout.
 - **Bestanden:** `demo-web/modellen3d/<sleutel>.glb` (+ `<sleutel>.jpg` voor de modelkaart, `BRON.md` met licentie). `bouw.mjs` sluit ze alleen in de gewone demo in (`/*MODELLEN3D*/`), niet in de huisstijlversie. `staat.ts` toont proefmodellen alleen als hun bestand er is (`proefModellenNu`).
 - **Een bestand voorbereiden:** lampen en camera's eruit, kleurvarianten eruit, texturen verkleinen (zie `docs/echte-3d-modellen.md`). Meet de maten en de zithoogte in het bestand, en kies elementtypes die binnen de catalogusgrenzen vallen (arm ≤ 40 cm, afgerond eindelement ≥ 80 cm). Wat de klant moet aanleveren, staat in dat document.
 

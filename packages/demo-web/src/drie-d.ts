@@ -46,6 +46,7 @@ export interface Viewer3D {
 }
 
 export type Standpunt = 'schuin' | 'voor' | 'boven' | 'zij' | 'achter' | 'ooghoogte';
+export type EchtToestand = 'getoond' | 'laden' | 'benadering' | 'fout' | 'geen';
 
 /** Vloeren die los van het decor te kiezen zijn. */
 export const VLOEREN = {
@@ -209,8 +210,11 @@ export interface Opties3D {
   zetel?: boolean;
   /** Klik (zonder slepen) op een deel van de zetel: het id van het element, of null naast de zetel. */
   opKlik?: (elementId: string | null) => void;
-  /** Na elke opbouw: het echte 3D-model dat in beeld staat, of null (geen, nog aan het laden, of de benadering). */
-  opEcht?: (getoond: Echt3DPlaatsing | null) => void;
+  /**
+   * Na elke opbouw: het echte 3D-model dat in beeld staat (of null) en de toestand: getoond, laden, benadering
+   * (gevraagd), fout (bestand kon niet geladen worden) of geen (het model heeft geen 3D-bestand of het past niet).
+   */
+  opEcht?: (getoond: Echt3DPlaatsing | null, toestand: EchtToestand) => void;
 }
 
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
@@ -1585,6 +1589,37 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     return uvOpp > 0 ? Math.sqrt(opp / uvOpp) * 100 : 300;
   }
+  function naarBase64(buf: ArrayBuffer) {
+    const b = new Uint8Array(buf);
+    let s = '';
+    for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  /**
+   * Afbeeldingen in een GLB laden via een data-URL, zoals de stoffoto's, in plaats van via een blob-adres: dat laat niet
+   * elke pagina toe (bv. de weergave van een artifact). Lukt het niet, dan het model zonder die textuur.
+   */
+  const afbeeldingenViaDataUrl = (parser: any) => ({
+    name: 'configurator_afbeeldingen_via_data_url',
+    loadTexture(index: number) {
+      const json = parser.json, def = json.textures?.[index], bron = def ? json.images?.[def.source] : undefined;
+      if (!bron || bron.bufferView === undefined || !bron.mimeType) return null;
+      return parser.getDependency('bufferView', bron.bufferView)
+        .then((buf: ArrayBuffer) => new Promise((ok, mis) => new THREE.TextureLoader().load(`data:${bron.mimeType};base64,${naarBase64(buf)}`, ok, undefined, mis)))
+        .then((t: any) => {
+          const s = json.samplers?.[def.sampler] ?? {};
+          const omloop = (w?: number) => (w === 33071 ? THREE.ClampToEdgeWrapping : w === 33648 ? THREE.MirroredRepeatWrapping : THREE.RepeatWrapping);
+          t.flipY = false;
+          t.name = def.name || bron.name || '';
+          t.magFilter = s.magFilter === 9728 ? THREE.NearestFilter : THREE.LinearFilter;
+          t.minFilter = s.minFilter === 9728 ? THREE.NearestFilter : s.minFilter === 9729 ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
+          t.wrapS = omloop(s.wrapS);
+          t.wrapT = omloop(s.wrapT);
+          return t;
+        })
+        .catch(() => null);
+    },
+  });
   /** Het geladen model, of null (nog aan het laden, niet in deze versie of kapot: dan de blokken). Laadt bij de eerste vraag. */
   function echtModelVan(bestand: string): EchtModel | null {
     const m = echteModellen.get(bestand);
@@ -1592,9 +1627,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const bron = (window as unknown as { __MODELLEN3D?: Record<string, string> }).__MODELLEN3D?.[bestand];
     if (!bron) { echteModellen.set(bestand, 'fout'); return null; }
     echteModellen.set(bestand, 'laden');
-    fetch(bron)
-      .then((r) => r.arrayBuffer())
-      .then((buf) => new GLTFLoader().parseAsync(buf, ''))
+    // Zelf uit base64 halen (geen fetch van een data-URL: die laat niet elke pagina toe).
+    Promise.resolve()
+      .then(() => {
+        const tekens = atob(bron.slice(bron.indexOf(',') + 1));
+        const bytes = new Uint8Array(tekens.length);
+        for (let i = 0; i < tekens.length; i++) bytes[i] = tekens.charCodeAt(i);
+        const loader = new GLTFLoader();
+        loader.register(afbeeldingenViaDataUrl);
+        return loader.parseAsync(bytes.buffer, '');
+      })
       .then((gltf: any) => {
         gltf.scene.updateMatrixWorld(true);
         const delen: EchtDeel[] = [];
@@ -1615,6 +1657,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       .catch((fout) => {
         console.error(`3D-bestand ${bestand} laden mislukt:`, fout);
         echteModellen.set(bestand, 'fout');
+        if (laatsteScene?.echt?.bestand === bestand) viewer.toon(laatsteScene);
       });
     return null;
   }
@@ -1682,7 +1725,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       if (echt) groep.add(echt);
       schaduwOpnieuw();
       zetContactschaduw(s, echt);
-      opties.opEcht?.(echt ? s.echt! : null);
+      const toestand: EchtToestand = !s.echt ? 'geen' : weergave.echtModel === false ? 'benadering' : echt ? 'getoond' : echteModellen.get(s.echt.bestand) === 'laden' ? 'laden' : 'fout';
+      opties.opEcht?.(echt ? s.echt! : null, toestand);
       const nieuw = s.kader;
       const veranderd = Math.abs(nieuw.b - kader.b) > 1 || Math.abs(nieuw.d - kader.d) > 1 || Math.abs(nieuw.x - kader.x) > 1 || Math.abs(nieuw.z - kader.z) > 1;
       kader = nieuw;

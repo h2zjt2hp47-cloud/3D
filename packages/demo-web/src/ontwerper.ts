@@ -34,7 +34,7 @@ import {
   type Scene3D,
 } from '../../core/src/index.js';
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
-import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
+import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type EchtToestand, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
 import { bewaarBestand, dataUrlNaarBlob } from './bewaren.js';
@@ -831,11 +831,13 @@ export function kiesWeergave(w: typeof weergave) {
         toonEigenschappen();
         tekenCanvas();
       },
-      // Echt 3D-model in beeld: de naamsvermelding (licentie) eronder.
-      opEcht: (p) => {
+      // Echt 3D-model in beeld: de naamsvermelding (licentie) eronder; de uitleg volgt de toestand (ook na het laden).
+      opEcht: (p, toestand) => {
         const bron = $('#o-3d-bron');
         bron.hidden = !p;
         bron.textContent = p?.vermelding ?? '';
+        echtToestand = toestand;
+        if (scene3D) toonEchtVak(scene3D);
       },
     });
     // Voor geautomatiseerde tests (Playwright): de 3D-weergave rechtstreeks bereikbaar.
@@ -858,15 +860,23 @@ function toonWeergave() {
   }
 }
 
-/** Echt 3D-model (proef): keuze met de benadering, of waarom het niet past. */
+/** Echt 3D-model (proef): keuze met de benadering, of waarom het niet past of niet geladen kon worden. */
 let echtAan = true;
 let scene3D: Scene3D | null = null;
+let echtToestand: EchtToestand = 'geen';
+const ECHT_UITLEG: Record<EchtToestand, string> = {
+  getoond: 'Proef: echt 3D-bestand, met onze stof en poten.',
+  laden: 'Echt 3D-model wordt geladen …',
+  benadering: 'Onze benadering met blokken, zoals bij de andere modellen.',
+  fout: 'Het 3D-bestand kon niet geladen worden: we tonen de benadering.',
+  geen: '',
+};
 function toonEchtVak(s: Scene3D) {
   $('#o-3d-echt').hidden = !s.echt && !s.echtNiet;
-  $('#o-3d-echt-keuze').hidden = !s.echt;
+  $('#o-3d-echt-keuze').hidden = !s.echt || echtToestand === 'fout';
   document.querySelectorAll<HTMLButtonElement>('[data-echt]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.echt === 'aan') === echtAan)));
   $('#o-3d-echt-tekst').textContent = s.echt
-    ? echtAan ? 'Proef: echt 3D-bestand, met onze stof en poten.' : 'Onze benadering met blokken, zoals bij de andere modellen.'
+    ? ECHT_UITLEG[echtToestand]
     : s.echtNiet ? `Echt 3D-model niet getoond: ${s.echtNiet} We tonen de benadering.` : '';
 }
 
