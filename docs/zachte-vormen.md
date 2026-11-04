@@ -92,14 +92,18 @@ onderbouw, zitkussen en rugdeel. Op de foto is elk model één doorlopende zetel
    Het zitkussen is een eigen vorm met een naad boven- en onderaan.
 5. **Geen strepen en geen uitstekende randen meer.** De rug volgt nu de ronding van de uiteinden en blijft overal binnen
    de onderbouw. De schaduw op de rug klopt ook waar de rug naar voren zakt.
-6. **Het scherm staat niet stil.** De zachte vorm wordt in de achtergrond berekend (één stuk per keer). Tot ze klaar is,
-   staat er even de gewone vorm. Gemeten op de server: Doha ±0,7 s, Montego ±0,3 à 0,4 s; in de browser verschijnt de
-   vorm na ±1 à 2 s.
+6. **Korter wachten, in stukjes.** De zachte vorm wordt na het tonen berekend, één stuk per keer (eerst onderbouw en
+   rug, dan het zitkussen). Tot ze klaar is, staat er even de gewone vorm. Gemeten op de server: Doha ±0,7 s, Montego
+   ±0,3 à 0,4 s; in de browser verschijnt de vorm na ±1 à 2 s. Tijdens elk stuk staat het scherm nog even stil (bij Doha
+   tot ±0,5 s; op een tablet waarschijnlijk 2 à 3 keer langer).
+7. **Het loungedeel loopt vloeiend over in de rest.** Hoe groter het verschil in diepte, hoe breder de overgang (bij Doha
+   ±1 m), zoals de golvende voorkant op de foto.
 
 ### Wat hetzelfde blijft
 
 - **Prijs en offerte:** per element, zoals vroeger.
-- **Bovenaanzicht en vooraanzicht:** per element. De boog is er (nog) niet in getekend; die zit alleen in de 3D.
+- **Bovenaanzicht en vooraanzicht:** per element. De boog is er (nog) niet in getekend; die zit alleen in de 3D. **Let op
+  bij de offerte:** het 3D-beeld toont één zetel, de tekeningen ernaast de losse elementen.
 - **Andere modellen:** ongewijzigd (*Per element* is de standaard).
 
 ## Hoe het werkt (kort)

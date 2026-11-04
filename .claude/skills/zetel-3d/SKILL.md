@@ -141,6 +141,7 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 ## Doorlopende opbouw (4/11, `core/src/doorlopend.ts`)
 - **`Vormgeving.opbouw`** `'elementen' | 'doorlopend'` en **`Vormgeving.bocht`** (cm, 0–60): alleen op zetelniveau (verborgen bij een element). Doha (`doorlopend`) en Montego (`doorlopend`, `bocht: 30`, benadering uit de foto).
 - **`doorlopendeRij`**: de langste rij aansluitende elementen met tekenstijl zit, rond of zit_zonder_rug, rotatie 0, op één lijn. **`doorlopendeOpbouw`** (vanuit `bouw3D`) haalt hun blokken weg en zet er één zetel voor in de plaats, met codes van het middelste element:
+  - diepte per x (`diepteBij`): een dieper buurelement loopt over met een smoothstep van 1,6 × het verschil aan elke kant (25–70 cm), hooguit de helft van elk element en buiten de ronde voorhoeken (anders een sprong aan het eind van de boog);
   - `.voet` (verdekt/plint, gewone omtrek, `glad: false`) of poten langs de omtrek;
   - `.basis` (stof) en `.zitkussen` (kussen, achterkant `RUG − 2` naar voor, met naad): vrije omtrek, `glad: true`;
   - `.rug`: kuipwand langs de omtrek (inset = halve rugdikte), rond een afgerond uiteinde ook langs de ronding vooraan tot 75 % van de diepte; hoogte zakt met een cosinus van het karkas naar zithoogte + 3;

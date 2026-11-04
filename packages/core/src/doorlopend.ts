@@ -90,21 +90,9 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     : naadTeken?.stiksel ? { soort: 'stiksel', kleur: donkerder(stof, 0.6) } : { soort: 'naad', kleur: donkerder(stof, 0.7) };
 
   // ---------- vorm in het grondvlak (rechte coördinaten: x zoals het bovenaanzicht, y van de rug naar voor) ----------
-  /** Diepte bij x: die van het element daar, met een zachte overgang (2 × 25 cm) naar een buur met een andere diepte. */
-  const diepteBij = (x: number) => {
-    let d = elementBij(x).diepte;
-    for (let i = 0; i < rij.length - 1; i++) {
-      const grens = rij[i]!.x + rij[i]!.breedte, a = rij[i]!.diepte, b = rij[i + 1]!.diepte, T = 25;
-      if (a !== b && Math.abs(x - grens) < T) {
-        const u = (x - grens + T) / (2 * T);
-        d = a + (b - a) * u * u * (3 - 2 * u);
-      }
-    }
-    return d;
-  };
   const rondeKant = (e: OntwerpElement, kant: 'links' | 'rechts') =>
     typen.get(e.type)?.tekenstijl === 'rond' && String(gekozenOpties(ontwerp, catalogus, e).get('ronde_kant')?.teken?.kant ?? 'links') === kant;
-  const dL = diepteBij(X0), dR = diepteBij(X1);
+  const dL = eerste.diepte, dR = laatste.diepte;
   /** Afronding van de hoeken: een afgerond uiteinde is bijna een halve cirkel, anders een kleine afronding. */
   const hoeken = (rond: boolean, d: number, b: number) => {
     if (!rond) return { voor: 6, achter: 6 };
@@ -113,6 +101,27 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     return { voor: voor * schaal, achter: achter * schaal };
   };
   const hL = hoeken(rondeKant(eerste, 'links'), dL, eerste.breedte), hR = hoeken(rondeKant(laatste, 'rechts'), dR, laatste.breedte);
+  /**
+   * Diepte bij x: die van het element daar, met een zachte overgang naar een buur met een andere diepte (zoals het
+   * loungedeel van Doha). Hoe groter het verschil, hoe breder de overgang: 1,6 × het verschil aan elke kant, tussen 25 en
+   * 70 cm, hooguit de helft van elk element en niet in de ronde voorhoeken.
+   */
+  const overgangen = rij.slice(0, -1).flatMap((e, i) => {
+    const volgende = rij[i + 1]!, grens = e.x + e.breedte, a = e.diepte, b = volgende.diepte;
+    if (a === b) return [];
+    const T = Math.min(70, Math.max(25, 1.6 * Math.abs(b - a)), e.breedte / 2, volgende.breedte / 2, grens - (X0 + hL.voor + 2), X1 - hR.voor - 2 - grens);
+    return T > 1 ? [{ grens, a, b, T }] : [];
+  });
+  const diepteBij = (x: number) => {
+    let d = elementBij(x).diepte;
+    for (const { grens, a, b, T } of overgangen) {
+      if (Math.abs(x - grens) < T) {
+        const u = (x - grens + T) / (2 * T);
+        d = a + (b - a) * u * u * (3 - 2 * u);
+      }
+    }
+    return d;
+  };
   const rondL = hL.voor > 6, rondR = hR.voor > 6;
 
   /** Kwartcirkel rond c met straal r van hoek a0 tot a1 (graden; 0 = +x, 90 = naar voor). */
