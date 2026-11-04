@@ -6,6 +6,7 @@
  * berekenOntwerp() controleert het ontwerp (maten, overlap, losse elementen) en
  * berekent prijs, stofverbruik per materiaal, stuklijst en tekening.
  */
+import type { Echt3D } from './echt3d.js';
 import { gebruiksklasse, materiaalArtikel, patroonfactor, type Materiaal } from './materialen.js';
 import { kuipOpbouw, kuipParameters } from './kuip.js';
 import type { Melding, StuklijstResultaat, TekeningResultaat, VormResultaat } from './types.js';
@@ -182,7 +183,11 @@ export interface ModelDefinitie {
   bron?: string;
   /** Sleutel van de productfoto (de demo laadt de foto's apart). */
   foto?: string;
+  /** Bijschrift bij de foto (standaard "foto website"). */
+  fotoBijschrift?: string;
   ontwerp: Ontwerp;
+  /** Echt 3D-bestand voor de 3D-weergave (anders de benadering met blokken). */
+  echt3d?: Echt3D;
 }
 
 export interface OntwerpCatalogus {

@@ -41,7 +41,7 @@ export function startModellen(kies: (code: string) => void) {
           const foto = m.foto ? fotos[m.foto] : undefined;
           if (foto) {
             const fig = el('figure', { class: 'modelfoto' });
-            fig.append(el('img', { src: foto, alt: `Productfoto ${m.naam}`, loading: 'lazy' }), el('figcaption', {}, 'foto website'));
+            fig.append(el('img', { src: foto, alt: m.fotoBijschrift ? `${m.naam}: ${m.fotoBijschrift}` : `Productfoto ${m.naam}`, loading: 'lazy' }), el('figcaption', {}, m.fotoBijschrift ?? 'foto website'));
             beelden.append(fig);
           }
           const schets = el('figure', { class: 'modelbeeld' });

@@ -20,9 +20,20 @@ if (existsSync('fotos')) {
   }
 }
 const fotoScript = `window.__FOTOS = ${JSON.stringify(fotos).replace(/</g, '\\u003c')};`;
-let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${js}`);
+// Echte 3D-modellen (proef): modellen3d/<sleutel>.glb met een beeld <sleutel>.jpg voor de modelkaart (zie modellen3d/BRON.md).
+// Alleen in de gewone demo: het zijn geen modellen van de klant, dus niet in de versie in zijn huisstijl.
+const modellen3d = {}, beelden3d = {};
+if (existsSync('modellen3d')) {
+  for (const f of readdirSync('modellen3d')) {
+    if (f.endsWith('.glb')) modellen3d[f.slice(0, -4)] = `data:model/gltf-binary;base64,${readFileSync(`modellen3d/${f}`).toString('base64')}`;
+    if (f.endsWith('.jpg')) beelden3d[f.slice(0, -4)] = `data:image/jpeg;base64,${readFileSync(`modellen3d/${f}`).toString('base64')}`;
+  }
+}
+const modelScript = `window.__MODELLEN3D = ${JSON.stringify(modellen3d)}; Object.assign(window.__FOTOS, ${JSON.stringify(beelden3d)});`.replace(/</g, '\\u003c');
+let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n/*MODELLEN3D*/\n${js}`);
 mkdirSync('dist', { recursive: true });
-writeFileSync('dist/configurator-demo.html', html.replace('<!--MERK-->', '').replace('/*HUISSTIJL*/', ''));
+writeFileSync('dist/configurator-demo.html', html.replace('<!--MERK-->', '').replace('/*HUISSTIJL*/', '').replace('/*MODELLEN3D*/', () => modelScript));
+html = html.replace('/*MODELLEN3D*/', '');
 
 // Variant in de huisstijl van de klant (alleen als bestand, niet om publiek te publiceren).
 html = html
@@ -45,4 +56,4 @@ function offline(bron) {
 writeFileSync('dist/configurator-demo-offline.html', offline(readFileSync('dist/configurator-demo.html', 'utf8')));
 writeFileSync('dist/configurator-corneille-silence-offline.html', offline(html));
 if (!lettertypen) console.log('Let op: geen lettertypen/lettertypen.css (scripts/haal_lettertypes.py); offline-versie gebruikt systeemletters.');
-console.log(`dist/configurator-demo.html en dist/configurator-corneille-silence.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's)`);
+console.log(`dist/configurator-demo.html en dist/configurator-corneille-silence.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's, ${Object.keys(modellen3d).length} echt 3D-model in de demo)`);

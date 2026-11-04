@@ -6,6 +6,7 @@
  * zoals y in het bovenaanzicht), y = hoogte vanaf de vloer.
  */
 import { weefselVan, type Materiaal } from './materialen.js';
+import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { kuipOpbouw, kuipParameters, type Punt } from './kuip.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
@@ -67,6 +68,18 @@ export interface Scene3D {
   blokken: Blok[];
   /** Omsluitend kader van de hele zetel. */
   kader: { x: number; z: number; b: number; d: number; h: number };
+  /**
+   * Echt 3D-model (bestand van de fabrikant) voor een rij elementen. De blokken van die elementen blijven in de
+   * lijst: de weergave toont ze als het bestand ontbreekt of als de benadering gevraagd wordt.
+   */
+  echt?: Echt3DPlaatsing;
+  /** Waarom het echte 3D-model van dit model niet past bij het ontwerp (de weergave toont dan de blokken). */
+  echtNiet?: string;
+}
+
+export interface Bouw3DOpties {
+  /** 3D-bestand van het model waarvan het ontwerp vertrok (zie echt3d.ts). */
+  echt3d?: Echt3D;
 }
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
@@ -80,7 +93,7 @@ function donkerder(hex: string, factor = 0.82): string {
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
-export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen: Materiaal[]): Scene3D {
+export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen: Materiaal[], opties: Bouw3DOpties = {}): Scene3D {
   const typen = new Map(catalogus.typen.map((t) => [t.code, t]));
   const mats = new Map(materialen.map((m) => [m.code, m]));
   const zetel = gekozenOpties(ontwerp, catalogus);
@@ -532,7 +545,13 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
   const x1 = afdrukken.length ? Math.max(...afdrukken.map((p) => p.x + p.b)) : 100;
   const z1 = afdrukken.length ? Math.max(...afdrukken.map((p) => p.y + p.h)) : 100;
   const h = blokken.length ? Math.max(...blokken.map((b) => b.y + b.h)) : 80;
-  return { blokken, kader: { x: x0, z: z0, b: x1 - x0, d: z1 - z0, h } };
+  const scene: Scene3D = { blokken, kader: { x: x0, z: z0, b: x1 - x0, d: z1 - z0, h } };
+  if (opties.echt3d) {
+    const u = echt3dPlaatsing(ontwerp, catalogus, materialen, opties.echt3d);
+    if (u.past) scene.echt = u.plaatsing;
+    else scene.echtNiet = u.reden;
+  }
+  return scene;
 }
 
 /** Handig voor tests: de blokken van één element. */

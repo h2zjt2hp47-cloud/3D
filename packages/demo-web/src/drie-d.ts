@@ -4,7 +4,7 @@
  * De motor levert de blokken (bouw3D); hier worden ze omgezet naar meshes.
  * Bediening: slepen = draaien, scrollen/knijpen = zoomen, knoppen = vaste standpunten.
  */
-import type { Blok, Scene3D, Weefsel } from '../../core/src/index.js';
+import type { Blok, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
 import { wielHint } from './zoom.js';
 import { WEEFSEL_CM, weefselCanvas } from './weefsel.js';
 import { bouwDecor, type DecorSpec } from './decor3d.js';
@@ -14,6 +14,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,8 +75,10 @@ export interface Weergave3D {
   helderheid: number;
   /** Richting van het zonlicht in graden (rond de zetel). */
   zonRichting: number;
+  /** Echt 3D-model tonen als het model er een heeft; false = de benadering met blokken. Leeg = aan. */
+  echtModel?: boolean;
 }
-export const STANDAARD_WEERGAVE: Weergave3D = { vloer: 'decor', muur: 'decor', tapijt: 'decor', spullen: 'decor', maten: false, draaien: false, lens: 35, helderheid: 0, zonRichting: 120 };
+export const STANDAARD_WEERGAVE: Weergave3D = { vloer: 'decor', muur: 'decor', tapijt: 'decor', spullen: 'decor', maten: false, draaien: false, lens: 35, helderheid: 0, zonRichting: 120, echtModel: true };
 
 /** Decors voor de zetel: vloer, muur, tapijt en een paar spullen. */
 export const DECORS = {
@@ -206,6 +209,8 @@ export interface Opties3D {
   zetel?: boolean;
   /** Klik (zonder slepen) op een deel van de zetel: het id van het element, of null naast de zetel. */
   opKlik?: (elementId: string | null) => void;
+  /** Na elke opbouw: het echte 3D-model dat in beeld staat, of null (geen, nog aan het laden, of de benadering). */
+  opEcht?: (getoond: Echt3DPlaatsing | null) => void;
 }
 
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
@@ -1117,7 +1122,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   contact.visible = false;
   scene.add(contact);
   /** Zachte schaduw onder de zetel, getekend uit de voetafdruk van de blokken (volgt ook een hoeksofa). */
-  function zetContactschaduw(s: Scene3D) {
+  function zetContactschaduw(s: Scene3D, echt: any = null) {
     if (!opties.zetel || !s.blokken.length) { contact.visible = false; return; }
     const k = s.kader, rand = 30, B = k.b + 2 * rand, D = k.d + 2 * rand;
     const c = document.createElement('canvas');
@@ -1129,9 +1134,31 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     g.shadowBlur = 9 * schaal * 2;
     g.shadowOffsetX = 2000;
     g.fillStyle = '#000';
+    const onder = echt ? new Set((echt.userData.echt as Echt3DPlaatsing).elementen.map((e) => e.id)) : null;
     for (const b of s.blokken) {
-      if (b.y > 25) continue;
+      if (b.y > 25 || onder?.has(b.code.split('.')[0]!)) continue;
       g.fillRect((b.x - k.x + rand) * schaal - 2000, (b.z - k.z + rand) * schaal, b.b * schaal, b.d * schaal);
+    }
+    // Echt 3D-model: zijn eigen grondvorm (alle driehoeken van boven gezien, in dezelfde draairichting, één vulling).
+    if (echt) {
+      echt.updateMatrixWorld(true);
+      const pad = new Path2D(), v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+      echt.traverse((o: any) => {
+        if (!o.isMesh) return;
+        const pos = o.geometry.attributes.position, idx = o.geometry.index, n = idx ? idx.count : pos.count;
+        const punt = (i: number, w: any) => {
+          w.fromBufferAttribute(pos, idx ? idx.getX(i) : i).applyMatrix4(o.matrixWorld);
+          return [(w.x - k.x + rand) * schaal - 2000, (w.z - k.z + rand) * schaal] as const;
+        };
+        for (let i = 0; i + 2 < n; i += 3) {
+          const p1 = punt(i, v[0]), p2 = punt(i + 1, v[1]), p3 = punt(i + 2, v[2]);
+          const opp = (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p3[0] - p1[0]) * (p2[1] - p1[1]);
+          if (Math.abs(opp) < 1e-6) continue;
+          const [q2, q3] = opp > 0 ? [p2, p3] : [p3, p2];
+          pad.moveTo(p1[0], p1[1]); pad.lineTo(q2[0], q2[1]); pad.lineTo(q3[0], q3[1]); pad.closePath();
+        }
+      });
+      g.fill(pad);
     }
     const oud = contact.material.map;
     contact.material.map = new THREE.CanvasTexture(c);
@@ -1376,6 +1403,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const r = renderer.domElement.getBoundingClientRect();
     straal.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camera);
     const raak = straal.intersectObjects(groep.children, true).find((h: any) => h.object.name || h.object.parent?.name);
+    // Echt 3D-model: het element onder de klik, volgens zijn stuk langs x.
+    const echt = raak?.object.parent?.userData?.echt as Echt3DPlaatsing | undefined;
+    if (echt) {
+      const x = raak.point.x;
+      opties.opKlik((echt.elementen.find((e) => x >= e.x0 && x <= e.x1) ?? echt.elementen[0]!).id);
+      return;
+    }
     const naam: string = raak ? raak.object.name || raak.object.parent.name : '';
     opties.opKlik(naam ? naam.split('.')[0]! : null);
   }
@@ -1452,7 +1486,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (markeerKader) { scene.remove(markeerKader); markeerKader.geometry?.dispose(); markeerKader = null; }
     if (!markeerId) return;
     const box = new THREE.Box3();
-    for (const c of groep.children) if (c.name.startsWith(`${markeerId}.`)) box.expandByObject(c);
+    for (const c of groep.children) {
+      if (c.name.startsWith(`${markeerId}.`)) box.expandByObject(c);
+      // Echt 3D-model: het stuk van dit element.
+      const p = c.userData?.echt as Echt3DPlaatsing | undefined;
+      const e = p?.elementen.find((x) => x.id === markeerId);
+      if (p && e) box.union(new THREE.Box3(new THREE.Vector3(e.x0, 0, p.z), new THREE.Vector3(e.x1, p.h, p.z + p.d)));
+    }
     if (box.isEmpty()) return;
     box.expandByScalar(1.5);
     markeerKader = new THREE.Box3Helper(box, new THREE.Color('#3f5a52'));
@@ -1522,6 +1562,107 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   const matenGroep = new THREE.Group();
   scene.add(matenGroep);
   let pathTracer: any = null;
+  // ---------- echte 3D-modellen (bestand van de fabrikant, zie core/src/echt3d.ts) ----------
+  type EchtDeel = { naam: string; geo: any; materiaal: any };
+  type EchtModel = { delen: EchtDeel[]; box: any; cmPerUV: number };
+  /** Per bestand: het geladen model, of 'laden' / 'fout' (dan de blokken). */
+  const echteModellen = new Map<string, EchtModel | 'laden' | 'fout'>();
+  let laatsteScene: Scene3D | null = null;
+  /** Welk deel van een 3D-bestand (naam van het deel of zijn materiaal): onze stof, onze poten of zoals in het bestand. */
+  const deelSoort = (naam: string) => (/fabric|stof|bekleding|upholster/.test(naam) ? 'stof' : /leg|poot|poten/.test(naam) ? 'poten' : 'eigen');
+  /** Hoeveel cm één eenheid van de textuurcoördinaten is (bestand in meter): uit de oppervlakte van alle driehoeken. */
+  function cmPerUV(geo: any) {
+    const p = geo.attributes.position, uv = geo.attributes.uv, idx = geo.index;
+    if (!uv) return 300;
+    const n = idx ? idx.count : p.count, h = (i: number) => (idx ? idx.getX(i) : i);
+    let opp = 0, uvOpp = 0;
+    for (let i = 0; i + 2 < n; i += 3) {
+      const a = h(i), b = h(i + 1), c = h(i + 2);
+      const ux = p.getX(b) - p.getX(a), uy = p.getY(b) - p.getY(a), uz = p.getZ(b) - p.getZ(a);
+      const vx = p.getX(c) - p.getX(a), vy = p.getY(c) - p.getY(a), vz = p.getZ(c) - p.getZ(a);
+      opp += Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) / 2;
+      uvOpp += Math.abs((uv.getX(b) - uv.getX(a)) * (uv.getY(c) - uv.getY(a)) - (uv.getX(c) - uv.getX(a)) * (uv.getY(b) - uv.getY(a))) / 2;
+    }
+    return uvOpp > 0 ? Math.sqrt(opp / uvOpp) * 100 : 300;
+  }
+  /** Het geladen model, of null (nog aan het laden, niet in deze versie of kapot: dan de blokken). Laadt bij de eerste vraag. */
+  function echtModelVan(bestand: string): EchtModel | null {
+    const m = echteModellen.get(bestand);
+    if (m) return typeof m === 'object' ? m : null;
+    const bron = (window as unknown as { __MODELLEN3D?: Record<string, string> }).__MODELLEN3D?.[bestand];
+    if (!bron) { echteModellen.set(bestand, 'fout'); return null; }
+    echteModellen.set(bestand, 'laden');
+    fetch(bron)
+      .then((r) => r.arrayBuffer())
+      .then((buf) => new GLTFLoader().parseAsync(buf, ''))
+      .then((gltf: any) => {
+        gltf.scene.updateMatrixWorld(true);
+        const delen: EchtDeel[] = [];
+        // Alleen meshes (een lamp of camera in het bestand doet niet mee); de vorm in wereldmaat van het bestand.
+        gltf.scene.traverse((o: any) => {
+          if (!o.isMesh) return;
+          const geo = o.geometry.clone();
+          geo.applyMatrix4(o.matrixWorld);
+          geo.computeBoundingBox();
+          delen.push({ naam: `${o.name} ${o.material?.name ?? ''}`.toLowerCase(), geo, materiaal: o.material });
+        });
+        const box = new THREE.Box3();
+        for (const d of delen) box.union(d.geo.boundingBox);
+        const stof = delen.find((d) => deelSoort(d.naam) === 'stof');
+        echteModellen.set(bestand, { delen, box, cmPerUV: stof ? cmPerUV(stof.geo) : 300 });
+        if (laatsteScene?.echt?.bestand === bestand) viewer.toon(laatsteScene);
+      })
+      .catch((fout) => {
+        console.error(`3D-bestand ${bestand} laden mislukt:`, fout);
+        echteModellen.set(bestand, 'fout');
+      });
+    return null;
+  }
+  /**
+   * Onze stof op het model: hetzelfde weefsel of dezelfde foto als op de blokken, op ware grootte via de
+   * textuurcoördinaten van het bestand, met de schaduw in plooien en naden (AO) uit het bestand.
+   */
+  function echtStof(p: Echt3DPlaatsing, cmPerUv: number, ao: any) {
+    const basis = materiaal({ soort: 'stof', kleur: p.stof.kleur, weefsel: p.stof.weefsel, textuur: p.stof.textuur });
+    const tegel = p.stof.textuur ? p.stof.textuurCm ?? 15 : p.stof.weefsel && p.stof.weefsel in WEEFSEL_CM ? WEEFSEL_CM[p.stof.weefsel as Weefsel] : 8;
+    const herhaling = Math.round((cmPerUv / tegel) * 10) / 10;
+    const sleutel = `echt:${basis.uuid}:${herhaling}:${ao?.uuid ?? ''}`;
+    let m = materialen.get(sleutel);
+    if (!m) {
+      m = basis.clone();
+      for (const veld of ['map', 'bumpMap']) {
+        if (!basis[veld]) continue;
+        const t = basis[veld].clone();
+        t.repeat.set(herhaling, herhaling);
+        t.needsUpdate = true;
+        m[veld] = t;
+      }
+      if (ao) { m.aoMap = ao; m.aoMapIntensity = 1; }
+      materialen.set(sleutel, m);
+    }
+    return m;
+  }
+  /** Het model in het kader van zijn elementen: per richting geschaald (meter in het bestand → cm), met onze stof en poten. */
+  function echtGroep(p: Echt3DPlaatsing, model: EchtModel) {
+    const g = new THREE.Group();
+    g.name = 'echt3d';
+    g.userData.echt = p;
+    const maat = model.box.getSize(new THREE.Vector3());
+    g.scale.set(p.b / maat.x, p.h / maat.y, p.d / maat.z);
+    g.position.set(p.x - model.box.min.x * g.scale.x, -model.box.min.y * g.scale.y, p.z - model.box.min.z * g.scale.z);
+    // Stofmaat na het schalen (gemiddeld over breedte en diepte: daar loopt de meeste stof).
+    const cmUv = model.cmPerUV * ((g.scale.x + g.scale.z) / 200);
+    const ao = model.delen.find((d) => d.materiaal?.aoMap)?.materiaal.aoMap ?? null;
+    for (const d of model.delen) {
+      const soort = deelSoort(d.naam);
+      const mat = soort === 'stof' ? echtStof(p, cmUv, ao) : soort === 'poten' ? materiaal({ soort: p.poten.soort, kleur: p.poten.kleur }) : d.materiaal;
+      const m = new THREE.Mesh(d.geo.clone(), mat);
+      m.castShadow = m.receiveShadow = true;
+      g.add(m);
+    }
+    return g;
+  }
+
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
   let laatsteBreedte = 0;
@@ -1531,10 +1672,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         groep.remove(c);
         c.traverse((o: any) => o.geometry?.dispose());
       }
+      laatsteScene = s;
       sceneBlokken = s.blokken;
-      for (const b of s.blokken) groep.add(mesh(b));
+      // Echt 3D-model (als het bestand geladen is en de benadering niet gevraagd is): in de plaats van de blokken van zijn elementen.
+      const model = s.echt && weergave.echtModel !== false ? echtModelVan(s.echt.bestand) : null;
+      const echt = model ? echtGroep(s.echt!, model) : null;
+      const onder = echt ? new Set(s.echt!.elementen.map((e) => e.id)) : null;
+      for (const b of s.blokken) if (!onder?.has(b.code.split('.')[0]!)) groep.add(mesh(b));
+      if (echt) groep.add(echt);
       schaduwOpnieuw();
-      zetContactschaduw(s);
+      zetContactschaduw(s, echt);
+      opties.opEcht?.(echt ? s.echt! : null);
       const nieuw = s.kader;
       const veranderd = Math.abs(nieuw.b - kader.b) > 1 || Math.abs(nieuw.d - kader.d) > 1 || Math.abs(nieuw.x - kader.x) > 1 || Math.abs(nieuw.z - kader.z) > 1;
       kader = nieuw;
@@ -1661,6 +1809,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
       if (weergave.zonRichting !== oud.zonRichting) zetZon();
       if (weergave.maten !== oud.maten) zetMaten();
+      if ((weergave.echtModel !== false) !== (oud.echtModel !== false) && laatsteScene) viewer.toon(laatsteScene);
       if (weergave.draaien && !draaiLoopt) requestAnimationFrame(draaiLus);
       const decorAnders = (['vloer', 'muur', 'tapijt', 'spullen'] as const).some((k) => weergave[k] !== oud[k]) || !Object.keys(w).length;
       if (decorAnders) {

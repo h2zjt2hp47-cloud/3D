@@ -84,6 +84,26 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - `maak3D(houder, { zetel: true })` (alleen ontwerper): contactschaduw, mist in de achtergrondkleur, houtnerf, buren-schaduw op kussens (`burenVan`), en de instellingen `decor()` / `licht()` / `kwaliteit()` / `foto()` met presets `DECORS` en `LICHTEN` (gegevens; `zetDecor` en `zetLicht` passen ze toe). UI in `ontwerper.ts` (`start3DInstellingen`), groot scherm via `grootSchermKnop($('#o-tekenvlak'))`.
 - Schaduwen via één `DirectionalLight` waarvan het schaduwkader meeschaalt met de zetel. Camera: eigen orbit (slepen, scrollen, knijpen) en vaste standpunten.
 
+## Echt 3D-model (bestand van de fabrikant, proef 4/11)
+- **Motor:** `core/src/echt3d.ts`. `ModelDefinitie.echt3d` beschrijft:
+  - het bestand en de elementtypes van links naar rechts (aansluitend, rotatie 0);
+  - de maten in het bestand (`maat`: b, d, h, zithoogte, poothoogte);
+  - `rek` (standaard 0,15);
+  - `toont` (per optiegroep de keuzes die het bestand kan tonen; groepen die er niet in staan, doen niet mee);
+  - `vast` (houtframe, rugvorm).
+
+  `echt3dPlaatsing()` controleert opstelling, opzet-elementen erop, één stof, keuzes, vormgeving, breedte, diepte, zithoogte, poothoogte en het hoogste punt (rug of arm). `bouw3D(o, c, m, { echt3d })` zet `scene.echt` (kader, stof zoals op de blokken, pootafwerking, de elementen met hun x-stuk) of `scene.echtNiet` (reden in gewone taal). **De blokken blijven altijd in de scène**: terugval, schakelaar *Benadering*, contactschaduw, tests. Prijs, tekeningen en offerte lezen `echt3d` niet.
+- **Weergave (`drie-d.ts`):**
+  - `echtModelVan(bestand)` laadt `window.__MODELLEN3D[bestand]` (data-URL) met `GLTFLoader.parseAsync`, één keer. Daarna volgt opnieuw `toon(laatsteScene)`; tot dan de blokken.
+  - `echtGroep()` kloont per beeld de geometrie (`toon()` gooit geometrie weg) en schaalt de groep per richting tot het kader (meter → cm, normalen kloppen via de normalMatrix).
+  - Delen met *fabric/stof* in de naam krijgen `echtStof()`: kloon van het blokmateriaal, weefsel of foto herhaald met `cmPerUV / tegelmaat`, de AO-textuur van het bestand (kanaal 0, zoals GLTFLoader die zet). Delen met *leg/poot* krijgen de pootafwerking; de rest blijft zoals in het bestand.
+  - De blokken van de elementen onder het model worden niet getekend.
+  - Klikken kiest het element via `userData.echt` en `raak.point.x`; `zetMarkering` tekent het stuk van dat element.
+  - De contactschaduw tekent de driehoeken van het model van boven (alle in dezelfde draairichting, één vulling).
+  - `Weergave3D.echtModel` (false = benadering) via `instellen()`; `opEcht(plaatsing | null)` meldt na elke opbouw wat in beeld staat (de naamsvermelding onderaan).
+- **Bestanden:** `demo-web/modellen3d/<sleutel>.glb` (+ `<sleutel>.jpg` voor de modelkaart, `BRON.md` met licentie). `bouw.mjs` sluit ze alleen in de gewone demo in (`/*MODELLEN3D*/`), niet in de huisstijlversie. `staat.ts` toont proefmodellen alleen als hun bestand er is (`proefModellenNu`).
+- **Een bestand voorbereiden:** lampen en camera's eruit, kleurvarianten eruit, texturen verkleinen (zie `docs/echte-3d-modellen.md`). Meet de maten en de zithoogte in het bestand, en kies elementtypes die binnen de catalogusgrenzen vallen (arm ≤ 40 cm, afgerond eindelement ≥ 80 cm). Wat de klant moet aanleveren, staat in dat document.
+
 ## Testen in de browser
 - three.js zit in de bundel (geen CDN). Neem beelden met `canvas.toDataURL()`; *Mooi* (GTAO + VSM) is in swiftshader ±7 s per beeld, dus test met *Snel* of wacht 30–45 s. `window.__zetel3d.fotoRealistisch({ stappen: 6, breedte: 520 })` = snelle proef van de fotomodus.
 - Start Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` voor WebGL zonder GPU.

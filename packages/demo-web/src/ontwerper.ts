@@ -31,6 +31,7 @@ import {
   type OntwerpElement,
   type OntwerpResultaat,
   type Rotatie,
+  type Scene3D,
 } from '../../core/src/index.js';
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
 import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
@@ -738,7 +739,7 @@ function start3DInstellingen() {
       tapijt: tapijt.value === 'kleur' ? tapijtKleur.value : tapijt.value,
       spullen: spullen.value as Weergave3D['spullen'],
       lens: Number(lens.value), helderheid: Number(helder.value), zonRichting: Number(zonR.value),
-      maten: maten.checked, draaien: draaien.checked,
+      maten: maten.checked, draaien: draaien.checked, echtModel: echtAan,
     };
     $('#o-3d-muurkleur-veld').hidden = muur.value !== 'kleur';
     $('#o-3d-tapijtkleur-veld').hidden = tapijt.value !== 'kleur';
@@ -747,12 +748,23 @@ function start3DInstellingen() {
   };
   toonVelden();
   for (const v of [vloer, muur, tapijt, spullen, lens, maten, draaien]) v.addEventListener('change', leesVelden);
+  // Echt 3D-model of de benadering (vergelijken); bewaard met de andere 3D-instellingen.
+  echtAan = weergave3D.echtModel !== false;
+  document.querySelectorAll<HTMLButtonElement>('[data-echt]').forEach((b) => b.addEventListener('click', () => {
+    echtAan = b.dataset.echt === 'aan';
+    weergave3D = { ...weergave3D, echtModel: echtAan };
+    viewer?.instellen?.({ echtModel: echtAan });
+    bewaarInst();
+    if (scene3D) toonEchtVak(scene3D);
+  }));
   for (const v of [muurKleur, tapijtKleur, helder, zonR]) v.addEventListener('input', leesVelden);
   $('#o-3d-herstel').addEventListener('click', () => {
     weergave3D = { ...STANDAARD_WEERGAVE };
+    echtAan = true;
     toonVelden();
     viewer?.instellen?.(weergave3D);
     bewaarInst();
+    if (scene3D) toonEchtVak(scene3D);
   });
   decor.addEventListener('change', () => {
     viewer?.decor?.(decor.value as DecorNaam);
@@ -819,6 +831,12 @@ export function kiesWeergave(w: typeof weergave) {
         toonEigenschappen();
         tekenCanvas();
       },
+      // Echt 3D-model in beeld: de naamsvermelding (licentie) eronder.
+      opEcht: (p) => {
+        const bron = $('#o-3d-bron');
+        bron.hidden = !p;
+        bron.textContent = p?.vermelding ?? '';
+      },
     });
     // Voor geautomatiseerde tests (Playwright): de 3D-weergave rechtstreeks bereikbaar.
     (window as unknown as { __zetel3d?: unknown }).__zetel3d = viewer;
@@ -831,8 +849,25 @@ function toonWeergave() {
   if (weergave === 'voor') tekenVoorvlak();
   if (weergave === '3d' && viewer) {
     viewer.formaat();
-    viewer.toon(bouw3D(ontwerp, getCatalogus(), getMaterialen()));
+    // Heeft het model een echt 3D-bestand, dan beslist de motor of het past bij het ontwerp zoals het nu is.
+    const model = getModellen().find((x) => x.code === ontwerp.model);
+    const s = bouw3D(ontwerp, getCatalogus(), getMaterialen(), { echt3d: model?.echt3d });
+    scene3D = s;
+    viewer.toon(s);
+    toonEchtVak(s);
   }
+}
+
+/** Echt 3D-model (proef): keuze met de benadering, of waarom het niet past. */
+let echtAan = true;
+let scene3D: Scene3D | null = null;
+function toonEchtVak(s: Scene3D) {
+  $('#o-3d-echt').hidden = !s.echt && !s.echtNiet;
+  $('#o-3d-echt-keuze').hidden = !s.echt;
+  document.querySelectorAll<HTMLButtonElement>('[data-echt]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.echt === 'aan') === echtAan)));
+  $('#o-3d-echt-tekst').textContent = s.echt
+    ? echtAan ? 'Proef: echt 3D-bestand, met onze stof en poten.' : 'Onze benadering met blokken, zoals bij de andere modellen.'
+    : s.echtNiet ? `Echt 3D-model niet getoond: ${s.echtNiet} We tonen de benadering.` : '';
 }
 
 // ---------- vooraanzicht: klikken, grepen slepen en tekenen ----------
@@ -1393,7 +1428,10 @@ export function toonOfferte() {
   figuur('Vooraanzicht (cm)', tekenSvg(tekenVooraanzicht(ontwerp, getCatalogus(), getMaterialen()), svgOpties));
   const canvas = document.querySelector<HTMLCanvasElement>('#o-3d canvas');
   if (viewer && canvas) {
-    try { figuur('3D', el('img', { src: canvas.toDataURL('image/jpeg', 0.9), alt: '3D-beeld van de zetel' })); } catch { /* geen 3D-beeld */ }
+    // Staat er een echt 3D-model in beeld, dan hoort de naamsvermelding (licentie) bij het beeld.
+    const bron = $('#o-3d-bron');
+    const titel = bron.hidden ? '3D' : `3D, echt 3D-model (proef). ${bron.textContent}`;
+    try { figuur(titel, el('img', { src: canvas.toDataURL('image/jpeg', 0.9), alt: '3D-beeld van de zetel' })); } catch { /* geen 3D-beeld */ }
   }
   kaart.append(beelden);
   // Omschrijving: hoofdstof, de elementen en de keuzes voor de hele zetel.

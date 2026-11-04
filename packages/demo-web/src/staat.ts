@@ -5,6 +5,7 @@
  */
 import { controleerCatalogus, leesMaterialen, type Materiaal, type ModelDefinitie, type OntwerpCatalogus } from '../../core/src/index.js';
 import { zetelModellen } from '../../core/voorbeelden/modellen.js';
+import { proefModellen } from '../../core/voorbeelden/proefmodellen.js';
 import { standaardMaterialen, STOFGROEPEN } from '../../core/voorbeelden/sofa.js';
 import { zetelCatalogus } from '../../core/voorbeelden/vrij-ontwerp.js';
 
@@ -104,8 +105,16 @@ let eigenModellen: ModelDefinitie[] = start.modellen;
 
 export const getCatalogus = () => catalogus;
 export const getEigenModellen = () => eigenModellen;
-/** Alle modellen: de collectie plus de zelf bewaarde modellen. */
-export const getModellen = () => [...zetelModellen, ...eigenModellen];
+/**
+ * Proefmodellen met een echt 3D-bestand: alleen als dat bestand in deze versie zit (de versie in de huisstijl van de
+ * klant heeft het niet) en het model past in de huidige catalogus.
+ */
+const proefModellenNu = () => {
+  const bestanden = (window as unknown as { __MODELLEN3D?: Record<string, string> }).__MODELLEN3D ?? {};
+  return proefModellen.filter((m) => (!m.echt3d || m.echt3d.bestand in bestanden) && controleerCatalogus(catalogus, [m]).length === 0);
+};
+/** Alle modellen: de collectie, de proefmodellen en de zelf bewaarde modellen. */
+export const getModellen = () => [...zetelModellen, ...proefModellenNu(), ...eigenModellen];
 export function setCatalogus(nieuw: OntwerpCatalogus, modellen: ModelDefinitie[] = eigenModellen) {
   catalogus = nieuw;
   eigenModellen = modellen;

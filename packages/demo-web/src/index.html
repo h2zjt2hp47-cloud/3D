@@ -169,6 +169,15 @@ button:disabled { opacity: .45; cursor: default; }
 .drie-d-vak { position: relative; }
 .drie-d-voortgang { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: color-mix(in srgb, var(--vlak) 92%, transparent); border: 1px solid var(--lijn); border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 18px rgba(0,0,0,.12); font-size: 14px; max-width: calc(100% - 24px); flex-wrap: wrap; justify-content: center; }
 .drie-d-voortgang progress { width: 160px; height: 8px; accent-color: var(--accent); }
+/* Echt 3D-model (proef): keuze met de benadering en uitleg linksboven, naamsvermelding (licentie) onderaan. */
+.drie-d-echt { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; max-width: min(460px, calc(100% - 20px)); background: color-mix(in srgb, var(--vlak) 92%, transparent); border: 1px solid var(--lijn); border-radius: 10px; padding: 6px 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08); font-size: 13px; }
+.drie-d-echt .tabs button { padding: 4px 10px; font-size: 13px; }
+.drie-d-bron { position: absolute; left: 10px; right: 10px; bottom: 6px; font-size: 11px; line-height: 1.3; color: #4f4c45; text-shadow: 0 0 3px #fff, 0 0 6px #fff; pointer-events: none; }
+/* Smal scherm: onder het beeld in plaats van erop (anders bedekken ze de zetel). */
+@media (max-width: 600px) {
+  .drie-d-echt, .drie-d-bron { position: static; max-width: none; margin-top: 6px; box-shadow: none; }
+  .drie-d-bron { text-shadow: none; color: var(--zacht, #5d5a52); }
+}
 .drie-d-instellingen { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: end; margin-top: 6px; }
 .drie-d-instellingen label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--zacht); }
 .drie-d-instellingen select { font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 36px; max-width: 220px; }
@@ -534,6 +543,14 @@ main.catalogus { display: block; }
     <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="o-voor" class="voorvlak" tabindex="0" role="application" aria-label="Vooraanzicht: klik, sleep grepen of teken een element" xmlns="http://www.w3.org/2000/svg" hidden></svg>
     <div class="drie-d-vak"><div id="o-3d" class="drie-d" hidden></div>
+      <div id="o-3d-echt" class="drie-d-echt" hidden>
+        <div class="tabs intern" id="o-3d-echt-keuze" role="group" aria-label="Weergave van het model in 3D">
+          <button type="button" data-echt="aan" aria-pressed="true">Echt 3D-model</button>
+          <button type="button" data-echt="uit" aria-pressed="false">Benadering</button>
+        </div>
+        <span id="o-3d-echt-tekst"></span>
+      </div>
+      <div id="o-3d-bron" class="drie-d-bron" hidden></div>
       <div id="o-3d-voortgang" class="drie-d-voortgang" role="status" hidden><span class="tekst">Fotorealistische foto wordt berekend …</span><progress max="1" value="0"></progress><button type="button" class="tweede" id="o-3d-annuleer">Annuleren</button></div>
     </div>
     <div id="o-3d-knoppen" class="knoppenrij" hidden>
