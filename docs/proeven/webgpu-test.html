@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="nl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>WebGPU-test</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 16px;background:#fff;color:#222}
+.ok{color:#1d7a3c;font-weight:600}.nee{color:#b3261e;font-weight:600}code{background:#f2f2f2;padding:1px 4px}</style></head>
+<body>
+<h1>WebGPU-test voor de fotomodus</h1>
+<p>Open dit bestand op het toestel van de toonzaal, in de browser die daar gebruikt wordt. Stuur de uitslag hieronder door.</p>
+<div id="uit">Bezig …</div>
+<script>
+(async () => {
+  const regels = [];
+  const r = (t) => regels.push(t);
+  r('Browser: <code>' + navigator.userAgent.replace(/</g, '&lt;') + '</code>');
+  if (!('gpu' in navigator)) { r('<span class="nee">Geen WebGPU</span>: <code>navigator.gpu</code> ontbreekt.'); }
+  else {
+    try {
+      const a = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
+      if (!a) r('<span class="nee">Geen WebGPU</span>: wel <code>navigator.gpu</code>, maar geen adapter.');
+      else {
+        const i = a.info || {};
+        r('<span class="ok">WebGPU werkt.</span> Adapter: ' + [i.vendor, i.architecture, i.description].filter(Boolean).join(' · '));
+        const d = await a.requestDevice();
+        r('Grootste buffer: ' + Math.round(d.limits.maxBufferSize / 1048576) + ' MB; grootste textuur: ' + d.limits.maxTextureDimension2D + ' px.');
+        r('Halve getallen (shader-f16, sneller voor de ontruiser): ' + (a.features.has('shader-f16') ? 'ja' : 'nee') + '.');
+      }
+    } catch (e) { r('<span class="nee">Fout:</span> ' + String(e)); }
+  }
+  document.getElementById('uit').innerHTML = regels.map((t) => '<p>' + t + '</p>').join('');
+})();
+</script>
+</body></html>
