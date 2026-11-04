@@ -8,12 +8,13 @@ import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 const kotor = zetelModellen.find((m) => m.code === 'kotor')!;
 
 describe('karkas en losse rugkussens', () => {
-  it('Kotor: karkas 70 cm, rugkussens van de zitting (44) tot 92 cm, 24 cm dik, leunen 7° achterover', () => {
+  it('Kotor: karkas 70 cm, rugkussens van de zitting (44) tot 92 cm, 24 cm dik, leunen achterover volgens de zachtheid', () => {
     const s = bouw3D(kotor.ontwerp, zetelCatalogus, standaardMaterialen);
     const b = blokkenVan(s, { id: 'e3' });
     const rug = b.find((x) => x.code === 'e3.rug')!;
     expect(rug.y + rug.h).toBe(70);
-    expect(b.find((x) => x.code === 'e3.rugkussen')).toMatchObject({ y: 44, h: 48, d: 24, kantel: { graden: 7 } });
+    // Zachtheid 7: 2 + 7 × 0,8 = 7,6° achterover.
+    expect(b.find((x) => x.code === 'e3.rugkussen')).toMatchObject({ y: 44, h: 48, d: 24, kantel: { graden: 7.6 } });
     const arm = blokkenVan(s, { id: 'e2' }).find((x) => x.code === 'e2.arm')!;
     expect(arm.y + arm.h).toBe(70);
   });

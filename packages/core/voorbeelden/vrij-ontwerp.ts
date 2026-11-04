@@ -101,6 +101,14 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
+    // Nekrol: ronde rol bovenop het karkas achter de losse rugkussens (technische tekening van Nestor en Belize).
+    code: 'nekrol', label: 'Nekrol', niveau: 'ontwerp', perElement: true, voorTypen: MET_RUG, standaard: 'geen',
+    keuzes: [
+      { code: 'geen', label: 'Zonder nekrol' },
+      { code: 'met', label: 'Met nekrol', prijs: 45, stofPct: 4, kost: 15, teken: { nekrol: true }, uitleg: 'Ronde rol bovenop het karkas, achter de rugkussens', alleenMet: { rug: ['los', 'los_dons'] }, reden: 'een nekrol ligt achter losse rugkussens' },
+    ],
+  },
+  {
     code: 'rughoogte', label: 'Rughoogte', niveau: 'ontwerp', perElement: true, voorTypen: [...MET_RUG, 'rugleuning'], standaard: 'standaard',
     keuzes: [
       { code: 'laag', label: 'Laag (70 cm)', pct: -3, stofPct: -5, teken: { hoogte: 70 } },
@@ -127,6 +135,7 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'schuin', label: 'Schuin aflopend', prijs: 20, teken: { vorm: 'schuin' } },
       { code: 'houtblad', label: 'Gestoffeerd met houten blad', prijs: 95, teken: { vorm: 'houtblad' }, kost: 35 },
       { code: 'hout', label: 'Massief houten arm', prijs: 180, teken: { vorm: 'hout' }, kost: 80 },
+      { code: 'uitlopend', label: 'Uitlopend (naar buiten)', prijs: 45, teken: { vorm: 'uitlopend' }, uitleg: 'Klassieke arm die naar buiten uitloopt, zoals bij Wallace en Esmee' },
     ],
   },
   {
@@ -172,6 +181,14 @@ export const zetelOpties: OptieGroep[] = [
     keuzes: [
       { code: 'links', label: 'Rond aan de linkerkant', teken: { kant: 'links' } },
       { code: 'rechts', label: 'Rond aan de rechterkant', teken: { kant: 'rechts' } },
+    ],
+  },
+  {
+    // Rug rond de ronde kant (Doha, Montego): de rug loopt in een boog door rond het uiteinde en wordt naar voren lager.
+    code: 'rug_rond', label: 'Rug bij de ronde kant', niveau: 'element', voorTypen: ['rond_einde'], standaard: 'recht',
+    keuzes: [
+      { code: 'recht', label: 'Rug alleen op het rechte deel', teken: { rond: false } },
+      { code: 'rond', label: 'Rug loopt rond het uiteinde', prijs: 90, stofPct: 10, kost: 30, teken: { rond: true } },
     ],
   },
   {

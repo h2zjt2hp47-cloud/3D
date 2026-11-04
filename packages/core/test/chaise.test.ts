@@ -26,7 +26,8 @@ describe('chaise longue met rugleuning', () => {
   it('rugleuning achteraan: rug over de breedte, kussens ervoor, meerprijs', () => {
     const b = blokkenVan(bouw3D(chaise('achter'), zetelCatalogus, standaardMaterialen), { id: 'c' });
     expect(b.find((x) => x.code === 'c.rug')).toMatchObject({ x: 0, z: 0, b: 85, d: 18, h: 68 });
-    expect(b.find((x) => x.code === 'c.basis')).toMatchObject({ z: 18, d: 147 });
+    // Onderbouw 1,5 cm achter de voorkant van het zitkussen (schaduwlijn).
+    expect(b.find((x) => x.code === 'c.basis')).toMatchObject({ z: 18, d: 145.5 });
     expect(bereken(chaise('achter')).prijs.brutoprijsExcl).toBeGreaterThan(bereken(chaise('geen')).prijs.brutoprijsExcl);
     expect(bereken(chaise('achter')).geldig).toBe(true);
   });

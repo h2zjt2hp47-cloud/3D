@@ -89,6 +89,14 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
   const zithoogte = hoogtesVan(ontwerp, catalogus).zithoogte;
   const blokken: Blok[] = [];
 
+  // Midden van de zetel (zonder opzet-elementen): bepaalt naar welke kant een uitlopende arm helt.
+  const basisAfdrukken = ontwerp.elementen.filter((o) => !typen.get(o.type)?.opzet).map(voetafdruk);
+  const midX = basisAfdrukken.length ? (Math.min(...basisAfdrukken.map((p) => p.x)) + Math.max(...basisAfdrukken.map((p) => p.x + p.b))) / 2 : 0;
+  const midY = basisAfdrukken.length ? (Math.min(...basisAfdrukken.map((p) => p.y)) + Math.max(...basisAfdrukken.map((p) => p.y + p.h))) / 2 : 0;
+  const naarBuiten = (e: OntwerpElement): 'x-' | 'x+' | 'z-' | 'z+' => {
+    const p = voetafdruk(e);
+    return p.b <= p.h ? (p.x + p.b / 2 < midX ? 'x-' : 'x+') : (p.y + p.h / 2 < midY ? 'z-' : 'z+');
+  };
   for (const e of ontwerp.elementen) {
     const t = typen.get(e.type);
     if (!t) continue;
@@ -189,7 +197,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     const kussens = (lx: number, ly: number, lb: number, ld: number, y: number, h: number) => {
       const n = Math.max(1, Math.round(v.zitkussens));
       for (let i = 0; i < n; i++)
-        lokaal(`zitkussen${n > 1 ? i + 1 : ''}`, 'kussen', lx + (i * lb) / n + (i ? 0.4 : 0), ly, lb / n - (i < n - 1 ? 0.8 : 0), ld, y, h, stof, { afronding: zacht, bol: rond1(h * 0.1 + v.zachtheid * 0.12) });
+        lokaal(`zitkussen${n > 1 ? i + 1 : ''}`, 'kussen', lx + (i * lb) / n + (i ? 0.4 : 0), ly, lb / n - (i < n - 1 ? 0.8 : 0), ld, y, h, stof, { afronding: zacht, bol: rond1(h * 0.05 + v.zachtheid * 0.22) });
     };
     const houtframe = (h: number) => {
       if (v.houtframe === 'geen') return;
@@ -205,7 +213,21 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     const frameRug = karkasHoogteVan(ontwerp, catalogus, e, losseRug);
     const RKD = v.rugkussendikte;
     // Gevulde rugkussens: bol op de voorkant (dikker kussen en zachtere vormgeving = boller).
-    const rugKussenExtra: Partial<Blok> = { afronding: Math.min(RKD / 2.2, 2 + zacht), bol: rond1(RKD * 0.15 + v.zachtheid * 0.15), kantel: { graden: v.rugvorm === 'hellend' ? 14 : 7, richting } };
+    // Zachtheid bepaalt het karakter: 2 = strakke blokken (Gozo, Azar), 9 = bolle, achterover zakkende donskussens.
+    const dons = opt.get('rug')?.code === 'los_dons';
+    const rugKussenExtra: Partial<Blok> = {
+      afronding: Math.min(RKD / 2.2, 1 + v.zachtheid * 0.9),
+      bol: rond1(RKD * (0.03 + v.zachtheid * 0.022) * (dons ? 1.25 : 1)),
+      kantel: { graden: v.rugvorm === 'hellend' ? 14 : rond1(2 + v.zachtheid * 0.8), richting },
+    };
+    const metNekrol = losseRug && opt.get('nekrol')?.teken?.nekrol === true;
+    /** Nekrol: ronde rol op het karkas (lokaal van lx over lb breed), achter de rugkussens. */
+    const nekrol = (lx: number, lb: number) => {
+      const dia = 13;
+      const w = lokaalNaarWereld(e, lx, Math.max(0, RUG / 2 - dia / 2), lb, dia);
+      const langsX = e.rotatie === 0 || e.rotatie === 180;
+      blokken.push({ code: `${e.id}.nekrol`, soort: 'kussen', vorm: 'cilinder', as: langsX ? 'x' : 'z', x: r2(w.x), y: r2(frameRug - 2), z: r2(w.y), b: r2(w.b), h: dia, d: r2(w.h), kleur: stof });
+    };
     const donker = donkerder(stof);
     const basisH = zithoogte - kussenDik - P;
 
@@ -217,7 +239,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         lokaal('rug', 'stof', fr, 0, B - 2 * fr, RUG, P, frameRug - P, stof, rugExtra);
         if (hoek) lokaal('rug2', 'stof', 0, RUG, RUG, D - RUG, P, frameRug - P, stof, { afronding: rugExtra.afronding });
         const sx = hoek ? RUG : fr;
-        lokaal('basis', 'stof', sx, RUG, B - sx - fr, D - RUG, P, basisH, donker, { afronding: 2 });
+        lokaal('basis', 'stof', sx, RUG, B - sx - fr, D - RUG - 1.5, P, basisH, donker, { afronding: 2 });
         if (kussenDik) kussens(sx + 1, RUG, B - sx - fr - 2, D - RUG - 1 - (v.houtframe === 'rondom' ? 4 : 0), zithoogte - kussenDik, kussenDik);
         if (!hoek) houtframe(zithoogte + 2);
         if (losseRug) {
@@ -225,6 +247,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           for (let i = 0; i < n; i++)
             lokaal(`rugkussen${n > 1 ? i + 1 : ''}`, 'kussen', fr + 2 + (i * (B - 2 * fr - 4)) / n, RUG - 2, (B - 2 * fr - 4) / n - (i < n - 1 ? 0.8 : 0), RKD, zithoogte, rugH - zithoogte, stof, rugKussenExtra);
           if (hoek) lokaal('rugkussen2', 'kussen', RUG - 2, RUG + RKD - 2, RKD, D - RUG - RKD, zithoogte, rugH - zithoogte, stof, { afronding: rugKussenExtra.afronding });
+          if (metNekrol) nekrol(fr + 2, B - 2 * fr - 4);
         }
         if (capitonne) {
           const kolommen = Math.max(2, Math.round(B / 18));
@@ -242,7 +265,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       case 'chaise': {
         const kant = chaiseRugVan(opt);
         if (!kant) {
-          lokaal('basis', 'stof', 0, 0, B, D, P, basisH, donker, { afronding: 2 });
+          lokaal('basis', 'stof', 0, 0, B, D - 1.5, P, basisH, donker, { afronding: 2 });
           if (kussenDik) kussens(1, 1, B - 2, D - 2, zithoogte - kussenDik, kussenDik);
           houtframe(zithoogte + 2);
           break;
@@ -251,14 +274,17 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const { rug, zit } = chaiseRugVlak(B, D, RUG, kant);
         const zij = kant !== 'achter';
         lokaal('rug', 'stof', rug.lx, rug.ly, rug.lb, rug.ld, P, frameRug - P, stof, zij ? { afronding: rugExtra.afronding } : rugExtra);
-        lokaal('basis', 'stof', zit.lx, zit.ly, zit.lb, zit.ld, P, basisH, donker, { afronding: 2 });
+        lokaal('basis', 'stof', zit.lx, zit.ly, zit.lb, zit.ld - 1.5, P, basisH, donker, { afronding: 2 });
         if (kussenDik) {
           if (zij) lokaal('zitkussen', 'kussen', zit.lx + 1, 1, zit.lb - 2, D - 2, zithoogte - kussenDik, kussenDik, stof, { afronding: zacht });
           else kussens(1, RUG, B - 2, D - RUG - 1, zithoogte - kussenDik, kussenDik);
         }
         if (losseRug) {
           if (zij) lokaal('rugkussen', 'kussen', kant === 'links' ? RUG - 2 : B - RUG - RKD + 2, 3, RKD, D - 6, zithoogte, rugH - zithoogte, stof, { afronding: rugKussenExtra.afronding });
-          else lokaal('rugkussen', 'kussen', 2, RUG - 2, B - 4, RKD, zithoogte, rugH - zithoogte, stof, rugKussenExtra);
+          else {
+            lokaal('rugkussen', 'kussen', 2, RUG - 2, B - 4, RKD, zithoogte, rugH - zithoogte, stof, rugKussenExtra);
+            if (metNekrol) nekrol(2, B - 4);
+          }
         }
         if (capitonne && !zij) {
           const kolommen = Math.max(2, Math.round(B / 18));
@@ -273,7 +299,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         break;
       }
       case 'zit_zonder_rug':
-        lokaal('basis', 'stof', 0, 0, B, D, P, basisH, donker, { afronding: 2 });
+        lokaal('basis', 'stof', 0, 0, B, D - 1.5, P, basisH, donker, { afronding: 2 });
         if (kussenDik) kussens(1, 1, B - 2, D - 2, zithoogte - kussenDik, kussenDik);
         houtframe(zithoogte + 2);
         break;
@@ -310,6 +336,30 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         if (recht > 0) lokaal('rug', 'stof', rx, 0, recht, RUG, P, frameRug - P, stof, rugExtra);
         // Losse rugkussens op het rechte deel (zoals bij Doha).
         if (recht > 6 && losseRug) lokaal('rugkussen', 'kussen', rx + 2, RUG - 2, recht - 4, RKD, zithoogte, rugH - zithoogte, stof, rugKussenExtra);
+        if (recht > 6 && metNekrol) nekrol(rx + 2, recht - 4);
+        // Rug rond het uiteinde: gebogen wand (zelfde opbouw als bij een kuip) van achteraan rond de ronde kant naar voren,
+        // van karkashoogte achteraan tot 10 cm boven de zitting vooraan.
+        if (opt.get('rug_rond')?.teken?.rond === true) {
+          const w = Math.min(RUG, r / 2);
+          const R = r - w / 2 + 0.4;
+          const zwaai = 140;
+          const stappen = 24;
+          const voor = zithoogte + 10;
+          const padLokaal: [number, number][] = [], hoogtes: number[] = [];
+          for (let i = 0; i <= stappen; i++) {
+            const u = i / stappen;
+            const a = ((-90 + (links ? -1 : 1) * zwaai * u) * Math.PI) / 180;
+            padLokaal.push([cx + R * Math.cos(a), D / 2 + R * Math.sin(a)]);
+            hoogtes.push(rond1(voor + (frameRug - voor) * (0.5 + 0.5 * Math.cos(Math.PI * u))));
+          }
+          const pad = padLokaal.map(([lx, ly]) => { const q = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(q.x), r2(q.y)] as [number, number]; });
+          const xs = pad.map((q) => q[0]), zs = pad.map((q) => q[1]);
+          blokken.push({
+            code: `${e.id}.rugrond`, soort: 'stof', vorm: 'kuipwand',
+            x: r2(Math.min(...xs) - w / 2), z: r2(Math.min(...zs) - w / 2), b: r2(Math.max(...xs) - Math.min(...xs) + w), d: r2(Math.max(...zs) - Math.min(...zs) + w),
+            y: r2(P), h: r2(Math.max(...hoogtes) - P), kleur: stof, pad, hoogtes, dikte: r2(w),
+          });
+        }
         break;
       }
       case 'poef': {
@@ -392,6 +442,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           rol('rol', -1, B + 2, top - B / 2 - 1, stof);
         } else if (vorm === 'schuin') {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P - 5, stof, { afronding: 6 });
+        } else if (vorm === 'uitlopend') {
+          // Naar buiten uitlopend (Wallace, Esmee): de arm helt weg van het midden van de zetel, met een ronde bovenkant.
+          lokaal('arm', 'stof', 0, 0, B, D, P, armH - P, stof, { afronding: Math.min(B / 2.2, 7), kantel: { graden: 9, richting: naarBuiten(e) } });
         } else {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P, stof, { afronding: 3 });
         }

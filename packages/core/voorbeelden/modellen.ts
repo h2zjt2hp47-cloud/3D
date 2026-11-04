@@ -31,6 +31,11 @@ function el(id: string, type: string, x: number, y: number, breedte: number, die
   return { id, type, x, y, breedte, diepte, rotatie, ...(opties ? { opties } : {}) };
 }
 
+/** Rolkussen langs een arm (20 cm dik), zoals bij Belize op de foto van de zijkant. */
+function rolkussen(id: string, x: number, y: number, lengte: number, rotatie: Rotatie): OntwerpElement {
+  return { id, type: 'rolkussen', x, y, breedte: lengte, diepte: 20, rotatie };
+}
+
 /** Sierkussen (45 × 14 cm, staat schuin tegen de rugkussens) in een eigen stof, zoals op de productfoto. */
 function sierkussen(id: string, x: number, y: number, materiaal: string, breedte = 45): OntwerpElement {
   return { id, type: 'sierkussen', x, y, breedte, diepte: 14, rotatie: 0, materiaal };
@@ -60,7 +65,7 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'linnen_travertin',
     opties: { poten: 'conisch', hout: 'eik_zwart', rug: 'los', comfort: 'dons' },
     // Maten van de productpagina: zithoogte 44, karkas 70, met rugkussen 92, arm 70 hoog en 15 breed, diepte 105, zitdiepte 65.
-    vormgeving: { zithoogte: 44, rughoogte: 92, armhoogte: 70, karkashoogte: 70, rugdikte: 16, rugkussendikte: 24, kussendikte: 18, zachtheid: 6 },
+    vormgeving: { zithoogte: 44, rughoogte: 92, armhoogte: 70, karkashoogte: 70, rugdikte: 16, rugkussendikte: 24, kussendikte: 18, zachtheid: 7 },
     elementen: [
       el('e1', 'console', 0, 25, 60, 80, 0, { console_uitvoering: 'bank' }),
       ...rij([['arm', 15, 105, strak], ['zit', 105, 105], ['zit', 105, 105]], 60).map((e, i) => ({ ...e, id: `e${i + 2}` })),
@@ -72,11 +77,11 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'Kotor', MATEN_WEBSITE),
   model('doha', 'Doha', SOFA, 'Organische sofa met afgeronde lounge-uiteinden, grote losse rugkussens en een zachte, ronde lijn.', {
     hoofdmateriaal: 'boucle_belize',
-    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los', comfort: 'dons' },
+    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los_dons', comfort: 'dons' },
     // Productpagina: diepte 110, zithoogte 42, karkas 65, met rugkussen 84, zitdiepte 62.
     vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 18, zachtheid: 9, rugvorm: 'rond' },
     elementen: [
-      ...rij([['rond_einde', 150, 110, { ronde_kant: 'links' }], ['zit', 100, 110], ['rond_einde', 110, 110, { ronde_kant: 'rechts' }]]),
+      ...rij([['rond_einde', 150, 110, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 100, 110], ['rond_einde', 110, 110, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
       sierkussen('e4', 62, 44, 'velours_terracotta'), sierkussen('e5', 108, 44, 'chenille_parel'), sierkussen('e6', 256, 44, 'velours_terracotta'),
     ],
   }, 'Doha', MATEN_WEBSITE),
@@ -86,14 +91,14 @@ export const zetelModellen: ModelDefinitie[] = [
     // Productpagina: diepte 99, zithoogte 39, hoogte 77, zitdiepte 60.
     vormgeving: { zithoogte: 39, rughoogte: 77, zachtheid: 10, rugvorm: 'rond', rugdikte: 30, kussendikte: 18 },
     elementen: [
-      ...rij([['rond_einde', 130, 99, { ronde_kant: 'links' }], ['rond_einde', 130, 99, { ronde_kant: 'rechts' }]]),
+      ...rij([['rond_einde', 130, 99, { ronde_kant: 'links', rug_rond: 'rond' }], ['rond_einde', 130, 99, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
       sierkussen('e3', 70, 28, 'chenille_camel'), sierkussen('e4', 140, 28, 'katoen_kalk'),
     ],
   }, 'Montego', MATEN_WEBSITE),
   model('nestor', 'Nestor', SOFA, 'Grote hoeksofa (hoek rechts) met dikke losse rugkussens, slanke armen en een lage, verdekte voet.', {
     hoofdmateriaal: 'katoen_naturel',
-    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los_dons', comfort: 'dons' },
-    // Technische tekening op de productpagina: arm 11 breed en 65 hoog, zithoogte 45, diepte 101, zitdiepte 61, karkas 65, met rugkussen 88.
+    opties: { poten: 'blok', poothoogte: 'laag', rug: 'los_dons', comfort: 'dons', nekrol: 'met' },
+    // Technische tekening op de productpagina (met nekrol en blokvoetjes): arm 11 breed en 65 hoog, zithoogte 45, diepte 101, zitdiepte 61, karkas 65, met rugkussen 88.
     vormgeving: { zithoogte: 45, rughoogte: 88, armhoogte: 65, karkashoogte: 65, rugdikte: 16, rugkussendikte: 24, kussendikte: 18, zachtheid: 6 },
     elementen: [
       ...rij([['arm', 12, 101, strak], ['zit', 95, 101], ['zit', 95, 101], ['zit', 95, 101]]),
@@ -105,12 +110,13 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'Nestor', MATEN_WEBSITE),
   model('belize', 'Belize', SOFA, 'Ruime U-opstelling met twee chaises longues, losse rugkussens, slanke armen en slanke metalen poten.', {
     hoofdmateriaal: 'chenille_parel',
-    opties: { poten: 'metaal_staaf', metaal: 'zwart', rug: 'los', comfort: 'veren', hout: 'notelaar' },
+    opties: { poten: 'metaal_staaf', metaal: 'zwart', rug: 'los', comfort: 'veren', hout: 'notelaar', nekrol: 'met' },
     // Technische tekening: arm 23 breed en 65 hoog, zithoogte 46, diepte 100, zitdiepte 57, karkas 65, met rugkussen 87.
     vormgeving: { zithoogte: 46, rughoogte: 87, armhoogte: 65, karkashoogte: 65, rugdikte: 18, rugkussendikte: 25, kussendikte: 16, zachtheid: 5 },
     elementen: [
       ...rij([['arm', 23, 165, strak], ['chaise', 90, 165, metRug], ['zit', 90, 100], ['zit', 90, 100], ['zit', 90, 100], ['console', 40, 100, { console_uitvoering: 'bank' }], ['chaise', 90, 165, metRug], ['arm', 23, 165, strak]]),
-      sierkussen('e9', 30, 41, 'boucle_kiezel'), sierkussen('e10', 120, 41, 'chenille_roest'), sierkussen('e11', 460, 41, 'boucle_kiezel'),
+      sierkussen('e9', 50, 41, 'boucle_kiezel'), sierkussen('e10', 120, 41, 'chenille_roest'), sierkussen('e11', 440, 41, 'boucle_kiezel'),
+      rolkussen('e12', 25, 45, 60, 270), rolkussen('e13', 491, 45, 60, 90),
     ],
   }, 'Belize', MATEN_WEBSITE),
   model('pula', 'Pula', SOFA, 'Lange, diepe sofa met grote chaise longue rechts, dikke losse rugkussens en brede armen op een verdekte voet.', {
@@ -135,7 +141,7 @@ export const zetelModellen: ModelDefinitie[] = [
   model('gozo', 'Gozo', SOFA, 'Modulaire, blokvormige hoeksofa met dikke rugblokken, brede armblokken en zonder zichtbare poten.', {
     hoofdmateriaal: 'katoen_kalk',
     opties: { poten: 'verdekt', poothoogte: 'laag', zithoogte: 'laag', rug: 'los_dons', comfort: 'dons' },
-    vormgeving: { rugdikte: 16, rugkussendikte: 26, karkashoogte: 58, rughoogte: 78, armhoogte: 62, kussendikte: 22, zachtheid: 3 },
+    vormgeving: { rugdikte: 16, rugkussendikte: 26, karkashoogte: 58, rughoogte: 78, armhoogte: 62, kussendikte: 22, zachtheid: 2 },
     elementen: [
       el('e1', 'hoek', 0, 0, 110, 110, 0),
       ...rij([['zit', 110, 110], ['zit', 110, 110], ['arm', 32, 110, strak]], 110).map((e, i) => ({ ...e, id: `e${i + 2}` })),
@@ -146,7 +152,7 @@ export const zetelModellen: ModelDefinitie[] = [
   }),
   model('azar', 'Azar', SOFA, 'Strakke, lage sofa in leder met open chaise longue links, dikke vaste rug en brede blokarm, zonder zichtbare poten.', {
     hoofdmateriaal: 'leder_cognac',
-    opties: { poten: 'verdekt', poothoogte: 'laag', zithoogte: 'laag', rug: 'vast', comfort: 'schuim' },
+    opties: { poten: 'verdekt', poothoogte: 'laag', zithoogte: 'laag', rug: 'vast', comfort: 'schuim', naad: 'stiksel' },
     vormgeving: { rugdikte: 24, kussendikte: 18, zachtheid: 2 },
     elementen: [
       ...rij([['chaise', 95, 170, zonderRug], ['zit', 100, 100], ['zit', 100, 100], ['arm', 30, 100, strak]]),
@@ -172,7 +178,7 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'Attribute', MATEN_WEBSITE),
   model('husk', 'Husk', SOFA, 'Lange, slanke sofa met hoes tot op de grond, één lang zitkussen en twee losse rugkussens.', {
     hoofdmateriaal: 'linnen_travertin',
-    opties: { poten: 'housse', rug: 'los', comfort: 'veren', zitting: 'losse_kussens' },
+    opties: { poten: 'housse', rug: 'los', comfort: 'veren', zitting: 'losse_kussens', naad: 'bies' },
     vormgeving: { rughoogte: 85, armhoogte: 62, karkashoogte: 64, rugdikte: 14, rugkussendikte: 22, rugkussens: 2, kussendikte: 16, zachtheid: 4 },
     elementen: [
       ...rij([['arm', 14, 95, strak], ['zit', 220, 95], ['arm', 14, 95, strak]]),
@@ -184,14 +190,14 @@ export const zetelModellen: ModelDefinitie[] = [
     opties: { poten: 'housse', rug: 'los_dons', comfort: 'dons', naad: 'bies' },
     // Technische tekening: arm 21 breed en 63 hoog, zithoogte 47, diepte 100, zitdiepte 55, rug 86 en met kussen 90.
     vormgeving: { zithoogte: 47, rughoogte: 90, armhoogte: 63, karkashoogte: 74, rugdikte: 16, rugkussendikte: 26, rugkussens: 2, kussendikte: 16, zachtheid: 8 },
-    elementen: rij([['arm', 21, 100, { armstijl: 'schuin' }], ['zit', 160, 100], ['arm', 21, 100, { armstijl: 'schuin' }]]),
+    elementen: rij([['arm', 21, 100, { armstijl: 'uitlopend' }], ['zit', 160, 100], ['arm', 21, 100, { armstijl: 'uitlopend' }]]),
   }, 'Wallace', MATEN_WEBSITE),
   model('esmee', 'Esmee', SOFA, 'Lange sofa met lage, uitlopende armen, hoes tot op de grond, vast zitkussen en losse donzen rugkussens.', {
     hoofdmateriaal: 'katoen_kalk',
     opties: { poten: 'housse', rug: 'los', comfort: 'dons' },
     vormgeving: { rughoogte: 86, armhoogte: 63, karkashoogte: 70, rugdikte: 14, rugkussendikte: 22, rugkussens: 3, kussendikte: 14, zachtheid: 7 },
     elementen: [
-      ...rij([['arm', 18, 95, { armstijl: 'schuin' }], ['zit', 220, 95], ['arm', 18, 95, { armstijl: 'schuin' }]]),
+      ...rij([['arm', 18, 95, { armstijl: 'uitlopend' }], ['zit', 220, 95], ['arm', 18, 95, { armstijl: 'uitlopend' }]]),
       sierkussen('e4', 24, 34, 'katoen_kalk'), sierkussen('e5', 196, 34, 'katoen_kalk'),
     ],
   }),

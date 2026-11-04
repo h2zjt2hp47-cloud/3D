@@ -456,7 +456,7 @@ export function vormEffect(stijl: Tekenstijl, opties: Map<string, OptieKeuze>): 
 }
 
 /** Optiegroepen over de rug: niet aan te rekenen op een element zonder rug (chaise longue zonder rugleuning). */
-const RUGGROEPEN = ['rug', 'rughoogte'];
+const RUGGROEPEN = ['rug', 'rughoogte', 'nekrol'];
 
 /** Een vrij getekende hoogte vervangt de gekozen maat; voor de prijs telt de keuze met de dichtstbijzijnde hoogte. */
 function keuzeBijHoogte(g: OptieGroep, h: number): OptieKeuze | undefined {
