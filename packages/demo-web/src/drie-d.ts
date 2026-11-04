@@ -7,7 +7,7 @@
 import type { Blok, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
 import { smeltMee, zachteVorm, type ZachteVorm } from '../../core/src/zachtevorm.js';
 import { wielHint } from './zoom.js';
-import { WEEFSEL_CM, weefselCanvas } from './weefsel.js';
+import { HOOGTE_KLEUR, KAART_PX, WEEFSEL_CM, WEEFSELKAART, weefselCanvas, weefselKaarten } from './weefsel.js';
 import { bouwDecor, type DecorSpec } from './decor3d.js';
 
 import * as THREE_ from 'three';
@@ -229,6 +229,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return null;
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // Zo scherp als de kaart toelaat onder een schuine hoek: weefsel op een zitting of rug wordt zo niet wazig (was vast 4).
+  const maxAnisotropie = Math.max(1, renderer.capabilities.getMaxAnisotropy());
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
@@ -501,12 +503,14 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (!m && !b.textuur && b.weefsel && b.weefsel in WEEFSEL_CM) {
       // Getekend weefsel (velours, bouclé, rib …) in de kleur van de stof, op ware grootte via wereldUV,
       // met een reliëfkaart van hetzelfde weefsel (in grijs) zodat draden, lusjes en ribbels licht vangen.
+      // Weefsels met kaarten (WEEFSELKAART): fijner getekend, met de draden waar de normal map ze legt.
       const w = b.weefsel as Weefsel;
-      const t = new THREE.CanvasTexture(weefselCanvas(w, b.kleur));
+      const metKaarten = Boolean(WEEFSELKAART[w]);
+      const t = new THREE.CanvasTexture(metKaarten ? weefselCanvas(w, b.kleur, KAART_PX, HOOGTE_KLEUR) : weefselCanvas(w, b.kleur));
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.colorSpace = THREE.SRGBColorSpace;
-      t.anisotropy = 4;
-      m = stofMateriaal(w, b.kleur, t, reliefVan(w));
+      t.anisotropy = maxAnisotropie;
+      m = stofMateriaal(w, b.kleur, t, metKaarten ? null : reliefVan(w));
       materialen.set(sleutel, m);
     }
     if (!m && b.textuur) {
@@ -517,7 +521,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         // Gespiegeld herhalen: een staalfoto is niet naadloos, zo zie je geen ruitjes op de grenzen.
         t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
         t.colorSpace = THREE.SRGBColorSpace;
-        t.anisotropy = 4;
+        t.anisotropy = maxAnisotropie;
         fotoTexturen.set(b.textuur, t);
       }
       // De foto zelf dient ook als reliëf (lichte delen komen naar voor).
@@ -556,17 +560,39 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   function reliefVan(w: Weefsel) {
     let t = reliefs.get(w);
     if (!t) {
-      t = new THREE.CanvasTexture(weefselCanvas(w, '#8c8c8c'));
+      t = new THREE.CanvasTexture(weefselCanvas(w, HOOGTE_KLEUR));
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       reliefs.set(w, t);
     }
     return t;
   }
+  /**
+   * Normal map en ruwheidskaart per weefsel met kaarten (WEEFSELKAART, proef 04-11), gedeeld door alle kleuren van dat
+   * weefsel. Gegevens, geen kleur: three.js leest ze lineair (de standaard van een textuur). Null zonder kaarten.
+   */
+  const kaarten = new Map<Weefsel, { normaal: any; ruwheid: any } | null>();
+  function kaartenVan(w: Weefsel) {
+    if (!kaarten.has(w)) {
+      const k = weefselKaarten(w);
+      const textuur = (c: HTMLCanvasElement) => {
+        const t = new THREE.CanvasTexture(c);
+        t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        t.anisotropy = maxAnisotropie;
+        return t;
+      };
+      kaarten.set(w, k ? { normaal: textuur(k.normaal), ruwheid: textuur(k.ruwheid) } : null);
+    }
+    return kaarten.get(w) ?? null;
+  }
   /** Reliëf per weefsel (hoe diep de structuur lijkt). */
   const RELIEF: Record<Weefsel, number> = { effen: 0.25, linnen: 0.6, velours: 0.15, boucle: 1.6, chenille: 0.7, wol: 0.6, rib: 1.0, jacquard: 0.5, leder: 0.35 };
   /** Stofmateriaal: velours met glans langs de randen (sheen), leder met een zachte toplaag, de rest mat. */
   function stofMateriaal(w: Weefsel, hex: string, map: any, relief: any) {
-    const basis = { color: 0xffffff, map, bumpMap: relief, bumpScale: RELIEF[w], envMapIntensity: OMGEVING };
+    // Met kaarten: reliëf als normal map (ook in de fotomodus) en glans per draad; anders de bumpMap zoals voorheen.
+    const k = kaartenVan(w);
+    const basis = k
+      ? { color: 0xffffff, map, normalMap: k.normaal, roughnessMap: k.ruwheid, envMapIntensity: OMGEVING }
+      : { color: 0xffffff, map, bumpMap: relief, bumpScale: RELIEF[w], envMapIntensity: OMGEVING };
     if (w === 'velours') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.8, sheen: 0.7, sheenColor: kleur(tint(hex, 1.15)), sheenRoughness: 0.5 });
     if (w === 'leder') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.42, clearcoat: 0.25, clearcoatRoughness: 0.5 });
     // Geweven stof: matte basis met een lichte, ruwe glans (sheen) zoals vezels die licht opvangen langs de randen.
@@ -1704,7 +1730,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     let m = materialen.get(sleutel);
     if (!m) {
       m = basis.clone();
-      for (const veld of ['map', 'bumpMap']) {
+      for (const veld of ['map', 'bumpMap', 'normalMap', 'roughnessMap']) {
         if (!basis[veld]) continue;
         const t = basis[veld].clone();
         t.repeat.set(herhaling, herhaling);

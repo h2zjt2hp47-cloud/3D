@@ -3,6 +3,7 @@
  * voor de stalen én als textuur in de 3D. Geen afhankelijkheden, zodat ook de bouwdemo dit kan gebruiken.
  */
 import type { Weefsel } from '../../core/src/index.js';
+import { kaartenUitHoogte } from '../../core/src/weefselkaart.js';
 
 /** Hoeveel cm stof één tegel van het weefsel toont (voor de 3D op ware grootte). */
 export const WEEFSEL_CM: Record<Weefsel, number> = {
@@ -10,6 +11,23 @@ export const WEEFSEL_CM: Record<Weefsel, number> = {
 };
 
 const PX = 128;
+
+/** Maat van de kaarten voor de 3D: dezelfde tekening als een staal, vier keer fijner (proef 04-11). */
+export const KAART_PX = 512;
+
+/** De grijze kleur waarin de hoogte getekend wordt; ook het zaad voor de kleurtextuur, zodat draad en reliëf samenvallen. */
+export const HOOGTE_KLEUR = '#8c8c8c';
+
+/**
+ * Weefsels met echte kaarten (proef 04-11): een normal map en een ruwheidskaart in plaats van een bumpMap. De path tracer
+ * van de fotomodus leest een normal map wel en een bumpMap niet. De andere weefsels houden de bumpMap tot de proef klopt.
+ * `hoek`: hoe steil de flanken van de draden lijken (graden); `glansverschil`: hoeveel gladder de toppen zijn (0 tot 1).
+ */
+export const WEEFSELKAART: Partial<Record<Weefsel, { hoek: number; glansverschil: number; vervaging?: number }>> = {
+  linnen: { hoek: 30, glansverschil: 0.3 },
+  // Velours: zachte pool, dus de hoogte eerst verzacht (anders worden de vlekjes in de tekening harde vierkantjes).
+  velours: { hoek: 8, glansverschil: 0.12, vervaging: 4 },
+};
 
 /** Vaste toevalsreeks, zodat een staal er altijd hetzelfde uitziet. */
 function toeval(zaad: number) {
@@ -33,12 +51,18 @@ function rondom(teken: (dx: number, dy: number) => void) {
   for (const dx of [-PX, 0, PX]) for (const dy of [-PX, 0, PX]) teken(dx, dy);
 }
 
-/** Tekent het weefsel in de kleur van de stof op een canvas van 128 × 128 px (naadloos herhaalbaar). */
-export function weefselCanvas(weefsel: Weefsel, kleur: string): HTMLCanvasElement {
+/**
+ * Tekent het weefsel in de kleur van de stof (naadloos herhaalbaar). Standaard op 128 × 128 px, zoals een staal; met `px`
+ * dezelfde tekening fijner (een veelvoud van 128). `zaad` bepaalt de toevalsreeks: standaard de kleur, zodat elke staal
+ * zijn eigen draden houdt; met HOOGTE_KLEUR liggen de draden precies waar de reliëfkaart ze legt.
+ */
+export function weefselCanvas(weefsel: Weefsel, kleur: string, px = PX, zaad = kleur): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  c.width = c.height = PX;
+  c.width = c.height = px;
   const g = c.getContext('2d')!;
-  const r = toeval([...weefsel, ...kleur].reduce((s, t) => s * 31 + t.charCodeAt(0), 7));
+  // Alles hieronder tekent in eenheden van 128: de schaal maakt het fijner zonder de tekening te veranderen.
+  g.scale(px / PX, px / PX);
+  const r = toeval([...weefsel, ...zaad].reduce((s, t) => s * 31 + t.charCodeAt(0), 7));
   g.fillStyle = kleur;
   g.fillRect(0, 0, PX, PX);
   switch (weefsel) {
@@ -172,5 +196,29 @@ export function weefselCanvas(weefsel: Weefsel, kleur: string): HTMLCanvasElemen
       }
       break;
   }
+  return c;
+}
+
+/** Normal map en ruwheidskaart van een weefsel op canvassen van KAART_PX, of null als het weefsel nog geen kaarten heeft. */
+export function weefselKaarten(weefsel: Weefsel): { normaal: HTMLCanvasElement; ruwheid: HTMLCanvasElement } | null {
+  const opties = WEEFSELKAART[weefsel];
+  if (!opties) return null;
+  const grijs = weefselCanvas(weefsel, HOOGTE_KLEUR, KAART_PX);
+  const beeld = grijs.getContext('2d')!.getImageData(0, 0, KAART_PX, KAART_PX).data;
+  const hoogte = new Float32Array(KAART_PX * KAART_PX);
+  for (let i = 0; i < hoogte.length; i++) {
+    hoogte[i] = (0.2126 * beeld[i * 4]! + 0.7152 * beeld[i * 4 + 1]! + 0.0722 * beeld[i * 4 + 2]!) / 255;
+  }
+  const { normaal, ruwheid } = kaartenUitHoogte(hoogte, KAART_PX, opties);
+  return { normaal: alsCanvas(normaal), ruwheid: alsCanvas(ruwheid) };
+}
+
+function alsCanvas(pixels: Uint8ClampedArray): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = c.height = KAART_PX;
+  const g = c.getContext('2d')!;
+  const beeld = g.createImageData(KAART_PX, KAART_PX);
+  beeld.data.set(pixels);
+  g.putImageData(beeld, 0, 0);
   return c;
 }
