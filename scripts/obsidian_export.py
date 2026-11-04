@@ -26,6 +26,9 @@ NOTITIES = {
     'docs/onderzoek-zetelconfigurators.md': ('Onderzoek zetelconfigurators', ['configurator', 'zetels', 'onderzoek'], ZETELS),
     'docs/fase0-productkennis-meubels.md': ('Fase 0 - productkennis meubels', ['configurator', 'zetels', 'klant', 'sjabloon'], ZETELS),
     '.claude/skills/zetel-3d/SKILL.md': ('Skill - 3D-logica zetels', ['configurator', 'zetels', 'skill', '3d'], ZETELS),
+    'docs/3d-technieken.md': ('3D-technieken - kennisbank', ['configurator', '3d', 'kennis', 'zetels', 'bouw'], 'alle'),
+    'docs/zachte-vormen.md': ('Zachte vormen - zetels in 3D', ['configurator', 'zetels', '3d'], ZETELS),
+    'docs/echte-3d-modellen.md': ('Echte 3D-modellen - proef', ['configurator', 'zetels', '3d', 'onderzoek'], ZETELS),
     'docs/onderzoek-bouw-ramen-deuren.md': ('Onderzoek bouw - pijnpunten ramen en deuren', ['configurator', 'bouw', 'onderzoek'], BOUW),
     'docs/analyse-bouw-woning-demo.md': ('Analyse bouw - woningconfigurator', ['configurator', 'bouw', 'analyse'], BOUW),
     'docs/begrippen-bouw.md': ('Begrippenlijst bouw', ['configurator', 'bouw', 'begrippen'], BOUW),
@@ -34,9 +37,13 @@ NOTITIES = {
     '.claude/skills/bouw-woning/SKILL.md': ('Skill - woningconfigurator bouw', ['configurator', 'bouw', 'skill', '3d'], BOUW),
 }
 TITEL_VAN = {os.path.basename(k): v[0] for k, v in NOTITIES.items()}
+# De twee skills heten allebei SKILL.md: een vermelding van hun pad wordt een link naar de juiste notitie.
+SKILLS = {'.claude/skills/zetel-3d/SKILL.md': 'Skill - 3D-logica zetels', '.claude/skills/bouw-woning/SKILL.md': 'Skill - woningconfigurator bouw'}
 
 
 def omzetten(tekst: str) -> str:
+    for pad, titel in SKILLS.items():
+        tekst = tekst.replace(f'`{pad}`', f'[[{titel}]]')
     # Afbeeldingen → ![[bestand]]
     tekst = re.sub(r'!\[[^\]]*\]\((?:docs/)?afbeeldingen/([^)]+)\)', r'![[\1]]', tekst)
     # Links naar andere notities → [[Titel]]
@@ -89,6 +96,66 @@ def main():
     regels.append('\n![[collectie-3d.png]]\n')
     with open(os.path.join(UIT, 'Collectie Corneille & Silence.md'), 'w', encoding='utf-8') as f:
         f.write('\n'.join(regels))
+
+    # Overzicht zetels (beelden en functies).
+    with open(os.path.join(UIT, 'Zetels - configurator.md'), 'w', encoding='utf-8') as f:
+        f.write(frontmatter('Zetels - configurator', ['configurator', 'zetels', 'demo', '3d'], ZETELS) + f"""# Zetelconfigurator (Corneille & Silence)
+
+Eerste case: zitmeubelen. Drie stappen: **1 · Modellen → 2 · Ontwerpen → 3 · Offerte**, met daarnaast *Sofa op maat*,
+*Kast op maat* en *Beheer* (stoffen, elementen, opties, modellen). Demo (privé): [Configurator demo]({DEMO}).
+Alle prijzen zijn verzonnen; de modellen zijn benaderingen uit de foto's van de website.
+
+## Modellen en collectie
+42 modellen in vier families (sofa's, fauteuils, zetelbedden, poufs), elk met hun maten van de productpagina en een
+eigen opbouw. Zie [[Collectie Corneille & Silence]].
+
+![[zetels-website-vergelijking.jpg]]
+
+## Details per model
+Zachtheid geeft karakter (strakke of bolle kussens), eigen armstijlen, nekrol, naden en bies.
+
+![[zetels-details.jpg]]
+
+## Ontwerpen: boven- en vooraanzicht, 3D
+Tekenen in het bovenaanzicht, maten slepen in het vooraanzicht, alles meteen in 3D.
+
+![[ontwerp-vooraanzicht.png]]
+
+## Decors, licht en fotomodus
+Echte kamers als decor (met raam, licht en meubels), dag- en avondlicht, en een fotomodus die het licht natuurgetrouw
+narekent.
+
+![[zetel-decors-kamers.png]]
+![[zetel-avond-decors.png]]
+
+## Fauteuils en ronde vormen
+![[fauteuils-vergelijking.png]]
+
+## Proef: echt 3D-model
+Een afgewerkt 3D-bestand in plaats van onze blokken, met onze stoffen. Zie [[Echte 3D-modellen - proef]].
+
+![[echt-3d-model-proef.jpg]]
+
+## Zachte vormen en eigen armvormen
+De gestoffeerde delen smelten samen tot één zachte vorm; de strakke en de uitlopende arm hebben een eigen doorsnede.
+Zie [[Zachte vormen - zetels in 3D]].
+
+![[zachte-vormen-wallace.jpg]]
+![[strakke-arm.jpg]]
+
+## Doorlopende zetel: Doha en Montego
+Een rij elementen als één zetel in 3D, ook in een boog: Doha met twee ronde banden en korte armleuningen, Montego met
+een vaste zitting en een kortere rug.
+
+![[doorlopende-zetel.jpg]]
+
+## Meer lezen
+- [[3D-technieken - kennisbank]]: welke 3D-techniek waarvoor, de lessen en een werkwijze voor een nieuw model
+- [[Skill - 3D-logica zetels]]: hoe de 3D technisch werkt (skill voor Claude)
+- [[Onderzoek zetelconfigurators]]: prijsopbouw, stofverbruik, tekenen
+- [[Fase 0 - productkennis meubels]]: invulsjabloon voor het gesprek met de klant
+- [[Overdracht en stand van zaken]]: alle rondes en beslissingen
+""")
 
     # Overzicht bouw (beelden en functies).
     with open(os.path.join(UIT, 'Bouw - woningconfigurator.md'), 'w', encoding='utf-8') as f:
@@ -149,6 +216,7 @@ Meerdere projecten, automatisch bewaard in de browser; bewaren als bestand (.won
 - [[Analyse gebruiksgemak]]: taken, bevindingen, klantreis en aanbevelingen
 - [[Begrippenlijst bouw]]
 - [[Skill - woningconfigurator bouw]]: hoe het technisch werkt (skill voor Claude)
+- [[3D-technieken - kennisbank]]: welke 3D-technieken van de zetels ook voor ramen en deuren bruikbaar zijn (advies 4/11)
 """)
 
     # Startnotitie (Map of Content).
@@ -162,9 +230,15 @@ Eigen productconfigurator, als aparte app **koppelbaar met Missing Link**. Eén 
 - [[Analyse en stappenplan]]: Hive CPQ, andere pakketten, architectuur, fasen
 - [[Technische opbouw (README)]]: voor de ontwikkelaar
 
+## 3D-kennis (voor beide cases)
+- [[3D-technieken - kennisbank]]: welke techniek waarvoor (blokken, eigen doorsnede, zachte vormen, doorlopende opbouw, boog, echt 3D-bestand, weergave), de lessen, een werkwijze voor een nieuw model en het advies voor ramen en deuren
+
 ## Case 1: zitmeubelen (Corneille & Silence)
-- **Demo:** [Configurator demo]({DEMO}): Modellen · Sofa op maat · Vrij ontwerp (tekenen, vooraanzicht, 3D, ontwerpmodus) · Kast · Materialen · Catalogus
+- **Demo:** [Configurator demo]({DEMO}): 1 · Modellen · 2 · Ontwerpen (boven- en vooraanzicht, 3D) · 3 · Offerte · Sofa en Kast op maat · Beheer
+- [[Zetels - configurator]]: overzicht met beelden
 - [[Collectie Corneille & Silence]]: de 42 modellen
+- [[Zachte vormen - zetels in 3D]]: zachte vormen, eigen armvormen, doorlopende zetel (Doha, Montego)
+- [[Echte 3D-modellen - proef]]: een echt 3D-bestand in plaats van blokken
 - [[Onderzoek zetelconfigurators]]: prijsopbouw, stofverbruik, tekenen
 - [[Fase 0 - productkennis meubels]]: invulsjabloon voor het gesprek met de klant
 - [[Skill - 3D-logica zetels]]: hoe de 3D-weergave werkt
@@ -187,6 +261,10 @@ Eigen productconfigurator, als aparte app **koppelbaar met Missing Link**. Eén 
 - [ ] Betekenis offerteregelvelden Missing Link laten bevestigen (keuzegroep, optie_sleutel, vereist_sleutel, berekening)
 - [ ] Gebruikstest met 5 klanten en 5 verkopers (taken en SUS-vragenlijst, zie [[Analyse gebruiksgemak]])
 - [ ] Echte gevelmaterialen en kleurstalen (foto's) van een leverancier
+- [ ] Zetels: echte maten van Doha en Montego bevestigen (diepte loungedeel, zittingdikte, boog, waar de rug stopt)
+- [ ] Zetels: de doorlopende zetel en de boog ook in het boven- en vooraanzicht (offerte als één geheel)
+- [ ] Zetels: *Zacht* testen op een tablet, daarna beslissen of het standaard aan mag
+- [ ] Ramen en deuren: doorsnedes (DXF) van één profielsysteem en 3D-bestanden van krukken en trekbeugels opvragen (zie [[3D-technieken - kennisbank]])
 
 ![[modellen-3d.png]]
 ![[bouw-gevel-3d.png]]

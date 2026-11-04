@@ -149,6 +149,7 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - Verdiepingen op elkaar met vloerplaat (min trapgaten) en plat dak (`dak`) boven delen zonder verdieping erboven; `totNiveau` toont alleen tot een verdieping (de bovenste zonder dak); "Muren laag" geldt voor de bovenste getoonde verdieping.
 - Blokken (cm) zoals bij de zetels; nieuwe soorten `steen`, `planken`, `tegel`, `parket`, `kunststof`, `matglas`; `zijden` voor een ander materiaal per zijvlak (baksteen buiten, verf of tegels binnen per ruimte); `plaatsBlokken` draait per 90° (en draait `zijden`/`kantel` mee); `kaderVan` voor het camerakader.
 - "Muren laag" knipt muren en openingen op 110 cm (meubels niet).
+- **Ramen echter maken (advies 4/11, nog niet gebouwd):** zie `docs/3d-technieken.md`. Geen zachte vormen (te grof en te zwaar voor harde profielen met mm-details). Wel een eigen doorsnede per profielsysteem, langs het kader getrokken met verstek (hout: stomp), dezelfde doorsnede voor een doorsnedetekening, rondboog met hetzelfde profiel langs een boog; doorsnedes als DXF van de systeemleverancier, met dezelfde maten als `raam.ts` (dagmaat, glasmaat, aftrekken). Echte 3D-bestanden (GLB, zoals `echt3d.ts`) voor krukken, trekbeugels, scharnieren en brievenbussen.
 
 ## Uitbreiden
 - **Nieuw raamtype of optie:** kenmerk + afgeleide + regel + stuklijstregel in `raam.ts`; tekening (`vormen`, eventueel `symbool`); 3D in `raam3d.ts`; controlekaart in `positie-ui.ts` (`raamControles`); test in `core/test/woning.test.ts`.

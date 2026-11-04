@@ -10,6 +10,8 @@ De 3D zit in twee lagen. Houd ze gescheiden:
 1. **Motor** (`packages/core/src/ruimtelijk.ts`): `bouw3D(ontwerp, catalogus, materialen)` zet een ontwerp om naar een lijst **blokken** (`Blok`). Geen 3D-bibliotheek, volledig testbaar met vitest.
 2. **Weergave** (`packages/demo-web/src/drie-d.ts`): zet blokken om naar three.js-meshes (three 0.187 uit npm, gebundeld; `const THREE: any = THREE_`, typen losjes via `three.d.ts`). Alleen presentatie: materialen, licht, camera, nabewerking, fotomodus.
 
+Welke techniek waarvoor (blokken, eigen doorsnede, zachte vormen, doorlopende opbouw, boog, echt 3D-bestand), de lessen en een werkwijze voor een nieuw model: `docs/3d-technieken.md`.
+
 Boven- en vooraanzicht volgen dezelfde regels: `tekenElement()` in `ontwerp.ts` (bovenaanzicht) en `tekenVooraanzicht()` in `vooraanzicht.ts`. **Een nieuwe vorm hoort in alle drie** (boven, voor, 3D).
 
 ## Assen en eenheden
