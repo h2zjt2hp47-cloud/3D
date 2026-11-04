@@ -23,9 +23,10 @@ export const HOOGTE_KLEUR = '#8c8c8c';
  * van de fotomodus leest een normal map wel en een bumpMap niet. De andere weefsels houden de bumpMap tot de proef klopt.
  * `hoek`: hoe steil de flanken van de draden lijken (graden); `glansverschil`: hoeveel gladder de toppen zijn (0 tot 1).
  */
-export const WEEFSELKAART: Partial<Record<Weefsel, { hoek: number; glansverschil: number }>> = {
+export const WEEFSELKAART: Partial<Record<Weefsel, { hoek: number; glansverschil: number; vervaging?: number }>> = {
   linnen: { hoek: 30, glansverschil: 0.3 },
-  velours: { hoek: 8, glansverschil: 0.12 },
+  // Velours: zachte pool, dus de hoogte eerst verzacht (anders worden de vlekjes in de tekening harde vierkantjes).
+  velours: { hoek: 8, glansverschil: 0.12, vervaging: 4 },
 };
 
 /** Vaste toevalsreeks, zodat een staal er altijd hetzelfde uitziet. */

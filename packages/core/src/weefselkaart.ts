@@ -14,6 +14,11 @@ export interface KaartOpties {
   hoek: number;
   /** Hoeveel gladder de hoogste delen zijn, als deel van de ruwheid van het materiaal (0 = overal gelijk). */
   glansverschil: number;
+  /**
+   * Verzachting van de hoogte vóór de normalen, in pixels (0 = scherp). Voor zachte stoffen zoals velours: zonder
+   * verzachting worden losse vlekjes in de tekening harde, ingedrukte vierkantjes.
+   */
+  vervaging?: number;
 }
 
 export interface Weefselkaarten {
@@ -32,6 +37,7 @@ export interface Weefselkaarten {
 export function kaartenUitHoogte(hoogte: Float32Array, px: number, opties: KaartOpties): Weefselkaarten {
   if (!Number.isInteger(px) || px < 2 || hoogte.length !== px * px) throw new Error('De hoogte past niet bij de maat van de tegel.');
   const n = px * px;
+  if (opties.vervaging && opties.vervaging > 0) hoogte = vervaag(hoogte, px, Math.round(opties.vervaging));
   const op = (x: number, y: number) => hoogte[(((y % px) + px) % px) * px + (((x % px) + px) % px)]!;
 
   // Helling per pixel (centrale verschillen, rondlopend aan de randen) en het gemiddelde van de hoogte.
@@ -80,6 +86,26 @@ export function kaartenUitHoogte(hoogte: Float32Array, px: number, opties: Kaart
     ruwheid[i * 4 + 3] = 255;
   }
   return { normaal, ruwheid, sterkte };
+}
+
+/** Twee keer een vakgemiddelde met straal `r` in x en in y, rondlopend aan de randen (de tegel blijft naadloos). */
+function vervaag(hoogte: Float32Array, px: number, r: number): Float32Array {
+  let a = Float32Array.from(hoogte);
+  const b = new Float32Array(a.length);
+  const w = 2 * r + 1;
+  for (let keer = 0; keer < 2; keer++) {
+    for (let y = 0; y < px; y++) for (let x = 0; x < px; x++) {
+      let s = 0;
+      for (let d = -r; d <= r; d++) s += a[y * px + (((x + d) % px) + px) % px]!;
+      b[y * px + x] = s / w;
+    }
+    for (let y = 0; y < px; y++) for (let x = 0; x < px; x++) {
+      let s = 0;
+      for (let d = -r; d <= r; d++) s += b[((((y + d) % px) + px) % px) * px + x]!;
+      a[y * px + x] = s / w;
+    }
+  }
+  return a;
 }
 
 /** De waarde onder welke een deel `p` (0 tot 1) van de waarden ligt. */

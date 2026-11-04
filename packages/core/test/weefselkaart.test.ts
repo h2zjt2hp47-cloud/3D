@@ -63,6 +63,16 @@ describe('weefselkaarten uit een hoogte', () => {
     expect(top).toBeGreaterThanOrEqual(Math.round(0.7 * 255) - 1);
   });
 
+  it('verzachting: een los vlekje wordt een zachte bult in plaats van een hard vierkantje, ook over de rand', () => {
+    const vlek = tegel((x, y) => (x === 0 && y === 0 ? 1 : 0));
+    const scherp = kaartenUitHoogte(vlek, PX, { hoek: 8, glansverschil: 0 });
+    const zacht = kaartenUitHoogte(vlek, PX, { hoek: 8, glansverschil: 0, vervaging: 3 });
+    expect(pixel(scherp.normaal, 4, 0)).toEqual([128, 128, 255, 255]); // scherp: enkel de buren hellen
+    expect(pixel(zacht.normaal, 4, 0)[0]).toBeGreaterThan(128); // zacht: ook verder weg, weg van de bult
+    expect(pixel(zacht.normaal, PX - 4, 0)[0]).toBeLessThan(128); // en aan de andere kant van de rand
+    expect(vlek[0]).toBe(1); // de hoogte zelf blijft onaangeroerd
+  });
+
   it('weigert een hoogte die niet bij de maat past', () => {
     expect(() => kaartenUitHoogte(new Float32Array(10), PX, { hoek: 30, glansverschil: 0 })).toThrow();
   });
