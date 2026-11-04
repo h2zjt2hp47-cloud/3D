@@ -11,12 +11,11 @@ import { HOOGTE_KLEUR, KAART_PX, WEEFSEL_CM, WEEFSELKAART, weefselCanvas, weefse
 import { bouwDecor, type DecorSpec } from './decor3d.js';
 
 import * as THREE_ from 'three';
-import { WebGPURenderer } from 'three/webgpu';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { RenderPipeline, WebGPURenderer } from 'three/webgpu';
+import { float, mix, mrt, normalView, output, packNormalToRGB, pass, sample, smoothstep, unpackRGBToNormal, vec4 } from 'three/tsl';
+import { ao } from 'three/addons/tsl/display/GTAONode.js';
+import { denoise } from 'three/addons/tsl/display/DenoiseNode.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
 import { fotoWebGPU, heeftWebGPU } from './fotomodus-webgpu.js';
@@ -1683,20 +1682,33 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }, { passive: false });
 
   // Nabewerking (alleen zetel, kwaliteit Mooi): ambient occlusion (GTAO) voor schaduw in hoeken, naden en onder kussens.
-  let composer: any = null, gtao: any = null;
+  // WebGPU (04-11): een RenderPipeline met TSL-knopen (pass met normalen, GTAO op halve resolutie, ontruisd), zelfde
+  // instellingen als vroeger met de GTAOPass; de AO dempt het beeld voor 90 %. Tonemapping en sRGB doet de pijplijn.
+  let composer: { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void } | null = null;
   function maakComposer() {
-    if (renderer.isWebGPURenderer) return; // stap 2: nabewerking via RenderPipeline
     try {
-      const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
-      composer = new EffectComposer(renderer, rt);
-      composer.addPass(new RenderPass(scene, camera));
-      gtao = new GTAOPass(scene, camera, 1, 1);
-      gtao.updateGtaoMaterial({ radius: 14, distanceExponent: 1.2, thickness: 8, scale: 1.1, samples: 12, distanceFallOff: 1 });
-      gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
-      gtao.blendIntensity = 0.9;
-      composer.addPass(gtao);
-      composer.addPass(new OutputPass());
-    } catch {
+      const pijplijn = new RenderPipeline(renderer);
+      const scenePass = pass(scene, camera, { samples: 4 });
+      scenePass.setMRT(mrt({ output, normal: packNormalToRGB(normalView) }));
+      const kleur = scenePass.getTextureNode('output');
+      const normaalKleur = scenePass.getTextureNode('normal');
+      const diepte = scenePass.getTextureNode('depth');
+      const normaal = sample((uv: unknown) => unpackRGBToNormal(normaalKleur.sample(uv)));
+      const aoPass = ao(diepte, normaal, camera);
+      aoPass.resolutionScale = 0.5;
+      aoPass.radius.value = 14; aoPass.distanceExponent.value = 1.2; aoPass.thickness.value = 8;
+      aoPass.scale.value = 1.1; aoPass.samples.value = 12; aoPass.distanceFallOff.value = 1;
+      const aoZacht = denoise(aoPass.getTextureNode(), diepte, normaal, camera);
+      aoZacht.lumaPhi.value = 10; aoZacht.depthPhi.value = 2; aoZacht.normalPhi.value = 3; aoZacht.radius.value = 6;
+      // Op grote afstand (de rand van het achterdoek, de verre vloer) geen AO: daar ziet GTAO valse hoeken (streepjes). De
+      // zetel staat altijd dichter dan 10 m.
+      // Afstand tot de camera van de scène (niet cameraNear/cameraFar: in de nabewerking is dat de camera van het schermvlak).
+      const afstand = scenePass.getViewZNode().negate();
+      const dichtbij = float(1).sub(smoothstep(1000, 1600, afstand));
+      pijplijn.outputNode = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(0.9))), kleur.a);
+      composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {} };
+    } catch (fout) {
+      console.warn('Nabewerking (GTAO) niet beschikbaar:', fout);
       composer = null;
     }
   }
@@ -1712,11 +1724,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
   function tekenNu(direct: boolean) {
     if (bezigMetFoto || !klaar) return;
-    if (!metNabewerking()) { renderer.render(scene, camera); return; }
-    if (direct) { clearTimeout(mooiGepland); composer.render(); return; }
+    const c = metNabewerking() ? composer : null;
+    if (!c) { renderer.render(scene, camera); return; }
+    if (direct) { clearTimeout(mooiGepland); c.render(); return; }
     renderer.render(scene, camera);
     clearTimeout(mooiGepland);
-    mooiGepland = window.setTimeout(() => composer.render(), 180);
+    mooiGepland = window.setTimeout(() => { if (!bezigMetFoto) c.render(); }, 180);
   }
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
