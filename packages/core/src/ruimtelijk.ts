@@ -495,22 +495,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             hoogtes.push(rond1(armH + (achter - armH) * s * s * (3 - 2 * s)));
           }
           const padW = padLokaal.map(([lx, ly]) => { const q = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(q.x), r2(q.y)] as [number, number]; });
-          // Doorsnede (s naar buiten): onderaan smal, de buitenkant helt naar buiten tot onder de krul, die over de zijkant
-          // uitsteekt (zoals op de foto), bovenaan afgerond naar binnen. Punten met 1 liggen onder de bovenkant ter plaatse.
-          const hw = B / 2, inzet = Math.min(0.38 * B, 8), krul = Math.min(5, 0.24 * B), rIn = Math.min(4, 0.2 * B);
-          const uitloop = Math.max(zithoogte - 6, onder + 8);
-          const profiel: [number, number, 0 | 1][] = [[-hw, onder, 0], [hw - inzet, onder, 0], [hw - inzet, uitloop, 0]];
-          profiel.push([rond1(hw - krul - 1), rond1(2 * krul + 2), 1]);
-          for (const a of [-90, -45, 0, 45, 90]) {
-            const r = (a * Math.PI) / 180;
-            profiel.push([rond1(hw - krul + krul * Math.cos(r)), rond1(krul - krul * Math.sin(r)), 1]);
-          }
-          profiel.push([rond1(-hw + rIn), 0.5, 1]);
-          for (const a of [120, 150]) {
-            const r = (a * Math.PI) / 180;
-            profiel.push([rond1(-hw + rIn + rIn * Math.cos(r)), rond1(rIn - rIn * Math.sin(r)), 1]);
-          }
-          profiel.push([-hw, rIn, 1]);
+          const profiel = uitlopendProfiel(B, zithoogte, onder), hw = B / 2;
           const xs = padW.flatMap((q) => [q[0] - Math.abs(ux) * hw, q[0] + Math.abs(ux) * hw]), zs = padW.flatMap((q) => [q[1] - Math.abs(uz) * hw, q[1] + Math.abs(uz) * hw]);
           blokken.push({
             code: `${e.id}.arm`, soort: 'stof', vorm: 'profiel',
@@ -567,6 +552,30 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
     else scene.echtNiet = u.reden;
   }
   return scene;
+}
+
+/**
+ * Doorsnede van een uitlopende arm (Wallace, Esmee), gedeeld door de 3D en het vooraanzicht: punten [s, y, boven] met s in
+ * cm opzij van het midden van de arm (positief = buitenkant) en y absoluut (boven = 0) of onder de bovenkant (boven = 1).
+ * Onderaan smal, de buitenkant helt naar buiten tot onder de krul, die over de zijkant uitsteekt (zoals op de foto),
+ * bovenaan afgerond naar binnen. Benadering uit de foto en de technische tekening.
+ */
+export function uitlopendProfiel(B: number, zithoogte: number, onder: number): [number, number, 0 | 1][] {
+  const hw = B / 2, inzet = Math.min(0.38 * B, 8), krul = Math.min(5, 0.24 * B), rIn = Math.min(4, 0.2 * B);
+  const uitloop = Math.max(zithoogte - 6, onder + 8);
+  const profiel: [number, number, 0 | 1][] = [[-hw, onder, 0], [hw - inzet, onder, 0], [hw - inzet, uitloop, 0]];
+  profiel.push([rond1(hw - krul - 1), rond1(2 * krul + 2), 1]);
+  for (const a of [-90, -45, 0, 45, 90]) {
+    const r = (a * Math.PI) / 180;
+    profiel.push([rond1(hw - krul + krul * Math.cos(r)), rond1(krul - krul * Math.sin(r)), 1]);
+  }
+  profiel.push([rond1(-hw + rIn), 0.5, 1]);
+  for (const a of [120, 150]) {
+    const r = (a * Math.PI) / 180;
+    profiel.push([rond1(-hw + rIn + rIn * Math.cos(r)), rond1(rIn - rIn * Math.sin(r)), 1]);
+  }
+  profiel.push([-hw, rIn, 1]);
+  return profiel;
 }
 
 /** Handig voor tests: de blokken van één element. */

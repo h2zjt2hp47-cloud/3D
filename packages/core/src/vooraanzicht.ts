@@ -8,6 +8,7 @@ import type { Materiaal } from './materialen.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 import { kuipOpbouw, kuipParameters } from './kuip.js';
+import { uitlopendProfiel } from './ruimtelijk.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
 const rugBovenOf = (e: { rotatie: number }) => e.rotatie === 0 || e.rotatie === 180;
@@ -322,23 +323,19 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         } else if (armVorm === 'engels') {
           pad(`${e.id}.arm`, bovenRond(x0, y + 8, p.b, h - 8, p.b / 2.2), x0, y + 8, p.b, h - 8, donker, lijn);
         } else if (armVorm === 'uitlopend') {
-          // Uitlopende arm zoals op de technische tekening van Wallace: smal onderaan tegen de zitting, bovenaan een ronde lip
-          // die naar buiten krult, en aan de binnenkant oplopend tot de hoogte van het karkas.
+          // Uitlopende arm: dezelfde doorsnede als in de 3D (uitlopendProfiel). Van voren zie je de doorsnede vooraan
+          // (krul op armhoogte) met daarachter de arm die oploopt tot het karkas: samen één omtrek. Met een hoes loopt de
+          // arm tot op de vloer.
           const buitenLinks = !ontwerp.elementen.some((o) => o !== e && voetafdruk(o).x + voetafdruk(o).b <= x0 + 1 && voetafdruk(o).x + voetafdruk(o).b >= x0 - 1);
           const achter = Math.max(armH, vormgevingVan(ontwerp, e).karkashoogte ?? armH);
-          const dik = Math.min(p.b * 0.5, 11), lip = Math.min(12, p.b * 0.6), vloer = -P;
-          const sp = (x: number) => (buitenLinks ? x : x0 + x1 - x); // spiegelen voor een arm met de buitenkant rechts
-          const binnen = x1, buitenX = x0;
-          const d = [
-            `M${rond(sp(binnen))} ${rond(vloer)}`,
-            `V${rond(-achter)}`,
-            `Q${rond(sp(binnen - 3))} ${rond(-armH - 3)} ${rond(sp(buitenX + lip))} ${rond(-armH)}`,
-            `Q${rond(sp(buitenX - 1))} ${rond(-armH)} ${rond(sp(buitenX))} ${rond(-armH + lip / 2)}`,
-            `Q${rond(sp(buitenX + 1))} ${rond(-armH + lip)} ${rond(sp(buitenX + lip * 0.7))} ${rond(-armH + lip)}`,
-            `Q${rond(sp(binnen - dik))} ${rond(-armH + lip + 12)} ${rond(sp(binnen - dik))} ${rond(vloer + 10)}`,
-            `L${rond(sp(binnen - dik))} ${rond(vloer)} Z`,
-          ].join(' ');
-          pad(`${e.id}.arm`, d, x0, rond(-achter), p.b, achter - P, donker, lijn);
+          const onder = vorm === 'housse' ? 0 : P;
+          const prof = uitlopendProfiel(p.b, zithoogte, onder);
+          const cx = (x0 + x1) / 2, kant = buitenLinks ? -1 : 1;
+          const punt = ([s, y, boven]: [number, number, 0 | 1], topH: number) => `${rond(cx + kant * s)} ${rond(-(boven ? topH - y : y))}`;
+          // Het verste punt van de krul (naar buiten): tot daar vooraan, dan langs de buitenkant omhoog naar achteraan.
+          const krul = prof.reduce((best, q, i) => (q[2] && q[0] > prof[best]![0] ? i : best), prof.findIndex((q) => q[2] === 1));
+          const omtrek = [...prof.slice(0, krul + 1).map((q) => punt(q, armH)), ...prof.slice(krul).map((q) => punt(q, achter))];
+          pad(`${e.id}.arm`, `M${omtrek.join(' L')} Z`, x0, rond(-achter), p.b, achter - onder, donker, lijn);
           maxHoogte = Math.max(maxHoogte, achter);
         } else if (armVorm === 'schuin') {
           // Schuin aflopend naar buiten (naar de kant zonder zitting).
@@ -379,7 +376,8 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       }
     }
     // Hoes tot op de grond (housse): bedekt de onderbouw.
-    if (vorm === 'housse' && t.tekenstijl !== 'console' && !t.opzet) {
+    const uitlopendeArm = t.tekenstijl === 'arm' && String(te('armstijl', 'vorm', 'strak')) === 'uitlopend';
+    if (vorm === 'housse' && t.tekenstijl !== 'console' && !t.opzet && !uitlopendeArm) {
       // Bij een zitelement loopt de hoes door tot onder het zitkussen (zoals in de 3D).
       const hoesTop = ['zit', 'hoek', 'chaise', 'zit_zonder_rug'].includes(t.tekenstijl) ? zithoogte - kussenDik - 0.5 : P + 1;
       rect(`${e.id}.housse`, x0 + 0.5, -hoesTop, p.b - 1, hoesTop, stof, { ...lijn });
