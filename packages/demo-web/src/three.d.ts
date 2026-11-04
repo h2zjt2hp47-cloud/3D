@@ -2,3 +2,5 @@
 declare module 'three';
 declare module 'three/addons/*';
 declare module 'three-gpu-pathtracer';
+declare module 'three/webgpu';
+declare module 'three-gpu-pathtracer/webgpu';
