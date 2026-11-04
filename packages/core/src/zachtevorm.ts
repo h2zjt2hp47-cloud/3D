@@ -204,9 +204,17 @@ function profielVorm(b: Blok): Primitief {
   const ax = pad[0]![0], az = pad[0]![1], bx = pad[pad.length - 1]![0], bz = pad[pad.length - 1]![1];
   const L = Math.sqrt((bx - ax) ** 2 + (bz - az) ** 2) || 1, tx = (bx - ax) / L, tz = (bz - az) / L;
   const n = prof.length, xs = new Float64Array(n), ys = new Float64Array(n), d2 = new Float64Array(5);
-  const rE = 2.5;
+  const rE = b.rand ?? 2.5;
+  let laatsteTop = NaN;
+  // Bol voorpaneel: in het midden kopBol cm naar voren, aan de randen niet (gevulde stof).
+  const kop = b.kopBol ?? 0;
+  const smid = (Math.min(...prof.map((p) => p[0])) + Math.max(...prof.map((p) => p[0]))) / 2;
+  const shalf = (Math.max(...prof.map((p) => p[0])) - Math.min(...prof.map((p) => p[0]))) / 2 || 1;
+  const ylaag = Math.min(...prof.filter((p) => !p[2]).map((p) => p[1]), b.y), yhoog = Math.max(...hoog);
+  const ymid = (ylaag + yhoog) / 2, yhalf = (yhoog - ylaag) / 2 || 1;
   const smin = Math.min(...prof.map((p) => p[0])), smax = Math.max(...prof.map((p) => p[0]));
-  const hoeken = [ax, bx].flatMap((x, i) => { const z = i ? bz : az; return [[x + ux * smin, z + uz * smin], [x + ux * smax, z + uz * smax]]; });
+  const uitsteek = b.kopBol ?? 0;
+  const hoeken = [ax - tx * uitsteek, bx].flatMap((x, i) => { const z = i ? bz : az - tz * uitsteek; return [[x + ux * smin, z + uz * smin], [x + ux * smax, z + uz * smax]]; });
   return {
     x0: Math.min(...hoeken.map((h) => h[0]!)), x1: Math.max(...hoeken.map((h) => h[0]!)),
     z0: Math.min(...hoeken.map((h) => h[1]!)), z1: Math.max(...hoeken.map((h) => h[1]!)),
@@ -218,7 +226,11 @@ function profielVorm(b: Blok): Primitief {
       const f = Math.max(0, Math.min(1, a / L)) * (hoog.length - 1), i = Math.min(hoog.length - 2, Math.floor(f));
       const top = hoog[i]! + (f - i) * (hoog[i + 1]! - hoog[i]!);
       const stijging = binnenLijn ? ((hoog[i + 1]! - hoog[i]!) * (hoog.length - 1)) / L : 0;
-      for (let k = 0; k < n; k++) { xs[k] = prof[k]![0]; ys[k] = prof[k]![2] ? top - prof[k]![1] : prof[k]![1]; }
+      // De doorsnede opnieuw opbouwen alleen als de bovenhoogte verandert (bij een strakke arm nooit).
+      if (top !== laatsteTop) {
+        for (let k = 0; k < n; k++) { xs[k] = prof[k]![0]; ys[k] = prof[k]![2] ? top - prof[k]![1] : prof[k]![1]; }
+        laatsteTop = top;
+      }
       veelhoek(s, y, xs, ys, n, d2);
       const gs0 = d2[1]!, gy0 = d2[2]!;
       // Waar de arm oploopt, verandert de doorsnede langs de lijn: die helling hoort in de richting en in de afstand
@@ -227,15 +239,26 @@ function profielVorm(b: Blok): Primitief {
       const zk = d2[3]!, zt = d2[4]!, mee = prof[zk]![2] * (1 - zt) + prof[(zk + 1) % n]![2] * zt;
       const helling = -gy0 * mee * stijging;
       const vlak = d2[0]! / Math.sqrt(1 + helling * helling);
-      // Afgeronde uiteinden: doorsnede en lengte samen (zoals een afgeronde balk).
-      const e = a < 0 ? -a : a > L ? a - L : -Math.min(a, L - a), ea = a < L / 2 ? -1 : 1;
+      // Afgeronde uiteinden: doorsnede en lengte samen (zoals een afgeronde balk). Vooraan eventueel een bol paneel.
+      const vooraan = a < L / 2;
+      let e = a < 0 ? -a : a > L ? a - L : -Math.min(a, L - a), es = 0, ey = 0;
+      const ea = vooraan ? -1 : 1;
+      if (vooraan && kop) {
+        const u = (s - smid) / shalf, w = (y - ymid) / yhalf;
+        if (Math.abs(u) < 1 && Math.abs(w) < 1) {
+          const fu = 1 - u * u, fw = 1 - w * w;
+          e -= kop * fu * fw;
+          es = (kop * 2 * u * fw) / shalf;
+          ey = (kop * 2 * w * fu) / yhalf;
+        }
+      }
       const qa = vlak + rE, qb = e + rE;
       const ma = Math.max(qa, 0), mb = Math.max(qb, 0);
       const d = Math.min(Math.max(qa, qb), 0) + Math.sqrt(ma * ma + mb * mb) - rE;
       let gs: number, gy: number, ga: number;
-      if (qa > 0 && qb > 0) { gs = gs0 * qa; gy = gy0 * qa; ga = ea * qb + helling * qa; }
+      if (qa > 0 && qb > 0) { gs = gs0 * qa + es * qb; gy = gy0 * qa + ey * qb; ga = ea * qb + helling * qa; }
       else if (qa > qb) { gs = gs0; gy = gy0; ga = helling; }
-      else { gs = 0; gy = 0; ga = ea; }
+      else { gs = es; gy = ey; ga = ea; }
       schrijf(uit, d, gs * ux + ga * tx, gy, gs * uz + ga * tz);
     },
   };

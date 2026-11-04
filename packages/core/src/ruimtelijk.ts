@@ -73,6 +73,10 @@ export interface Blok {
   profiel?: [number, number, 0 | 1][];
   /** Richting van de buitenkant in het grondvlak [x, z] (eenheidsvector), voor een profiel. */
   uit?: [number, number];
+  /** Profiel: afronding van de randen van voor- en achterkant in cm (standaard 2,5). */
+  rand?: number;
+  /** Profiel: hoe ver het voorpaneel in het midden bol staat, in cm (gevulde stof). */
+  kopBol?: number;
 }
 
 export interface Scene3D {
@@ -169,8 +173,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       const p = voetafdruk(e);
       cilinderMidden('draaivoet', 'metaal', 1.5, P - 1.5, Math.min(p.b, p.h) * 0.22, Math.min(p.b, p.h) * 0.22, '#2e2c2a');
       cilinderMidden('voetplaat', 'metaal', 0, 1.5, Math.min(p.b, p.h) * 0.55, Math.min(p.b, p.h) * 0.55, '#2e2c2a');
-    } else if (t.tekenstijl === 'arm' && potVorm === 'housse' && String(te('armstijl', 'vorm', 'strak')) === 'uitlopend') {
-      // Uitlopende arm met hoes: de arm zelf loopt tot op de vloer (zie de arm), geen aparte rok eronder.
+    } else if (t.tekenstijl === 'arm' && potVorm === 'housse' && ['uitlopend', 'strak'].includes(String(te('armstijl', 'vorm', 'strak')))) {
+      // Uitlopende of strakke arm met hoes: de arm zelf loopt tot op de vloer (zie de arm), geen aparte rok eronder.
     } else if (t.tekenstijl !== 'console' && potVorm === 'housse') {
       // Hoes tot op de grond: bij een zitelement in één stuk van de vloer tot onder het zitkussen (zoals Husk, Wallace,
       // Esmee op de foto's), anders een rok tot net boven de poothoogte.
@@ -474,13 +478,16 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           rol('rol', -1, B + 2, top - B / 2 - 1, stof);
         } else if (vorm === 'schuin') {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P - 5, stof, { afronding: 6 });
-        } else if (vorm === 'uitlopend') {
-          // Uitlopende arm (technische tekening van Wallace, vorm benaderd uit de foto): één doorsnede die van voor naar achter
-          // loopt. Binnenkant recht tegen de zitting; buitenkant onderaan iets naar binnen, bovenaan naar buiten uitlopend tot een
-          // opgerolde rand (krul) op armhoogte; naar achteren oplopend tot de hoogte van het karkas. Met een hoes tot op de
-          // vloer (geen aparte rok eronder), anders vanaf de poten.
-          const achter = Math.max(armH, v.karkashoogte ?? armH);
+        } else if (vorm === 'uitlopend' || vorm === 'strak') {
+          // Arm met een eigen doorsnede (profiel) die van voor naar achter loopt; met een hoes tot op de vloer (geen aparte
+          // rok eronder), anders vanaf de poten.
+          // - Uitlopend (technische tekening van Wallace, vorm benaderd uit de foto): binnenkant recht tegen de zitting,
+          //   buitenkant onderaan iets naar binnen en bovenaan uitlopend tot een opgerolde rand (krul) op armhoogte, naar
+          //   achteren oplopend tot de hoogte van het karkas.
+          // - Strak (track arm, benaderd uit de foto's van Husk, Attribute, Amusette …): rechte arm met een zacht afgeronde,
+          //   licht bolle bovenkant, licht bolle zijkanten en een voorpaneel met zachte rand; hoe zacht volgt de zachtheid.
           const onder = potVorm === 'housse' ? 0 : P;
+          const achter = vorm === 'uitlopend' ? Math.max(armH, v.karkashoogte ?? armH) : armH;
           // Welke lokale kant (x = 0 of x = B) ligt aan de buitenkant van de zetel?
           const buiten = naarBuiten(e);
           const w0 = lokaalNaarWereld(e, 0, 0, 1, 1), wB = lokaalNaarWereld(e, B - 1, 0, 1, 1);
@@ -491,16 +498,19 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           for (let i = 0; i <= 14; i++) {
             const t = i / 14; // 0 = vooraan, 1 = achteraan
             const s = Math.max(0, Math.min(1, (t - 0.5) / 0.5));
-            padLokaal.push([B / 2, D - 2 - t * (D - 4)]);
+            padLokaal.push([B / 2, D - t * D]);
             hoogtes.push(rond1(armH + (achter - armH) * s * s * (3 - 2 * s)));
           }
           const padW = padLokaal.map(([lx, ly]) => { const q = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(q.x), r2(q.y)] as [number, number]; });
-          const profiel = uitlopendProfiel(B, zithoogte, onder), hw = B / 2;
-          const xs = padW.flatMap((q) => [q[0] - Math.abs(ux) * hw, q[0] + Math.abs(ux) * hw]), zs = padW.flatMap((q) => [q[1] - Math.abs(uz) * hw, q[1] + Math.abs(uz) * hw]);
+          const hw = B / 2;
+          const profiel = vorm === 'uitlopend' ? uitlopendProfiel(B, zithoogte, onder) : strakProfiel(B, onder, armH, v.zachtheid, potVorm === 'housse');
+          const zijden = profiel.map((q) => q[0]), wijd = Math.max(hw, ...zijden.map(Math.abs));
+          const xs = padW.flatMap((q) => [q[0] - Math.abs(ux) * wijd, q[0] + Math.abs(ux) * wijd]), zs = padW.flatMap((q) => [q[1] - Math.abs(uz) * wijd, q[1] + Math.abs(uz) * wijd]);
           blokken.push({
             code: `${e.id}.arm`, soort: 'stof', vorm: 'profiel',
             x: r2(Math.min(...xs)), z: r2(Math.min(...zs)), b: r2(Math.max(...xs) - Math.min(...xs)), d: r2(Math.max(...zs) - Math.min(...zs)),
             y: r2(onder), h: r2(Math.max(...hoogtes) - onder), kleur: stof, pad: padW, hoogtes, profiel, uit: [r2(ux), r2(uz)],
+            ...(vorm === 'strak' ? { rand: rond1(Math.max(2.5, Math.min(6, (0.14 + 0.012 * v.zachtheid) * B))), kopBol: rond1(0.4 + 0.08 * v.zachtheid) } : {}),
           });
         } else {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P, stof, { afronding: 3 });
@@ -533,6 +543,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       ? { soort: 'bies', kleur: naadTeken.contrast ? '#2b2622' : stof }
       : naadTeken?.stiksel ? { soort: 'stiksel', kleur: donkerder(stof, 0.6) } : { soort: 'naad', kleur: donkerder(stof, 0.7) };
     for (const b of blokken.slice(eersteBlok)) if (b.soort === 'kussen' && b.kleur === stof && ((b.vorm ?? 'blok') === 'blok' || (b.vorm === 'cilinder' && !b.as))) b.naad = naad;
+    // Arm met een profiel: een naad of bies rond het voorpaneel (zoals een gestoffeerde arm), geen sierstiksel.
+    for (const b of blokken.slice(eersteBlok)) if (b.vorm === 'profiel' && b.kleur === stof && naad.soort !== 'stiksel') b.naad = naad;
     if (m) for (const b of blokken.slice(eersteBlok)) if ((b.soort === 'stof' || b.soort === 'kussen') && b.kleur === stof) {
       if (m.textuur) { b.textuur = m.textuur; b.textuurCm = m.textuurCm ?? 15; }
       else b.weefsel = weefselVan(m);
@@ -576,6 +588,28 @@ export function uitlopendProfiel(B: number, zithoogte: number, onder: number): [
   }
   profiel.push([-hw, rIn, 1]);
   return profiel;
+}
+
+/**
+ * Doorsnede van een strakke arm (track arm), gedeeld door de 3D en het vooraanzicht: punten [s, y, 0] (y absoluut), s in cm
+ * opzij van het midden (positief = buitenkant). Zacht afgeronde bovenkant die in het midden licht bol staat, zijkanten
+ * die naar onder heel licht inspringen (gevulde stof), kleine afronding onderaan. Met een hoes loopt de arm tot op de vloer
+ * en waait de buitenkant onderaan een fractie uit. Hoe rond en hoe bol volgt de zachtheid (0–10). Benadering uit de foto's.
+ */
+export function strakProfiel(B: number, onder: number, top: number, zachtheid: number, hoes: boolean): [number, number, 0 | 1][] {
+  const hw = B / 2;
+  const rTop = rond1(Math.max(2.5, Math.min(8, hw - 0.5, (0.2 + 0.022 * zachtheid) * B)));
+  const kroon = rond1(0.3 + 0.1 * zachtheid), bol = rond1(0.2 + 0.06 * zachtheid);
+  const rOnder = hoes ? 0.8 : 2, uitwaai = hoes ? 0.8 : 0;
+  const ySide0 = onder + rOnder, ySide1 = top - kroon - rTop;
+  const p: [number, number, 0 | 1][] = [[rond1(-hw + bol + rOnder), onder, 0], [rond1(hw - bol + uitwaai - rOnder), onder, 0], [rond1(hw - bol + uitwaai), rond1(ySide0), 0]];
+  for (const f of [0.33, 0.66]) p.push([rond1(hw - bol * (1 - f) ** 2), rond1(ySide0 + f * (ySide1 - ySide0)), 0]);
+  for (const a of [0, 45, 90]) { const r = (a * Math.PI) / 180; p.push([rond1(hw - rTop + rTop * Math.cos(r)), rond1(ySide1 + rTop * Math.sin(r)), 0]); }
+  p.push([0, rond1(top), 0]);
+  for (const a of [90, 135, 180]) { const r = (a * Math.PI) / 180; p.push([rond1(-hw + rTop + rTop * Math.cos(r)), rond1(ySide1 + rTop * Math.sin(r)), 0]); }
+  for (const f of [0.66, 0.33]) p.push([rond1(-(hw - bol * (1 - f) ** 2)), rond1(ySide0 + f * (ySide1 - ySide0)), 0]);
+  p.push([rond1(-hw + bol), rond1(ySide0), 0]);
+  return p;
 }
 
 /** Handig voor tests: de blokken van één element. */

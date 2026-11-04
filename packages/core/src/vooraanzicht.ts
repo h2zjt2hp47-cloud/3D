@@ -8,7 +8,7 @@ import type { Materiaal } from './materialen.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 import { kuipOpbouw, kuipParameters } from './kuip.js';
-import { uitlopendProfiel } from './ruimtelijk.js';
+import { strakProfiel, uitlopendProfiel } from './ruimtelijk.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
 const rugBovenOf = (e: { rotatie: number }) => e.rotatie === 0 || e.rotatie === 180;
@@ -345,6 +345,13 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             ? `M${rond(x0)} ${vloer} V${laag} L${rond(x1)} ${hoog} V${vloer} Z`
             : `M${rond(x0)} ${vloer} V${hoog} L${rond(x1)} ${laag} V${vloer} Z`;
           pad(`${e.id}.arm`, d, x0, y, p.b, h, donker, lijn);
+        } else if (armVorm === 'strak') {
+          // Strakke arm: dezelfde doorsnede als in de 3D (strakProfiel), met een hoes tot op de vloer.
+          const buitenLinks = !ontwerp.elementen.some((o) => o !== e && voetafdruk(o).x + voetafdruk(o).b <= x0 + 1 && voetafdruk(o).x + voetafdruk(o).b >= x0 - 1);
+          const onder = vorm === 'housse' ? 0 : P;
+          const prof = strakProfiel(p.b, onder, armH, vormgevingVan(ontwerp, e).zachtheid, vorm === 'housse');
+          const cx = (x0 + x1) / 2, kant = buitenLinks ? -1 : 1;
+          pad(`${e.id}.arm`, `M${prof.map(([s, hh]) => `${rond(cx + kant * s)} ${rond(-hh)}`).join(' L')} Z`, x0, y, p.b, armH - onder, donker, lijn);
         } else {
           rect(`${e.id}.arm`, x0, y, p.b, h, donker, { afronding: 2.5, ...lijn });
         }
@@ -376,8 +383,9 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       }
     }
     // Hoes tot op de grond (housse): bedekt de onderbouw.
-    const uitlopendeArm = t.tekenstijl === 'arm' && String(te('armstijl', 'vorm', 'strak')) === 'uitlopend';
-    if (vorm === 'housse' && t.tekenstijl !== 'console' && !t.opzet && !uitlopendeArm) {
+    // Een uitlopende of strakke arm loopt zelf tot op de vloer (geen aparte rok onder de arm).
+    const eigenArm = t.tekenstijl === 'arm' && ['uitlopend', 'strak'].includes(String(te('armstijl', 'vorm', 'strak')));
+    if (vorm === 'housse' && t.tekenstijl !== 'console' && !t.opzet && !eigenArm) {
       // Bij een zitelement loopt de hoes door tot onder het zitkussen (zoals in de 3D).
       const hoesTop = ['zit', 'hoek', 'chaise', 'zit_zonder_rug'].includes(t.tekenstijl) ? zithoogte - kussenDik - 0.5 : P + 1;
       rect(`${e.id}.housse`, x0 + 0.5, -hoesTop, p.b - 1, hoesTop, stof, { ...lijn });

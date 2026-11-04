@@ -1006,12 +1006,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
 
   function mesh(b: Blok) {
-    // Profiel (bv. een uitlopende arm): altijd als zachte vorm, ook bij blokken (één blok rekent snel).
+    // Profiel (bv. een arm): altijd als zachte vorm, ook bij blokken (één blok rekent snel), met de kussens ernaast voor
+    // de schaduw in de hoek, en de naad of bies rond het voorpaneel.
     if (b.vorm === 'profiel') {
-      const sleutel = vormSleutel([b], []);
-      if (!zachteVormen.has(sleutel)) zachteVormen.set(sleutel, zachteVorm([b], { minAfronding: 0 }));
-      const m = zachteMesh([b], [])!;
+      const kader = doosVan(b).expandByScalar(8);
+      const buren = sceneBlokken.filter((k) => k.soort === 'kussen' && kader.intersectsBox(doosVan(k)));
+      const sleutel = vormSleutel([b], buren);
+      if (!zachteVormen.has(sleutel)) zachteVormen.set(sleutel, zachteVorm([b], { minAfronding: 0, buren }));
+      const m = zachteMesh([b], buren)!;
       m.name = b.code;
+      const naad = profielNaad(b);
+      if (naad) m.add(naad);
       return m;
     }
     let geo: any;
@@ -1775,6 +1780,41 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     m.userData.delen = [...perElement].map(([id, box]) => ({ id, box }));
     return m;
   }
+  /**
+   * Naad of bies rond het voorpaneel van een arm met een profiel, op de afgeronde rand tussen het paneel en de zijkanten
+   * (0,29 × de afronding naar binnen en naar achter). Niet langs de onderkant.
+   */
+  function profielNaad(b: Blok) {
+    if (!b.naad || b.naad.soort === 'stiksel' || !b.pad || !b.profiel || !b.uit || !b.hoogtes) return null;
+    const [ux, uz] = b.uit, [ax, az] = b.pad[0]!, [bx, bz] = b.pad[b.pad.length - 1]!;
+    const L = Math.hypot(bx - ax, bz - az) || 1, tx = (bx - ax) / L, tz = (bz - az) / L;
+    const top = b.hoogtes[0]!, inw = (b.rand ?? 2.5) * 0.29;
+    const pts = b.profiel.map(([s, y, boven]) => [s, boven ? top - y : y] as [number, number]);
+    const n = pts.length;
+    let opp = 0;
+    for (let i = 0; i < n; i++) { const p = pts[i]!, q = pts[(i + 1) % n]!; opp += p[0] * q[1] - q[0] * p[1]; }
+    const zin = opp > 0 ? 1 : -1;
+    // Per punt de richting naar binnen (gemiddelde van de twee zijden), dan het punt een fractie naar binnen.
+    const binnen = pts.map((p, i) => {
+      const v = pts[(i - 1 + n) % n]!, w = pts[(i + 1) % n]!;
+      const n1 = [-(p[1] - v[1]), p[0] - v[0]], n2 = [-(w[1] - p[1]), w[0] - p[0]];
+      const l1 = Math.hypot(n1[0]!, n1[1]!) || 1, l2 = Math.hypot(n2[0]!, n2[1]!) || 1;
+      const nx = (n1[0]! / l1 + n2[0]! / l2) * zin, ny = (n1[1]! / l1 + n2[1]! / l2) * zin, l = Math.hypot(nx, ny) || 1;
+      return [p[0] + (nx / l) * inw, p[1] + (ny / l) * inw] as [number, number];
+    });
+    // Van de buitenkant onderaan rond tot de binnenkant onderaan: de onderkant (eerste zijde) niet.
+    const reeks = [...binnen.slice(1), binnen[0]!];
+    const punten = reeks.map(([s, y]) => new THREE.Vector3(ax + ux * s + tx * inw, y, az + uz * s + tz * inw));
+    const curve = new THREE.CatmullRomCurve3(punten, false, 'centripetal');
+    const straal = b.naad.soort === 'bies' ? 0.55 : 0.14;
+    const mat = b.naad.soort === 'bies'
+      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
+      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+    const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(300, punten.length * 10), straal, 6, false), mat);
+    m.receiveShadow = true;
+    return m;
+  }
+
   /** Ontbrekende vormen even later berekenen (na het slepen), dan opnieuw tonen; tot dan de blokken. */
   function planZacht(s: Scene3D, taken: { delen: Blok[]; buren: Blok[] }[]) {
     clearTimeout(zachtGepland);
@@ -1782,7 +1822,10 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       for (const { delen, buren } of taken) {
         const sleutel = vormSleutel(delen, buren);
         if (zachteVormen.has(sleutel)) continue;
-        zachteVormen.set(sleutel, zachteVorm(delen, { buren }));
+        // Grote zetels (meer dan 3 m³ in hun kader, bv. een hoeksofa): raster van 2,5 cm, half zoveel rekenwerk; van op die
+        // afstand zie je het verschil niet.
+        const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()), maat = kader.getSize(new THREE.Vector3());
+        zachteVormen.set(sleutel, zachteVorm(delen, { buren, raster: maat.x * maat.y * maat.z > 3e6 ? 2.5 : 2 }));
         // Niet onbeperkt bewaren (een sofa is al gauw enkele MB): de oudste eerst weg.
         if (zachteVormen.size > 8) zachteVormen.delete(zachteVormen.keys().next().value!);
       }
@@ -1815,7 +1858,15 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
           const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()).expandByScalar(25);
           const buren = kussens.filter((b) => kader.intersectsBox(doosVan(b)));
           const m = zachteMesh(delen, buren);
-          if (m) { groep.add(m); for (const b of delen) versmolten.add(b); }
+          if (m) {
+            groep.add(m);
+            for (const b of delen) {
+              versmolten.add(b);
+              // Ook samengesmolten houdt een arm zijn naad of bies rond het voorpaneel.
+              const naad = b.vorm === 'profiel' ? profielNaad(b) : null;
+              if (naad) m.add(naad);
+            }
+          }
           else taken.push({ delen, buren });
         }
         if (taken.length) planZacht(s, taken);

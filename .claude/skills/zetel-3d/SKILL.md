@@ -120,9 +120,13 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - **Weergave:** `Weergave3D.vormen` (`'blokken' | 'zacht'`), keuze *Vormen* in de 3D-balk.
   - `zachteGroepen` groepeert per materiaalsleutel en raakvlak (union-find).
   - Een vorm wordt onthouden per sleutel: maten van de delen en de kussens eromheen; de kleur hoort niet bij de sleutel.
-  - `planZacht` rekent 140 ms na de laatste wijziging; tot dan de blokken.
+  - `planZacht` rekent 140 ms na de laatste wijziging; tot dan de blokken. Kader groter dan 3 m³: raster 2,5 cm.
+  - Snelheid meten: bundel een testscript met esbuild en draai het met node (`tsx` meet de eerste, koude keer en geeft een veel te hoge tijd).
   - De mesh krijgt `userData.delen` (per element een Box3) voor kiezen (`raak.point`) en markeren.
-- **`Blok.vorm = 'profiel'`** (uitlopende arm):
+- **`Blok.vorm = 'profiel'`** (uitlopende en strakke arm, `uitlopendProfiel` / `strakProfiel` in `ruimtelijk.ts`, ook gebruikt door `vooraanzicht.ts`):
+  - `rand` = afronding van voor- en achterkant (standaard 2,5), `kopBol` = bolling van het voorpaneel (in het midden, met de juiste richting in de gradiënt);
+  - de naad of bies rond het voorpaneel komt van `profielNaad` in `drie-d.ts`: op de afgeronde rand (0,29 × rand naar binnen en naar achter), niet langs de onderkant, ook als het blok samensmelt;
+  - een uitlopende of strakke arm met hoes loopt zelf tot op de vloer (geen `.housse` onder de arm, ook niet in het vooraanzicht);
   - `pad` is de rechte middenlijn (15 punten) met `hoogtes`;
   - `profiel` bestaat uit punten [s, y, boven]: s naar `uit` (buitenkant); `boven = 1` betekent onder de bovenkant ter plaatse, dus mee met de hoogte;
   - de helling van de opgaande arm zit in de richting en de afstand (−gy × deel dat meeschuift × stijging), anders kartels;

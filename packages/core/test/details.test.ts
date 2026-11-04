@@ -52,6 +52,39 @@ describe('uitlopende arm', () => {
   });
 });
 
+describe('strakke arm', () => {
+  it('eigen doorsnede: ronde, licht bolle bovenkant op armhoogte, binnen de breedte, naar buiten gericht', () => {
+    const o = bank({}, { vormgeving: { armhoogte: 66, zachtheid: 6 } });
+    const s = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
+    const arm1 = s.find((b) => b.code === 'a1.arm')!, arm2 = s.find((b) => b.code === 'a2.arm')!;
+    expect(arm1.vorm).toBe('profiel');
+    expect(arm1.uit).toEqual([-1, 0]);
+    expect(arm2.uit).toEqual([1, 0]);
+    expect(new Set(arm1.hoogtes)).toEqual(new Set([66])); // overal even hoog
+    const ys = arm1.profiel!.map((p) => p[1]), ss = arm1.profiel!.map((p) => p[0]);
+    expect(Math.max(...ys)).toBe(66); // het midden van de bolle bovenkant op armhoogte
+    expect(Math.max(...ss.map(Math.abs))).toBeLessThanOrEqual(10); // binnen de 20 cm van het element
+    expect(arm1.kopBol).toBeGreaterThan(0); // bol voorpaneel
+    expect(arm1.rand).toBeGreaterThanOrEqual(2.5);
+    expect(arm1.y + arm1.h).toBe(66);
+    expect(tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen).vormen.find((v) => v.code === 'a1.arm')?.pad).toBeTruthy();
+  });
+  it('zachter model: rondere rand en boller voorpaneel', () => {
+    const arm = (zachtheid: number) => bouw3D(bank({}, { vormgeving: { zachtheid } }), zetelCatalogus, standaardMaterialen).blokken.find((b) => b.code === 'a1.arm')!;
+    expect(arm(9).rand!).toBeGreaterThan(arm(1).rand!);
+    expect(arm(9).kopBol!).toBeGreaterThan(arm(1).kopBol!);
+  });
+  it('met een hoes: tot op de vloer zonder aparte rok, met een bies rond het voorpaneel als de naad een bies is', () => {
+    const o = bank({ poten: 'housse', naad: 'bies' });
+    const s = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
+    const arm = s.find((b) => b.code === 'a1.arm')!;
+    expect(arm.y).toBe(0);
+    expect(s.some((b) => b.code === 'a1.housse')).toBe(false);
+    expect(arm.naad?.soort).toBe('bies');
+    expect(tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen).vormen.some((v) => v.code === 'a1.housse')).toBe(false);
+  });
+});
+
 describe('nekrol', () => {
   it('alleen met losse rugkussens, bovenop het karkas, bij elke draaiing', () => {
     for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
