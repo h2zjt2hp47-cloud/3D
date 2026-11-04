@@ -100,8 +100,8 @@ Waar in de code: blokken in `packages/core/src/ruimtelijk.ts` (zetels) en `packa
    - Die hebben een vaste maat, dus een bestand past perfect.
    - Vooral bij voordeuren loont het: die worden op uitzicht gekocht.
    - Fabrikanten bieden 3D-modellen aan; de licentie per bestand nakijken.
-3. **De weergave hebben we al:** licht, reflecties en de fotomodus. Glas en aluminium profiteren daar al van, en de
-   fotomodus rekent glas natuurgetrouw.
+3. **De weergave hebben we al:** licht, reflecties en de fotomodus. Sinds de proef met glas (4/11) laat het glas het
+   licht door en spiegelt het volledig (vroeger half doorzichtig, met maar ±28 % van de spiegeling), ook in de fotomodus.
 4. **Kleine afrondingen** (de ronde randen van kunststofprofielen) gaan in de doorsnede zelf, niet via zachte vormen.
 
 **Wat we van een leverancier of klant nodig hebben:**
