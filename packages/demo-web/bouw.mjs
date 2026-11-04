@@ -37,11 +37,7 @@ if (existsSync('modellen3d')) {
   }
 }
 const modelScript = `window.__MODELLEN3D = ${JSON.stringify(modellen3d)}; Object.assign(window.__FOTOS, ${JSON.stringify(beelden3d)});`.replace(/</g, '\\u003c');
-let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}
-${omgevingScript}
-${ontruiserScript}
-/*MODELLEN3D*/
-${js}`);
+let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${omgevingScript}\n${ontruiserScript}\n/*MODELLEN3D*/\n${js}`);
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/configurator-demo.html', html.replace('<!--MERK-->', '').replace('/*HUISSTIJL*/', '').replace('/*MODELLEN3D*/', () => modelScript));
 html = html.replace('/*MODELLEN3D*/', '');
