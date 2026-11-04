@@ -19,7 +19,8 @@ meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat 
 Waar in de code: blokken in `packages/core/src/ruimtelijk.ts` (zetels) en `packages/core/voorbeelden/raam3d.ts`
 (ramen), de doorsnedes `strakProfiel` en `uitlopendProfiel` in `ruimtelijk.ts`, de zachte vormen in
 `packages/core/src/zachtevorm.ts`, de doorlopende opbouw en de boog in `packages/core/src/doorlopend.ts`, echte
-3D-bestanden in `packages/core/src/echt3d.ts`, de weergave in `packages/demo-web/src/drie-d.ts` en de decors in
+3D-bestanden in `packages/core/src/echt3d.ts`, de weefselkaarten (normal map en ruwheid, proef 4/11) in `packages/core/src/weefselkaart.ts` en
+`packages/demo-web/src/weefsel.ts`, de weergave in `packages/demo-web/src/drie-d.ts` en de decors in
 `decor3d.ts`.
 
 ## Wat we leerden
