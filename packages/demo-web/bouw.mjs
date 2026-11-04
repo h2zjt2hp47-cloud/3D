@@ -24,6 +24,9 @@ const fotoScript = `window.__FOTOS = ${JSON.stringify(fotos).replace(/</g, '\\u0
 const omgevingen = {};
 if (existsSync('omgeving')) for (const f of readdirSync('omgeving').filter((f) => f.endsWith('.hdr'))) omgevingen[f.slice(0, -4)] = readFileSync(`omgeving/${f}`).toString('base64');
 const omgevingScript = `window.__OMGEVINGEN = ${JSON.stringify(omgevingen)};`;
+// Gewichten van de ontruiser voor de fotomodus op WebGPU (Open Image Denoise, Apache 2.0, zie ontruiser/BRON.md).
+const ontruiser = existsSync('ontruiser/rt_hdr_alb_nrm_small.tza') ? readFileSync('ontruiser/rt_hdr_alb_nrm_small.tza').toString('base64') : '';
+const ontruiserScript = ontruiser ? `window.__ONTRUISER = ${JSON.stringify(ontruiser)};` : '';
 // Echte 3D-modellen (proef): modellen3d/<sleutel>.glb met een beeld <sleutel>.jpg voor de modelkaart (zie modellen3d/BRON.md).
 // Alleen in de gewone demo: het zijn geen modellen van de klant, dus niet in de versie in zijn huisstijl.
 const modellen3d = {}, beelden3d = {};
@@ -34,7 +37,11 @@ if (existsSync('modellen3d')) {
   }
 }
 const modelScript = `window.__MODELLEN3D = ${JSON.stringify(modellen3d)}; Object.assign(window.__FOTOS, ${JSON.stringify(beelden3d)});`.replace(/</g, '\\u003c');
-let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${omgevingScript}\n/*MODELLEN3D*/\n${js}`);
+let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}
+${omgevingScript}
+${ontruiserScript}
+/*MODELLEN3D*/
+${js}`);
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/configurator-demo.html', html.replace('<!--MERK-->', '').replace('/*HUISSTIJL*/', '').replace('/*MODELLEN3D*/', () => modelScript));
 html = html.replace('/*MODELLEN3D*/', '');

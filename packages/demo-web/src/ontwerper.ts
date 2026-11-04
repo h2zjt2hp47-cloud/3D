@@ -810,7 +810,23 @@ function start3DInstellingen() {
     voortgang.hidden = false;
     $<HTMLButtonElement>('#o-3d-fotoreal').disabled = true;
     const tablet = window.matchMedia?.('(pointer: coarse)').matches;
-    const url = await viewer.fotoRealistisch({ stappen: tablet ? 32 : 96, breedte: tablet ? 1400 : 2000, signaal: bezig.signal, opVoortgang: (d) => { balk.value = d; } });
+    const tekst = voortgang.querySelector('.tekst')!;
+    let methode: 'webgpu' | 'webgl' | undefined, reden: string | undefined;
+    tekst.textContent = 'Fotorealistische foto wordt berekend …';
+    const url = await viewer.fotoRealistisch({
+      stappen: tablet ? 32 : 96, breedte: tablet ? 1400 : 2000, signaal: bezig.signal, opVoortgang: (d) => { balk.value = d; },
+      opMethode: (m, r) => {
+        methode = m; reden = r;
+        tekst.textContent = m === 'webgpu' ? 'Fotorealistische foto wordt berekend (WebGPU met ontruiser) …' : 'Fotorealistische foto wordt berekend …';
+      },
+    });
+    // Lukte WebGPU niet, dan de reden even tonen (proef: zo ziet de toonzaal wat er misliep).
+    if (methode === 'webgl' && reden) {
+      tekst.textContent = `Foto gerekend met WebGL: WebGPU lukte niet (${reden}).`;
+      balk.hidden = true;
+      await new Promise((r) => setTimeout(r, 8000));
+      balk.hidden = false;
+    }
     voortgang.hidden = true;
     $<HTMLButtonElement>('#o-3d-fotoreal').disabled = false;
     bezig = null;

@@ -18,6 +18,7 @@ import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
+import { fotoWebGPU, heeftWebGPU } from './fotomodus-webgpu.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const THREE: any = THREE_;
@@ -38,7 +39,11 @@ export interface Viewer3D {
    * Fotorealistische foto: path tracing (echte lichtweerkaatsing, zachte schaduwen) met `stappen` monsters.
    * Toont het beeld al tijdens het rekenen; geeft de PNG als data-URL, of null bij annuleren of een fout.
    */
-  fotoRealistisch?(o: { stappen: number; breedte?: number; opVoortgang?: (deel: number) => void; signaal?: AbortSignal }): Promise<string | null>;
+  /**
+   * Fotomodus. Met WebGPU (bv. Safari 26+ op een Mac) de WebGPU-path tracer met ontruiser, anders of bij een fout de
+   * WebGL-path tracer. `opMethode` meldt welke gebruikt wordt.
+   */
+  fotoRealistisch?(o: { stappen: number; breedte?: number; opVoortgang?: (deel: number) => void; signaal?: AbortSignal; opMethode?: (m: 'webgpu' | 'webgl', reden?: string) => void }): Promise<string | null>;
   standpunt(naam: Standpunt): void;
   /** Losse instellingen bovenop decor en licht (vloer, muur, maten, draaien …). */
   instellen?(w: Partial<Weergave3D>): void;
@@ -2052,7 +2057,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         return null;
       }
     },
-    async fotoRealistisch({ stappen, breedte = 1800, opVoortgang, signaal }) {
+    async fotoRealistisch({ stappen, breedte = 1800, opVoortgang, signaal, opMethode }) {
       const oudRatio = renderer.getPixelRatio();
       const oudMist = scene.fog, oudContact = contact.visible, oudIntensiteit = scene.environmentIntensity;
       const oudMaten = matenGroep.visible, oudKader = markeerKader?.visible;
@@ -2072,6 +2077,19 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         // Geen gebakken schaduw in de hoekpunten: de path tracer rekent de echte; en hij leest ze verkeerd (zwart).
         for (const m of materialen.values()) if (m?.vertexColors) { m.vertexColors = false; m.userData.vcTerug = true; }
         const b = houder.clientWidth || 600;
+        // Eerst WebGPU met ontruiser (proef 04-11): veel minder stappen nodig. Lukt het niet, dan de WebGL-path tracer.
+        let webgpuReden: string | undefined;
+        if (await heeftWebGPU()) {
+          try {
+            opMethode?.('webgpu');
+            const w = Math.round(Math.min(breedte, maxBreedte())), h = Math.round((w * (houder.clientHeight || b * 0.62)) / b);
+            return await fotoWebGPU({ scene, camera, breedte: w, hoogte: h, stappen: Math.max(8, Math.round(stappen / 3)), belichting: renderer.toneMappingExposure, opVoortgang, signaal });
+          } catch (fout) {
+            console.warn('Fotomodus op WebGPU niet gelukt, verder met WebGL:', fout);
+            webgpuReden = String((fout as Error)?.message ?? fout).slice(0, 160);
+          }
+        }
+        opMethode?.('webgl', webgpuReden);
         renderer.setPixelRatio(Math.max(1, Math.min(breedte, maxBreedte()) / b));
         viewer.formaat();
         // Eerst de voortgangsbalk laten tekenen; het opbouwen van de scène (BVH) blokkeert even.
