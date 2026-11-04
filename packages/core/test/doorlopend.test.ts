@@ -23,17 +23,24 @@ describe('doorlopende opbouw', () => {
     expect(Math.max(...xs)).toBeGreaterThan(357);
     const dieptebij = (x: number) => Math.max(...zit[0]!.omtrek!.filter((p) => Math.abs(p[0] - x) < 8).map((p) => p[1]));
     expect(dieptebij(75)).toBeGreaterThan(dieptebij(200) + 25);
-    // De rug: hoog achteraan (karkas 65), rond de uiteinden lager naar voren.
+    // De rug: overal op karkashoogte (65), aan beide uiteinden een korte omloop als armleuning (tot ±32 % van de diepte).
     const rug = b.find((x) => x.code.endsWith('.rug'))!;
     expect(rug.vorm).toBe('kuipwand');
-    expect(Math.max(...rug.hoogtes!)).toBe(65);
-    expect(rug.hoogtes![0]!).toBeLessThan(60);
-    expect(rug.hoogtes![rug.hoogtes!.length - 1]!).toBeLessThan(60);
-    expect(rug.pad![0]![1]).toBeGreaterThan(60); // de wand begint links vooraan, op het loungedeel
+    expect(new Set(rug.hoogtes)).toEqual(new Set([65]));
+    expect(rug.pad![0]![1]).toBeGreaterThan(40); // links: tot ±46 cm naar voren op het loungedeel (145 diep)
+    expect(rug.pad![0]![1]).toBeLessThan(52);
+    expect(rug.pad![rug.pad!.length - 1]![1]).toBeGreaterThan(30); // rechts: ±35 cm (110 diep)
+    expect(rug.pad![rug.pad!.length - 1]![1]).toBeLessThan(40);
+    expect(rug.y).toBe(zit[0]!.y); // de rug staat op de onderbouw, achter het zitkussen
+    // Twee banden: het zitkussen rondom (ook achteraan), de onderbouw 3 cm terug, met een ronde rand.
+    const basis = b.find((x) => x.code.endsWith('.basis'))!;
+    expect(Math.min(...zit[0]!.omtrek!.map((p) => p[1]))).toBeLessThan(1);
+    expect(Math.max(...basis.omtrek!.map((p) => p[0]))).toBeLessThan(Math.max(...xs) - 2.5);
+    expect(basis.afronding!).toBeGreaterThan(basis.h * 0.4);
     expect(b.filter((x) => x.code.includes('.rugkussen'))).toHaveLength(4);
     expect(b.some((x) => x.code.endsWith('.voet') && x.soort === 'donker')).toBe(true); // verdekte voet
     // De sierkussens blijven.
-    expect(b.filter((x) => x.code.startsWith('e4.') || x.code.startsWith('e6.')).length).toBeGreaterThan(0);
+    expect(b.filter((x) => x.code.startsWith('e4.') || x.code.startsWith('e5.')).length).toBeGreaterThan(0);
   });
 
   it('prijs, bovenaanzicht en vooraanzicht blijven per element', () => {
@@ -44,13 +51,19 @@ describe('doorlopende opbouw', () => {
     expect(tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen)).toEqual(tekenVooraanzicht(perElement(o), zetelCatalogus, standaardMaterialen));
   });
 
-  it('Montego: in een boog, de uiteinden 30 cm naar voren; de kussens erop draaien mee', () => {
+  it('Montego: in een boog, de uiteinden naar voren; vaste zitting; de rug korter dan de zitting; de kussens draaien mee', () => {
     const b = blokken(model('montego'));
     const rug = b.find((x) => x.code.endsWith('.rug'))!;
     const zs = rug.pad!.map((p) => p[1]);
     const midden = Math.min(...zs);
-    expect(zs[0]! - midden).toBeGreaterThan(20);
-    expect(zs[zs.length - 1]! - midden).toBeGreaterThan(20);
+    // De rug stopt aan beide kanten op de rechte achterkant (minstens 40 % van het eindelement ver), met een ronde kop.
+    expect(rug.pad![0]![0]).toBeGreaterThan(50);
+    expect(rug.pad![rug.pad!.length - 1]![0]).toBeLessThan(210);
+    expect(zs[0]! - midden).toBeGreaterThan(5); // ook daar al naar voren door de boog
+    expect(zs[zs.length - 1]! - midden).toBeGreaterThan(5);
+    expect(new Set(rug.hoogtes)).toEqual(new Set([77])); // overal even hoog: de ronde kop komt van de wand zelf
+    expect(rug.y).toBe(b.find((x) => x.code.endsWith('.basis'))!.y); // één vorm van de voet tot de rug
+    expect(b.some((x) => x.code.endsWith('.zitkussen'))).toBe(false); // vaste zitting
     expect(b.filter((x) => x.code.includes('.rugkussen'))).toHaveLength(0); // vaste rug
     const kussen = b.filter((x) => x.code.startsWith('e3.') || x.code.startsWith('e4.'));
     expect(kussen.length).toBeGreaterThan(0);

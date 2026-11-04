@@ -79,22 +79,27 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'boucle_belize',
     opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los_dons', comfort: 'dons' },
     // Productpagina: diepte 110, zithoogte 42, karkas 65, met rugkussen 84, zitdiepte 62.
-    // Op de foto één doorlopende zetel: één zitting, een lage rug die rond de uiteinden loopt met losse rugkussens erop,
-    // links een dieper, rond loungedeel (diepte 145 = benadering uit de foto), op een verdekte voet.
-    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 18, zachtheid: 9, rugvorm: 'rond', opbouw: 'doorlopend' },
+    // Op de foto's één doorlopende zetel: twee dikke ronde banden (de zitting van ±22 cm boven een dunnere onderbouw),
+    // een lage rug die aan beide uiteinden kort omdraait als armleuning (armhoogte 65, armbreedte 20 volgens de
+    // productpagina) met losse rugkussens erop, links een dieper, rond loungedeel (diepte 145 en zittingdikte 22 zijn een
+    // benadering uit de foto's), op een verdekte voet.
+    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 22, zachtheid: 9, rugvorm: 'rond', opbouw: 'doorlopend' },
     elementen: [
       ...rij([['rond_einde', 150, 145, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 100, 110], ['rond_einde', 110, 110, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
-      sierkussen('e4', 62, 44, 'velours_terracotta'), sierkussen('e5', 108, 44, 'chenille_parel'), sierkussen('e6', 256, 44, 'velours_terracotta'),
+      // Zoals op de foto: een oranje sierkussen en een kleiner lichtgrijs ervoor, links van het midden.
+      sierkussen('e4', 100, 44, 'velours_terracotta'), sierkussen('e5', 136, 50, 'chenille_parel', 40),
     ],
   }, 'Doha', MATEN_WEBSITE),
-  model('montego', 'Montego', SOFA, 'Lage, gebogen sofa in bouclé zonder armen, op een verdekte voet: één doorlopende vorm in een boog, met een vaste rug die rond de uiteinden loopt.', {
+  model('montego', 'Montego', SOFA, 'Lage, gebogen sofa in bouclé zonder armen, op een verdekte voet: één doorlopende vorm in een boog, met een vaste zitting en een vaste rug die korter is dan de zitting.', {
     hoofdmateriaal: 'boucle_belize',
-    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast', comfort: 'dons' },
-    // Productpagina: diepte 99, zithoogte 39, hoogte 77, zitdiepte 60. De boog (uiteinden 30 cm naar voren) is een
-    // benadering uit de foto; in de tekening blijven het twee afgeronde elementen.
+    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast', zitting: 'vaste_zitting', comfort: 'dons' },
+    // Productpagina: diepte 99, zithoogte 39, hoogte 77, zitdiepte 60. Op de foto's: één vaste zitting zonder los kussen,
+    // en een ronde rug die aan beide kanten met een ronde kop stopt, ±20 % voor het uiteinde (de zitting loopt verder).
+    // De boog (uiteinden 30 cm naar voren) en die rugverdeling zijn een benadering uit de foto's; in de tekening blijven
+    // het twee afgeronde elementen.
     vormgeving: { zithoogte: 39, rughoogte: 77, zachtheid: 10, rugvorm: 'rond', rugdikte: 30, kussendikte: 18, opbouw: 'doorlopend', bocht: 30 },
     elementen: [
-      ...rij([['rond_einde', 130, 99, { ronde_kant: 'links', rug_rond: 'rond' }], ['rond_einde', 130, 99, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
+      ...rij([['rond_einde', 130, 99, { ronde_kant: 'links', rug_rond: 'recht' }], ['rond_einde', 130, 99, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
       sierkussen('e3', 70, 28, 'chenille_camel'), sierkussen('e4', 140, 28, 'katoen_kalk'),
     ],
   }, 'Montego', MATEN_WEBSITE),

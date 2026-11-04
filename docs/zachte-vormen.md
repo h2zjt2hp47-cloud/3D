@@ -69,35 +69,50 @@ verschil qua opbouw van de zetel."
 ### Oorzaak
 
 Beide modellen waren in 3D opgebouwd uit losse elementen: twee of drie elementen naast elkaar, elk met een eigen
-onderbouw, zitkussen en rugdeel. Op de foto is elk model één doorlopende zetel, en de twee verschillen sterk:
+onderbouw, zitkussen en rugdeel. Op de foto's is elk model één doorlopende zetel, en de twee verschillen sterk. De
+grote foto's van de productpagina's (Doha 2, Montego 5) tonen:
 
-- **Doha:** één lange zitting, een lage rug die rond de ronde uiteinden loopt met losse rugkussens erop, links een
-  dieper, rond loungedeel, op een verdekte voet;
-- **Montego:** één vorm in een boog (de uiteinden komen naar voren), met een vaste rug die rond de uiteinden loopt.
+- **Doha:** twee dikke, ronde banden boven elkaar: de zitting (±22 cm) en een dunnere onderbouw die iets terugspringt,
+  met een diepe naad ertussen. De lage rug draait aan beide uiteinden kort om als een ronde armleuning op volle hoogte
+  (productpagina: armhoogte 65, armbreedte 20). De zitting loopt eronder door rond de uiteinden. Losse rugkussens,
+  links een dieper, rond loungedeel, op een verdekte voet.
+- **Montego:** één vaste zitting zonder los kussen, in een boog (de uiteinden komen naar voren). De rug is een ronde
+  rol die korter is dan de zitting: aan beide kanten stopt hij met een ronde kop, ±20 % vóór het uiteinde.
 
 ### Wat er nieuw is
 
-![Doha en Montego: foto van de website, de vorige versie (per element) en nu (doorlopend)](afbeeldingen/doorlopende-zetel.jpg)
+![Doha en Montego: foto's van de website en nu, schuin en van voor](afbeeldingen/doorlopende-zetel.jpg)
 
 1. **Nieuwe keuze bij de vormgeving van de zetel: *Opbouw in 3D*.**
    - *Per element* (zoals vroeger);
-   - *Doorlopend (één zetel)*: de rij elementen wordt in 3D één zetel, met één onderbouw, één zitkussen over de hele
-     lengte en één lage rug die achteraan loopt en rond de ronde uiteinden naar voren zakt. Losse rugkussens staan langs
-     de rug. Een dieper element, zoals het loungedeel van Doha, loopt met een zachte overgang over in de rest.
-2. **Nieuwe schuifbalk: *Boog bij doorlopend*** (0 tot 60 cm). De hele zetel buigt in een boog: de uiteinden komen zoveel
+   - *Doorlopend (één zetel)*: de rij elementen wordt in 3D één zetel. Met losse zitkussens zijn dat twee ronde banden
+     (zitting rondom, onderbouw 3 cm terug); met een vaste zitting één ronde vorm van de voet tot de zitting. Daarop één
+     rug langs de achterkant, met losse rugkussens als het model die heeft. Een dieper element, zoals het loungedeel
+     van Doha, loopt vloeiend over in de rest.
+2. **De rug bij een afgerond uiteinde volgt de keuze *Rug bij de ronde kant*:**
+   - *Rug loopt rond het uiteinde*: een korte omloop om de achterhoek (tot ±32 % van de diepte) op volle hoogte, met
+     een ronde kop, zoals de armleuningen van Doha;
+   - *Rug alleen op het rechte deel*: de rug stopt met een ronde kop waar de achterkant recht wordt (minstens 40 % van
+     het eindelement ver), zoals bij Montego; de zitting loopt verder.
+3. **Nieuwe schuifbalk: *Boog bij doorlopend*** (0 tot 60 cm). De hele zetel buigt in een boog: de uiteinden komen zoveel
    cm naar voren. De kussens erop draaien mee.
-3. **Doha en Montego gebruiken die opbouw.** Doha: links een loungedeel van 145 cm diep. Montego: een boog van 30 cm.
-   Beide maten zijn een **benadering uit de foto**, geen maat van de klant.
-4. **Eén zachte vorm.** Onderbouw en rug zijn één gestoffeerd geheel met een zachte overgang ertussen, ook bij *Blokken*.
+4. **Doha en Montego gebruiken die opbouw.**
+   - Doha: links een loungedeel van 145 cm diep, zitting 22 cm dik, een oranje en een lichtgrijs sierkussen zoals op de
+     foto.
+   - Montego: vaste zitting, de rug aan beide kanten *alleen op het rechte deel*, een boog van 30 cm.
+   - De diepte, de zittingdikte, de boog en de rugverdeling zijn een **benadering uit de foto's**, geen maat van de
+     klant.
+5. **Eén zachte vorm.** Onderbouw en rug zijn één gestoffeerd geheel met een zachte overgang ertussen, ook bij *Blokken*.
    Het zitkussen is een eigen vorm met een naad boven- en onderaan.
-5. **Geen strepen en geen uitstekende randen meer.** De rug volgt nu de ronding van de uiteinden en blijft overal binnen
-   de onderbouw. De schaduw op de rug klopt ook waar de rug naar voren zakt.
-6. **Korter wachten, in stukjes.** De zachte vorm wordt na het tonen berekend, één stuk per keer (eerst onderbouw en
+6. **Geen strepen, geen uitstekende randen en geen grijze vlekken meer.**
+   - De rug blijft overal binnen de omtrek.
+   - De schaduw van een buurdeel met een vrije omtrek (bv. het zitkussen) volgt nu die omtrek. Vroeger telde zo'n deel
+     als een rechthoekige doos, wat schaduw gaf waar niets staat, zoals vóór de holle voorkant van Montego.
+   - Het zitkussen krijgt schaduw van de rug ernaast.
+7. **Korter wachten, in stukjes.** De zachte vorm wordt na het tonen berekend, één stuk per keer (eerst onderbouw en
    rug, dan het zitkussen). Tot ze klaar is, staat er even de gewone vorm. Gemeten op de server: Doha ±0,7 s, Montego
-   ±0,3 à 0,4 s; in de browser verschijnt de vorm na ±1 à 2 s. Tijdens elk stuk staat het scherm nog even stil (bij Doha
+   ±0,3 s; in de browser verschijnt de vorm na ±1 à 2 s. Tijdens elk stuk staat het scherm nog even stil (bij Doha
    tot ±0,5 s; op een tablet waarschijnlijk 2 à 3 keer langer).
-7. **Het loungedeel loopt vloeiend over in de rest.** Hoe groter het verschil in diepte, hoe breder de overgang (bij Doha
-   ±1 m), zoals de golvende voorkant op de foto.
 
 ### Wat hetzelfde blijft
 
@@ -138,8 +153,11 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
   verandert weinig, de winst zit in een eigen vorm per stijl. De rug en de onderbouw zijn ook nog balken.
 - **Geen plooien of hangende stof:** geen kreukels in de hoes, geen kussens die doorzakken.
 - **Benaderingen:** voor modellen zonder technische tekening blijft elke 3D een benadering uit foto's, hoe mooi ze ook
-  oogt. Bij Doha en Montego gaat het om de diepte van het loungedeel, de boog en hoe ver de rug rond de uiteinden loopt.
+  oogt. Bij Doha en Montego gaat het om de diepte van het loungedeel, de zittingdikte, de boog en hoe ver de rug rond de
+  uiteinden loopt.
 - **Doorlopende opbouw:** alleen voor een rechte rij zitelementen (geen hoeksofa), en de boog staat alleen in de 3D.
+  Montego is symmetrisch getekend; op de foto loopt de zitting links iets verder dan rechts. De rugkussens van Doha zijn
+  even breed; op de foto verschillen ze wat.
 - **Niet getest op een echt toestel:** alleen in Chromium zonder grafische kaart (swiftshader), niet op een tablet of
   telefoon.
 

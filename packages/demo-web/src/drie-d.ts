@@ -1896,11 +1896,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         const zacht = weergave.vormen === 'zacht';
         const groepen = zachteGroepen(zacht ? zichtbaar : zichtbaar.filter((b) => b.glad));
         for (const b of zichtbaar) if (b.glad && !smeltMee(b)) groepen.push([b]);
-        const kussens = zichtbaar.filter((b) => b.soort === 'kussen');
         const taken: { delen: Blok[]; buren: Blok[] }[] = [];
         for (const delen of groepen) {
           const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()).expandByScalar(25);
-          const buren = kussens.filter((b) => !delen.includes(b) && kader.intersectsBox(doosVan(b)));
+          // Een glad kussen (het zitkussen van een doorlopende zetel) krijgt ook schaduw van de rug en de onderbouw ernaast.
+          const kussenGroep = delen.every((d) => d.soort === 'kussen');
+          const buren = zichtbaar.filter((b) => (b.soort === 'kussen' || (kussenGroep && b.glad && b.soort === 'stof')) && !delen.includes(b) && kader.intersectsBox(doosVan(b)));
           const m = zachteMesh(delen, buren);
           if (m) {
             groep.add(m);

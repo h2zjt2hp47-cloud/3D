@@ -123,6 +123,11 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     return d;
   };
   const rondL = hL.voor > 6, rondR = hR.voor > 6;
+  // De rug bij een afgerond uiteinde: met "Rug loopt rond het uiteinde" draait hij kort om de achterhoek naar voren, als
+  // een armleuning (Doha: armhoogte 65, armbreedte 20); anders stopt hij waar de achterkant recht wordt en loopt de
+  // zitting verder dan de rug (Montego links).
+  const rugRond = (e: OntwerpElement) => gekozenOpties(ontwerp, catalogus, e).get('rug_rond')?.teken?.rond === true;
+  const omL = rondL && rugRond(eerste), omR = rondR && rugRond(laatste);
 
   /** Kwartcirkel rond c met straal r van hoek a0 tot a1 (graden; 0 = +x, 90 = naar voor). */
   const boog = (cx: number, cy: number, r: number, a0: number, a1: number, n = 10): P2[] =>
@@ -192,11 +197,16 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     nieuw.push({ code: `${id}.${code}`, soort, vorm: 'blok', ...kaderVan(omtrekW), y: r2(y), h: r2(h), kleur, omtrek: omtrekW, glad: true, ...extra });
   };
   const zitOnder = Math.max(P + 4, hg.zithoogte - kussenDik);
+  // Twee banden, zoals op de foto's van Doha: buiten de zitting (het zitkussen, rondom), de onderbouw 3 cm terug, allebei
+  // dik en rond met een diepe naad ertussen. Een vaste zitting (Montego) is één ronde vorm van de voet tot de zitting.
+  const metKussen = kussenDik > 0;
+  const insetBasis = metKussen ? 3.5 : 0.5, hb = zitOnder - P;
+  const rondBasis = Math.max(2, Math.min(hb / 2 - 0.01, hb * (metKussen ? 0.47 : 0.36) * (0.6 + 0.04 * v.zachtheid)));
   // Voet: verdekt (donker, ver naar binnen) of een plint; met een hoes loopt de onderbouw tot op de vloer. De voet staat
   // in de schaduw onder de zetel: de gewone vorm volstaat (geen zachte vorm nodig, dat spaart rekentijd).
   if (potVorm === 'verdekt' || potVorm === 'plint') {
     const hout = String(zetel.get('hout')?.teken?.kleur ?? '#c8a27a');
-    omtrekBlok('voet', potVorm === 'plint' ? 'hout' : 'donker', 0, P, potVorm === 'plint' ? hout : donkerder(stof, 0.45), omtrek(potVorm === 'plint' ? 2 : 7), { afronding: 1, glad: false });
+    omtrekBlok('voet', potVorm === 'plint' ? 'hout' : 'donker', 0, P, potVorm === 'plint' ? hout : donkerder(stof, 0.3), omtrek((potVorm === 'plint' ? 1.5 : 7.5) + insetBasis), { afronding: 1, glad: false });
   } else if (potVorm !== 'housse' && P > 0) {
     // Poten onder de omtrek: in de hoeken en om de ±120 cm langs voor- en achterkant.
     const metaal = opt.get('poten')?.teken?.metaal === true;
@@ -211,18 +221,20 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       }
     }
   }
-  // Onderbouw in de stof, en het zitkussen (achteraan tot net achter de rug) of een vaste zitting.
-  omtrekBlok('basis', 'stof', P, zitOnder - P, stof, omtrek(0.5), { afronding: Math.min(4, (zitOnder - P) / 3), ...stofExtra });
-  if (kussenDik > 0) omtrekBlok('zitkussen', 'kussen', zitOnder, kussenDik, stof, omtrek(1, RUG - 2), { afronding: zacht, naad, ...stofExtra });
-  // De rug: middenlijn achteraan, rond de afgeronde uiteinden naar voren (tot ±75 % van de diepte), waar hij net boven
-  // de zitting in het zitkussen verdwijnt (geen opstaande vin aan het uiteinde). De middenlijn volgt de omtrek (ook de
-  // ronding vooraan), zodat de wand overal binnen de onderbouw blijft.
+  omtrekBlok('basis', 'stof', P, hb, stof, omtrek(insetBasis), { afronding: rond1(rondBasis), ...stofExtra });
+  // Het zitkussen rondom (ook onder de rug, zoals de band op de foto), met een platte bovenkant en een ronde rand.
+  if (metKussen) omtrekBlok('zitkussen', 'kussen', zitOnder, kussenDik, stof, omtrek(0.5), { afronding: rond1(Math.min(zacht, kussenDik * 0.42)), naad, ...stofExtra });
+  // De rug: middenlijn langs de achterkant. Met een zitkussen staat hij erachter op de onderbouw, net binnen de rand van
+  // het kussen (zoals op de foto loopt de zitting eronder door); bij een vaste zitting vanaf de voet, één vorm.
+  // Bij een afgerond uiteinde: een korte omloop om de achterhoek tot ±32 % van de diepte, op volle hoogte met een ronde
+  // kop (de armleuning van Doha), of de rug stopt met een ronde kop waar de achterkant recht wordt (minstens 40 % van het
+  // eindelement ver, Montego).
+  const w = RUG / 2, wi = w + (metKussen ? 1 : 0), rugOnder = metKussen ? zitOnder : P;
   {
-    const w = RUG / 2, st = omtrekStukken(w);
-    const tot = (d: number) => Y0 + d * 0.75;
+    const st = omtrekStukken(wi);
+    const tot = (d: number) => Y0 + d * 0.32;
     const pad: P2[] = [];
     const hoog: number[] = [];
-    const voor = hg.zithoogte + 3;
     /** Het deel van een ketting (y loopt op) tot op hoogte `grens`, met het laatste punt precies op de grens. */
     const totGrens = (ketting: P2[], grens: number): P2[] => {
       const uit: P2[] = [];
@@ -234,19 +246,16 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       }
       return uit;
     };
-    // Links: van de achterhoek langs de zijkant en de ronding vooraan tot ±75 % van de diepte; dan omgekeerd (van
-    // vooraan naar achter), zodat de rug van links naar rechts loopt.
-    const wrapL: P2[] = rondL ? totGrens(zonderDubbel([...st.links, ...st.achterL].reverse().concat([...st.voorL].reverse()), false), tot(dL)).reverse() : [[st.xa, st.yb]];
-    const wrapR: P2[] = rondR ? totGrens(zonderDubbel([...st.achterR, ...st.rechts, ...st.voorR], false), tot(dR)) : [[st.xb, st.yb]];
-    const lengte = (pts: P2[]) => pts.reduce((l, p, i) => (i ? l + Math.hypot(p[0] - pts[i - 1]![0], p[1] - pts[i - 1]![1]) : 0), 0);
-    const LL = lengte(wrapL), LR = lengte(wrapR);
-    // Hoogte: achteraan het karkas, naar het einde van de wand toe zachtjes lager.
-    const zak = (u: number) => rond1(voor + (frameRug - voor) * (0.5 + 0.5 * Math.cos(Math.PI * Math.min(1, u))));
-    let l = 0;
-    wrapL.forEach((p, i) => { if (i) l += Math.hypot(p[0] - wrapL[i - 1]![0], p[1] - wrapL[i - 1]![1]); pad.push(p); hoog.push(rondL ? zak(1 - l / (LL || 1)) : frameRug); });
-    for (const p of st.achterkant) { pad.push(p); hoog.push(frameRug); }
-    l = 0;
-    wrapR.forEach((p, i) => { if (i) l += Math.hypot(p[0] - wrapR[i - 1]![0], p[1] - wrapR[i - 1]![1]); pad.push(p); hoog.push(rondR ? zak(l / (LR || 1)) : frameRug); });
+    // Waar de rug begint en eindigt op de rechte achterkant (als hij niet om het uiteinde loopt).
+    const beginX = omL ? st.xa + st.aL : rondL ? Math.max(st.xa + st.aL, X0 + 0.4 * eerste.breedte) : st.xa;
+    const eindX = omR ? st.xb - st.aR : rondR ? Math.min(st.xb - st.aR, X1 - 0.4 * laatste.breedte) : st.xb;
+    // Links: van de achterhoek langs de zijkant tot ±32 % van de diepte; dan omgekeerd (van vooraan naar achter), zodat
+    // de rug van links naar rechts loopt. Overal op karkashoogte: de ronde kop komt van de wand zelf.
+    const wrapL: P2[] = omL ? totGrens(zonderDubbel([...st.links, ...st.achterL].reverse().concat([...st.voorL].reverse()), false), tot(dL)).reverse() : [[beginX, st.yb]];
+    const wrapR: P2[] = omR ? totGrens(zonderDubbel([...st.achterR, ...st.rechts, ...st.voorR], false), tot(dR)) : [[eindX, st.yb]];
+    for (const p of wrapL) { pad.push(p); hoog.push(frameRug); }
+    for (const p of st.achterkant) if (p[0] > beginX + 0.5 && p[0] < eindX - 0.5) { pad.push(p); hoog.push(frameRug); }
+    for (const p of wrapR) { pad.push(p); hoog.push(frameRug); }
     // Dubbele punten weg (de stukken raken elkaar).
     const padSchoon: P2[] = [], hoogSchoon: number[] = [];
     pad.forEach((p, i) => {
@@ -257,17 +266,19 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     const k = kaderVan(padW);
     nieuw.push({
       code: `${id}.rug`, soort: 'stof', vorm: 'kuipwand', x: r2(k.x - w), z: r2(k.z - w), b: r2(k.b + RUG), d: r2(k.d + RUG),
-      y: r2(P), h: r2(Math.max(...hoogSchoon) - P), kleur: stof, pad: padW, hoogtes: hoogSchoon, dikte: r2(RUG), glad: true, ...stofExtra,
+      y: r2(rugOnder), h: r2(Math.max(...hoogSchoon) - rugOnder), kleur: stof, pad: padW, hoogtes: hoogSchoon, dikte: r2(RUG), glad: true, ...stofExtra,
     });
   }
   // Losse rugkussens langs het rechte deel van de rug, elk naar de rug gedraaid in een boog.
   if (losseRug) {
+    // Van de omloop (of het begin van de rug) tot de andere kant, tegen de binnenkant van de rug.
     const st = omtrekStukken(0);
-    const x0 = st.xa + (rondL ? hL.achter * 0.75 : 2), x1 = st.xb - (rondR ? hR.achter * 0.75 : 2);
+    const x0 = omL ? st.xa + hL.achter * 0.75 : rondL ? Math.max(X0 + hL.achter, X0 + 0.4 * eerste.breedte) : st.xa + 2;
+    const x1 = omR ? st.xb - hR.achter * 0.75 : rondR ? Math.min(X1 - hR.achter, X1 - 0.4 * laatste.breedte) : st.xb - 2;
     const n = Math.max(1, Math.round((x1 - x0) / 75)), breed = (x1 - x0) / n;
     const kantel = { graden: rond1(v.rugvorm === 'hellend' ? 14 : 2 + v.zachtheid * 0.8), richting: 'z-' as const };
     for (let i = 0; i < n; i++) {
-      const cx = x0 + breed * (i + 0.5), cy = Y0 + RUG - 2 + RKD / 2;
+      const cx = x0 + breed * (i + 0.5), cy = Y0 + wi + w - 2 + RKD / 2;
       const q = buig([cx, cy]), b = breed - 2;
       nieuw.push({
         code: `${elementBij(cx).id}.rugkussen${i + 1}`, soort: 'kussen', vorm: 'blok', x: r2(q[0] - b / 2), z: r2(q[1] - RKD / 2), b: r2(b), d: r2(RKD),

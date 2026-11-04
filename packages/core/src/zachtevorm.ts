@@ -604,7 +604,10 @@ export function zachteVorm(blokken: Blok[], opties: ZachteVormOpties = {}): Zach
   }
 
   // Schaduw in hoeken en plooien: hoe dicht het oppervlak (met kussens en vloer) langs de normaal ligt.
-  const buren = (opties.buren ?? []).filter((b) => (b.vorm ?? 'blok') === 'blok' || b.vorm === 'cilinder').map((b) => balk(b, Math.min(b.afronding ?? 2, 6)));
+  // Een buur met een eigen vorm (vrije omtrek, gebogen wand, profiel) met die vorm: als doos rond zijn kader gaf hij schaduw
+  // waar niets staat (bv. vóór de holle voorkant van een doorlopende zetel).
+  const buren = (opties.buren ?? []).filter((b) => (b.vorm ?? 'blok') === 'blok' || b.vorm === 'cilinder' || kanVorm(b))
+    .map((b) => (b.omtrek || b.vorm === 'kuipwand' || b.vorm === 'profiel' ? primitiefVan(b) : balk(b, Math.min(b.afronding ?? 2, 6))));
   const burenVeld = (x: number, y: number, z: number) => {
     let d = y; // de vloer
     for (const p of buren) {
