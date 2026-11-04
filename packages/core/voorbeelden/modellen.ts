@@ -79,17 +79,20 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'boucle_belize',
     opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los_dons', comfort: 'dons' },
     // Productpagina: diepte 110, zithoogte 42, karkas 65, met rugkussen 84, zitdiepte 62.
-    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 18, zachtheid: 9, rugvorm: 'rond' },
+    // Op de foto één doorlopende zetel: één zitting, een lage rug die rond de uiteinden loopt met losse rugkussens erop,
+    // links een dieper, rond loungedeel (diepte 145 = benadering uit de foto), op een verdekte voet.
+    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 18, zachtheid: 9, rugvorm: 'rond', opbouw: 'doorlopend' },
     elementen: [
-      ...rij([['rond_einde', 150, 110, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 100, 110], ['rond_einde', 110, 110, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
+      ...rij([['rond_einde', 150, 145, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 100, 110], ['rond_einde', 110, 110, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
       sierkussen('e4', 62, 44, 'velours_terracotta'), sierkussen('e5', 108, 44, 'chenille_parel'), sierkussen('e6', 256, 44, 'velours_terracotta'),
     ],
   }, 'Doha', MATEN_WEBSITE),
-  model('montego', 'Montego', SOFA, 'Lage, afgeronde sofa in bouclé zonder armen, op een verdekte voet. In werkelijkheid één gebogen vorm: hier benaderd met twee afgeronde elementen.', {
+  model('montego', 'Montego', SOFA, 'Lage, gebogen sofa in bouclé zonder armen, op een verdekte voet: één doorlopende vorm in een boog, met een vaste rug die rond de uiteinden loopt.', {
     hoofdmateriaal: 'boucle_belize',
     opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast', comfort: 'dons' },
-    // Productpagina: diepte 99, zithoogte 39, hoogte 77, zitdiepte 60.
-    vormgeving: { zithoogte: 39, rughoogte: 77, zachtheid: 10, rugvorm: 'rond', rugdikte: 30, kussendikte: 18 },
+    // Productpagina: diepte 99, zithoogte 39, hoogte 77, zitdiepte 60. De boog (uiteinden 30 cm naar voren) is een
+    // benadering uit de foto; in de tekening blijven het twee afgeronde elementen.
+    vormgeving: { zithoogte: 39, rughoogte: 77, zachtheid: 10, rugvorm: 'rond', rugdikte: 30, kussendikte: 18, opbouw: 'doorlopend', bocht: 30 },
     elementen: [
       ...rij([['rond_einde', 130, 99, { ronde_kant: 'links', rug_rond: 'rond' }], ['rond_einde', 130, 99, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
       sierkussen('e3', 70, 28, 'chenille_camel'), sierkussen('e4', 140, 28, 'katoen_kalk'),

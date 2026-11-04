@@ -7,6 +7,7 @@
  */
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
+import { doorlopendeOpbouw } from './doorlopend.js';
 import { kuipOpbouw, kuipParameters, type Punt } from './kuip.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
@@ -77,6 +78,13 @@ export interface Blok {
   rand?: number;
   /** Profiel: hoe ver het voorpaneel in het midden bol staat, in cm (gevulde stof). */
   kopBol?: number;
+  /** Draaiing rond de verticale as in graden (van x naar z), rond het midden; bv. een kussen in een gebogen zetel. */
+  draai?: number;
+  /**
+   * Altijd als zachte vorm tekenen (zachtevorm.ts), ook bij Blokken: grote vrije vormen zoals de zitting en rug van een
+   * doorlopende zetel (anders lange, smalle driehoeken met strepen in het reliëf).
+   */
+  glad?: boolean;
 }
 
 export interface Scene3D {
@@ -556,8 +564,10 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
   const z0 = afdrukken.length ? Math.min(...afdrukken.map((p) => p.y)) : 0;
   const x1 = afdrukken.length ? Math.max(...afdrukken.map((p) => p.x + p.b)) : 100;
   const z1 = afdrukken.length ? Math.max(...afdrukken.map((p) => p.y + p.h)) : 100;
-  const h = blokken.length ? Math.max(...blokken.map((b) => b.y + b.h)) : 80;
-  const scene: Scene3D = { blokken, kader: { x: x0, z: z0, b: x1 - x0, d: z1 - z0, h } };
+  // Doorlopende opbouw (Doha, Montego): de rij zitelementen als één zetel (zie doorlopend.ts).
+  const alle = doorlopendeOpbouw(ontwerp, catalogus, materialen, blokken);
+  const h = alle.length ? Math.max(...alle.map((b) => b.y + b.h)) : 80;
+  const scene: Scene3D = { blokken: alle, kader: { x: x0, z: z0, b: x1 - x0, d: z1 - z0, h } };
   if (opties.echt3d) {
     const u = echt3dPlaatsing(ontwerp, catalogus, materialen, opties.echt3d);
     if (u.past) scene.echt = u.plaatsing;

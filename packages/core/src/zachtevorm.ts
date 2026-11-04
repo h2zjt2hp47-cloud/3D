@@ -52,6 +52,8 @@ export interface ZachteVorm {
  * zijn al rond getekend, en samengesmolten gaven ze in de proef foutjes aan de randen. `zachteVorm` kan ze wel aan.
  */
 export function smeltMee(b: Blok): boolean {
+  // Een glad blok (doorlopende zetel) is al als zachte vorm bedoeld: stof smelt mee, ook een omtrek of gebogen wand.
+  if (b.glad) return b.soort === 'stof' && !b.zijden && kanVorm(b);
   if (b.soort !== 'stof' || b.zijden || b.omtrek) return false;
   const vorm = b.vorm ?? 'blok';
   if (vorm === 'kuipwand') return false;
@@ -135,26 +137,61 @@ function wand(b: Blok): Primitief {
   const pad = b.pad!, hoog = b.hoogtes!, w = (b.dikte ?? 14) / 2, onder = b.y;
   const n = pad.length;
   const xs = pad.map((p) => p[0]), zs = pad.map((p) => p[1]);
+  /**
+   * Dichtste punt op de middenlijn (in het grondvlak), gezocht in de stukken `van` tot en met `tot` van het pad: het
+   * verschil ernaartoe (0, 1), de hoogte daar (2), de helling van de bovenkant langs het pad maal de richting van het pad
+   * (3, 4) en het stuk (5). Aan een hoekpunt of uiteinde staat het dichtste punt stil: geen helling.
+   */
+  const dichtste = (x: number, z: number, o: Float64Array, van = 0, tot = n - 2) => {
+    let beste = Infinity, qx = 0, qz = 0, top = onder, hx = 0, hz = 0, stuk = 0;
+    for (let i = van; i <= tot; i++) {
+      const ax = pad[i]![0], az = pad[i]![1], bx = pad[i + 1]![0], bz = pad[i + 1]![1];
+      const ux = bx - ax, uz = bz - az, l2 = ux * ux + uz * uz || 1e-9;
+      const t = Math.max(0, Math.min(1, ((x - ax) * ux + (z - az) * uz) / l2));
+      const cx = ax + t * ux, cz = az + t * uz, d2 = (x - cx) * (x - cx) + (z - cz) * (z - cz);
+      if (d2 < beste) {
+        beste = d2; qx = cx; qz = cz; top = hoog[i]! + t * (hoog[i + 1]! - hoog[i]!); stuk = i;
+        if (t > 0 && t < 1) { const hel = (hoog[i + 1]! - hoog[i]!) / l2; hx = hel * ux; hz = hel * uz; } else hx = hz = 0;
+      }
+    }
+    o[0] = x - qx; o[1] = z - qz; o[2] = top; o[3] = hx; o[4] = hz; o[5] = stuk;
+  };
+  // Een lange wand (de rug van een doorlopende zetel) heeft tientallen stukken. Daarom, pas als het veld echt gebruikt
+  // wordt, per cm in het grondvlak het dichtste stuk in een tabel (de middenlijn hangt niet van de hoogte af); daarna
+  // zoekt de motor alleen in de stukken rond die van de vier tabelpunten eromheen. Liggen die ver uit elkaar (midden
+  // tussen twee delen van de wand), dan zoekt hij overal.
+  const x0 = Math.min(...xs) - w - 25, z0 = Math.min(...zs) - w - 25;
+  const tw = Math.ceil(Math.max(...xs) + w + 25 - x0) + 1, th = Math.ceil(Math.max(...zs) + w + 25 - z0) + 1;
+  let stukken: Uint16Array | null = null, oproepen = 0;
+  const o = new Float64Array(6);
   return {
     x0: Math.min(...xs) - w, x1: Math.max(...xs) + w, z0: Math.min(...zs) - w, z1: Math.max(...zs) + w,
     y0: onder, y1: Math.max(...hoog),
     veld(x, y, z, uit) {
-      // Dichtste punt op de middenlijn (in het grondvlak) en de hoogte daar.
-      let beste = Infinity, qx = 0, qz = 0, top = onder;
-      for (let i = 0; i < n - 1; i++) {
-        const ax = pad[i]![0], az = pad[i]![1], bx = pad[i + 1]![0], bz = pad[i + 1]![1];
-        const ux = bx - ax, uz = bz - az, l2 = ux * ux + uz * uz || 1e-9;
-        const t = Math.max(0, Math.min(1, ((x - ax) * ux + (z - az) * uz) / l2));
-        const cx = ax + t * ux, cz = az + t * uz, d2 = (x - cx) * (x - cx) + (z - cz) * (z - cz);
-        if (d2 < beste) { beste = d2; qx = cx; qz = cz; top = hoog[i]! + t * (hoog[i + 1]! - hoog[i]!); }
+      if (!stukken && n > 8 && ++oproepen > 2000) {
+        stukken = new Uint16Array(tw * th);
+        for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) { dichtste(x0 + i, z0 + j, o); stukken[j * tw + i] = o[5]!; }
       }
+      let van = 0, tot = n - 2;
+      const fx = x - x0, fz = z - z0;
+      if (stukken && fx >= 0 && fz >= 0 && fx < tw - 1 && fz < th - 1) {
+        const a = (fz | 0) * tw + (fx | 0);
+        const s0 = stukken[a]!, s1 = stukken[a + 1]!, s2 = stukken[a + tw]!, s3 = stukken[a + tw + 1]!;
+        const laag = Math.min(s0, s1, s2, s3), hoogst = Math.max(s0, s1, s2, s3);
+        if (hoogst - laag <= 4) { van = Math.max(0, laag - 1); tot = Math.min(n - 2, hoogst + 1); }
+      }
+      dichtste(x, z, o, van, tot);
+      const lx = o[0]!, lz = o[1]!, top = o[2]!;
       // Doorsnede: capsule van onder − w tot top − w (straal w), onderaan plat afgesneden op `onder`.
       const yc = Math.max(onder - w, Math.min(y, top - w));
-      const lx = x - qx, ly = y - yc, lz = z - qz;
+      const ly = y - yc;
       const l = Math.sqrt(lx * lx + ly * ly + lz * lz);
       const dc = l - w, db = onder - y;
+      // Bovenaan hangt het middelpunt van de ronding af van de plaats langs het pad: daar telt de helling mee in de
+      // richting (anders kloppen de normalen niet waar de wand oploopt of zakt, bv. rond het ronde uiteinde).
+      const mee = y > top - w ? ly : 0;
       if (db > dc) schrijf(uit, db, 0, -1, 0);
-      else if (l > 1e-9) schrijf(uit, dc, lx, ly, lz);
+      else if (l > 1e-9) schrijf(uit, dc, lx - mee * o[3]!, ly, lz - mee * o[4]!);
       else schrijf(uit, dc, 0, 1, 0);
     },
   };
@@ -293,17 +330,57 @@ function rol(b: Blok): Primitief {
 }
 
 /** Blok met een vrije omtrek in het grondvlak (bv. de onderbouw van een afgerond eindelement), met afgeronde randen. */
+/**
+ * De afstand tot een veelhoek (met de richting naar buiten) als tabel per `stap` cm, tot `marge` cm rond de veelhoek, en
+ * daartussen bilineair. Een vrije omtrek hangt niet van de hoogte af: zo rekent de motor elke plek in het grondvlak één
+ * keer, in plaats van voor elk punt opnieuw alle zijden (bij een lange zetel ruim 100). Buiten de tabel, of waar de
+ * richting onzeker is (midden tussen twee zijden), rekent hij gewoon.
+ */
+function veelhoekTabel(xs: Float64Array, ys: Float64Array, n: number, stap: number, marge: number) {
+  let ax = Infinity, ay = Infinity, bx = -Infinity, by = -Infinity;
+  for (let i = 0; i < n; i++) { ax = Math.min(ax, xs[i]!); ay = Math.min(ay, ys[i]!); bx = Math.max(bx, xs[i]!); by = Math.max(by, ys[i]!); }
+  const x0 = ax - marge, y0 = ay - marge, tw = Math.ceil((bx - ax + 2 * marge) / stap) + 1, th = Math.ceil((by - ay + 2 * marge) / stap) + 1;
+  const t = new Float32Array(tw * th * 3), h = new Float64Array(5);
+  for (let j = 0; j < th; j++) for (let i = 0; i < tw; i++) {
+    veelhoek(x0 + i * stap, y0 + j * stap, xs, ys, n, h);
+    const k = (j * tw + i) * 3;
+    t[k] = h[0]!; t[k + 1] = h[1]!; t[k + 2] = h[2]!;
+  }
+  return (px: number, py: number, uit: Float64Array) => {
+    const fx = (px - x0) / stap, fy = (py - y0) / stap;
+    if (fx >= 0 && fy >= 0 && fx < tw - 1 && fy < th - 1) {
+      const i = fx | 0, j = fy | 0, u = fx - i, v = fy - j;
+      const a = (j * tw + i) * 3, b = a + 3, c = a + tw * 3, d = c + 3;
+      const w00 = (1 - u) * (1 - v), w10 = u * (1 - v), w01 = (1 - u) * v, w11 = u * v;
+      const nx = t[a + 1]! * w00 + t[b + 1]! * w10 + t[c + 1]! * w01 + t[d + 1]! * w11;
+      const ny = t[a + 2]! * w00 + t[b + 2]! * w10 + t[c + 2]! * w01 + t[d + 2]! * w11;
+      const l = Math.sqrt(nx * nx + ny * ny);
+      // Wijzen de vier richtingen uiteen (een knik in de afstand, midden tussen twee zijden), dan gewoon rekenen.
+      if (l > 0.995) {
+        uit[0] = t[a]! * w00 + t[b]! * w10 + t[c]! * w01 + t[d]! * w11;
+        uit[1] = nx / l; uit[2] = ny / l;
+        return;
+      }
+    }
+    veelhoek(px, py, xs, ys, n, uit);
+  };
+}
+
 function omtrekBlok(b: Blok, minR = 0): Primitief {
   const pts = b.omtrek!, n = pts.length;
   const rr = Math.max(0.3, Math.min(Math.max(minR, b.afronding ?? Math.min(5, b.h / 3)), b.h / 2 - 0.01));
   const cy = b.y + b.h / 2, hh = b.h / 2;
-  const xs = Float64Array.from(pts.map((p) => p[0])), zs = Float64Array.from(pts.map((p) => p[1])), vh = new Float64Array(3);
+  const xs = Float64Array.from(pts.map((p) => p[0])), zs = Float64Array.from(pts.map((p) => p[1])), vh = new Float64Array(5);
+  // De tabel pas maken als het veld echt gebruikt wordt (en niet voor een paar punten): 1 cm, 25 cm rond de omtrek.
+  let tabel: ((px: number, py: number, uit: Float64Array) => void) | null = null, oproepen = 0;
   return {
     x0: Math.min(...pts.map((p) => p[0])), x1: Math.max(...pts.map((p) => p[0])),
     z0: Math.min(...pts.map((p) => p[1])), z1: Math.max(...pts.map((p) => p[1])), y0: b.y, y1: b.y + b.h,
     veld(x, y, z, uit) {
       // Afstand tot de omtrek met teken (binnen negatief), en de richting naar buiten.
-      veelhoek(x, z, xs, zs, n, vh);
+      if (!tabel && ++oproepen > 2000) tabel = veelhoekTabel(xs, zs, n, 1, 25);
+      if (tabel) tabel(x, z, vh);
+      else veelhoek(x, z, xs, zs, n, vh);
       const dxz = vh[0]! + rr, dy = Math.abs(y - cy) - (hh - rr);
       const mx = Math.max(dxz, 0), my = Math.max(dy, 0);
       const d = Math.min(Math.max(dxz, dy), 0) + Math.sqrt(mx * mx + my * my) - rr;
@@ -323,7 +400,13 @@ function primitiefVan(b: Blok, minR = 0, element?: number): Primitief {
 
 /** Kan `zachteVorm` dit blok omzetten (ruimer dan `smeltMee`: ook gebogen wanden en vrije omtrekken)? */
 function kanVorm(b: Blok): boolean {
-  if (b.soort !== 'stof' || b.zijden) return false;
+  if (b.zijden) return false;
+  // Een glad blok mag ook een kussen of de (donkere) voet zijn.
+  if (b.glad) {
+    if (b.vorm === 'kuipwand') return !!(b.pad && b.hoogtes && b.pad.length >= 2 && b.pad.length === b.hoogtes.length);
+    return (b.vorm ?? 'blok') === 'blok';
+  }
+  if (b.soort !== 'stof') return false;
   if (b.vorm === 'kuipwand') return !!(b.pad && b.hoogtes && b.pad.length >= 2 && b.pad.length === b.hoogtes.length);
   return smeltMee({ ...b, omtrek: undefined }) || !!b.omtrek;
 }

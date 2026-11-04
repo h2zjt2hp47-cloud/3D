@@ -584,8 +584,10 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   /** Andere stofdelen vlak naast dit blok (binnen 4 cm), in wereldmaat. */
   function burenVan(b: Blok): Doos[] {
     const m = 4;
+    // Een gebogen wand of een vrije omtrek (bv. de rug of onderbouw van een doorlopende zetel) is geen doos: zijn kader
+    // ligt rond de hele zetel en gaf overal schaduw (donkere strepen). Die doen hier niet mee.
     return sceneBlokken
-      .filter((o) => o !== b && (o.soort === 'stof' || o.soort === 'kussen' || o.soort === 'hout') && o.y < b.y + b.h + m && o.y + o.h > b.y - m &&
+      .filter((o) => o !== b && o.vorm !== 'kuipwand' && !o.omtrek && (o.soort === 'stof' || o.soort === 'kussen' || o.soort === 'hout') && o.y < b.y + b.h + m && o.y + o.h > b.y - m &&
         o.x < b.x + b.b + m && o.x + o.b > b.x - m && o.z < b.z + b.d + m && o.z + o.d > b.z - m)
       .map((o) => ({ x0: o.x, x1: o.x + o.b, y0: o.y, y1: o.y + o.h, z0: o.z, z1: o.z + o.d }));
   }
@@ -1006,8 +1008,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
 
   function mesh(b: Blok) {
-    // Profiel (bv. een arm): altijd als zachte vorm, ook bij blokken (één blok rekent snel), met de kussens ernaast voor
-    // de schaduw in de hoek, en de naad of bies rond het voorpaneel.
+    // Profiel (bv. een arm): altijd als zachte vorm, ook bij blokken (klein, dus meteen), met de kussens ernaast voor de
+    // schaduw in de hoek en de naad of bies rond het voorpaneel. Een glad blok (doorlopende zetel) komt hier alleen zolang
+    // zijn zachte vorm nog berekend wordt (zie `toon`): tot dan de gewone vorm.
     if (b.vorm === 'profiel') {
       const kader = doosVan(b).expandByScalar(8);
       const buren = sceneBlokken.filter((k) => k.soort === 'kussen' && kader.intersectsBox(doosVan(k)));
@@ -1122,6 +1125,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     m.name = b.code;
     if (kussen) for (const n of naden(b, kussen)) m.add(n);
     m.position.set(cx, y, cz);
+    // Draaiing rond de verticale as (bv. een kussen in een gebogen zetel): eerst draaien, dan kantelen.
+    if (b.draai) { m.rotation.order = 'YXZ'; m.rotation.y = -(b.draai * Math.PI) / 180; }
     if (b.kantel) {
       // Achterover hellen rond de onderkant: de bovenkant gaat naar de achterkant.
       const a = (b.kantel.graden * Math.PI) / 180;
@@ -1815,22 +1820,57 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return m;
   }
 
-  /** Ontbrekende vormen even later berekenen (na het slepen), dan opnieuw tonen; tot dan de blokken. */
+  /**
+   * Naad of bies rond een glad kussen met een vrije omtrek (de zitting van een doorlopende zetel): boven- en onderaan op
+   * de afgeronde rand, zoals bij de gewone kussens.
+   */
+  function omtrekNaad(b: Blok) {
+    if (!b.naad || b.naad.soort === 'stiksel' || b.soort !== 'kussen' || !b.omtrek) return [];
+    const rr = Math.max(0.3, Math.min(b.afronding ?? Math.min(5, b.h / 3), b.h / 2 - 0.01)), inw = rr * 0.29;
+    const pts = b.omtrek, n = pts.length;
+    let opp = 0;
+    for (let i = 0; i < n; i++) { const p = pts[i]!, q = pts[(i + 1) % n]!; opp += p[0] * q[1] - q[0] * p[1]; }
+    const zin = opp > 0 ? 1 : -1;
+    const binnen = pts.map((p, i) => {
+      const v = pts[(i - 1 + n) % n]!, w = pts[(i + 1) % n]!;
+      const n1 = [-(p[1] - v[1]), p[0] - v[0]], n2 = [-(w[1] - p[1]), w[0] - p[0]];
+      const l1 = Math.hypot(n1[0]!, n1[1]!) || 1, l2 = Math.hypot(n2[0]!, n2[1]!) || 1;
+      const nx = (n1[0]! / l1 + n2[0]! / l2) * zin, nz = (n1[1]! / l1 + n2[1]! / l2) * zin, l = Math.hypot(nx, nz) || 1;
+      return [p[0] + (nx / l) * inw, p[1] + (nz / l) * inw] as [number, number];
+    });
+    const straal = b.naad.soort === 'bies' ? 0.55 : 0.14;
+    const mat = b.naad.soort === 'bies'
+      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
+      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+    return [b.y + b.h - inw, b.y + inw].map((y) => {
+      const curve = new THREE.CatmullRomCurve3(binnen.map(([x, z]) => new THREE.Vector3(x, y, z)), true, 'centripetal');
+      const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(600, n * 3), straal, 6, true), mat);
+      m.receiveShadow = true;
+      return m;
+    });
+  }
+
+  /**
+   * Ontbrekende vormen even later berekenen (na het slepen), één per keer zodat het scherm tussendoor kan reageren, en
+   * dan opnieuw tonen; tot dan de blokken.
+   */
   function planZacht(s: Scene3D, taken: { delen: Blok[]; buren: Blok[] }[]) {
     clearTimeout(zachtGepland);
-    zachtGepland = window.setTimeout(() => {
-      for (const { delen, buren } of taken) {
-        const sleutel = vormSleutel(delen, buren);
-        if (zachteVormen.has(sleutel)) continue;
-        // Grote zetels (meer dan 3 m³ in hun kader, bv. een hoeksofa): raster van 2,5 cm, half zoveel rekenwerk; van op die
-        // afstand zie je het verschil niet.
-        const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()), maat = kader.getSize(new THREE.Vector3());
-        zachteVormen.set(sleutel, zachteVorm(delen, { buren, raster: maat.x * maat.y * maat.z > 3e6 ? 2.5 : 2 }));
-        // Niet onbeperkt bewaren (een sofa is al gauw enkele MB): de oudste eerst weg.
-        if (zachteVormen.size > 8) zachteVormen.delete(zachteVormen.keys().next().value!);
-      }
-      if (laatsteScene === s) viewer.toon(s);
-    }, 140);
+    const volgende = () => {
+      if (laatsteScene !== s) return;
+      const taak = taken.find((t) => !zachteVormen.has(vormSleutel(t.delen, t.buren)));
+      if (!taak) { viewer.toon(s); return; }
+      const { delen, buren } = taak;
+      // Grote vormen (meer dan 3 m³ in hun kader, bv. een hoeksofa, of meer dan 4 m² grondvlak, bv. de zitting van een
+      // lange doorlopende zetel): raster van 2,5 cm, ±40 % minder rekenwerk; van op die afstand zie je het verschil niet.
+      const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()), maat = kader.getSize(new THREE.Vector3());
+      const groot = maat.x * maat.y * maat.z > 3e6 || maat.x * maat.z > 4e4;
+      zachteVormen.set(vormSleutel(delen, buren), zachteVorm(delen, { buren, raster: groot ? 2.5 : 2 }));
+      // Niet onbeperkt bewaren (een sofa is al gauw enkele MB): de oudste eerst weg.
+      if (zachteVormen.size > 12) zachteVormen.delete(zachteVormen.keys().next().value!);
+      zachtGepland = window.setTimeout(volgende, 0);
+    };
+    zachtGepland = window.setTimeout(volgende, 140);
   }
 
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
@@ -1850,21 +1890,24 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const onder = echt ? new Set(s.echt!.elementen.map((e) => e.id)) : null;
       const zichtbaar = s.blokken.filter((b) => !onder?.has(b.code.split('.')[0]!));
       // Zachte vormen: de gestoffeerde delen van het karkas per groep samengesmolten; kussens, hout en metaal zoals altijd.
+      // Gladde blokken (een doorlopende zetel: onderbouw en rug samen, het zitkussen apart) altijd, ook bij Blokken.
       const versmolten = new Set<Blok>();
-      if (opties.zetel && weergave.vormen === 'zacht') {
+      if (opties.zetel) {
+        const zacht = weergave.vormen === 'zacht';
+        const groepen = zachteGroepen(zacht ? zichtbaar : zichtbaar.filter((b) => b.glad));
+        for (const b of zichtbaar) if (b.glad && !smeltMee(b)) groepen.push([b]);
         const kussens = zichtbaar.filter((b) => b.soort === 'kussen');
         const taken: { delen: Blok[]; buren: Blok[] }[] = [];
-        for (const delen of zachteGroepen(zichtbaar)) {
+        for (const delen of groepen) {
           const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()).expandByScalar(25);
-          const buren = kussens.filter((b) => kader.intersectsBox(doosVan(b)));
+          const buren = kussens.filter((b) => !delen.includes(b) && kader.intersectsBox(doosVan(b)));
           const m = zachteMesh(delen, buren);
           if (m) {
             groep.add(m);
             for (const b of delen) {
               versmolten.add(b);
-              // Ook samengesmolten houdt een arm zijn naad of bies rond het voorpaneel.
-              const naad = b.vorm === 'profiel' ? profielNaad(b) : null;
-              if (naad) m.add(naad);
+              // Ook samengesmolten houdt een arm zijn naad of bies rond het voorpaneel; het zitkussen boven- en onderaan.
+              for (const naad of b.vorm === 'profiel' ? [profielNaad(b)] : omtrekNaad(b)) if (naad) m.add(naad);
             }
           }
           else taken.push({ delen, buren });

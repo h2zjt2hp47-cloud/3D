@@ -55,9 +55,52 @@ Wat het Glam-model echter maakt dan onze blokken:
    - **Vooraanzicht:** de tekening (modelkaart, offerte) toont dezelfde vorm.
 
    ![Strakke arm: foto, vorige versie, nu met blokken en zacht](afbeeldingen/strakke-arm.jpg)
-4. **Ronde vormen blijven zoals ze waren.** Kuipfauteuils (Pebble, Ross, Karl …) en het afgeronde eindelement (Doha,
-   Montego) waren al rond getekend. Samengesmolten gaven ze in de proef foutjes aan de randen, dus die delen smelten niet
-   mee.
+4. **Ronde vormen blijven zoals ze waren.** Kuipfauteuils (Pebble, Ross, Karl …) en het afgeronde eindelement in een
+   eigen ontwerp waren al rond getekend. Samengesmolten gaven ze in de proef foutjes aan de randen, dus die delen smelten
+   niet mee. Doha en Montego zijn wel aangepast: zie het volgende hoofdstuk.
+
+## Doorlopende zetel: Doha en Montego (4/11, derde ronde)
+
+### Melding
+
+"Montego en Doha zien er in de 3D identiek uit. Ook als je Doha bekijkt op de foto en de 3D ernaast, is er een groot
+verschil qua opbouw van de zetel."
+
+### Oorzaak
+
+Beide modellen waren in 3D opgebouwd uit losse elementen: twee of drie elementen naast elkaar, elk met een eigen
+onderbouw, zitkussen en rugdeel. Op de foto is elk model één doorlopende zetel, en de twee verschillen sterk:
+
+- **Doha:** één lange zitting, een lage rug die rond de ronde uiteinden loopt met losse rugkussens erop, links een
+  dieper, rond loungedeel, op een verdekte voet;
+- **Montego:** één vorm in een boog (de uiteinden komen naar voren), met een vaste rug die rond de uiteinden loopt.
+
+### Wat er nieuw is
+
+![Doha en Montego: foto van de website, de vorige versie (per element) en nu (doorlopend)](afbeeldingen/doorlopende-zetel.jpg)
+
+1. **Nieuwe keuze bij de vormgeving van de zetel: *Opbouw in 3D*.**
+   - *Per element* (zoals vroeger);
+   - *Doorlopend (één zetel)*: de rij elementen wordt in 3D één zetel, met één onderbouw, één zitkussen over de hele
+     lengte en één lage rug die achteraan loopt en rond de ronde uiteinden naar voren zakt. Losse rugkussens staan langs
+     de rug. Een dieper element, zoals het loungedeel van Doha, loopt met een zachte overgang over in de rest.
+2. **Nieuwe schuifbalk: *Boog bij doorlopend*** (0 tot 60 cm). De hele zetel buigt in een boog: de uiteinden komen zoveel
+   cm naar voren. De kussens erop draaien mee.
+3. **Doha en Montego gebruiken die opbouw.** Doha: links een loungedeel van 145 cm diep. Montego: een boog van 30 cm.
+   Beide maten zijn een **benadering uit de foto**, geen maat van de klant.
+4. **Eén zachte vorm.** Onderbouw en rug zijn één gestoffeerd geheel met een zachte overgang ertussen, ook bij *Blokken*.
+   Het zitkussen is een eigen vorm met een naad boven- en onderaan.
+5. **Geen strepen en geen uitstekende randen meer.** De rug volgt nu de ronding van de uiteinden en blijft overal binnen
+   de onderbouw. De schaduw op de rug klopt ook waar de rug naar voren zakt.
+6. **Het scherm staat niet stil.** De zachte vorm wordt in de achtergrond berekend (één stuk per keer). Tot ze klaar is,
+   staat er even de gewone vorm. Gemeten op de server: Doha ±0,7 s, Montego ±0,3 à 0,4 s; in de browser verschijnt de
+   vorm na ±1 à 2 s.
+
+### Wat hetzelfde blijft
+
+- **Prijs en offerte:** per element, zoals vroeger.
+- **Bovenaanzicht en vooraanzicht:** per element. De boog is er (nog) niet in getekend; die zit alleen in de 3D.
+- **Andere modellen:** ongewijzigd (*Per element* is de standaard).
 
 ## Hoe het werkt (kort)
 
@@ -72,8 +115,9 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
 |---|---|
 | `packages/core/src/zachtevorm.ts` | `zachteVorm(blokken, opties)` geeft posities, normalen, textuurcoördinaten en schaduw. `smeltMee(blok)` zegt welke blokken meesmelten. `zachtVeld()` geeft het veld zelf, voor tests. Vormen: afgeronde balk (ook gekanteld), rol, gebogen wand, vrije omtrek en het nieuwe *profiel*. |
 | `packages/core/src/ruimtelijk.ts` | `Blok.vorm = 'profiel'` met `profiel` (doorsnede), `uit` (richting buitenkant), `rand` (afronding van het voorpaneel) en `kopBol` (bolling van het voorpaneel). `uitlopendProfiel()` en `strakProfiel()` geven de doorsnede, gedeeld met het vooraanzicht. |
-| `packages/demo-web/src/drie-d.ts` | Groepen per stof die elkaar raken, de vormen worden onthouden en pas na het slepen berekend (tot dan de blokken). Klikken en markeren per element. Een *profiel* wordt ook bij *Blokken* zo getekend, met de naad of bies rond het voorpaneel (`profielNaad`). |
-| Tests | `packages/core/test/zachtevorm.test.ts` (dicht oppervlak, afronding in de hoek, geen richel op een naad, Wallace) en `details.test.ts` (uitlopende en strakke arm). |
+| `packages/core/src/doorlopend.ts` | Doorlopende opbouw: `doorlopendeRij()` zoekt de rij zitelementen, `doorlopendeOpbouw()` vervangt hun blokken door één zetel (voet, onderbouw, zitkussen, rug rond de uiteinden, rugkussens), eventueel in een boog. Prijs en tekeningen blijven per element. |
+| `packages/demo-web/src/drie-d.ts` | Groepen per stof die elkaar raken, de vormen worden onthouden en pas na het slepen berekend (één per keer; tot dan de blokken). Klikken en markeren per element. Een *profiel* wordt ook bij *Blokken* zo getekend, met de naad of bies rond het voorpaneel (`profielNaad`). Een doorlopende zetel ook (`Blok.glad`). |
+| Tests | `packages/core/test/zachtevorm.test.ts` (dicht oppervlak, afronding in de hoek, geen richel op een naad, Wallace, aflopende wand, Doha en Montego), `details.test.ts` (uitlopende en strakke arm) en `doorlopend.test.ts` (opbouw, boog, geen plooi in de omtrek, prijs en tekeningen per element). |
 
 ## Grenzen van de proef
 
@@ -90,7 +134,8 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
   verandert weinig, de winst zit in een eigen vorm per stijl. De rug en de onderbouw zijn ook nog balken.
 - **Geen plooien of hangende stof:** geen kreukels in de hoes, geen kussens die doorzakken.
 - **Benaderingen:** voor modellen zonder technische tekening blijft elke 3D een benadering uit foto's, hoe mooi ze ook
-  oogt.
+  oogt. Bij Doha en Montego gaat het om de diepte van het loungedeel, de boog en hoe ver de rug rond de uiteinden loopt.
+- **Doorlopende opbouw:** alleen voor een rechte rij zitelementen (geen hoeksofa), en de boog staat alleen in de 3D.
 - **Niet getest op een echt toestel:** alleen in Chromium zonder grafische kaart (swiftshader), niet op een tablet of
   telefoon.
 

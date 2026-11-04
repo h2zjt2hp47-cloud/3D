@@ -98,3 +98,58 @@ describe('zachte vorm', () => {
     expect(v.schaduw.reduce((a, b) => Math.min(a, b), 1)).toBeGreaterThan(0.3);
   });
 });
+
+/** Hoeveel normalen van de vorm afwijken van de richting van het veld zelf (gemeten met kleine stapjes). */
+function afwijkend(v: ZachteVorm, blokken: Blok[]) {
+  const veld = zachtVeld(blokken, 4, 10, 0), h = 0.05;
+  let mis = 0;
+  for (let i = 0; i < v.driehoeken * 3; i += 3) {
+    const x = v.posities[i * 3]!, y = v.posities[i * 3 + 1]!, z = v.posities[i * 3 + 2]!;
+    const gx = veld(x + h, y, z) - veld(x - h, y, z), gy = veld(x, y + h, z) - veld(x, y - h, z), gz = veld(x, y, z + h) - veld(x, y, z - h);
+    const l = Math.hypot(gx, gy, gz) || 1;
+    if ((gx * v.normalen[i * 3]! + gy * v.normalen[i * 3 + 1]! + gz * v.normalen[i * 3 + 2]!) / l < 0.94) mis++;
+  }
+  return mis / v.driehoeken;
+}
+
+describe('doorlopende zetel als zachte vorm', () => {
+  it('een wand die afloopt: de normalen bovenaan hellen mee (geen strepen in de schaduw)', () => {
+    const pad: [number, number][] = Array.from({ length: 11 }, (_, i) => [i * 10, 0]);
+    const wand = blok('r.rug', -10, 0, -10, 120, 80, 20, { vorm: 'kuipwand', pad, hoogtes: pad.map((_, i) => 80 - i * 5), dikte: 20, glad: true });
+    const v = zachteVorm([wand], { minAfronding: 0 });
+    expect(dicht(v)).toBe(0);
+    expect(afwijkend(v, [wand])).toBeLessThan(0.002);
+  });
+
+  it('Doha en Montego: onderbouw, rug en zitkussen dicht, met kloppende normalen; snel genoeg dankzij de tabellen', () => {
+    for (const code of ['doha', 'montego']) {
+      const s = bouw3D(zetelModellen.find((m) => m.code === code)!.ontwerp, zetelCatalogus, standaardMaterialen);
+      for (const b of s.blokken.filter((x) => x.glad)) {
+        const v = zachteVorm([b], { minAfronding: 0, raster: 2.5 });
+        expect(dicht(v), `${code} ${b.code}`).toBe(0);
+        expect(afwijkend(v, [b]), `${code} ${b.code}`).toBeLessThan(0.003);
+      }
+    }
+  });
+
+  it('de tabel van een lange omtrek geeft hetzelfde veld als het rekenen per zijde', () => {
+    const s = bouw3D(zetelModellen.find((m) => m.code === 'doha')!.ontwerp, zetelCatalogus, standaardMaterialen);
+    const basis = s.blokken.find((b) => b.code.endsWith('.basis'))!, rug = s.blokken.find((b) => b.code.endsWith('.rug'))!;
+    for (const b of [basis, rug]) {
+      // Na 2000 punten maakt de motor de tabel; een nieuw veld rekent de eerste 2000 punten nog per zijde.
+      const metTabel = zachtVeld([b], 4, 10, 0), zonder = zachtVeld([b], 4, 10, 0);
+      let r = 7;
+      const toeval = () => ((r = (r * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 2500; i++) metTabel(b.x + toeval() * b.b, b.y + toeval() * b.h, b.z + toeval() * b.d);
+      let grootst = 0, aanOppervlak = 0;
+      for (let i = 0; i < 1500; i++) {
+        const x = b.x - 5 + toeval() * (b.b + 10), y = b.y + toeval() * b.h, z = b.z - 5 + toeval() * (b.d + 10);
+        const echt = zonder(x, y, z), fout = Math.abs(metTabel(x, y, z) - echt);
+        grootst = Math.max(grootst, fout);
+        if (Math.abs(echt) < 3) aanOppervlak = Math.max(aanOppervlak, fout);
+      }
+      expect(grootst, b.code).toBeLessThan(0.06);
+      expect(aanOppervlak, b.code).toBeLessThan(0.02);
+    }
+  });
+});

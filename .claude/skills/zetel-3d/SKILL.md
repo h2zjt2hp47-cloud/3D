@@ -116,11 +116,11 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
   - daarna twee keer gelijkmatiger verdeeld (half naar het gemiddelde van de buren, terug op het oppervlak): anders een kartelrand langs scherpe bochten zoals de krul;
   - normalen uit het veld, schaduw (AO) uit 5 stappen langs de normaal met kussens en vloer erbij;
   - uitvoer per driehoek met textuurcoördinaten in cm volgens de richting van de driehoek (zoals `wereldUV`).
-- **`smeltMee(b)`**: stof, geen kussen of zijden, geen kuipwand en geen omtrek. Die zijn al rond en gaven foutjes aan de randen; `zachteVorm` kan ze wel als je ze rechtstreeks geeft.
+- **`smeltMee(b)`**: stof, geen kussen of zijden, geen kuipwand en geen omtrek. Die zijn al rond en gaven foutjes aan de randen; `zachteVorm` kan ze wel als je ze rechtstreeks geeft. Uitzondering: een `glad` blok in de stof (doorlopende zetel) smelt wel mee, ook als omtrek of kuipwand.
 - **Weergave:** `Weergave3D.vormen` (`'blokken' | 'zacht'`), keuze *Vormen* in de 3D-balk.
   - `zachteGroepen` groepeert per materiaalsleutel en raakvlak (union-find).
   - Een vorm wordt onthouden per sleutel: maten van de delen en de kussens eromheen; de kleur hoort niet bij de sleutel.
-  - `planZacht` rekent 140 ms na de laatste wijziging; tot dan de blokken. Kader groter dan 3 m³: raster 2,5 cm.
+  - `planZacht` rekent 140 ms na de laatste wijziging, één vorm per keer (het scherm kan tussendoor reageren); tot dan de blokken. Kader groter dan 3 m³ of grondvlak groter dan 4 m²: raster 2,5 cm. Hooguit 12 vormen onthouden.
   - Snelheid meten: bundel een testscript met esbuild en draai het met node (`tsx` meet de eerste, koude keer en geeft een veel te hoge tijd).
   - De mesh krijgt `userData.delen` (per element een Box3) voor kiezen (`raak.point`) en markeren.
 - **`Blok.vorm = 'profiel'`** (uitlopende en strakke arm, `uitlopendProfiel` / `strakProfiel` in `ruimtelijk.ts`, ook gebruikt door `vooraanzicht.ts`):
@@ -133,6 +133,22 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
   - de veelhoek-richting komt van de dichtste zijde, ook precies op de rand, anders verkeerde normalen (strepen);
   - in de weergave altijd via `zachteVorm([b])`, ook bij *Blokken*.
 - **Valkuil:** samensmelten alleen geeft weinig winst. Een overtuigende vorm vraagt een eigen doorsnede per stijl (arm, rug, hoes). Test met `zachtVeld` en de vergelijking van normalen met de numerieke gradiënt.
+- **Tabellen in het grondvlak** (sneller, zelfde uitkomst): een vrije omtrek (`omtrekBlok`) en een gebogen wand (`wand`) hangen niet van de hoogte af. Na 2000 oproepen maakt de motor per cm een tabel:
+  - omtrek: afstand en richting, bilineair (`veelhoekTabel`); waar de vier richtingen meer dan ±11° uiteenlopen (een knik), rekent hij gewoon;
+  - wand: het dichtste stuk van het pad per cm; daarna zoekt hij alleen in de stukken rond die van de vier tabelpunten (liggen die meer dan 4 stukken uit elkaar, dan overal). Dat blijft exact.
+  - De wand rekent de helling van de bovenkant langs het pad mee in de richting (`mee`), anders kloppen de normalen niet waar de wand oploopt of zakt.
+
+## Doorlopende opbouw (4/11, `core/src/doorlopend.ts`)
+- **`Vormgeving.opbouw`** `'elementen' | 'doorlopend'` en **`Vormgeving.bocht`** (cm, 0–60): alleen op zetelniveau (verborgen bij een element). Doha (`doorlopend`) en Montego (`doorlopend`, `bocht: 30`, benadering uit de foto).
+- **`doorlopendeRij`**: de langste rij aansluitende elementen met tekenstijl zit, rond of zit_zonder_rug, rotatie 0, op één lijn. **`doorlopendeOpbouw`** (vanuit `bouw3D`) haalt hun blokken weg en zet er één zetel voor in de plaats, met codes van het middelste element:
+  - `.voet` (verdekt/plint, gewone omtrek, `glad: false`) of poten langs de omtrek;
+  - `.basis` (stof) en `.zitkussen` (kussen, achterkant `RUG − 2` naar voor, met naad): vrije omtrek, `glad: true`;
+  - `.rug`: kuipwand langs de omtrek (inset = halve rugdikte), rond een afgerond uiteinde ook langs de ronding vooraan tot 75 % van de diepte; hoogte zakt met een cosinus van het karkas naar zithoogte + 3;
+  - losse rugkussens om de ±75 cm (met `draai` in een boog).
+- **Omtrek in stukken** (`omtrekStukken`): achterhoeken, achterkant, zijkanten, voorhoeken, voorkant met de diepte per x (zachte overgang van 2 × 25 cm naar een dieper element). De hoeken worden kleiner als de achterkant naar voor schuift (anders plooit de omtrek: test op snijdende zijden in `doorlopend.test.ts`). Dubbele punten eruit (`zonderDubbel`).
+- **Boog** (`buig`): R = W²/(8s) + s/2 en θ = (x − xc)/R; alle punten (omtrek, pad, kussens, opzet-elementen op de rij) gaan mee; `Blok.draai` (graden, x naar z) draait een blok rond zijn midden (weergave: `rotation.order = 'YXZ'`, `rotation.y = −draai`).
+- **`Blok.glad`**: altijd als zachte vorm, ook bij *Blokken*. `toon()` groepeert de gladde stofdelen (onderbouw + rug = één vorm) en zet de andere gladde delen (zitkussen) apart; `planZacht` rekent ze in de achtergrond, één per keer, tot dan de gewone vorm. Raster 2,5 cm bij meer dan 3 m³ of meer dan 4 m² grondvlak.
+- **Prijs, bovenaanzicht en vooraanzicht blijven per element** (test in `doorlopend.test.ts`). Een gedraaid element breekt de rij.
 
 ## Testen in de browser
 - three.js zit in de bundel (geen CDN). Neem beelden met `canvas.toDataURL()`; *Mooi* (GTAO + VSM) is in swiftshader ±7 s per beeld, dus test met *Snel* of wacht 30–45 s. `window.__zetel3d.fotoRealistisch({ stappen: 6, breedte: 520 })` = snelle proef van de fotomodus.

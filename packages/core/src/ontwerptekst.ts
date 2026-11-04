@@ -33,6 +33,8 @@ function vormgevingTekst(v: Partial<Vormgeving>): string[] {
   if (v.rugkussendikte !== undefined) delen.push(`rugkussens ${getal(v.rugkussendikte)} cm dik`);
   if (v.rugkussens !== undefined) delen.push(`${Math.round(v.rugkussens)} rugkussens per element`);
   if (v.karkashoogte !== undefined) delen.push(`karkas ${getal(v.karkashoogte)} cm hoog`);
+  if (v.opbouw === 'doorlopend') delen.push('doorlopende vorm (één zetel)');
+  if (v.bocht) delen.push(`in een boog (uiteinden ${getal(v.bocht)} cm naar voren)`);
   return delen;
 }
 

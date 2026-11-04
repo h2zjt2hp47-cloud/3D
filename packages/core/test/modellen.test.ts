@@ -85,7 +85,9 @@ describe('ontwerpmodus (vormgeving)', () => {
   });
 
   it('afgerond eindelement: ronde contour in het bovenaanzicht, cilinder in 3D', () => {
-    const doha = zetelModellen.find((m) => m.code === 'doha')!.ontwerp;
+    // Doha per element (zonder de doorlopende opbouw van het model): elk afgerond element apart.
+    const model = zetelModellen.find((m) => m.code === 'doha')!.ontwerp;
+    const doha: Ontwerp = { ...model, vormgeving: { ...model.vormgeving, opbouw: 'elementen' } };
     const r = bereken(doha);
     expect(r.tekening.vormen.find((v) => v.code === 'e1.zit')?.pad).toMatch(/^M.* Z$/);
     const s = bouw3D(doha, zetelCatalogus, standaardMaterialen);

@@ -87,11 +87,19 @@ function metNieuweChaise(c: OntwerpCatalogus): OntwerpCatalogus {
   };
 }
 
+/**
+ * Een bewaarde catalogus met de oude grens voor het afgeronde eindelement (hoogstens 120 cm diep) bijwerken naar 160 cm:
+ * zo kan een rond loungedeel dieper zijn (Doha). Alleen als die grens nog de oude standaard is.
+ */
+function metDieperEindelement(c: OntwerpCatalogus): OntwerpCatalogus {
+  return { ...c, typen: c.typen.map((t) => (t.code === 'rond_einde' && t.diepte.max === 120 ? { ...t, diepte: { ...t.diepte, max: 160 } } : t)) };
+}
+
 function startCatalogus(): { catalogus: OntwerpCatalogus; modellen: ModelDefinitie[] } {
   try {
     const c = JSON.parse(lees(SLEUTEL_CATALOGUS) ?? 'null') as OntwerpCatalogus | null;
     const m = JSON.parse(lees(SLEUTEL_MODELLEN) ?? '[]') as ModelDefinitie[];
-    const catalogus = c && Array.isArray(c.typen) ? metNieuweChaise(c) : structuredClone(zetelCatalogus);
+    const catalogus = c && Array.isArray(c.typen) ? metDieperEindelement(metNieuweChaise(c)) : structuredClone(zetelCatalogus);
     const modellen = Array.isArray(m) ? m : [];
     if (controleerCatalogus(catalogus, [...zetelModellen, ...modellen]).length === 0) return { catalogus, modellen };
   } catch {

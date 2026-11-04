@@ -285,7 +285,7 @@ export const zetelCatalogus: OntwerpCatalogus = {
     },
     {
       code: 'rond_einde', label: 'Afgerond eindelement', tekenstijl: 'rond',
-      breedte: { min: 80, max: 200, standaard: 130 }, diepte: { min: 80, max: 120, standaard: 100 },
+      breedte: { min: 80, max: 200, standaard: 130 }, diepte: { min: 80, max: 160, standaard: 100 },
       prijs: g(890, 990, 1140, 800), per10cm: g(30, 34, 40, 26),
       stofVast: 1.4, stofPerM: 3.0, kostVast: 200, kostPerM: 190, uren: 5, urenPerM: 2.5,
     },

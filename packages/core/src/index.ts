@@ -65,6 +65,7 @@ export { tekenVooraanzicht } from './vooraanzicht.js';
 export { bouw3D, blokkenVan, kaderVan, plaatsBlokken, type Blok, type BlokSoort, type BlokZijde, type Bouw3DOpties, type Scene3D } from './ruimtelijk.js';
 export { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing, type Echt3DUitkomst } from './echt3d.js';
 export { smeltMee, zachteVorm, zachtVeld, type ZachteVorm, type ZachteVormOpties } from './zachtevorm.js';
+export { doorlopendeOpbouw, doorlopendeRij } from './doorlopend.js';
 export { controleerCatalogus, maakCode, tekenstijlen } from './catalogus.js';
 export * from './plattegrond.js';
 export * from './plattegrondsvg.js';

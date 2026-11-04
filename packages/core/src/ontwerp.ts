@@ -115,6 +115,14 @@ export interface Vormgeving {
    */
   karkashoogte?: number;
   /**
+   * Opbouw van een rij zitelementen in de 3D: per element (zoals altijd) of doorlopend: één onderbouw, één zitting en één
+   * lage rug die rond de afgeronde uiteinden loopt (zoals Doha en Montego), zie doorlopend.ts. Prijs en tekeningen blijven
+   * per element.
+   */
+  opbouw?: 'elementen' | 'doorlopend';
+  /** Bij een doorlopende opbouw: hoeveel cm de uiteinden naar voren komen (een boog, zoals Montego); 0 = recht. */
+  bocht: number;
+  /**
    * Vrije hoogtes in cm (bv. getekend in het vooraanzicht). Leeg = volgens de gekozen opties.
    * Rughoogte en armhoogte gelden per element; zithoogte en poothoogte voor de hele zetel.
    */
@@ -149,7 +157,7 @@ export function hoogtesVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e?: On
   };
 }
 
-export const STANDAARD_VORMGEVING: Vormgeving = { rugdikte: 18, kussendikte: 14, zitkussens: 1, zachtheid: 4, rugvorm: 'recht', houtframe: 'geen', rugkussendikte: 14 };
+export const STANDAARD_VORMGEVING: Vormgeving = { rugdikte: 18, kussendikte: 14, zitkussens: 1, zachtheid: 4, rugvorm: 'recht', houtframe: 'geen', rugkussendikte: 14, bocht: 0 };
 
 export const VORMGEVING_BEREIK = {
   rugdikte: { min: 10, max: 30 },
@@ -157,6 +165,7 @@ export const VORMGEVING_BEREIK = {
   zitkussens: { min: 1, max: 3 },
   zachtheid: { min: 0, max: 10 },
   rugkussendikte: { min: 10, max: 30 },
+  bocht: { min: 0, max: 60 },
 } as const;
 
 /** Meerprijzen voor de vormgeving (per element). */

@@ -513,10 +513,13 @@ const VORM_LABELS: Record<keyof Vormgeving, string> = {
   armhoogte: 'Armhoogte (cm)',
   zithoogte: 'Zithoogte (cm)',
   poothoogte: 'Poothoogte (cm)',
+  opbouw: 'Opbouw in 3D',
+  bocht: 'Boog bij doorlopend: uiteinden naar voren (cm)',
 };
 const KEUZE_LABELS: Record<string, string> = {
   recht: 'Recht', hellend: 'Achterover hellend', rond: 'Afgerond',
   geen: 'Geen', zijkant: 'Zijkanten', rondom: 'Zijkanten + voorkant',
+  elementen: 'Per element', doorlopend: 'Doorlopend (één zetel)',
 };
 
 /**
@@ -526,15 +529,16 @@ const KEUZE_LABELS: Record<string, string> = {
 function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Partial<Vormgeving>, pas: (veld: keyof Vormgeving, w: Vormgeving[keyof Vormgeving]) => void, effect?: VormEffect): HTMLElement {
   const raster = el('div', { class: 'vormraster' });
   // Voor één element: alleen wat bij dat element zichtbaar is (en aangerekend wordt), zie vormEffect in de motor.
+  // Opbouw en boog gelden voor de hele zetel: niet per element.
   const toon = (veld: keyof Vormgeving) =>
-    !effect || ((veld !== 'rugdikte' && veld !== 'rugvorm') || effect.rugvorm) && (veld !== 'zitkussens' || effect.kussens) && (veld !== 'houtframe' || effect.houtframe) && (veld !== 'rugkussendikte' || effect.rug);
+    !effect || (veld !== 'opbouw' && veld !== 'bocht' && ((veld !== 'rugdikte' && veld !== 'rugvorm') || effect.rugvorm) && (veld !== 'zitkussens' || effect.kussens) && (veld !== 'houtframe' || effect.houtframe) && (veld !== 'rugkussendikte' || effect.rug));
   for (const veld of Object.keys(VORMGEVING_BEREIK) as (keyof typeof VORMGEVING_BEREIK)[]) {
     if (!toon(veld)) continue;
     const b = VORMGEVING_BEREIK[veld];
     const id = `${idVoorvoegsel}-${veld}`;
     const wrap = el('label', { for: id, class: `vormveld${veld in eigen ? ' afwijkend' : ''}` });
-    const waarde = el('output', { for: id }, String(huidig[veld]));
-    const schuif = el('input', { type: 'range', id, min: String(b.min), max: String(b.max), step: '1', value: String(huidig[veld]) }) as HTMLInputElement;
+    const waarde = el('output', { for: id }, String(huidig[veld] ?? 0));
+    const schuif = el('input', { type: 'range', id, min: String(b.min), max: String(b.max), step: '1', value: String(huidig[veld] ?? 0) }) as HTMLInputElement;
     schuif.addEventListener('input', () => {
       waarde.textContent = schuif.value;
       pas(veld, Number(schuif.value));
@@ -544,7 +548,7 @@ function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Part
     wrap.append(kop, schuif);
     raster.append(wrap);
   }
-  for (const [veld, keuzes] of [['rugvorm', ['recht', 'hellend', 'rond']], ['houtframe', ['geen', 'zijkant', 'rondom']]] as const) {
+  for (const [veld, keuzes] of [['rugvorm', ['recht', 'hellend', 'rond']], ['houtframe', ['geen', 'zijkant', 'rondom']], ['opbouw', ['elementen', 'doorlopend']]] as const) {
     if (!toon(veld)) continue;
     const fs = el('fieldset', { class: `optiegroep${veld in eigen ? ' afwijkend' : ''}` });
     fs.append(el('legend', {}, VORM_LABELS[veld]));
@@ -553,7 +557,7 @@ function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Part
       const id = `${idVoorvoegsel}-${veld}-${k}`;
       const chip = el('label', { class: 'chip', for: id });
       const r = el('input', { type: 'radio', name: `${idVoorvoegsel}-${veld}`, id, value: k }) as HTMLInputElement;
-      r.checked = huidig[veld] === k;
+      r.checked = (huidig[veld] ?? (veld === 'opbouw' ? 'elementen' : undefined)) === k;
       r.addEventListener('change', () => pas(veld, k));
       chip.append(r, el('span', {}, KEUZE_LABELS[k] ?? k));
       chips.append(chip);
