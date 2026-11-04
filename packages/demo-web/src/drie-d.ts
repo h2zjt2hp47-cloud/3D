@@ -5,6 +5,7 @@
  * Bediening: slepen = draaien, scrollen/knijpen = zoomen, knoppen = vaste standpunten.
  */
 import type { Blok, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
+import { smeltMee, zachteVorm, type ZachteVorm } from '../../core/src/zachtevorm.js';
 import { wielHint } from './zoom.js';
 import { WEEFSEL_CM, weefselCanvas } from './weefsel.js';
 import { bouwDecor, type DecorSpec } from './decor3d.js';
@@ -78,8 +79,10 @@ export interface Weergave3D {
   zonRichting: number;
   /** Echt 3D-model tonen als het model er een heeft; false = de benadering met blokken. Leeg = aan. */
   echtModel?: boolean;
+  /** Vormen: blokken (zoals altijd) of zacht (proef: onderbouw, armen en rug samengesmolten tot één zachte vorm). */
+  vormen?: 'blokken' | 'zacht';
 }
-export const STANDAARD_WEERGAVE: Weergave3D = { vloer: 'decor', muur: 'decor', tapijt: 'decor', spullen: 'decor', maten: false, draaien: false, lens: 35, helderheid: 0, zonRichting: 120, echtModel: true };
+export const STANDAARD_WEERGAVE: Weergave3D = { vloer: 'decor', muur: 'decor', tapijt: 'decor', spullen: 'decor', maten: false, draaien: false, lens: 35, helderheid: 0, zonRichting: 120, echtModel: true, vormen: 'blokken' };
 
 /** Decors voor de zetel: vloer, muur, tapijt en een paar spullen. */
 export const DECORS = {
@@ -1003,6 +1006,14 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
 
   function mesh(b: Blok) {
+    // Profiel (bv. een uitlopende arm): altijd als zachte vorm, ook bij blokken (één blok rekent snel).
+    if (b.vorm === 'profiel') {
+      const sleutel = vormSleutel([b], []);
+      if (!zachteVormen.has(sleutel)) zachteVormen.set(sleutel, zachteVorm([b], { minAfronding: 0 }));
+      const m = zachteMesh([b], [])!;
+      m.name = b.code;
+      return m;
+    }
     let geo: any;
     let kussen: ReturnType<typeof kussenGeometrie> | null = null;
     let vrijeNaden: any[][] | null = null;
@@ -1414,6 +1425,14 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       opties.opKlik((echt.elementen.find((e) => x >= e.x0 && x <= e.x1) ?? echt.elementen[0]!).id);
       return;
     }
+    // Zachte vorm: het element met het dichtste deel bij de klik.
+    const delen = raak?.object.userData?.delen as { id: string; box: any }[] | undefined;
+    if (delen?.length) {
+      let beste = delen[0]!, afstand = Infinity;
+      for (const d of delen) { const a = d.box.distanceToPoint(raak.point); if (a < afstand) { afstand = a; beste = d; } }
+      opties.opKlik(beste.id);
+      return;
+    }
     const naam: string = raak ? raak.object.name || raak.object.parent.name : '';
     opties.opKlik(naam ? naam.split('.')[0]! : null);
   }
@@ -1496,6 +1515,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const p = c.userData?.echt as Echt3DPlaatsing | undefined;
       const e = p?.elementen.find((x) => x.id === markeerId);
       if (p && e) box.union(new THREE.Box3(new THREE.Vector3(e.x0, 0, p.z), new THREE.Vector3(e.x1, p.h, p.z + p.d)));
+      // Zachte vorm: de delen van dit element.
+      for (const d of (c.userData?.delen ?? []) as { id: string; box: any }[]) if (d.id === markeerId) box.union(d.box);
     }
     if (box.isEmpty()) return;
     box.expandByScalar(1.5);
@@ -1706,6 +1727,69 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return g;
   }
 
+  // ---------- zachte vormen (proef, zie core/src/zachtevorm.ts) ----------
+  /** Berekende vormen per groep (sleutel = de maten van de delen en de kussens eromheen), om niet opnieuw te rekenen. */
+  const zachteVormen = new Map<string, ZachteVorm>();
+  let zachtGepland = 0;
+  const materiaalSleutel = (b: Blok) => `${b.soort}:${b.kleur}:${b.weefsel ?? ''}:${b.textuur ? b.textuur.length + b.textuur.slice(-24) : ''}`;
+  const doosVan = (b: Blok) => new THREE.Box3(new THREE.Vector3(b.x, b.y, b.z), new THREE.Vector3(b.x + b.b, b.y + b.h, b.z + b.d));
+  /** Groepen die samensmelten: zelfde stof en aan elkaar (kaders raken elkaar). */
+  function zachteGroepen(blokken: Blok[]) {
+    const mee = blokken.filter(smeltMee);
+    const ouder = mee.map((_, i) => i);
+    const wortel = (i: number): number => (ouder[i] === i ? i : (ouder[i] = wortel(ouder[i]!)));
+    const dozen = mee.map((b) => doosVan(b).expandByScalar(1));
+    for (let i = 0; i < mee.length; i++) for (let j = i + 1; j < mee.length; j++)
+      if (materiaalSleutel(mee[i]!) === materiaalSleutel(mee[j]!) && dozen[i]!.intersectsBox(dozen[j]!)) ouder[wortel(i)] = wortel(j);
+    const groepen = new Map<number, Blok[]>();
+    mee.forEach((b, i) => { const w = wortel(i); groepen.set(w, [...(groepen.get(w) ?? []), b]); });
+    return [...groepen.values()];
+  }
+  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
+  /** De zachte vorm als mesh (onze stof, schaduw in de hoeken als hoekpuntkleur), of null als ze nog berekend moet worden. */
+  function zachteMesh(delen: Blok[], buren: Blok[]) {
+    const v = zachteVormen.get(vormSleutel(delen, buren));
+    if (!v) return null;
+    const b = delen[0]!;
+    const tegel = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(v.posities, 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(v.normalen, 3));
+    const uv = new Float32Array(v.uv.length);
+    for (let i = 0; i < uv.length; i++) uv[i] = v.uv[i]! / tegel;
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    const kleur = new Float32Array(v.schaduw.length * 3);
+    for (let i = 0; i < v.schaduw.length; i++) kleur[i * 3] = kleur[i * 3 + 1] = kleur[i * 3 + 2] = v.schaduw[i]!;
+    geo.setAttribute('color', new THREE.BufferAttribute(kleur, 3));
+    geo.computeBoundingSphere();
+    const basis = materiaal(b);
+    const sleutel = `vc:${basis.uuid}`;
+    let mat = materialen.get(sleutel);
+    if (!mat) { mat = basis.clone(); mat.vertexColors = true; materialen.set(sleutel, mat); }
+    const m = new THREE.Mesh(geo, mat);
+    m.name = 'zacht';
+    m.castShadow = m.receiveShadow = true;
+    // Voor kiezen en markeren: per element het kader van zijn delen.
+    const perElement = new Map<string, any>();
+    for (const d of delen) { const id = d.code.split('.')[0]!; perElement.set(id, (perElement.get(id) ?? new THREE.Box3()).union(doosVan(d))); }
+    m.userData.delen = [...perElement].map(([id, box]) => ({ id, box }));
+    return m;
+  }
+  /** Ontbrekende vormen even later berekenen (na het slepen), dan opnieuw tonen; tot dan de blokken. */
+  function planZacht(s: Scene3D, taken: { delen: Blok[]; buren: Blok[] }[]) {
+    clearTimeout(zachtGepland);
+    zachtGepland = window.setTimeout(() => {
+      for (const { delen, buren } of taken) {
+        const sleutel = vormSleutel(delen, buren);
+        if (zachteVormen.has(sleutel)) continue;
+        zachteVormen.set(sleutel, zachteVorm(delen, { buren }));
+        // Niet onbeperkt bewaren (een sofa is al gauw enkele MB): de oudste eerst weg.
+        if (zachteVormen.size > 8) zachteVormen.delete(zachteVormen.keys().next().value!);
+      }
+      if (laatsteScene === s) viewer.toon(s);
+    }, 140);
+  }
+
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
   let laatsteBreedte = 0;
@@ -1721,7 +1805,22 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const model = s.echt && weergave.echtModel !== false ? echtModelVan(s.echt.bestand) : null;
       const echt = model ? echtGroep(s.echt!, model) : null;
       const onder = echt ? new Set(s.echt!.elementen.map((e) => e.id)) : null;
-      for (const b of s.blokken) if (!onder?.has(b.code.split('.')[0]!)) groep.add(mesh(b));
+      const zichtbaar = s.blokken.filter((b) => !onder?.has(b.code.split('.')[0]!));
+      // Zachte vormen: de gestoffeerde delen van het karkas per groep samengesmolten; kussens, hout en metaal zoals altijd.
+      const versmolten = new Set<Blok>();
+      if (opties.zetel && weergave.vormen === 'zacht') {
+        const kussens = zichtbaar.filter((b) => b.soort === 'kussen');
+        const taken: { delen: Blok[]; buren: Blok[] }[] = [];
+        for (const delen of zachteGroepen(zichtbaar)) {
+          const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()).expandByScalar(25);
+          const buren = kussens.filter((b) => kader.intersectsBox(doosVan(b)));
+          const m = zachteMesh(delen, buren);
+          if (m) { groep.add(m); for (const b of delen) versmolten.add(b); }
+          else taken.push({ delen, buren });
+        }
+        if (taken.length) planZacht(s, taken);
+      }
+      for (const b of zichtbaar) if (!versmolten.has(b)) groep.add(mesh(b));
       if (echt) groep.add(echt);
       schaduwOpnieuw();
       zetContactschaduw(s, echt);
@@ -1853,7 +1952,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
       if (weergave.zonRichting !== oud.zonRichting) zetZon();
       if (weergave.maten !== oud.maten) zetMaten();
-      if ((weergave.echtModel !== false) !== (oud.echtModel !== false) && laatsteScene) viewer.toon(laatsteScene);
+      if (((weergave.echtModel !== false) !== (oud.echtModel !== false) || weergave.vormen !== oud.vormen) && laatsteScene) viewer.toon(laatsteScene);
       if (weergave.draaien && !draaiLoopt) requestAnimationFrame(draaiLus);
       const decorAnders = (['vloer', 'muur', 'tapijt', 'spullen'] as const).some((k) => weergave[k] !== oud[k]) || !Object.keys(w).length;
       if (decorAnders) {

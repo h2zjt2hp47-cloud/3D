@@ -17,17 +17,22 @@ const bank = (opties: Record<string, string> = {}, extra: Partial<Ontwerp> = {},
 const blok = (o: Ontwerp, code: string) => bouw3D(o, zetelCatalogus, standaardMaterialen).blokken.find((b) => b.code === code);
 
 describe('uitlopende arm', () => {
-  it('smal tegen de zitting, met de lip aan de buitenkant (links en rechts), oplopend naar het karkas', () => {
+  it('één doorsnede: smal tegen de zitting, de krul aan de buitenkant (links en rechts), oplopend naar het karkas', () => {
     const o = bank({}, { vormgeving: { armhoogte: 63, karkashoogte: 86 } }, 'uitlopend');
     const s = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
-    const lip1 = s.find((b) => b.code === 'a1.lip')!, lip2 = s.find((b) => b.code === 'a2.lip')!;
-    expect(lip1.x).toBe(0); // linkerarm: lip links (buiten)
-    expect(lip2.x + lip2.b).toBe(140); // rechterarm: lip rechts (buiten)
-    const wand1 = s.find((b) => b.code === 'a1.arm')!;
-    expect(wand1.vorm).toBe('kuipwand');
-    expect(Math.min(...wand1.pad!.map((q) => q[0]))).toBeGreaterThan(10); // tegen de zitting, niet aan de buitenkant
-    expect(wand1.hoogtes![0]).toBeLessThan(wand1.hoogtes![wand1.hoogtes!.length - 1]!); // vooraan lager dan achteraan
-    expect(Math.max(...wand1.hoogtes!)).toBeCloseTo(86, 5);
+    const arm1 = s.find((b) => b.code === 'a1.arm')!, arm2 = s.find((b) => b.code === 'a2.arm')!;
+    expect(arm1.vorm).toBe('profiel');
+    expect(s.some((b) => b.code === 'a1.lip')).toBe(false);
+    expect(arm1.uit).toEqual([-1, 0]); // linkerarm: krul naar links (buiten)
+    expect(arm2.uit).toEqual([1, 0]); // rechterarm: krul naar rechts
+    expect([arm1.x, arm1.x + arm1.b]).toEqual([0, 20]);
+    // Onderaan smaller dan bovenaan: de buitenkant staat onderaan naar binnen (s < breedte/2), de krul reikt tot de rand.
+    const onderaan = arm1.profiel!.filter((p) => !p[2]).map((p) => p[0]), bovenaan = arm1.profiel!.filter((p) => p[2]).map((p) => p[0]);
+    expect(Math.max(...onderaan)).toBeLessThan(5);
+    expect(Math.max(...bovenaan)).toBeCloseTo(10, 5);
+    expect(arm1.hoogtes![0]).toBeLessThan(arm1.hoogtes![arm1.hoogtes!.length - 1]!); // vooraan lager dan achteraan
+    expect(arm1.hoogtes![0]).toBe(63);
+    expect(Math.max(...arm1.hoogtes!)).toBeCloseTo(86, 5);
     expect(berekenOntwerp(o, zetelCatalogus, standaardMaterialen).prijs.brutoprijsExcl).toBeGreaterThan(berekenOntwerp(bank({}, { vormgeving: { armhoogte: 63, karkashoogte: 86 } }), zetelCatalogus, standaardMaterialen).prijs.brutoprijsExcl);
     expect(tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen).vormen.find((v) => v.code === 'a1.arm')?.pad).toBeTruthy();
   });
@@ -35,9 +40,15 @@ describe('uitlopende arm', () => {
     const arm = (y: number, rotatie: Rotatie): OntwerpElement => ({ id: `a${y}`, type: 'arm', x: 0, y, breedte: 20, diepte: 95, rotatie, opties: { armstijl: 'uitlopend' } });
     const o: Ontwerp = { hoofdmateriaal: 'linnen_ficelle', elementen: [arm(0, 90), { id: 'z', type: 'zit', x: 0, y: 20, breedte: 100, diepte: 95, rotatie: 90 }, arm(120, 90)] };
     const s = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
-    expect(s.find((b) => b.code === 'a0.lip')!.z).toBe(0);
-    const lip = s.find((b) => b.code === 'a120.lip')!;
-    expect(lip.z + lip.d).toBe(140);
+    expect(s.find((b) => b.code === 'a0.arm')!.uit).toEqual([0, -1]);
+    expect(s.find((b) => b.code === 'a120.arm')!.uit).toEqual([0, 1]);
+  });
+  it('met een hoes tot op de grond: de arm loopt zelf tot op de vloer, geen aparte rok eronder', () => {
+    const o = bank({ poten: 'housse' }, { vormgeving: { armhoogte: 63, karkashoogte: 86 } }, 'uitlopend');
+    const s = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
+    expect(s.find((b) => b.code === 'a1.arm')!.y).toBe(0);
+    expect(s.some((b) => b.code === 'a1.housse')).toBe(false);
+    expect(s.some((b) => b.code === 'z.housse')).toBe(true);
   });
 });
 

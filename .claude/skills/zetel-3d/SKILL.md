@@ -107,6 +107,29 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - **Bestanden:** `demo-web/modellen3d/<sleutel>.glb` (+ `<sleutel>.jpg` voor de modelkaart, `BRON.md` met licentie). `bouw.mjs` sluit ze alleen in de gewone demo in (`/*MODELLEN3D*/`), niet in de huisstijlversie. `staat.ts` toont proefmodellen alleen als hun bestand er is (`proefModellenNu`).
 - **Een bestand voorbereiden:** lampen en camera's eruit, kleurvarianten eruit, texturen verkleinen (zie `docs/echte-3d-modellen.md`). Meet de maten en de zithoogte in het bestand, en kies elementtypes die binnen de catalogusgrenzen vallen (arm ≤ 40 cm, afgerond eindelement ≥ 80 cm). Wat de klant moet aanleveren, staat in dat document.
 
+## Zachte vormen (proef 4/11, `core/src/zachtevorm.ts`)
+- **`zachteVorm(blokken, { raster 2, overgang 4, overgangBinnen 10, minAfronding 1,25 × raster, buren, tegelCm })`**: maakt van gestoffeerde blokken één dichte vorm. Werkwijze:
+  - afstandsveld per blok: `balk` (ook met kantel, zelfde draaiing als de weergave: rond de onderkant in het midden), `rol`, `wand` (kuipwand), `omtrekBlok`, `profielVorm`;
+  - zacht samenvoegen met een straal × (1 − cos hoek tussen de richtingen naar buiten), dus geen richel waar vlakken in elkaars verlengde liggen; binnen één element (code vóór het punt) de ruimere `overgangBinnen`;
+  - eerst een grof raster (3×), dan fijn alleen vlak bij het oppervlak;
+  - surface nets op een licht verschoven raster (vlakken niet op rasterpunten, anders dubbele randen), punten met 3 Newton-stappen op het oppervlak;
+  - daarna twee keer gelijkmatiger verdeeld (half naar het gemiddelde van de buren, terug op het oppervlak): anders een kartelrand langs scherpe bochten zoals de krul;
+  - normalen uit het veld, schaduw (AO) uit 5 stappen langs de normaal met kussens en vloer erbij;
+  - uitvoer per driehoek met textuurcoördinaten in cm volgens de richting van de driehoek (zoals `wereldUV`).
+- **`smeltMee(b)`**: stof, geen kussen of zijden, geen kuipwand en geen omtrek. Die zijn al rond en gaven foutjes aan de randen; `zachteVorm` kan ze wel als je ze rechtstreeks geeft.
+- **Weergave:** `Weergave3D.vormen` (`'blokken' | 'zacht'`), keuze *Vormen* in de 3D-balk.
+  - `zachteGroepen` groepeert per materiaalsleutel en raakvlak (union-find).
+  - Een vorm wordt onthouden per sleutel: maten van de delen en de kussens eromheen; de kleur hoort niet bij de sleutel.
+  - `planZacht` rekent 140 ms na de laatste wijziging; tot dan de blokken.
+  - De mesh krijgt `userData.delen` (per element een Box3) voor kiezen (`raak.point`) en markeren.
+- **`Blok.vorm = 'profiel'`** (uitlopende arm):
+  - `pad` is de rechte middenlijn (15 punten) met `hoogtes`;
+  - `profiel` bestaat uit punten [s, y, boven]: s naar `uit` (buitenkant); `boven = 1` betekent onder de bovenkant ter plaatse, dus mee met de hoogte;
+  - de helling van de opgaande arm zit in de richting en de afstand (−gy × deel dat meeschuift × stijging), anders kartels;
+  - de veelhoek-richting komt van de dichtste zijde, ook precies op de rand, anders verkeerde normalen (strepen);
+  - in de weergave altijd via `zachteVorm([b])`, ook bij *Blokken*.
+- **Valkuil:** samensmelten alleen geeft weinig winst. Een overtuigende vorm vraagt een eigen doorsnede per stijl (arm, rug, hoes). Test met `zachtVeld` en de vergelijking van normalen met de numerieke gradiënt.
+
 ## Testen in de browser
 - three.js zit in de bundel (geen CDN). Neem beelden met `canvas.toDataURL()`; *Mooi* (GTAO + VSM) is in swiftshader ±7 s per beeld, dus test met *Snel* of wacht 30–45 s. `window.__zetel3d.fotoRealistisch({ stappen: 6, breedte: 520 })` = snelle proef van de fotomodus.
 - Start Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` voor WebGL zonder GPU.

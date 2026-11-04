@@ -718,6 +718,7 @@ function start3DInstellingen() {
   const spullen = $<HTMLSelectElement>('#o-3d-spullen'), lens = $<HTMLSelectElement>('#o-3d-lens');
   const helder = $<HTMLInputElement>('#o-3d-helderheid'), zonR = $<HTMLInputElement>('#o-3d-zon');
   const maten = $<HTMLInputElement>('#o-3d-maten'), draaien = $<HTMLInputElement>('#o-3d-draaien');
+  const vormen = $<HTMLSelectElement>('#o-3d-vormen');
   vloer.replaceChildren(el('option', { value: 'decor' }, 'Zoals het decor'), ...Object.entries(VLOEREN).map(([k, v]) => el('option', { value: k }, v.label)));
   const toonVelden = () => {
     const w = weergave3D;
@@ -731,6 +732,7 @@ function start3DInstellingen() {
     spullen.value = w.spullen; lens.value = String(w.lens);
     helder.value = String(w.helderheid); zonR.value = String(w.zonRichting);
     maten.checked = w.maten; draaien.checked = w.draaien;
+    vormen.value = w.vormen ?? 'blokken';
   };
   const leesVelden = () => {
     weergave3D = {
@@ -740,6 +742,7 @@ function start3DInstellingen() {
       spullen: spullen.value as Weergave3D['spullen'],
       lens: Number(lens.value), helderheid: Number(helder.value), zonRichting: Number(zonR.value),
       maten: maten.checked, draaien: draaien.checked, echtModel: echtAan,
+      vormen: vormen.value === 'zacht' ? 'zacht' : 'blokken',
     };
     $('#o-3d-muurkleur-veld').hidden = muur.value !== 'kleur';
     $('#o-3d-tapijtkleur-veld').hidden = tapijt.value !== 'kleur';
@@ -747,7 +750,7 @@ function start3DInstellingen() {
     bewaarInst();
   };
   toonVelden();
-  for (const v of [vloer, muur, tapijt, spullen, lens, maten, draaien]) v.addEventListener('change', leesVelden);
+  for (const v of [vloer, muur, tapijt, spullen, lens, maten, draaien, vormen]) v.addEventListener('change', leesVelden);
   // Echt 3D-model of de benadering (vergelijken); bewaard met de andere 3D-instellingen.
   echtAan = weergave3D.echtModel !== false;
   document.querySelectorAll<HTMLButtonElement>('[data-echt]').forEach((b) => b.addEventListener('click', () => {
