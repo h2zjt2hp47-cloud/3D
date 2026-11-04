@@ -189,7 +189,8 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'linnen_travertin',
     opties: { poten: 'housse', rug: 'los_dons', comfort: 'dons', naad: 'bies' },
     // Technische tekening: arm 21 breed en 63 hoog, zithoogte 47, diepte 100, zitdiepte 55, rug 86 en met kussen 90.
-    vormgeving: { zithoogte: 47, rughoogte: 90, armhoogte: 63, karkashoogte: 74, rugdikte: 16, rugkussendikte: 26, rugkussens: 2, kussendikte: 16, zachtheid: 8 },
+    // Karkas 86 cm (zijaanzicht op de tekening); de arm loopt naar achteren op tot die hoogte.
+    vormgeving: { zithoogte: 47, rughoogte: 90, armhoogte: 63, karkashoogte: 86, rugdikte: 16, rugkussendikte: 26, rugkussens: 2, kussendikte: 16, zachtheid: 8 },
     elementen: rij([['arm', 21, 100, { armstijl: 'uitlopend' }], ['zit', 160, 100], ['arm', 21, 100, { armstijl: 'uitlopend' }]]),
   }, 'Wallace', MATEN_WEBSITE),
   model('esmee', 'Esmee', SOFA, 'Lange sofa met lage, uitlopende armen, hoes tot op de grond, vast zitkussen en losse donzen rugkussens.', {

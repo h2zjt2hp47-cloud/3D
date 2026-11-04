@@ -146,7 +146,13 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       cilinderMidden('draaivoet', 'metaal', 1.5, P - 1.5, Math.min(p.b, p.h) * 0.22, Math.min(p.b, p.h) * 0.22, '#2e2c2a');
       cilinderMidden('voetplaat', 'metaal', 0, 1.5, Math.min(p.b, p.h) * 0.55, Math.min(p.b, p.h) * 0.55, '#2e2c2a');
     } else if (t.tekenstijl !== 'console' && potVorm === 'housse') {
-      lokaal('housse', 'stof', 0.3, 0.3, B - 0.6, D - 0.6, 0, P + 2, stof, { afronding: 1 });
+      // Hoes tot op de grond: bij een zitelement in één stuk van de vloer tot onder het zitkussen (zoals Husk, Wallace,
+      // Esmee op de foto's), anders een rok tot net boven de poothoogte.
+      const zitHoes = ['zit', 'hoek', 'chaise', 'zit_zonder_rug'].includes(t.tekenstijl);
+      const hoesTop = zitHoes
+        ? hoogtesVan(ontwerp, catalogus, e).zithoogte - (gekozenOpties(ontwerp, catalogus, e).get('zitting')?.code === 'vaste_zitting' ? 0 : vormgevingVan(ontwerp, e).kussendikte) - 0.5
+        : P + 2;
+      lokaal('housse', 'stof', 0.3, 0.3, B - 0.6, D - 0.6, 0, hoesTop, stof, { afronding: 1 });
     } else if (t.tekenstijl !== 'console') {
       if (potVorm === 'plint') lokaal('plint', 'hout', 2, 2, B - 4, D - 4, 0, P, hout);
       else if (potVorm === 'verdekt' && t.tekenstijl === 'rond') {
@@ -443,8 +449,46 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         } else if (vorm === 'schuin') {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P - 5, stof, { afronding: 6 });
         } else if (vorm === 'uitlopend') {
-          // Naar buiten uitlopend (Wallace, Esmee): de arm helt weg van het midden van de zetel, met een ronde bovenkant.
-          lokaal('arm', 'stof', 0, 0, B, D, P, armH - P, stof, { afronding: Math.min(B / 2.2, 7), kantel: { graden: 9, richting: naarBuiten(e) } });
+          // Uitlopende arm (technische tekening van Wallace): onderaan smal tegen de zitting, bovenaan een ronde lip die naar
+          // buiten krult (op armhoogte), en naar achteren oplopend tot de hoogte van het karkas.
+          const dik = Math.min(B * 0.5, 11), lip = Math.min(12, B * 0.6);
+          const achter = Math.max(armH, v.karkashoogte ?? armH);
+          // Welke lokale kant (x = 0 of x = B) ligt aan de buitenkant van de zetel?
+          const buiten = naarBuiten(e);
+          const w0 = lokaalNaarWereld(e, 0, 0, 1, 1), wB = lokaalNaarWereld(e, B - 1, 0, 1, 1);
+          const buitenBijNul = buiten === 'x-' ? w0.x < wB.x : buiten === 'x+' ? w0.x > wB.x : buiten === 'z-' ? w0.y < wB.y : w0.y > wB.y;
+          const lxWand = buitenBijNul ? B - dik / 2 : dik / 2;
+          const padLokaal: [number, number][] = [], hoogtes: number[] = [];
+          for (let i = 0; i <= 14; i++) {
+            const t = i / 14; // 0 = vooraan, 1 = achteraan
+            const s = Math.max(0, Math.min(1, (t - 0.5) / 0.5));
+            padLokaal.push([lxWand, D - 2 - t * (D - 4)]);
+            hoogtes.push(rond1(armH - lip * 0.3 + (achter - armH + lip * 0.3) * s * s * (3 - 2 * s)));
+          }
+          const padW = padLokaal.map(([lx, ly]) => { const q = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(q.x), r2(q.y)] as [number, number]; });
+          const xs = padW.map((q) => q[0]), zs = padW.map((q) => q[1]);
+          blokken.push({
+            code: `${e.id}.arm`, soort: 'stof', vorm: 'kuipwand',
+            x: r2(Math.min(...xs) - dik / 2), z: r2(Math.min(...zs) - dik / 2), b: r2(Math.max(...xs) - Math.min(...xs) + dik), d: r2(Math.max(...zs) - Math.min(...zs) + dik),
+            y: r2(P), h: r2(Math.max(...hoogtes) - P), kleur: stof, pad: padW, hoogtes, dikte: r2(dik),
+          });
+          // De lip: een band die bovenaan naar buiten uitsteekt en in de arm overloopt (geen losse rol), over het voorste deel
+          // waar de arm nog niet oploopt. Samen met de smalle wand geeft dat de uitlopende vorm van de tekening.
+          const lipDik = Math.min(9, B * 0.45);
+          const lxLip = buitenBijNul ? lipDik / 2 : B - lipDik / 2;
+          const lipPadLokaal: [number, number][] = [], lipHoogtes: number[] = [];
+          for (let i = 0; i <= 8; i++) {
+            const t = (i / 8) * 0.55;
+            lipPadLokaal.push([lxLip, D - 2 - t * (D - 4)]);
+            lipHoogtes.push(rond1(armH));
+          }
+          const lipW = lipPadLokaal.map(([lx, ly]) => { const q = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(q.x), r2(q.y)] as [number, number]; });
+          const lx2 = lipW.map((q) => q[0]), lz2 = lipW.map((q) => q[1]);
+          blokken.push({
+            code: `${e.id}.lip`, soort: 'stof', vorm: 'kuipwand',
+            x: r2(Math.min(...lx2) - lipDik / 2), z: r2(Math.min(...lz2) - lipDik / 2), b: r2(Math.max(...lx2) - Math.min(...lx2) + lipDik), d: r2(Math.max(...lz2) - Math.min(...lz2) + lipDik),
+            y: r2(armH - lip - 4), h: r2(lip + 4), kleur: stof, pad: lipW, hoogtes: lipHoogtes, dikte: r2(lipDik),
+          });
         } else {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P, stof, { afronding: 3 });
         }

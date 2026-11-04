@@ -17,18 +17,27 @@ const bank = (opties: Record<string, string> = {}, extra: Partial<Ontwerp> = {},
 const blok = (o: Ontwerp, code: string) => bouw3D(o, zetelCatalogus, standaardMaterialen).blokken.find((b) => b.code === code);
 
 describe('uitlopende arm', () => {
-  it('helt naar buiten: links naar links, rechts naar rechts', () => {
-    const o = bank({}, {}, 'uitlopend');
-    expect(blok(o, 'a1.arm')?.kantel).toEqual({ graden: 9, richting: 'x-' });
-    expect(blok(o, 'a2.arm')?.kantel).toEqual({ graden: 9, richting: 'x+' });
-    expect(berekenOntwerp(o, zetelCatalogus, standaardMaterialen).prijs.brutoprijsExcl).toBeGreaterThan(berekenOntwerp(bank(), zetelCatalogus, standaardMaterialen).prijs.brutoprijsExcl);
+  it('smal tegen de zitting, met de lip aan de buitenkant (links en rechts), oplopend naar het karkas', () => {
+    const o = bank({}, { vormgeving: { armhoogte: 63, karkashoogte: 86 } }, 'uitlopend');
+    const s = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
+    const lip1 = s.find((b) => b.code === 'a1.lip')!, lip2 = s.find((b) => b.code === 'a2.lip')!;
+    expect(lip1.x).toBe(0); // linkerarm: lip links (buiten)
+    expect(lip2.x + lip2.b).toBe(140); // rechterarm: lip rechts (buiten)
+    const wand1 = s.find((b) => b.code === 'a1.arm')!;
+    expect(wand1.vorm).toBe('kuipwand');
+    expect(Math.min(...wand1.pad!.map((q) => q[0]))).toBeGreaterThan(10); // tegen de zitting, niet aan de buitenkant
+    expect(wand1.hoogtes![0]).toBeLessThan(wand1.hoogtes![wand1.hoogtes!.length - 1]!); // vooraan lager dan achteraan
+    expect(Math.max(...wand1.hoogtes!)).toBeCloseTo(86, 5);
+    expect(berekenOntwerp(o, zetelCatalogus, standaardMaterialen).prijs.brutoprijsExcl).toBeGreaterThan(berekenOntwerp(bank({}, { vormgeving: { armhoogte: 63, karkashoogte: 86 } }), zetelCatalogus, standaardMaterialen).prijs.brutoprijsExcl);
     expect(tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen).vormen.find((v) => v.code === 'a1.arm')?.pad).toBeTruthy();
   });
-  it('bij een gedraaide zetel (arm achter- of vooraan) helt hij weg van het midden', () => {
+  it('bij een gedraaide zetel (armen achter- en vooraan) zit de lip ook aan de buitenkant', () => {
     const arm = (y: number, rotatie: Rotatie): OntwerpElement => ({ id: `a${y}`, type: 'arm', x: 0, y, breedte: 20, diepte: 95, rotatie, opties: { armstijl: 'uitlopend' } });
     const o: Ontwerp = { hoofdmateriaal: 'linnen_ficelle', elementen: [arm(0, 90), { id: 'z', type: 'zit', x: 0, y: 20, breedte: 100, diepte: 95, rotatie: 90 }, arm(120, 90)] };
-    expect(blok(o, 'a0.arm')?.kantel?.richting).toBe('z-');
-    expect(blok(o, 'a120.arm')?.kantel?.richting).toBe('z+');
+    const s = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
+    expect(s.find((b) => b.code === 'a0.lip')!.z).toBe(0);
+    const lip = s.find((b) => b.code === 'a120.lip')!;
+    expect(lip.z + lip.d).toBe(140);
   });
 });
 

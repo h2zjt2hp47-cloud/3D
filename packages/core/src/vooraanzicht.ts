@@ -322,12 +322,24 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         } else if (armVorm === 'engels') {
           pad(`${e.id}.arm`, bovenRond(x0, y + 8, p.b, h - 8, p.b / 2.2), x0, y + 8, p.b, h - 8, donker, lijn);
         } else if (armVorm === 'uitlopend') {
-          // Naar buiten uitlopend: bovenaan ±9° naar buiten (naar de kant zonder zitting), zoals in de 3D.
+          // Uitlopende arm zoals op de technische tekening van Wallace: smal onderaan tegen de zitting, bovenaan een ronde lip
+          // die naar buiten krult, en aan de binnenkant oplopend tot de hoogte van het karkas.
           const buitenLinks = !ontwerp.elementen.some((o) => o !== e && voetafdruk(o).x + voetafdruk(o).b <= x0 + 1 && voetafdruk(o).x + voetafdruk(o).b >= x0 - 1);
-          const uit = rond(h * Math.tan((9 * Math.PI) / 180)) * (buitenLinks ? -1 : 1);
-          const vloer = rond(-P), boven = rond(y);
-          const d = `M${rond(x0)} ${vloer} L${rond(x0 + uit)} ${boven} L${rond(x1 + uit)} ${boven} L${rond(x1)} ${vloer} Z`;
-          pad(`${e.id}.arm`, d, Math.min(x0, x0 + uit), y, p.b + Math.abs(uit), h, donker, lijn);
+          const achter = Math.max(armH, vormgevingVan(ontwerp, e).karkashoogte ?? armH);
+          const dik = Math.min(p.b * 0.5, 11), lip = Math.min(12, p.b * 0.6), vloer = -P;
+          const sp = (x: number) => (buitenLinks ? x : x0 + x1 - x); // spiegelen voor een arm met de buitenkant rechts
+          const binnen = x1, buitenX = x0;
+          const d = [
+            `M${rond(sp(binnen))} ${rond(vloer)}`,
+            `V${rond(-achter)}`,
+            `Q${rond(sp(binnen - 3))} ${rond(-armH - 3)} ${rond(sp(buitenX + lip))} ${rond(-armH)}`,
+            `Q${rond(sp(buitenX - 1))} ${rond(-armH)} ${rond(sp(buitenX))} ${rond(-armH + lip / 2)}`,
+            `Q${rond(sp(buitenX + 1))} ${rond(-armH + lip)} ${rond(sp(buitenX + lip * 0.7))} ${rond(-armH + lip)}`,
+            `Q${rond(sp(binnen - dik))} ${rond(-armH + lip + 12)} ${rond(sp(binnen - dik))} ${rond(vloer + 10)}`,
+            `L${rond(sp(binnen - dik))} ${rond(vloer)} Z`,
+          ].join(' ');
+          pad(`${e.id}.arm`, d, x0, rond(-achter), p.b, achter - P, donker, lijn);
+          maxHoogte = Math.max(maxHoogte, achter);
         } else if (armVorm === 'schuin') {
           // Schuin aflopend naar buiten (naar de kant zonder zitting).
           const buitenLinks = !ontwerp.elementen.some((o) => o !== e && voetafdruk(o).x + voetafdruk(o).b <= x0 + 1 && voetafdruk(o).x + voetafdruk(o).b >= x0 - 1);
@@ -367,7 +379,11 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       }
     }
     // Hoes tot op de grond (housse): bedekt de onderbouw.
-    if (vorm === 'housse' && t.tekenstijl !== 'console' && !t.opzet) rect(`${e.id}.housse`, x0 + 0.5, -P - 1, p.b - 1, P + 1, stof, { ...lijn });
+    if (vorm === 'housse' && t.tekenstijl !== 'console' && !t.opzet) {
+      // Bij een zitelement loopt de hoes door tot onder het zitkussen (zoals in de 3D).
+      const hoesTop = ['zit', 'hoek', 'chaise', 'zit_zonder_rug'].includes(t.tekenstijl) ? zithoogte - kussenDik - 0.5 : P + 1;
+      rect(`${e.id}.housse`, x0 + 0.5, -hoesTop, p.b - 1, hoesTop, stof, { ...lijn });
+    }
     // Hoofdsteun en relax: klein symbool.
     const functie = String(te('functie', 'vorm', 'geen'));
     if ((functie === 'hoofdsteun' || functie === 'relax_hoofdsteun') && rugBoven)
