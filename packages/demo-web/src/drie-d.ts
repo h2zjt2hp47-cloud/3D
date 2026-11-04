@@ -11,11 +11,11 @@ import { HOOGTE_KLEUR, KAART_PX, WEEFSEL_CM, WEEFSELKAART, weefselCanvas, weefse
 import { bouwDecor, type DecorSpec } from './decor3d.js';
 
 import * as THREE_ from 'three';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { RenderPipeline, WebGPURenderer } from 'three/webgpu';
+import { float, mix, mrt, normalView, output, packNormalToRGB, pass, sample, smoothstep, unpackRGBToNormal, vec4 } from 'three/tsl';
+import { ao } from 'three/addons/tsl/display/GTAONode.js';
+import { denoise } from 'three/addons/tsl/display/DenoiseNode.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
 import { fotoWebGPU, heeftWebGPU } from './fotomodus-webgpu.js';
@@ -35,6 +35,8 @@ export interface Viewer3D {
   kwaliteit?(k: Kwaliteit): void;
   /** Foto van het huidige beeld in hoge resolutie (PNG als data-URL). */
   foto?(): string | null;
+  /** Het beeld zoals het nu op het scherm staat (tekenen en meteen lezen; met WebGPU kan het canvas niet later gelezen worden). */
+  beeld?(type?: string, kwaliteit?: number): string | null;
   /**
    * Fotorealistische foto: path tracing (echte lichtweerkaatsing, zachte schaduwen) met `stappen` monsters.
    * Toont het beeld al tijdens het rekenen; geeft de PNG als data-URL, of null bij annuleren of een fout.
@@ -209,10 +211,20 @@ function hdrBeeld(h: Hdr) {
       data[i] = kleur[0]!; data[i + 1] = kleur[1]!; data[i + 2] = kleur[2]!; data[i + 3] = 1;
     }
   }
-  const t = new THREE.DataTexture(data, W, H, THREE.RGBAFormat, THREE.FloatType);
+  return alsHalf(data, W, H);
+}
+/**
+ * Omgevingsbeeld in halve getallen (16 bit): WebGPU filtert 32-bit-getallen alleen met een extra functie van de
+ * grafische kaart, halve altijd. Het gemiddelde (voor de helderheid van een HDRI) wordt vooraf op de echte waarden bewaard.
+ */
+function alsHalf(data: Float32Array, W: number, H: number) {
+  const half = new Uint16Array(data.length);
+  for (let i = 0; i < data.length; i++) half[i] = THREE.DataUtils.toHalfFloat(data[i]!);
+  const t = new THREE.DataTexture(half, W, H, THREE.RGBAFormat, THREE.HalfFloatType);
   t.mapping = THREE.EquirectangularReflectionMapping;
   t.colorSpace = THREE.LinearSRGBColorSpace;
   t.magFilter = t.minFilter = THREE.LinearFilter;
+  t.userData.gemiddelde = gemiddelde(data);
   t.needsUpdate = true;
   return t;
 }
@@ -233,12 +245,14 @@ function hdriBeeld(sleutel: string, doel: number) {
   try {
     const bin = atob(b64), bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const t = new HDRLoader().setDataType(THREE.FloatType).createDataTexture(bytes.buffer);
-    const data = t.image.data as Float32Array, f = doel / (gemiddelde(data) || 1);
+    const bron = new HDRLoader().setDataType(THREE.FloatType).createDataTexture(bytes.buffer);
+    const data = bron.image.data as Float32Array, f = doel / (gemiddelde(data) || 1);
     for (let i = 0; i < data.length; i++) if (i % 4 !== 3) data[i] = data[i]! * f;
-    t.mapping = THREE.EquirectangularReflectionMapping;
-    t.needsUpdate = true;
-    return t;
+    // HDRLoader keert de rijen om bij het tekenen (flipY); in halve getallen zelf omkeren, zoals de equirect verwacht.
+    const W = bron.image.width, H = bron.image.height, rijen = new Float32Array(data.length);
+    for (let y = 0; y < H; y++) rijen.set(data.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+    bron.dispose();
+    return alsHalf(bron.flipY ? rijen : data, W, H);
   } catch (fout) {
     console.error('Omgevingsbeeld niet gelezen:', fout);
     return null;
@@ -249,7 +263,7 @@ function omgevingVoor(naam: LichtNaam) {
   if (!t) {
     t = hdrBeeld(LICHTEN[naam].hdr as unknown as Hdr);
     const hdri = (LICHTEN[naam] as { hdri?: string }).hdri;
-    if (hdri) t = hdriBeeld(hdri, gemiddelde(t.image.data)) ?? t;
+    if (hdri) t = hdriBeeld(hdri, t.userData.gemiddelde) ?? t;
     hdrCache.set(naam, t);
   }
   return t;
@@ -268,24 +282,54 @@ export interface Opties3D {
 }
 
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
+  // WebGPU (04-11): WebGPURenderer, op WebGPU waar de browser het heeft (Safari 26+, Chrome), anders op WebGL2. Zonder
+  // navigator.gpu kiezen we zelf WebGL2 met een bewaard beeld (preserveDrawingBuffer), zodat een beeld van het canvas
+  // ook later te nemen is (tests, oudere browsers). Met WebGPU: beelden altijd via beeld() of foto() (tekenen en lezen
+  // in één keer).
   let renderer: any;
+  let webgpu = false;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    const webgl2 = (canvas: HTMLCanvasElement) => canvas.getContext('webgl2', { antialias: true, alpha: true, depth: true, stencil: false, preserveDrawingBuffer: true });
+    if ('gpu' in navigator) {
+      const parameters: Record<string, unknown> = { antialias: true };
+      renderer = new WebGPURenderer(parameters);
+      webgpu = true;
+      // Geeft de browser toch geen WebGPU (navigator.gpu zonder adapter), dan valt three terug op WebGL2: ook dan met
+      // een bewaard beeld. De terugval leest parameters.context, dus die zetten we vlak ervoor.
+      const terugval = renderer._getFallback;
+      if (terugval) renderer._getFallback = (fout: unknown) => { parameters.context = webgl2(renderer.domElement) ?? undefined; return terugval(fout); };
+    } else {
+      const canvas = document.createElement('canvas');
+      const context = webgl2(canvas);
+      if (!context) throw new Error('geen WebGL2');
+      renderer = new WebGPURenderer({ canvas, context, antialias: true, forceWebGL: true });
+    }
   } catch {
-    houder.textContent = '3D wordt niet ondersteund in deze browser (WebGL ontbreekt).';
+    houder.textContent = '3D wordt niet ondersteund in deze browser (WebGPU en WebGL2 ontbreken).';
     return null;
   }
+  /** Pas na init() kan de renderer tekenen; tot dan wordt elk beeld uitgesteld. */
+  let klaar = false;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  // Zo scherp als de kaart toelaat onder een schuine hoek: weefsel op een zitting of rug wordt zo niet wazig (was vast 4).
-  const maxAnisotropie = Math.max(1, renderer.capabilities.getMaxAnisotropy());
+  // Zo scherp als de kaart toelaat onder een schuine hoek: weefsel op een zitting of rug wordt zo niet wazig. 16 is het
+  // maximum van WebGPU; de WebGL2-weg begrenst zelf op wat de kaart kan.
+  const maxAnisotropie = 16;
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
-  // Zetel: zachte schaduwen (VSM, vervaagd); woning: scherpe PCF-schaduwen zoals voorheen.
-  renderer.shadowMap.type = opties.zetel ? THREE.VSMShadowMap : THREE.PCFSoftShadowMap;
-  // Schaduwen alleen opnieuw berekenen als de scène of het licht verandert, niet bij elke camerabeweging.
-  renderer.shadowMap.autoUpdate = false;
-  const schaduwOpnieuw = () => { renderer.shadowMap.needsUpdate = true; };
+  // Zetel: zachte schaduwen (VSM, vervaagd); woning: PCF-schaduwen (PCFSoft bestaat niet in WebGPURenderer).
+  renderer.shadowMap.type = opties.zetel ? THREE.VSMShadowMap : THREE.PCFShadowMap;
+  // Schaduwen alleen opnieuw berekenen als de scène of het licht verandert, niet bij elke camerabeweging: in
+  // WebGPURenderer per licht (shadow.autoUpdate / needsUpdate). De zon is het enige licht met schaduw.
+  // Na een wijziging nog twee keer kort daarna: nieuwe delen worden soms pas een beeld later getekend (hun shader wordt
+  // op de achtergrond gemaakt), en zouden anders in de schaduw ontbreken.
+  let zonSchaduw: any = null, schaduwLater: number[] = [];
+  const schaduwOpnieuw = () => {
+    if (!zonSchaduw) return;
+    zonSchaduw.needsUpdate = true;
+    schaduwLater.forEach(clearTimeout);
+    schaduwLater = [150, 600].map((ms) => window.setTimeout(() => { zonSchaduw.needsUpdate = true; render(); }, ms));
+  };
   houder.replaceChildren(renderer.domElement);
   renderer.domElement.style.touchAction = 'none';
 
@@ -305,6 +349,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   scene.add(lamp);
   const zon = new THREE.DirectionalLight(0xffffff, 0.8 * PI);
   zon.castShadow = true;
+  zon.shadow.autoUpdate = false;
+  zon.shadow.needsUpdate = true;
+  zonSchaduw = zon.shadow;
   zon.shadow.mapSize.set(2048, 2048);
   zon.shadow.bias = -0.0005;
   if (opties.zetel) { zon.shadow.radius = 7; zon.shadow.blurSamples = 10; zon.shadow.bias = -0.0002; }
@@ -1635,19 +1682,33 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }, { passive: false });
 
   // Nabewerking (alleen zetel, kwaliteit Mooi): ambient occlusion (GTAO) voor schaduw in hoeken, naden en onder kussens.
-  let composer: any = null, gtao: any = null;
+  // WebGPU (04-11): een RenderPipeline met TSL-knopen (pass met normalen, GTAO op halve resolutie, ontruisd), zelfde
+  // instellingen als vroeger met de GTAOPass; de AO dempt het beeld voor 90 %. Tonemapping en sRGB doet de pijplijn.
+  let composer: { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void } | null = null;
   function maakComposer() {
     try {
-      const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
-      composer = new EffectComposer(renderer, rt);
-      composer.addPass(new RenderPass(scene, camera));
-      gtao = new GTAOPass(scene, camera, 1, 1);
-      gtao.updateGtaoMaterial({ radius: 14, distanceExponent: 1.2, thickness: 8, scale: 1.1, samples: 12, distanceFallOff: 1 });
-      gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
-      gtao.blendIntensity = 0.9;
-      composer.addPass(gtao);
-      composer.addPass(new OutputPass());
-    } catch {
+      const pijplijn = new RenderPipeline(renderer);
+      const scenePass = pass(scene, camera, { samples: 4 });
+      scenePass.setMRT(mrt({ output, normal: packNormalToRGB(normalView) }));
+      const kleur = scenePass.getTextureNode('output');
+      const normaalKleur = scenePass.getTextureNode('normal');
+      const diepte = scenePass.getTextureNode('depth');
+      const normaal = sample((uv: unknown) => unpackRGBToNormal(normaalKleur.sample(uv)));
+      const aoPass = ao(diepte, normaal, camera);
+      aoPass.resolutionScale = 0.5;
+      aoPass.radius.value = 14; aoPass.distanceExponent.value = 1.2; aoPass.thickness.value = 8;
+      aoPass.scale.value = 1.1; aoPass.samples.value = 12; aoPass.distanceFallOff.value = 1;
+      const aoZacht = denoise(aoPass.getTextureNode(), diepte, normaal, camera);
+      aoZacht.lumaPhi.value = 10; aoZacht.depthPhi.value = 2; aoZacht.normalPhi.value = 3; aoZacht.radius.value = 6;
+      // Op grote afstand (de rand van het achterdoek, de verre vloer) geen AO: daar ziet GTAO valse hoeken (streepjes). De
+      // zetel staat altijd dichter dan 10 m.
+      // Afstand tot de camera van de scène (niet cameraNear/cameraFar: in de nabewerking is dat de camera van het schermvlak).
+      const afstand = scenePass.getViewZNode().negate();
+      const dichtbij = float(1).sub(smoothstep(1000, 1600, afstand));
+      pijplijn.outputNode = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(0.9))), kleur.a);
+      composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {} };
+    } catch (fout) {
+      console.warn('Nabewerking (GTAO) niet beschikbaar:', fout);
       composer = null;
     }
   }
@@ -1662,12 +1723,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (!beeldGepland) beeldGepland = requestAnimationFrame(() => { beeldGepland = 0; tekenNu(false); });
   }
   function tekenNu(direct: boolean) {
-    if (bezigMetFoto) return;
-    if (!metNabewerking()) { renderer.render(scene, camera); return; }
-    if (direct) { clearTimeout(mooiGepland); composer.render(); return; }
+    if (bezigMetFoto || !klaar) return;
+    const c = metNabewerking() ? composer : null;
+    if (!c) { renderer.render(scene, camera); return; }
+    if (direct) { clearTimeout(mooiGepland); c.render(); return; }
     renderer.render(scene, camera);
     clearTimeout(mooiGepland);
-    mooiGepland = window.setTimeout(() => composer.render(), 180);
+    mooiGepland = window.setTimeout(() => { if (!bezigMetFoto) c.render(); }, 180);
   }
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
@@ -1680,7 +1742,6 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   let markeerKader: any = null;
   const matenGroep = new THREE.Group();
   scene.add(matenGroep);
-  let pathTracer: any = null;
   // ---------- echte 3D-modellen (bestand van de fabrikant, zie core/src/echt3d.ts) ----------
   type EchtDeel = { naam: string; geo: any; materiaal: any };
   type EchtModel = { delen: EchtDeel[]; box: any; cmPerUV: number };
@@ -2035,9 +2096,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       renderer.setPixelRatio(k === 'mooi' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
       // VSM vervaagt de schaduw zelf: 2048 is scherp genoeg en veel lichter dan 4096.
       const maat = k === 'mooi' ? 2048 : 1024;
+      // De schaduwkaart past zich zelf aan de nieuwe maat aan (WebGPURenderer).
       zon.shadow.mapSize.set(maat, maat);
-      zon.shadow.map?.dispose();
-      zon.shadow.map = null;
       schaduwOpnieuw();
       viewer.formaat();
     },
@@ -2058,15 +2118,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       }
     },
     async fotoRealistisch({ stappen, breedte = 1800, opVoortgang, signaal, opMethode }) {
-      const oudRatio = renderer.getPixelRatio();
       const oudMist = scene.fog, oudContact = contact.visible, oudIntensiteit = scene.environmentIntensity;
       const oudMaten = matenGroep.visible, oudKader = markeerKader?.visible;
       bezigMetFoto = true;
+      let glRenderer: any = null, pt: any = null;
       try {
-        pathTracer ??= new WebGLPathTracer(renderer);
-        const pt = pathTracer;
-        pt.renderDelay = 0; pt.fadeDuration = 0; pt.minSamples = 1; pt.bounces = 5; pt.filterGlossyFactor = 0.5;
-        pt.tiles.set(2, 2);
         // De path tracer kent geen mist, geen hemellicht en geen schaduwvlak (hij rekent echte contactschaduw).
         scene.fog = null;
         contact.visible = false;
@@ -2090,8 +2146,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
           }
         }
         opMethode?.('webgl', webgpuReden);
-        renderer.setPixelRatio(Math.max(1, Math.min(breedte, maxBreedte()) / b));
-        viewer.formaat();
+        // Zonder WebGPU: de WebGL-path tracer op een eigen, tijdelijke WebGLRenderer (de weergave zelf is een
+        // WebGPURenderer, ook als die op WebGL2 draait), met dezelfde scène en camera.
+        const w = Math.round(Math.min(breedte, maxBreedte())), h = Math.round((w * (houder.clientHeight || b * 0.62)) / b);
+        glRenderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: true });
+        glRenderer.setPixelRatio(1);
+        glRenderer.setSize(w, h, false);
+        glRenderer.toneMapping = renderer.toneMapping;
+        glRenderer.toneMappingExposure = renderer.toneMappingExposure;
+        pt = new WebGLPathTracer(glRenderer);
+        pt.renderDelay = 0; pt.fadeDuration = 0; pt.minSamples = 1; pt.bounces = 5; pt.filterGlossyFactor = 0.5;
+        pt.tiles.set(2, 2);
         // Eerst de voortgangsbalk laten tekenen; het opbouwen van de scène (BVH) blokkeert even.
         await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
         pt.setScene(scene, camera);
@@ -2103,11 +2168,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
           pt.renderSample();
           opVoortgang?.(Math.min(1, Math.max(pt.samples / stappen, (performance.now() - start) / 75000)));
         }
-        return renderer.domElement.toDataURL('image/png');
+        return glRenderer.domElement.toDataURL('image/png');
       } catch (fout) {
         console.error('Fotomodus mislukt:', fout);
         return null;
       } finally {
+        pt?.dispose?.();
+        glRenderer?.dispose();
         bezigMetFoto = false;
         for (const m of materialen.values()) if (m?.userData?.vcTerug) { m.vertexColors = true; delete m.userData.vcTerug; m.needsUpdate = true; }
         scene.fog = oudMist;
@@ -2115,9 +2182,15 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         matenGroep.visible = oudMaten;
         if (markeerKader && oudKader !== undefined) markeerKader.visible = oudKader;
         scene.environmentIntensity = oudIntensiteit;
-        renderer.setPixelRatio(oudRatio);
-        viewer.formaat();
         render(true);
+      }
+    },
+    beeld(type = 'image/png', kwaliteit = 0.92) {
+      try {
+        render(true);
+        return renderer.domElement.toDataURL(type, kwaliteit);
+      } catch {
+        return null;
       }
     },
     standpunt(naam) {
@@ -2181,5 +2254,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     gepland = requestAnimationFrame(() => { gepland = 0; viewer.formaat(); });
   }).observe(houder);
   viewer.formaat();
+  // WebGPURenderer start asynchroon: pas daarna tekenen (de eerste toon() wacht tot hier).
+  renderer.init().then(() => {
+    klaar = true;
+    webgpu = webgpu && renderer.backend?.isWebGPUBackend === true;
+    renderer.domElement.dataset.backend = webgpu ? 'webgpu' : 'webgl2';
+    schaduwOpnieuw();
+    viewer.formaat();
+    render(true);
+  }).catch((fout: unknown) => {
+    console.error('3D kon niet starten:', fout);
+    houder.textContent = '3D kon niet starten in deze browser.';
+  });
   return viewer;
 }

@@ -1464,7 +1464,9 @@ export function toonOfferte() {
     // Staat er een echt 3D-model in beeld, dan hoort de naamsvermelding (licentie) bij het beeld.
     const bron = $('#o-3d-bron');
     const titel = bron.hidden ? '3D' : `3D, echt 3D-model (proef). ${bron.textContent}`;
-    try { figuur(titel, el('img', { src: canvas.toDataURL('image/jpeg', 0.9), alt: '3D-beeld van de zetel' })); } catch { /* geen 3D-beeld */ }
+    // Tekenen en meteen lezen: met WebGPU kan het canvas niet later gelezen worden.
+    const url = viewer.beeld?.('image/jpeg', 0.9);
+    if (url) figuur(titel, el('img', { src: url, alt: '3D-beeld van de zetel' }));
   }
   kaart.append(beelden);
   // Omschrijving: hoofdstof, de elementen en de keuzes voor de hele zetel.

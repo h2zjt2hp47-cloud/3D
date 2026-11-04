@@ -23,6 +23,13 @@ Waar in de code: blokken in `packages/core/src/ruimtelijk.ts` (zetels) en `packa
 `packages/demo-web/src/weefsel.ts`, de weergave in `packages/demo-web/src/drie-d.ts` en de decors in
 `decor3d.ts`.
 
+## WebGPU (sinds 4/11)
+
+De 3D draait op de WebGPU-renderer van three.js: op WebGPU waar de browser het heeft (Safari 26 of nieuwer op de Mac in
+de toonzaal, Chrome), anders automatisch op WebGL2, met hetzelfde beeld. De fotomodus rekent met WebGPU op de
+WebGPU-path tracer met ontruiser, anders zoals vroeger. Nieuwe effecten maken we in TSL (de taal van three.js voor
+WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU: daar is alleen de WebGL2-weg te testen.
+
 ## Wat we leerden
 
 1. **Echtheid komt van één eigen vorm per type.** Samensmelten alleen gaf weinig winst. Het verschil kwam van een eigen
