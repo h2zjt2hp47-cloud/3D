@@ -14,6 +14,7 @@ import * as THREE_ from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
@@ -157,6 +158,13 @@ export const LICHTEN = {
     achtergrond: '#2f2925',
     hdr: { boven: [0.06, 0.05, 0.043], onder: [0.022, 0.018, 0.015], bronnen: [[[0.85, 0.5, -0.2], 18, 3, [1, 0.8, 0.6]], [[-0.9, 0.2, 0.3], 22, 0.3, [0.7, 0.74, 0.9]]] },
   },
+  fotostudio: {
+    // Echte omgeving (HDRI, CC0, zie demo-web/omgeving/BRON.md): scherpere, echte spiegelingen. Zonder het bestand
+    // (bv. in de bouwdemo) het zelfgemaakte studiobeeld hieronder.
+    label: 'Fotostudio (echte omgeving)', zon: '#ffffff', zonSterkte: 0.7, hoogte: 1.6, hemel: 0.3, hemelKleur: '#ffffff', omgeving: 0.5, lamp: 0,
+    hdri: 'studio_small_09',
+    hdr: { boven: [0.11, 0.1, 0.095], onder: [0.04, 0.037, 0.034], bronnen: [[[0, 1, 0.1], 28, 2.6, [1, 1, 0.97]], [[-0.95, 0.32, 0.3], 19, 1.6, [1, 1, 0.97]], [[0.95, 0.24, -0.3], 16, 0.8, [1, 1, 0.97]], [[0.1, 0.2, 0.97], 22, 0.9, [1, 1, 0.97]]] },
+  },
   spots: {
     label: 'Toonzaal (spots)', zon: '#fff6ea', zonSterkte: 0.95, hoogte: 2.2, hemel: 0.18, hemelKleur: '#fff8f0', omgeving: 0.4, lamp: 0,
     hdr: { boven: [0.05, 0.048, 0.045], onder: [0.03, 0.028, 0.026], bronnen: [[[-0.3, 0.95, 0.2], 9, 9, [1, 0.95, 0.88]], [[0.35, 0.94, 0.1], 9, 9, [1, 0.95, 0.88]], [[0, 0.3, 1], 30, 0.5, [1, 1, 1]]] },
@@ -167,11 +175,13 @@ export type Kwaliteit = 'snel' | 'mooi';
 type Hdr = { boven: readonly number[]; onder: readonly number[]; bronnen: readonly (readonly [readonly number[], number, number, readonly number[]])[] };
 
 /**
- * Omgevingsbeeld als HDR-equirect (lineair, 256 × 128): wanden boven/onder de horizon en zachte ronde lichtbronnen.
+ * Omgevingsbeeld als HDR-equirect (lineair, 1024 × 512): wanden boven/onder de horizon en zachte ronde lichtbronnen.
+ * three.js maakt er een kubus van een kwart van de breedte van (256 px per zijde): scherp genoeg voor spiegelingen op
+ * glas, aluminium en lak (bij 256 × 128 was dat 64 px, vage spiegelingen).
  * Dient de gewone weergave (reflecties, glans) én de fotomodus (path tracing).
  */
 function hdrBeeld(h: Hdr) {
-  const W = 256, H = 128, data = new Float32Array(W * H * 4);
+  const W = 1024, H = 512, data = new Float32Array(W * H * 4);
   const bronnen = h.bronnen.map(([r, hoek, sterkte, kleur]) => {
     const l = Math.hypot(r[0]!, r[1]!, r[2]!) || 1;
     return { d: [r[0]! / l, r[1]! / l, r[2]! / l], cos: Math.cos((hoek * Math.PI) / 180), rand: Math.cos((hoek * 1.35 * Math.PI) / 180), sterkte, kleur };
@@ -202,9 +212,41 @@ function hdrBeeld(h: Hdr) {
   return t;
 }
 const hdrCache = new Map<string, any>();
+/** Gemiddelde helderheid van een omgevingsbeeld (lineair, RGBA in floats). */
+function gemiddelde(data: ArrayLike<number>) {
+  let s = 0;
+  for (let i = 0; i < data.length; i += 4) s += 0.2126 * data[i]! + 0.7152 * data[i + 1]! + 0.0722 * data[i + 2]!;
+  return s / (data.length / 4);
+}
+/**
+ * Een ingesloten HDRI (window.__OMGEVINGEN, base64, zonder fetch) als omgevingsbeeld, op dezelfde gemiddelde helderheid
+ * als het zelfgemaakte beeld van die lichtsfeer: zo blijven zon, hemel en `omgeving` in verhouding. Null zonder bestand.
+ */
+function hdriBeeld(sleutel: string, doel: number) {
+  const b64 = (window as unknown as { __OMGEVINGEN?: Record<string, string> }).__OMGEVINGEN?.[sleutel];
+  if (!b64) return null;
+  try {
+    const bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const t = new HDRLoader().setDataType(THREE.FloatType).createDataTexture(bytes.buffer);
+    const data = t.image.data as Float32Array, f = doel / (gemiddelde(data) || 1);
+    for (let i = 0; i < data.length; i++) if (i % 4 !== 3) data[i] = data[i]! * f;
+    t.mapping = THREE.EquirectangularReflectionMapping;
+    t.needsUpdate = true;
+    return t;
+  } catch (fout) {
+    console.error('Omgevingsbeeld niet gelezen:', fout);
+    return null;
+  }
+}
 function omgevingVoor(naam: LichtNaam) {
   let t = hdrCache.get(naam);
-  if (!t) { t = hdrBeeld(LICHTEN[naam].hdr as unknown as Hdr); hdrCache.set(naam, t); }
+  if (!t) {
+    t = hdrBeeld(LICHTEN[naam].hdr as unknown as Hdr);
+    const hdri = (LICHTEN[naam] as { hdri?: string }).hdri;
+    if (hdri) t = hdriBeeld(hdri, gemiddelde(t.image.data)) ?? t;
+    hdrCache.set(naam, t);
+  }
   return t;
 }
 

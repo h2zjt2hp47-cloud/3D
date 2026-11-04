@@ -20,6 +20,10 @@ if (existsSync('fotos')) {
   }
 }
 const fotoScript = `window.__FOTOS = ${JSON.stringify(fotos).replace(/</g, '\\u003c')};`;
+// Omgevingsbeelden (HDRI, CC0): omgeving/<sleutel>.hdr, zie omgeving/BRON.md. Als base64, de weergave leest ze zonder fetch.
+const omgevingen = {};
+if (existsSync('omgeving')) for (const f of readdirSync('omgeving').filter((f) => f.endsWith('.hdr'))) omgevingen[f.slice(0, -4)] = readFileSync(`omgeving/${f}`).toString('base64');
+const omgevingScript = `window.__OMGEVINGEN = ${JSON.stringify(omgevingen)};`;
 // Echte 3D-modellen (proef): modellen3d/<sleutel>.glb met een beeld <sleutel>.jpg voor de modelkaart (zie modellen3d/BRON.md).
 // Alleen in de gewone demo: het zijn geen modellen van de klant, dus niet in de versie in zijn huisstijl.
 const modellen3d = {}, beelden3d = {};
@@ -30,7 +34,7 @@ if (existsSync('modellen3d')) {
   }
 }
 const modelScript = `window.__MODELLEN3D = ${JSON.stringify(modellen3d)}; Object.assign(window.__FOTOS, ${JSON.stringify(beelden3d)});`.replace(/</g, '\\u003c');
-let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n/*MODELLEN3D*/\n${js}`);
+let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${omgevingScript}\n/*MODELLEN3D*/\n${js}`);
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/configurator-demo.html', html.replace('<!--MERK-->', '').replace('/*HUISSTIJL*/', '').replace('/*MODELLEN3D*/', () => modelScript));
 html = html.replace('/*MODELLEN3D*/', '');
