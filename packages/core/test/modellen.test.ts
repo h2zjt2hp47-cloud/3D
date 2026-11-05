@@ -184,3 +184,27 @@ describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meube
     expect(zora.omtrek).toBeUndefined();
   });
 });
+
+describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse lagen', () => {
+  const blokken = (code: string) => bouw3D(structuredClone(zetelModellen.find((m) => m.code === code)!.ontwerp), zetelCatalogus, standaardMaterialen).blokken;
+  it('zitting is één zacht blok in de stof tot op zithoogte, zonder los zitkussen; de schaal is glad en staat op de vloer', () => {
+    const b = blokken('pebble');
+    const zit = b.find((x) => x.code === 'e1.basis')!, rug = b.find((x) => x.code === 'e1.rug')!;
+    expect(b.some((x) => x.code === 'e1.zitkussen')).toBe(false);
+    expect(zit.soort).toBe('kussen');
+    expect(zit.glad).toBe(true);
+    expect(zit.kleur).toBe(rug.kleur); // geen donkere onderbouw meer
+    expect(rug.vorm).toBe('kuipwand');
+    expect(rug.glad).toBe(true);
+    expect(rug.y).toBeLessThan(0); // platte onderkant onder de vloer
+  });
+  it('andere kuipfauteuils blijven zoals ze waren (donkere onderbouw, los zitkussen, wand op de onderbouw)', () => {
+    for (const code of ['tumble', 'manon', 'satie']) {
+      const b = blokken(code), basis = b.find((x) => x.code === 'e1.basis')!, rug = b.find((x) => x.code === 'e1.rug')!;
+      expect(basis.soort, code).toBe('stof');
+      expect(basis.glad, code).toBeUndefined();
+      expect(rug.glad, code).toBeUndefined();
+      expect(rug.y, code).toBeGreaterThanOrEqual(0);
+    }
+  });
+});

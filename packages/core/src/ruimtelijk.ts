@@ -441,14 +441,25 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // samen, en dat gaf vlekken en strepen op de onderbouw (z-fighting). Bij een schelp staat de wand niet op de onderbouw.
           const krimp = kp.zwevend ? 0 : 0.8;
           const basisPlan = opb.plan.map(([x, y]) => [B / 2 + (x - B / 2) * (1 - krimp / (B / 2)), D / 2 + (y - D / 2) * (1 - krimp / (D / 2))] as Punt);
-          omtrekBlok('basis', 'stof', opb.basis.onder, opb.basis.boven - opb.basis.onder, donker, basisPlan, { afronding: kp.organisch ? 9 : 4 });
-          if (kussenDik) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
+          // Organisch (Pebble): de zitting is één zachte kiezel in de stof (geen donkere onderbouw met een los kussen erop) en
+          // de schaal een eigen zachte vorm met ronde uiteinden (glad, zoals de doorlopende zetel), in plaats van een wand die
+          // recht afgesneden in de onderbouw steekt. Twee aparte zachte delen: waar de schaal tegen de zitting drukt, blijft
+          // een vouw zoals op de productfoto (de zitting is daarom een kussen). Benadering uit de foto. Prijs en tekeningen
+          // lezen dit niet.
+          const kiezel = kp.organisch && !kp.zwevend;
+          const basisBoven = kiezel ? zithoogte : opb.basis.boven;
+          omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel ? stof : donker, basisPlan, { afronding: kp.organisch ? 12 : 4, ...(kiezel ? { glad: true } : {}) });
+          if (kussenDik && !kiezel) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
           const pad = opb.wand.pad.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
           const xs = pad.map((q) => q[0]), zs = pad.map((q) => q[1]), half = opb.wand.dikte / 2;
+          // Kiezel op een verdekte voet: de schaal staat op de vloer (zoals op de foto). Ze begint net onder de vloer, zodat
+          // haar platte onderkant niet te zien is (die gaf rafels in de zachte vorm). Alleen de 3D; het vooraanzicht niet.
+          const wandOnder = kiezel && P <= 8 ? -3 : opb.wand.onder;
           blokken.push({
             code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
             x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),
-            y: r2(opb.wand.onder), h: r2(Math.max(...opb.wand.hoogtes) - opb.wand.onder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
+            y: r2(wandOnder), h: r2(Math.max(...opb.wand.hoogtes) - wandOnder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
+            ...(kiezel ? { glad: true } : {}),
           });
           if (kp.zwevend) {
             // Schelp: twee houten dragers achteraan van het frame tot onder de schaal.

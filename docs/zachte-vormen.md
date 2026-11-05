@@ -55,9 +55,9 @@ Wat het Glam-model echter maakt dan onze blokken:
    - **Vooraanzicht:** de tekening (modelkaart, offerte) toont dezelfde vorm.
 
    ![Strakke arm: foto, vorige versie, nu met blokken en zacht](afbeeldingen/strakke-arm.jpg)
-4. **Ronde vormen blijven zoals ze waren.** Kuipfauteuils (Pebble, Ross, Karl …) en het afgeronde eindelement in een
+4. **Ronde vormen blijven zoals ze waren.** Kuipfauteuils (Ross, Karl …) en het afgeronde eindelement in een
    eigen ontwerp waren al rond getekend. Samengesmolten gaven ze in de proef foutjes aan de randen, dus die delen smelten
-   niet mee. Doha en Montego zijn wel aangepast: zie het volgende hoofdstuk.
+   niet mee. Doha en Montego zijn wel aangepast: zie het volgende hoofdstuk. Pebble ook (5/11, zie onder).
 
 ## Doorlopende zetel: Doha en Montego (4/11, derde ronde)
 
@@ -169,3 +169,24 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
 2. **Sneller rekenen:** in de achtergrond rekenen, zodat het scherm niet stilstaat.
 3. **Daarna kiezen:** *Zacht* standaard aan, als het op een tablet vlot genoeg is.
 4. **Stap 2 voor topmodellen:** een 3D-bestand per model (zie `echte-3d-modellen.md`).
+
+## Pebble: zachte kiezel met een schaal (5/11)
+
+Melding van Jonas: "de vormen lopen door elkaar". Pebble (kuipvorm *Organisch*) bestond uit drie losse delen: een
+donkere onderbouw, een lichter zitkussen met een uitstekende rand, en een schaal die vooraan recht afgesneden in de
+onderbouw stak. Op de productfoto is de zitting één zachte kiezel in één kleur, met een hoge schaal die eromheen loopt
+tot op de vloer.
+
+Nu (alleen bij *Organisch*, in `ruimtelijk.ts`):
+- de zitting is één zacht blok in de stof, van de voet tot op zithoogte (kussen, `glad`), zonder los zitkussen;
+- de schaal is een eigen zachte vorm (`glad`) met ronde uiteinden. Zitting en schaal smelten bewust **niet** samen: dan
+  werd het één klomp. Apart blijft er een zachte vouw waar de schaal tegen de zitting drukt, zoals op de foto;
+- de schaal staat op de vloer: ze begint 3 cm onder de vloer, zodat haar platte onderkant (die rafels gaf) niet te zien
+  is.
+
+Prijs, offerte, boven- en vooraanzicht veranderen niet. Andere kuipfauteuils (Tumble, Manon, Satie …) blijven zoals ze
+waren. Benadering uit één kleine foto (400 px): de schaal lijkt op de foto iets scheef (hoger aan één kant); dat is niet
+nagebootst.
+
+![Pebble: vóór, na, de productfoto en een detail](afbeeldingen/pebble-kiezel.jpg)
+
