@@ -172,29 +172,29 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
 
 ## Pebble: zachte kiezel met een scheve schaal (5/11)
 
-Melding van Jonas: "de vormen lopen door elkaar", met de productfoto. Pebble (kuipvorm *Organisch*) bestond uit drie
-losse delen: een donkere onderbouw, een lichter zitkussen met een uitstekende rand, en een symmetrische schaal die
-vooraan recht afgesneden in de onderbouw stak. Op de foto is de zitting één zachte kiezel in één kleur, en de schaal
-staat scheef: links hoog en tot vooraan op de vloer, rechts zakt ze schuin weg in de zitting.
+Melding van Jonas: "de vormen lopen door elkaar" en later "totaal onherkenbaar". Eerst gebouwd op één kleine foto,
+wat te veel gissen was (onder meer een vierkante zitting met een dunne wand eromheen). Daarna opnieuw op de zes foto's
+van de productpagina (corneille-silence.be/pebble.html; de site geeft geen maten voor de fauteuil, alleen voor de poef:
+82 × 42 × 61 cm).
 
-Nu:
+Wat de foto's tonen en hoe het nu gebouwd is (alleen kuipvorm *Organisch*):
 - **Zitting:** één zacht blok in de stof, van de voet tot op zithoogte (kussen, `glad`), zonder los zitkussen
-  (`ruimtelijk.ts`).
-- **Schaal:** een eigen zachte vorm (`glad`) met ronde uiteinden. Ze loopt van rechtsachter (3 cm onder de zitting, dus
-  in de zitting) over de rug, het hoogst linksachter, tot linksvoor op ±half de hoogte boven de zitting (`kuip.ts`,
-  `scheef`). 16 cm dik. Plattegrond (zitting en schaal): een afgeronde rechthoek zoals op de foto, niet rond. De punten
-  van de schaal liggen op gelijke afstanden (anders golfde de bovenkant bij een afgeronde rechthoek). Zitting en schaal smelten bewust **niet** samen: dan werd het één klomp. Apart
-  blijft er een zachte vouw waar de schaal tegen de zitting drukt.
-- **Op de vloer:** de schaal begint 3 cm onder de vloer, zodat haar platte onderkant (die rafels gaf) niet te zien is.
-- **Lichte vlekjes** op een oplopende, gebogen wand: op de knikpunten van het pad rekende de motor de helling als nul.
-  Nu het gemiddelde van de stukken ernaast (`zachtevorm.ts`, `wand`).
+  (`ruimtelijk.ts`). Grondvlak met eigen exponent 2,6 (`teken.exponent`): grote, zachte afrondingen.
+- **Rug:** één dikke, bolle schaal (24 cm, `glad`, eigen zachte vorm) achter de zitting die aan de linkerkant om de
+  zijkant draait (`kuip.ts`, `scheef`). Ze begint rechtsachter in de zitting (−38°, ±vier vijfde van de breedte), is het
+  hoogst op de rug links van het midden (−128°, ±een kwart van de breedte) en zakt langs de linkerzijde naar voren tot
+  op zithoogte (−240°); de ronde kop loopt daaronder tot op de vloer, net achter de voorkant van de zitting.
+- **Bol verloop** van de bovenrand, zoals de rand van een blad: vlak bij de top, steiler naar de uiteinden (sinus en
+  cosinus over een kwart periode). De punten liggen op gelijke afstanden langs de schaal.
+- **Op de vloer:** de schaal begint 3 cm onder de vloer (geen rafels aan de platte onderkant).
+- **Lichte vlekjes** op een oplopende, gebogen wand: op de knikpunten telt de gemiddelde helling mee (`zachtevorm.ts`).
 
-Wat verandert: de 3D, en het boven- en vooraanzicht van Pebble (die lezen dezelfde schaal uit `kuipOpbouw`, dus ook de
-tekening in de offerte). Het vooraanzicht toont de zitting nog als kussen op een onderbouw. Prijs en offertetekst
-veranderen niet; de andere kuipfauteuils (Tumble, Manon, Satie …) blijven zoals ze waren (tests). Kussendikte en
-comfort zie je bij Pebble niet meer in 3D (één blok).
+Wat verandert: de 3D en het boven- en vooraanzicht van Pebble (die lezen dezelfde schaal, dus ook de tekening in de
+offerte). Prijs en offertetekst niet; de andere kuipfauteuils niet (tests).
 
-Benadering uit één kleine foto (400 px, één standpunt): hoe ver de schaal links naar voren loopt, de dikte van de schaal
-en hoe hoekig de zitting is, moeten op een tweede foto of bij de klant nagekeken worden.
+Nog af te stemmen met de klant: de maten van de fauteuil, het kleine "voetje" linksonder (de kop van de schaal naast
+de afgeronde zitting), en of Pebble een linkse en een rechtse versie heeft (de groepsfoto toont gespiegelde
+exemplaren; hier de versie van de vooraanzichtfoto: hoog links).
 
-![Pebble: de productfoto, vanmorgen, nu schuin, van voren, van boven en het vooraanzicht](afbeeldingen/pebble-kiezel.jpg)
+![Pebble: foto's van de productpagina naast de 3D in dezelfde standpunten](afbeeldingen/pebble-kiezel.jpg)
+

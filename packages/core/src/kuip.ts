@@ -32,6 +32,8 @@ export interface KuipParameters {
    * linkerkant; rechts stopt de wand 50° na het midden achteraan.
    */
   scheef: boolean;
+  /** Eigen exponent van het grondvlak (2 = ellips, hoger = hoekiger); leeg = volgens `plan`. */
+  exponent?: number;
 }
 
 /** Parameters uit de `teken`-velden van de gekozen kuipvorm; null voor de hoekige fauteuil (rechte rug en armen). */
@@ -48,6 +50,7 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
     organisch: teken.organisch === true,
     vlak: teken.vlak === true,
     scheef: teken.scheef === true,
+    ...(typeof teken.exponent === 'number' ? { exponent: teken.exponent } : {}),
   };
 }
 
@@ -83,7 +86,7 @@ export interface KuipOpbouw {
  * `kussenDik` = dikte zitkussen (0 = vaste zitting).
  */
 export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
-  const n = exponent(k.plan);
+  const n = k.exponent ?? exponent(k.plan);
   const w = Math.min(k.dikte, B / 3, D / 3);
   const cx = B / 2, cy = D / 2;
   const plan = superellips(cx, cy, B / 2, D / 2, n, 0, 360, 72).slice(0, -1);
@@ -95,9 +98,10 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   const rond1 = (x: number) => Math.round(x * 10) / 10;
   let pad: Punt[], hoogtes: number[];
   if (k.scheef) {
-    // Van rechtsachter (−30°) over het midden achteraan (−90°) naar linksvoor (−90° − boog); het hoogst linksachter (−140°).
-    // Het stijgende stuk rechts is lang genoeg om niet te steil te worden (een te steile bovenkant gaf vlekjes in de 3D).
-    const tRechts = -30, tLinks = -90 - k.boog, tTop = -140;
+    // Volgens de productfoto's (pebble-01-6, -13, -18): van rechtsachter (−38°, de schaal komt daar op de zitting uit,
+    // ±vier vijfde van de breedte) over de rug naar links, het hoogst op de rug links van het midden (−128°, ±een kwart van de breedte), en langs de linkerzijde naar
+    // voren (−90° − boog) waar ze rond tot op de vloer zakt, net achter de voorkant van de zitting.
+    const tRechts = -38, tLinks = -90 - k.boog, tTop = -128;
     // Eerst fijn bemonsterd, dan op gelijke afstanden langs de wand: bij een afgerond grondvlak liggen punten op gelijke
     // hoeken ongelijk verdeeld, en dan golfde de bovenkant (de hoogte volgt de afstand langs de wand, niet de hoek).
     const F = 600, fijn = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, tRechts, tLinks, F);
@@ -112,14 +116,15 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
       return [rond1(fijn[j]![0] + f * (fijn[j + 1]![0] - fijn[j]![0])), rond1(fijn[j]![1] + f * (fijn[j + 1]![1] - fijn[j]![1]))] as Punt;
     });
     const uTop = afstand[Math.round(((tRechts - tTop) / (tRechts - tLinks)) * F)]! / totaal;
-    // Links vooraan nog ±half de hoogte boven de zitting (de schaal staat daar tot op de vloer). Rechts verdwijnt de schaal
-    // in de zitting: haar bovenkant eindigt 3 cm onder de zitting, niet erop (twee vlakken op dezelfde hoogte flikkeren).
-    const links = voor + (rug - voor) * 0.5, rechts = zitBoven - 3;
+    // Vooraan links ongeveer op zithoogte (daaronder loopt de ronde kop tot op de vloer). Rechts verdwijnt de schaal in de
+    // zitting: haar bovenkant eindigt 3 cm onder de zitting, niet erop (twee vlakken op dezelfde hoogte flikkeren).
+    const links = zitBoven + 1, rechts = zitBoven - 3;
+    // Bol verloop, zoals de rand van een blad: bij de top vlak, naar de uiteinden toe steeds steiler.
     hoogtes = pad.map((_, i) => {
       const u = i / (pad.length - 1);
       return u <= uTop
-        ? rond1(rechts + (rug - rechts) * (0.5 - 0.5 * Math.cos((Math.PI * u) / uTop)))
-        : rond1(rug - (rug - links) * (0.5 - 0.5 * Math.cos((Math.PI * (u - uTop)) / (1 - uTop))));
+        ? rond1(rechts + (rug - rechts) * Math.sin((Math.PI / 2) * (u / uTop)))
+        : rond1(links + (rug - links) * Math.cos((Math.PI / 2) * ((u - uTop) / (1 - uTop))));
     });
   } else {
     pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, -90 - k.boog, -90 + k.boog, stappen * 2);

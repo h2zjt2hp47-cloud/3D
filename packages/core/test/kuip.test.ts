@@ -51,19 +51,26 @@ describe('scheve schaal (kuipvorm organisch, Pebble)', () => {
   const h = { P: 4, zithoogte: 44, rugH: 92, kussenDik: 12 };
   const opb = kuipOpbouw(85, 85, h, kuipParameters(teken('organisch'))!, false);
   const { pad, hoogtes } = opb.wand;
-  it('rechts achteraan begint de schaal onder de zitting, links blijft ze hoog tot vooraan', () => {
+  it("volgens de productfoto's: rechts in de zitting, het hoogst op de rug links van het midden, links in een boog naar voren", () => {
     expect(hoogtes[0]).toBeLessThan(h.zithoogte); // rechts: verdwijnt in de zitting
     expect(pad[0]![0]).toBeGreaterThan(60); // rechts (grote x)
     expect(pad[0]![1]).toBeLessThan(40); // achter het midden
     const laatste = pad[pad.length - 1]!;
-    expect(laatste[0]).toBeLessThan(25); // links
+    expect(laatste[0]).toBeLessThan(26); // links
     expect(laatste[1]).toBeGreaterThan(55); // vooraan
-    expect(hoogtes[hoogtes.length - 1]).toBeGreaterThan(h.zithoogte + 15);
-    // Het hoogst linksachter.
+    // Vooraan links rond zithoogte; de ronde kop loopt daaronder tot op de vloer.
+    expect(hoogtes[hoogtes.length - 1]).toBeGreaterThanOrEqual(h.zithoogte);
+    expect(hoogtes[hoogtes.length - 1]).toBeLessThan(h.zithoogte + 6);
+    // Het hoogst op de rug, links van het midden (±een kwart van de breedte).
     const top = pad[hoogtes.indexOf(Math.max(...hoogtes))]!;
     expect(top[0]).toBeLessThan(42.5);
-    expect(top[1]).toBeLessThan(42.5);
+    expect(top[0]).toBeGreaterThan(10);
+    expect(top[1]).toBeLessThan(20);
     expect(Math.max(...hoogtes)).toBe(92);
+    // Bol verloop: halverwege tussen de top en de uiteinden nog ruim boven het midden van de hoogte.
+    const iTop = hoogtes.indexOf(Math.max(...hoogtes));
+    expect(hoogtes[Math.round(iTop / 2)]!).toBeGreaterThan((92 + h.zithoogte) / 2);
+    expect(hoogtes[Math.round((iTop + hoogtes.length - 1) / 2)]!).toBeGreaterThan((92 + h.zithoogte) / 2);
     for (const [x, y] of [...opb.plan, ...pad]) { expect(x).toBeGreaterThanOrEqual(-0.01); expect(x).toBeLessThanOrEqual(85.01); expect(y).toBeGreaterThanOrEqual(-0.01); expect(y).toBeLessThanOrEqual(85.01); }
   });
   it('de andere kuipvormen blijven symmetrisch', () => {
