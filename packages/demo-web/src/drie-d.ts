@@ -1278,6 +1278,54 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   contact.visible = false;
   scene.add(contact);
   /** Zachte schaduw onder de zetel, getekend uit de voetafdruk van de blokken (volgt ook een hoeksofa). */
+  /**
+   * De grondvorm van een blok, van boven gezien, op het canvas van de contactschaduw: de echte vorm en niet het kader
+   * (een ronde poef geeft een ronde schaduw, een doorlopende zetel volgt zijn ronde uiteinden). Eén vulling per blok.
+   */
+  function tekenGrondvorm(g: CanvasRenderingContext2D, b: Blok, X: (x: number) => number, Z: (z: number) => number, schaal: number) {
+    g.beginPath();
+    // Gebogen wand: een lijn langs het midden, zo dik als de wand.
+    if (b.vorm === 'kuipwand' && b.pad?.length) {
+      g.lineWidth = (b.dikte ?? 14) * schaal;
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      b.pad.forEach(([x, z], i) => (i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z))));
+      g.stroke();
+      return;
+    }
+    // Vrije omtrek (in wereldcoördinaten, zonder draaiing, zoals de vorm in 3D).
+    if (b.omtrek?.length) {
+      b.omtrek.forEach(([x, z], i) => (i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z))));
+      g.closePath();
+      g.fill();
+      return;
+    }
+    // Profiel (arm): de strook langs de lijn, zo breed als het onderste deel van de doorsnede (niet de krul bovenaan).
+    if (b.vorm === 'profiel' && b.pad?.length && b.profiel && b.uit) {
+      const vast = b.profiel.filter((p) => !p[2]);
+      const bodem = Math.min(...vast.map((p) => p[1]), b.y);
+      const laag = vast.filter((p) => p[1] <= bodem + 30);
+      const ss = (laag.length ? laag : b.profiel).map((p) => p[0]);
+      const s0 = Math.min(...ss), s1 = Math.max(...ss), [ux, uz] = b.uit;
+      const a = b.pad[0]!, e = b.pad[b.pad.length - 1]!;
+      const hoeken: [number, number][] = [[a[0] + ux * s0, a[1] + uz * s0], [e[0] + ux * s0, e[1] + uz * s0], [e[0] + ux * s1, e[1] + uz * s1], [a[0] + ux * s1, a[1] + uz * s1]];
+      hoeken.forEach(([x, z], i) => (i ? g.lineTo(X(x), Z(z)) : g.moveTo(X(x), Z(z))));
+      g.closePath();
+      g.fill();
+      return;
+    }
+    // Balk, cilinder of kegel: rond het midden, gedraaid zoals in 3D (draai van x naar z = met de klok mee op het canvas).
+    const hb = (b.b / 2) * schaal, hd = (b.d / 2) * schaal;
+    g.save();
+    g.translate(X(b.x + b.b / 2), Z(b.z + b.d / 2));
+    if (b.draai) g.rotate((b.draai * Math.PI) / 180);
+    if ((b.vorm === 'cilinder' || b.vorm === 'kegel') && (!b.as || b.as === 'y')) g.ellipse(0, 0, hb, hd, 0, 0, Math.PI * 2);
+    else if (b.afronding) g.roundRect(-hb, -hd, 2 * hb, 2 * hd, Math.min(b.afronding * schaal, hb, hd));
+    else g.rect(-hb, -hd, 2 * hb, 2 * hd);
+    g.fill();
+    g.restore();
+  }
+
   function zetContactschaduw(s: Scene3D, echt: any = null) {
     if (!opties.zetel || !s.blokken.length) { contact.visible = false; return; }
     const k = s.kader, rand = 30, B = k.b + 2 * rand, D = k.d + 2 * rand;
@@ -1289,11 +1337,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     g.shadowColor = 'rgba(0,0,0,0.5)';
     g.shadowBlur = 9 * schaal * 2;
     g.shadowOffsetX = 2000;
-    g.fillStyle = '#000';
+    g.fillStyle = g.strokeStyle = '#000';
     const onder = echt ? new Set((echt.userData.echt as Echt3DPlaatsing).elementen.map((e) => e.id)) : null;
+    const X = (x: number) => (x - k.x + rand) * schaal - 2000, Z = (z: number) => (z - k.z + rand) * schaal;
     for (const b of s.blokken) {
-      if (b.y > 25 || onder?.has(b.code.split('.')[0]!)) continue;
-      g.fillRect((b.x - k.x + rand) * schaal - 2000, (b.z - k.z + rand) * schaal, b.b * schaal, b.d * schaal);
+      if (b.y > 25 || b.vorm === 'bol' || b.soort === 'glas' || b.soort === 'matglas' || onder?.has(b.code.split('.')[0]!)) continue;
+      tekenGrondvorm(g, b, X, Z, schaal);
     }
     // Echt 3D-model: zijn eigen grondvorm (alle driehoeken van boven gezien, in dezelfde draairichting, één vulling).
     if (echt) {

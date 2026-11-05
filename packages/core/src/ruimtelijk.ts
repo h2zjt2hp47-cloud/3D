@@ -543,6 +543,18 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         break;
       }
     }
+    // Verdekte voet onder een rond of vrij gevormd element (ronde poef, kuipfauteuil): dezelfde vorm als wat erop staat,
+    // ±10 cm naar binnen. Een vierkante voet stak onder de ronde kant uit en leek een harde, vierkante schaduw.
+    // Het vooraanzicht blijft gelijk (van voor gezien is de voet even breed). Een rond eindelement heeft zijn eigen voet.
+    const voet = t.tekenstijl === 'rond' ? undefined : blokken.slice(eersteBlok).find((b) => b.code === `${e.id}.verdekt`);
+    const lijf = voet && blokken.slice(eersteBlok).find((b) => b !== voet && (b.soort === 'stof' || b.soort === 'kussen') && b.y <= voet.y + voet.h + 0.5 &&
+      ((b.vorm === 'cilinder' && !b.as) || b.omtrek));
+    if (voet && lijf && lijf.b > 30 && lijf.d > 30) {
+      const cx = lijf.x + lijf.b / 2, cz = lijf.z + lijf.d / 2, sx = (lijf.b - 20) / lijf.b, sz = (lijf.d - 20) / lijf.d;
+      Object.assign(voet, { x: r2(lijf.x + 10), z: r2(lijf.z + 10), b: r2(lijf.b - 20), d: r2(lijf.d - 20) });
+      if (lijf.omtrek) voet.omtrek = lijf.omtrek.map(([x, z]) => [r2(cx + (x - cx) * sx), r2(cz + (z - cz) * sz)] as [number, number]);
+      else voet.vorm = 'cilinder';
+    }
     // Stoffoto als textuur op alle stofdelen van dit element (zitting, rug, armen, kussens).
     // Zonder foto: het weefsel (velours, bouclé, linnen …) zodat de structuur in de 3D klopt.
     // Kussens: naad langs de randen volgens de optie "Naden" (bies in dezelfde stof of contrast, sierstiksel).

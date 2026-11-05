@@ -150,3 +150,37 @@ describe('collectie', () => {
     expect(bouw3D(hoekig, zetelCatalogus, standaardMaterialen).blokken.some((b) => b.code === 'e1.arm-l')).toBe(true);
   });
 });
+
+describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meubel)', () => {
+  const blokken = (code: string) => bouw3D(structuredClone(zetelModellen.find((m) => m.code === code)!.ontwerp), zetelCatalogus, standaardMaterialen).blokken;
+  /** Ligt het punt binnen de veelhoek (even-oneven regel)? */
+  const binnen = ([x, z]: [number, number], v: [number, number][]) => {
+    let in_ = false;
+    for (let i = 0, j = v.length - 1; i < v.length; j = i++) {
+      const [xi, zi] = v[i]!, [xj, zj] = v[j]!;
+      if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) in_ = !in_;
+    }
+    return in_;
+  };
+  it('ronde poef: ronde voet, 10 cm naar binnen', () => {
+    for (const code of ['stockholm', 'fez', 'tumble-pouf']) {
+      const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, poef = b.find((x) => x.code === 'e1.poef')!;
+      expect(voet.vorm, code).toBe('cilinder');
+      expect(voet.b, code).toBeCloseTo(poef.b - 20, 1);
+      expect(voet.x + voet.b / 2, code).toBeCloseTo(poef.x + poef.b / 2, 1);
+    }
+  });
+  it('kuipfauteuil: voet met de omtrek van de onderbouw, helemaal binnen die omtrek', () => {
+    for (const code of ['pebble', 'tumble', 'manon', 'satie']) {
+      const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, basis = b.find((x) => x.code === 'e1.basis')!;
+      expect(voet.omtrek, code).toBeDefined();
+      for (const p of voet.omtrek!) expect(binnen(p, basis.omtrek!), `${code} ${p}`).toBe(true);
+    }
+  });
+  it('vierkante poef en gewone zetel: voet blijft een balk', () => {
+    expect(blokken('kanto').find((x) => x.code === 'e1.verdekt')!.vorm).toBe('blok');
+    const zora = blokken('zora').find((x) => x.code === 'e2.verdekt')!;
+    expect(zora.vorm).toBe('blok');
+    expect(zora.omtrek).toBeUndefined();
+  });
+});

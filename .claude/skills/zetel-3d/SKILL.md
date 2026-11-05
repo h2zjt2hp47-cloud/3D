@@ -172,7 +172,8 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 ## Valkuilen
 - Vergeet de rotatie niet: test elke nieuwe vorm bij 0, 90, 180 en 270.
 - Vooraanzicht: achterste elementen eerst tekenen (sortering op voorrand), anders bedekken ze de voorste.
-- Ronde elementen: poten en verdekte voet naar binnen zetten, anders steken ze buiten de ronding uit.
+- Ronde elementen: poten en verdekte voet naar binnen zetten, anders steken ze buiten de ronding uit. Sinds 5/11 krijgt de verdekte voet onder een staande cilinder (ronde poef) of een blok met `omtrek` (kuipfauteuil) dezelfde vorm, 10 cm naar binnen (`ruimtelijk.ts`, na de opbouw van het element; niet bij `rond`, dat heeft `verdekt-rond`). Het vooraanzicht blijft een rechthoek.
+- Contactschaduw (`zetContactschaduw` → `tekenGrondvorm` in `drie-d.ts`): per blok onder 25 cm de echte grondvorm op een canvas (omtrek, ellips voor staande cilinder/kegel, `roundRect` met afronding, `draai` rond het midden, kuipwand als dikke lijn langs `pad`, profiel als strook over het onderste deel van de doorsnede), vervaagd via `shadowBlur` met de vorm 2000 px links buiten beeld. Nooit terug naar het kader per blok.
 - Prijs en tekening los houden: de tekening leest `teken`, de prijs leest `prijs/prijsPerM/pct`.
 - Alle maten en prijzen in de voorbeelden zijn demo-waarden (benadering op basis van foto's).
 - Twee vlakken op exact dezelfde plaats geven vlekken en strepen (z-fighting). Voorbeeld: de buitenkant van de kuipwand en de zijkant van de onderbouw. Daarom ligt de onderbouw van een kuip 0,8 cm binnen de wand (`ruimtelijk.ts`, `krimp`). Doe hetzelfde bij elke nieuwe vorm die tegen een andere aanligt.

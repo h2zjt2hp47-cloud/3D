@@ -128,6 +128,10 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
   schaduwen niet. Test de richtingen tegen kleine stapjes in het veld (`zachtevorm.test.ts`).
 - **Schaduw van buurdelen met hun echte vorm.** Een zitkussen met een vrije omtrek dat als rechthoekige doos meetelde,
   gaf grijze vlekken waar niets staat.
+- **Elke schaduw volgt de echte vorm, niet het kader.** De contactschaduw onder de zetel tekende per onderdeel een
+  rechthoek: een ronde poef kreeg een vierkante schaduw, en bij Doha stak de schaduw rechthoekig uit voorbij de ronde
+  uiteinden. Ook de verdekte voet (donker, onder het meubel) was altijd vierkant en stak onder een ronde fauteuil uit:
+  dat leek een harde, vierkante schaduw. Sinds 5/11 volgen beide de vorm (omtrek, rond, gedraaid, gebogen wand, arm).
 - **Delen binnen elkaars omtrek houden.** Een rug die buiten de onderbouw uitstak, gaf vinnen en strepen.
 - **Snelheid meten:** met een gebundeld script in node; de eerste keer met `tsx` geeft een veel te hoge tijd.
 - **Twee vlakken op exact dezelfde plaats** geven vlekken (z-fighting): laat het ene deel net binnen het andere liggen.
