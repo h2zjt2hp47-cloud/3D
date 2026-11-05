@@ -26,6 +26,12 @@ export interface KuipParameters {
   organisch: boolean;
   /** Trommel: de wand is rondom (bijna) even hoog; de rug komt van de losse kussens. */
   vlak: boolean;
+  /**
+   * Scheef (Pebble): de schaal loopt niet symmetrisch rond, maar van rechtsachter (op zithoogte, schuin in de zitting)
+   * over de rug naar linksvoor (van voren gezien), het hoogst linksachter, en links tot vooraan. `boog` geldt dan voor de
+   * linkerkant; rechts stopt de wand 50° na het midden achteraan.
+   */
+  scheef: boolean;
 }
 
 /** Parameters uit de `teken`-velden van de gekozen kuipvorm; null voor de hoekige fauteuil (rechte rug en armen). */
@@ -41,6 +47,7 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
     zwevend: teken.zwevend === true,
     organisch: teken.organisch === true,
     vlak: teken.vlak === true,
+    scheef: teken.scheef === true,
   };
 }
 
@@ -82,15 +89,34 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   const plan = superellips(cx, cy, B / 2, D / 2, n, 0, 360, 72).slice(0, -1);
   // Middenlijn van de wand: een halve dikte binnen de rand, symmetrisch rond het midden achteraan.
   const stappen = Math.max(16, Math.round(k.boog / 5));
-  const pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, -90 - k.boog, -90 + k.boog, stappen * 2);
   const zitBoven = h.zithoogte;
   const voor = zitBoven + k.voorBoven;
   const rug = k.vlak ? voor + 5 : Math.max(h.rugH, voor + 4);
-  const hoogtes = pad.map((_, i) => {
-    const u = Math.abs(i - stappen) / stappen; // 0 = midden achteraan, 1 = einde van de wand
-    const t = Math.min(1, u / k.armVanaf);
-    return Math.round((voor + (rug - voor) * (0.5 + 0.5 * Math.cos(Math.PI * t))) * 10) / 10;
-  });
+  const rond1 = (x: number) => Math.round(x * 10) / 10;
+  let pad: Punt[], hoogtes: number[];
+  if (k.scheef) {
+    // Van rechtsachter (−30°) over het midden achteraan (−90°) naar linksvoor (−90° − boog); het hoogst linksachter (−140°).
+    // Het stijgende stuk rechts is lang genoeg om niet te steil te worden (een te steile bovenkant gaf vlekjes in de 3D).
+    const tRechts = -30, tLinks = -90 - k.boog, tTop = -140;
+    pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, tRechts, tLinks, stappen * 2);
+    const uTop = (tRechts - tTop) / (tRechts - tLinks);
+    // Links vooraan nog ±half de hoogte boven de zitting (de schaal staat daar tot op de vloer). Rechts verdwijnt de schaal
+    // in de zitting: haar bovenkant eindigt 3 cm onder de zitting, niet erop (twee vlakken op dezelfde hoogte flikkeren).
+    const links = voor + (rug - voor) * 0.5, rechts = zitBoven - 3;
+    hoogtes = pad.map((_, i) => {
+      const u = i / (pad.length - 1);
+      return u <= uTop
+        ? rond1(rechts + (rug - rechts) * (0.5 - 0.5 * Math.cos((Math.PI * u) / uTop)))
+        : rond1(rug - (rug - links) * (0.5 - 0.5 * Math.cos((Math.PI * (u - uTop)) / (1 - uTop))));
+    });
+  } else {
+    pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, -90 - k.boog, -90 + k.boog, stappen * 2);
+    hoogtes = pad.map((_, i) => {
+      const u = Math.abs(i - stappen) / stappen; // 0 = midden achteraan, 1 = einde van de wand
+      const t = Math.min(1, u / k.armVanaf);
+      return rond1(voor + (rug - voor) * (0.5 + 0.5 * Math.cos(Math.PI * t)));
+    });
+  }
   const basisBoven = h.zithoogte - h.kussenDik;
   // Schelp: zweeft een eind boven de zitting (gedragen door het frame), anders staat de wand op de onderbouw.
   const onder = k.zwevend ? h.zithoogte + 6 : h.P;

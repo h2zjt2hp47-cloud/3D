@@ -170,23 +170,31 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
 3. **Daarna kiezen:** *Zacht* standaard aan, als het op een tablet vlot genoeg is.
 4. **Stap 2 voor topmodellen:** een 3D-bestand per model (zie `echte-3d-modellen.md`).
 
-## Pebble: zachte kiezel met een schaal (5/11)
+## Pebble: zachte kiezel met een scheve schaal (5/11)
 
-Melding van Jonas: "de vormen lopen door elkaar". Pebble (kuipvorm *Organisch*) bestond uit drie losse delen: een
-donkere onderbouw, een lichter zitkussen met een uitstekende rand, en een schaal die vooraan recht afgesneden in de
-onderbouw stak. Op de productfoto is de zitting één zachte kiezel in één kleur, met een hoge schaal die eromheen loopt
-tot op de vloer.
+Melding van Jonas: "de vormen lopen door elkaar", met de productfoto. Pebble (kuipvorm *Organisch*) bestond uit drie
+losse delen: een donkere onderbouw, een lichter zitkussen met een uitstekende rand, en een symmetrische schaal die
+vooraan recht afgesneden in de onderbouw stak. Op de foto is de zitting één zachte kiezel in één kleur, en de schaal
+staat scheef: links hoog en tot vooraan op de vloer, rechts zakt ze schuin weg in de zitting.
 
-Nu (alleen bij *Organisch*, in `ruimtelijk.ts`):
-- de zitting is één zacht blok in de stof, van de voet tot op zithoogte (kussen, `glad`), zonder los zitkussen;
-- de schaal is een eigen zachte vorm (`glad`) met ronde uiteinden. Zitting en schaal smelten bewust **niet** samen: dan
-  werd het één klomp. Apart blijft er een zachte vouw waar de schaal tegen de zitting drukt, zoals op de foto;
-- de schaal staat op de vloer: ze begint 3 cm onder de vloer, zodat haar platte onderkant (die rafels gaf) niet te zien
-  is.
+Nu:
+- **Zitting:** één zacht blok in de stof, van de voet tot op zithoogte (kussen, `glad`), zonder los zitkussen
+  (`ruimtelijk.ts`).
+- **Schaal:** een eigen zachte vorm (`glad`) met ronde uiteinden. Ze loopt van rechtsachter (3 cm onder de zitting, dus
+  in de zitting) over de rug, het hoogst linksachter, tot linksvoor op ±half de hoogte boven de zitting (`kuip.ts`,
+  `scheef`). Ronde plattegrond, 16 cm dik. Zitting en schaal smelten bewust **niet** samen: dan werd het één klomp. Apart
+  blijft er een zachte vouw waar de schaal tegen de zitting drukt.
+- **Op de vloer:** de schaal begint 3 cm onder de vloer, zodat haar platte onderkant (die rafels gaf) niet te zien is.
+- **Lichte vlekjes** op een oplopende, gebogen wand: op de knikpunten van het pad rekende de motor de helling als nul.
+  Nu het gemiddelde van de stukken ernaast (`zachtevorm.ts`, `wand`).
 
-Prijs, offerte, boven- en vooraanzicht veranderen niet. Andere kuipfauteuils (Tumble, Manon, Satie …) blijven zoals ze
-waren. Benadering uit één kleine foto (400 px): de schaal lijkt op de foto iets scheef (hoger aan één kant); dat is niet
-nagebootst.
+Wat verandert: de 3D, en het boven- en vooraanzicht van Pebble (die lezen dezelfde schaal uit `kuipOpbouw`, dus ook de
+tekening in de offerte). Het vooraanzicht toont de zitting nog als kussen op een onderbouw. Prijs en offertetekst
+veranderen niet; de andere kuipfauteuils (Tumble, Manon, Satie …) blijven zoals ze waren (tests). Kussendikte en
+comfort zie je bij Pebble niet meer in 3D (één blok).
 
-![Pebble: vóór, na, de productfoto en een detail](afbeeldingen/pebble-kiezel.jpg)
+Benadering uit één kleine foto (400 px, één standpunt): hoe ver de schaal links naar voren loopt, de dikte en de
+plattegrond van de zitting (op de foto eerder een afgeronde rechthoek; een afgerond grondvlak gaf vlekken op de schaal)
+moeten op een tweede foto of bij de klant nagekeken worden.
 
+![Pebble: de productfoto, vanmorgen, nu in drie standpunten en het vooraanzicht](afbeeldingen/pebble-kiezel.jpg)

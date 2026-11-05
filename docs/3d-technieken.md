@@ -177,6 +177,9 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 - **Effecten die over meerdere beelden opbouwen** (TRAA, tijdsfilters) passen slecht bij een weergave die alleen
   tekent als er iets verandert: ze vragen 8 à 16 schermbeelden na elke wijziging, en een foto voor de offerte ook. Ze
   rekenen hun geschiedenis maar één keer per schermbeeld bij, dus snel na elkaar tekenen helpt niet.
+- **Een gebogen wand die oploopt:** op de knikpunten van het pad moet de helling meetellen (gemiddelde van de stukken
+  ernaast), anders lichte vlekjes om de 2 cm. Hou de stijging ook niet te steil, en laat een wand niet eindigen op
+  exact de hoogte van een ander vlak (flikkeren): liever een paar cm erin.
 - **Geen Math.random in texturen:** dan ziet het parket er bij elke keer laden anders uit, en kan de beeldvergelijking
   niets vergelijken. Gebruik `vasteReeks(sleutel)` in `drie-d.ts`.
 - **Meer:** de skills `zetel-3d` (`.claude/skills/zetel-3d/SKILL.md`) en `bouw-woning`

@@ -151,7 +151,18 @@ function wand(b: Blok): Primitief {
       const cx = ax + t * ux, cz = az + t * uz, d2 = (x - cx) * (x - cx) + (z - cz) * (z - cz);
       if (d2 < beste) {
         beste = d2; qx = cx; qz = cz; top = hoog[i]! + t * (hoog[i + 1]! - hoog[i]!); stuk = i;
-        if (t > 0 && t < 1) { const hel = (hoog[i + 1]! - hoog[i]!) / l2; hx = hel * ux; hz = hel * uz; } else hx = hz = 0;
+        if (t > 0 && t < 1) { const hel = (hoog[i + 1]! - hoog[i]!) / l2; hx = hel * ux; hz = hel * uz; }
+        else {
+          // Op een hoekpunt van het pad (niet aan een uiteinde): de gemiddelde helling van de twee stukken ernaast. Met
+          // helling nul sprong de richting daar: lichte vlekjes om de 2 cm op een oplopende wand, aan de buitenkant van
+          // een bocht (Pebble, 5/11).
+          const j = t <= 0 ? i : i + 1;
+          if (j > 0 && j < n - 1) {
+            const vx = pad[j + 1]![0] - pad[j - 1]![0], vz = pad[j + 1]![1] - pad[j - 1]![1], v2 = vx * vx + vz * vz || 1e-9;
+            const hel = (hoog[j + 1]! - hoog[j - 1]!) / v2;
+            hx = hel * vx; hz = hel * vz;
+          } else hx = hz = 0;
+        }
       }
     }
     o[0] = x - qx; o[1] = z - qz; o[2] = top; o[3] = hx; o[4] = hz; o[5] = stuk;

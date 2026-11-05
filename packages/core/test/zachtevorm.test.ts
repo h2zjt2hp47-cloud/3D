@@ -153,3 +153,22 @@ describe('doorlopende zetel als zachte vorm', () => {
     }
   });
 });
+
+describe('gebogen wand die oploopt (Pebble, 5/11)', () => {
+  it('op de knikpunten van het pad springt de richting niet (vroeger lichte vlekjes om de 2 cm)', () => {
+    const s = bouw3D(structuredClone(zetelModellen.find((m) => m.code === 'pebble')!.ontwerp), zetelCatalogus, standaardMaterialen);
+    const rug = s.blokken.find((b) => b.code === 'e1.rug')!;
+    const v = zachteVorm([rug], { minAfronding: 0 });
+    expect(dicht(v)).toBe(0);
+    // Driehoeken waarvan de richtingen in de hoekpunten meer dan 20° uiteenlopen: zonder de helling op de knikpunten 4,9 %.
+    const c = Math.cos((20 * Math.PI) / 180);
+    let mis = 0;
+    for (let t = 0; t < v.driehoeken; t++) {
+      const n = (k: number) => [0, 1, 2].map((a) => v.normalen[(t * 3 + k) * 3 + a]!);
+      const [a, b, d] = [n(0), n(1), n(2)];
+      const dot = (p: number[], q: number[]) => p[0]! * q[0]! + p[1]! * q[1]! + p[2]! * q[2]!;
+      if (Math.min(dot(a, b), dot(b, d), dot(a, d)) < c) mis++;
+    }
+    expect(mis / v.driehoeken).toBeLessThan(0.04);
+  });
+});
