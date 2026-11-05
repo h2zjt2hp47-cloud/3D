@@ -5,6 +5,11 @@
   "scripts": {
     "test": "npm test --workspaces",
     "typecheck": "npm run typecheck --workspaces",
-    "demo": "npm run demo -w @configurator/core"
+    "demo": "npm run demo -w @configurator/core",
+    "beelden": "node scripts/beeldvergelijking.mjs"
+  },
+  "devDependencies": {
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0"
   }
 }

@@ -281,6 +281,15 @@ export interface Opties3D {
   opEcht?: (getoond: Echt3DPlaatsing | null, toestand: EchtToestand) => void;
 }
 
+/**
+ * Vaste toevalsreeks (Park-Miller) voor de getekende texturen van vloer, wand en hout: dezelfde tekening bij elke keer
+ * laden (vroeger Math.random: telkens een ander parket). Ook nodig voor de beeldvergelijking (scripts/beeldvergelijking.mjs).
+ */
+function vasteReeks(sleutel: string) {
+  let s = [...sleutel].reduce((h, t) => (h * 31 + t.charCodeAt(0)) % 2147483647, 7) || 1;
+  return () => (s = (s * 16807) % 2147483647) / 2147483647;
+}
+
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
   // WebGPU (04-11): WebGPURenderer, op WebGPU waar de browser het heeft (Safari 26+, Chrome), anders op WebGL2. Zonder
   // navigator.gpu kiezen we zelf WebGL2 met een bewaard beeld (preserveDrawingBuffer), zodat een beeld van het canvas
@@ -366,15 +375,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
 
   // Fijne weefselstructuur voor stof (kleur komt van het materiaal).
   const weefsel = (() => {
+    const toeval = vasteReeks('weefsel');
     const c = document.createElement('canvas');
     c.width = c.height = 64;
     const g = c.getContext('2d')!;
     g.fillStyle = '#ffffff';
     g.fillRect(0, 0, 64, 64);
     for (let i = 0; i < 64; i += 2) {
-      g.fillStyle = `rgba(0,0,0,${0.035 + Math.random() * 0.03})`;
+      g.fillStyle = `rgba(0,0,0,${0.035 + toeval() * 0.03})`;
       g.fillRect(0, i, 64, 1);
-      g.fillStyle = `rgba(0,0,0,${0.02 + Math.random() * 0.03})`;
+      g.fillStyle = `rgba(0,0,0,${0.02 + toeval() * 0.03})`;
       g.fillRect(i, 0, 1, 64);
     }
     const tex = new THREE.CanvasTexture(c);
@@ -410,6 +420,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return `#${k(r!)}${k(g!)}${k(b!)}`;
   }
   function baksteen(hex: string, voeg = '#cfc8bb') {
+    const toeval = vasteReeks('baksteen' + hex);
     const px = 4, c = document.createElement('canvas');
     c.width = STEEN.b * px;
     c.height = STEEN.h * px;
@@ -419,7 +430,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     for (let rij = 0; rij < 10; rij++) {
       const off = rij % 2 ? 11 : 0;
       for (let s = -1; s < 5; s++) {
-        g.fillStyle = tint(hex, 0.82 + Math.random() * 0.3);
+        g.fillStyle = tint(hex, 0.82 + toeval() * 0.3);
         g.fillRect((s * 22 + off) * px, (rij * 6) * px, 21 * px, 5 * px);
       }
     }
@@ -429,16 +440,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return t;
   }
   function planken(hex: string) {
+    const toeval = vasteReeks('planken' + hex);
     const px = 2, c = document.createElement('canvas');
     c.width = PLANK.b * px;
     c.height = PLANK.h * px;
     const g = c.getContext('2d')!;
     for (let p = 0; p < 4; p++) {
-      g.fillStyle = tint(hex, 0.85 + Math.random() * 0.25);
+      g.fillStyle = tint(hex, 0.85 + toeval() * 0.25);
       g.fillRect(p * 12 * px, 0, 12 * px, c.height);
       for (let n = 0; n < 6; n++) {
-        g.fillStyle = `rgba(0,0,0,${0.04 + Math.random() * 0.05})`;
-        g.fillRect((p * 12 + 1 + Math.random() * 10) * px, 0, 1, c.height);
+        g.fillStyle = `rgba(0,0,0,${0.04 + toeval() * 0.05})`;
+        g.fillRect((p * 12 + 1 + toeval() * 10) * px, 0, 1, c.height);
       }
       g.fillStyle = 'rgba(0,0,0,.35)';
       g.fillRect((p * 12 + 11.6) * px, 0, 0.8 * px, c.height);
@@ -449,6 +461,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return t;
   }
   function tegels(hex: string) {
+    const toeval = vasteReeks('tegels' + hex);
     // 60 × 60 cm tegels met voeg; lichte kleurvariatie per tegel.
     const px = 4, c = document.createElement('canvas');
     c.width = c.height = 120 * px;
@@ -456,7 +469,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     g.fillStyle = tint(hex, 0.78);
     g.fillRect(0, 0, c.width, c.height);
     for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
-      g.fillStyle = tint(hex, 0.95 + Math.random() * 0.08);
+      g.fillStyle = tint(hex, 0.95 + toeval() * 0.08);
       g.fillRect((i * 60 + 0.3) * px, (j * 60 + 0.3) * px, 59.4 * px, 59.4 * px);
     }
     const t = new THREE.CanvasTexture(c);
@@ -465,6 +478,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     return t;
   }
   function parket(hex: string) {
+    const toeval = vasteReeks('parket' + hex);
     // Planken van 20 × 120 cm in halfsteens verband.
     const px = 2, c = document.createElement('canvas');
     c.width = 240 * px;
@@ -473,11 +487,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     for (let rij = 0; rij < 4; rij++) {
       const off = (rij % 2) * 60;
       for (let s = -1; s < 2; s++) {
-        g.fillStyle = tint(hex, 0.86 + Math.random() * 0.24);
+        g.fillStyle = tint(hex, 0.86 + toeval() * 0.24);
         g.fillRect((s * 120 + off) * px, rij * 20 * px, 120 * px, 20 * px);
         for (let n = 0; n < 5; n++) {
-          g.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.04})`;
-          g.fillRect((s * 120 + off) * px, (rij * 20 + 2 + Math.random() * 16) * px, 120 * px, 1);
+          g.fillStyle = `rgba(0,0,0,${0.03 + toeval() * 0.04})`;
+          g.fillRect((s * 120 + off) * px, (rij * 20 + 2 + toeval() * 16) * px, 120 * px, 1);
         }
         g.fillStyle = 'rgba(0,0,0,.28)';
         g.fillRect((s * 120 + off) * px, rij * 20 * px, 1, 20 * px);
@@ -505,15 +519,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   };
   /** Liggende planken van 15 cm (rabat), met schaduwnaad en hier en daar een kopse naad. */
   const plankenLiggend = (hex: string) => canvasTextuur(LIGGEND.b, LIGGEND.h, 2, (g, px) => {
+    const toeval = vasteReeks('plankenLiggend' + hex);
     for (let r = 0; r < 4; r++) {
       const naad = (r * 53) % 200;
       for (const [a, b] of [[0, naad], [naad, 200]] as const) {
-        g.fillStyle = tint(hex, 0.85 + Math.random() * 0.25);
+        g.fillStyle = tint(hex, 0.85 + toeval() * 0.25);
         g.fillRect(a * px, r * 15 * px, (b - a) * px, 15 * px);
       }
       for (let n = 0; n < 5; n++) {
-        g.fillStyle = `rgba(0,0,0,${0.03 + Math.random() * 0.05})`;
-        g.fillRect(0, (r * 15 + 1 + Math.random() * 12) * px, LIGGEND.b * px, 1);
+        g.fillStyle = `rgba(0,0,0,${0.03 + toeval() * 0.05})`;
+        g.fillRect(0, (r * 15 + 1 + toeval() * 12) * px, LIGGEND.b * px, 1);
       }
       g.fillStyle = 'rgba(0,0,0,.38)';
       g.fillRect(0, (r * 15 + 14.2) * px, LIGGEND.b * px, 0.8 * px);
@@ -522,12 +537,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   });
   /** Gevelleien (vezelcement of natuurleien) 20 × 12 cm zichtbaar, in halfsteens verband. */
   const leien = (hex: string) => canvasTextuur(LEIEN.b, LEIEN.h, 3, (g, px) => {
+    const toeval = vasteReeks('leien' + hex);
     g.fillStyle = tint(hex, 0.55);
     g.fillRect(0, 0, LEIEN.b * px, LEIEN.h * px);
     for (let r = 0; r < 4; r++) {
       const off = r % 2 ? 10 : 0;
       for (let s = -1; s < 4; s++) {
-        g.fillStyle = tint(hex, 0.9 + Math.random() * 0.18);
+        g.fillStyle = tint(hex, 0.9 + toeval() * 0.18);
         g.fillRect((s * 20 + off + 0.3) * px, (r * 12 + 0.4) * px, 19.4 * px, 11.4 * px);
       }
     }
@@ -547,27 +563,29 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   });
   /** Natuursteen (bv. blauwe hardsteen) in platen van 80 × 40 cm. */
   const natuursteen = (hex: string) => canvasTextuur(NATUURSTEEN.b, NATUURSTEEN.h, 2, (g, px) => {
+    const toeval = vasteReeks('natuursteen' + hex);
     g.fillStyle = tint(hex, 1.25);
     g.fillRect(0, 0, NATUURSTEEN.b * px, NATUURSTEEN.h * px);
     for (let r = 0; r < 2; r++) {
       const off = r % 2 ? 40 : 0;
       for (let s = -1; s < 2; s++) {
-        g.fillStyle = tint(hex, 0.93 + Math.random() * 0.12);
+        g.fillStyle = tint(hex, 0.93 + toeval() * 0.12);
         g.fillRect((s * 80 + off + 0.4) * px, (r * 40 + 0.4) * px, 79.2 * px, 39.2 * px);
         for (let n = 0; n < 40; n++) {
-          g.fillStyle = `rgba(255,255,255,${Math.random() * 0.08})`;
-          g.fillRect((s * 80 + off + Math.random() * 79) * px, (r * 40 + Math.random() * 39) * px, 1.5, 1.5);
+          g.fillStyle = `rgba(255,255,255,${toeval() * 0.08})`;
+          g.fillRect((s * 80 + off + toeval() * 79) * px, (r * 40 + toeval() * 39) * px, 1.5, 1.5);
         }
       }
     }
   });
   /** Sierpleister (crepi): fijne korrel. */
   const pleister = (hex: string) => canvasTextuur(PLEISTER.b, PLEISTER.h, 3, (g, px) => {
+    const toeval = vasteReeks('pleister' + hex);
     g.fillStyle = hex;
     g.fillRect(0, 0, PLEISTER.b * px, PLEISTER.h * px);
     for (let n = 0; n < 2600; n++) {
-      g.fillStyle = Math.random() < 0.5 ? `rgba(0,0,0,${Math.random() * 0.07})` : `rgba(255,255,255,${Math.random() * 0.08})`;
-      g.fillRect(Math.random() * PLEISTER.b * px, Math.random() * PLEISTER.h * px, 1.5, 1.5);
+      g.fillStyle = toeval() < 0.5 ? `rgba(0,0,0,${toeval() * 0.07})` : `rgba(255,255,255,${toeval() * 0.08})`;
+      g.fillRect(toeval() * PLEISTER.b * px, toeval() * PLEISTER.h * px, 1.5, 1.5);
     }
   });
   /** Textuurmaat per soort (cm); soorten zonder textuur hebben geen maat. */
@@ -1385,12 +1403,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     let t = nerven.get(hex);
     if (!t) {
       t = canvasTextuur(16, 32, 8, (g, px) => {
+        const toeval = vasteReeks('houtnerf' + hex);
         g.fillStyle = hex;
         g.fillRect(0, 0, 16 * px, 32 * px);
         for (let n = 0; n < 60; n++) {
-          const x = Math.random() * 16 * px, w = 0.4 + Math.random() * 1.6;
-          g.globalAlpha = 0.35 + Math.random() * 0.3;
-          g.fillStyle = tint(hex, Math.random() < 0.5 ? 0.82 : 1.1);
+          const x = toeval() * 16 * px, w = 0.4 + toeval() * 1.6;
+          g.globalAlpha = 0.35 + toeval() * 0.3;
+          g.fillStyle = tint(hex, toeval() < 0.5 ? 0.82 : 1.1);
           g.fillRect(x, 0, w, 32 * px);
           g.globalAlpha = 1;
         }

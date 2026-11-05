@@ -12,7 +12,7 @@ Productconfigurator (configureren → prijzen → offerte) voor maatwerkmeubelen
 - `docs/`: analyse en stappenplan, fase 0-sjabloon, onderzoek, overdracht, afbeeldingen, en de 3D-kennisbank `docs/3d-technieken.md` (welke 3D-techniek waarvoor, lessen, werkwijze, advies ramen en deuren). Obsidian-export: `python3 -I scripts/obsidian_export.py` (nieuwe documenten toevoegen aan `NOTITIES`).
 
 ## Werkwijze
-- Controles vóór elke commit: `npm test` (vitest) en `npm run typecheck` in de root.
+- Controles vóór elke commit: `npm test` (vitest) en `npm run typecheck` in de root. Bij een wijziging aan de 3D (of wat erin komt) ook `npm run beelden` (beeldvergelijking, ±2 min, `beeldtest/LEESMIJ.md`); een bewuste wijziging vastleggen met `npm run beelden -- --vernieuw` en de nieuwe referentiebeelden mee committen.
 - Code, namen en commentaar in het Nederlands, zoals de bestaande code.
 - Branch: `claude/vigilant-cray-yi2j33` (enige branch in de repo, dus geen PR mogelijk).
 - 3D lokaal testen: Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader` (zonder grafische kaart; kwaliteit *Mooi* is daar ±7 s per beeld, gebruik *Snel* of wacht lang). De 3D draait sinds 4/11 op `WebGPURenderer` (WebGPU, anders WebGL2): in de cloud is er geen WebGPU, dus daar test je de WebGL2-terugval; WebGPU zelf alleen op een echt toestel (de M5 in de toonzaal). Beelden nemen met `canvas.toDataURL()` (in de WebGL2-terugval met bewaard beeld) i.p.v. een elementscreenshot; in de app via `viewer.beeld()` of `foto()`. `window.__zetel3d` geeft in de ontwerper de 3D-weergave (bv. `fotoRealistisch({ stappen: 6, breedte: 520 })` voor een snelle proef van de fotomodus, ±2 min in swiftshader).

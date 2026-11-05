@@ -46,3 +46,21 @@ schermbreedtes en browsers van Jonas was niet beschikbaar.
   bestanden van fabrikanten": nakijken of die staalfoto mag blijven.
 - De stoffoto's dienen ook als reliëf (bumpmap). Dat geeft nep-reliëf uit de schaduw in de foto (al vermeld in de
   werkbrief).
+
+## Vervolg 05-11: fijne contactschaduw (SSS) en TRAA
+
+Op vraag van Jonas getest bij kwaliteit *Mooi*, volgens de voorbeelden van three.js r187, op Doha, Kotor, Pebble en de
+Stockholm-poef (Chromium zonder grafische kaart, de WebGL2-weg). Beeld: `docs/afbeeldingen/proef-sss-traa.jpg`.
+
+| Punt | Uitslag | Advies |
+|---|---|---|
+| SSS (fijne contactschaduw van de zon) | Werkt (links van de rugkussens, onder de rand van de zitting), maar daar valt de gewone zonneschaduw al. Ook op volle sterkte (25 cm) alleen dunne randjes, zichtbaar bij 5 × versterkt verschil. Vraagt een extra tekenronde van de hele scène. | Niet opgenomen. |
+| Schaduw in hoeken alleen op het omgevingslicht (`builtinAOContext`) | Bijna hetzelfde beeld als nu. | Niet opgenomen (hoort bij dezelfde ombouw). |
+| TRAA (16 beelden opgebouwd) | Even goed als MSAA 4×, iets zachtere randen, weefsel een fractie waziger. Helpt niet tijdens het draaien. Een foto voor de offerte zou 8 à 16 schermbeelden moeten wachten. | Niet opgenomen. |
+
+Lessen (ook in de kennisbank): eenheden in cm i.p.v. meter; een effect in de scène zelf liep één beeld achter
+(spookranden van het vorige standpunt) tot het vooraf apart berekend werd; effecten die over meerdere beelden opbouwen
+passen slecht bij een weergave die alleen tekent bij een wijziging.
+
+Wel opgenomen: de **beeldvergelijking** (`npm run beelden`, zie `beeldtest/LEESMIJ.md`) en een vaste toevalsreeks
+voor de texturen van vloer, wand en hout (zelfde beeld bij elke keer laden).

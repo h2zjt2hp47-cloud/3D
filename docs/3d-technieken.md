@@ -1,6 +1,6 @@
 # 3D-technieken: wat werkt waarvoor (kennisbank)
 
-*Stand 4/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
+*Stand 5/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
 meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat in de notities onderaan.
 
 ## De technieken op een rij
@@ -57,6 +57,38 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 9. **Een echt 3D-bestand is geen vervanging voor maatwerk.** Het past bij een vast model of een vast onderdeel. Voor
    een zetel of raam op maat moet de configurator de vorm zelf maken.
 
+## Gratis hulpmiddelen (advies en proeven van 5/11)
+
+Voorwaarden: alles in één HTML-bestand, niets van internet laden, alleen materialen die we zelf maken (procedureel of
+uit de foto's van de productsite), gratis HDRI's mogen (CC0, met bronvermelding).
+
+**In de configurator zelf** (zit in three.js 0.187, MIT):
+
+| Hulpmiddel | Wat het doet | Uitslag |
+|---|---|---|
+| **SSS** (fijne contactschaduw op het scherm) | Kleine schaduwen van de zon waar de schaduwkaart te grof is. | Getest 5/11, **niet opgenomen**: ook op volle sterkte alleen dunne randjes; de zonneschaduw dekt die plekken al. Kost een extra tekenronde van de hele scène. |
+| **TRAA** (randverzachting over meerdere beelden) | Bouwt het beeld op over 8 à 16 schermbeelden. | Getest 5/11, **niet opgenomen**: even goed als de huidige randverzachting (MSAA 4×), iets zachter; het weefsel wordt een fractie waziger. Helpt niet tijdens het draaien (dan tekenen we het snelle beeld). |
+| **SSGI** (weerkaatsend licht) | Kleur die van het ene vlak op het andere straalt. | Nog niet getest. Zwaar: alleen bij *Mooi* en op WebGPU, eerst op de M5. Met mist (die wij gebruiken) meldt het forum een te donkere vloer. |
+| **SSR** (spiegelingen) | Spiegeling in een glanzende vloer, glas, metaal. | Weinig nut bij stof; wel later voor ramen en deuren. |
+| **Inspector** | Meetvenster: beelden per seconde, geheugen, tussenbeelden. | Om op de M5 te meten. |
+
+Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
+
+![Proef SSS en TRAA (5/11)](afbeeldingen/proef-sss-traa.jpg)
+
+**Buiten de app** (het resultaat gaat als afbeelding mee in de pagina):
+- **Material Maker 1.8** (MIT, Windows, Mac, Linux): naadloze stoffen bouwen (bouclé, velours, linnen, rib) met kleur,
+  reliëf en glans, met blokjes die je verbindt, zonder code. Past bij de regel "procedureel, zelf gemaakt". Voorrang 1.
+- **DeepBump** (Blender-uitbreiding, GPL-3): een echte reliëfkaart uit de stoffoto van de productsite, in plaats van de
+  foto zelf als reliëf (dat geeft nep-reliëf uit de schaduw in de foto). De licentie geldt voor het hulpmiddel, niet
+  voor de kaarten die het maakt.
+- **Real-ESRGAN** (BSD-3): kleine foto's vergroten. Verzint fijn detail en is niet vanzelf naadloos: lage voorrang,
+  altijd als benadering markeren.
+- **Poly Haven** (CC0): extra HDRI's voor lichtsferen. Hun stoffen en modellen zijn scans: valt buiten de regel.
+
+**Kwaliteitscontrole:** de beeldvergelijking `npm run beelden` (Playwright, pixelmatch, pngjs), sinds 5/11. Zie
+[Beeldvergelijking](../beeldtest/LEESMIJ.md).
+
 ## Werkwijze voor een nieuw model of product
 
 1. **Bronnen:** de grote foto's en de maten van de productpagina. Voor de bouw: doorsnedes en gegevens van de
@@ -67,7 +99,9 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
    - de vorm is dicht en de schaduw klopt;
    - de maten van de opbouw kloppen;
    - prijs en tekening veranderen niet ongewild.
-5. **3D-beelden** nemen in hetzelfde standpunt als de foto, en het vergelijkingsbeeld maken.
+5. **3D-beelden** nemen in hetzelfde standpunt als de foto, en het vergelijkingsbeeld maken. Daarna
+   `npm run beelden`: de vaste reeks beelden tegenover de vorige versie (zie [Beeldvergelijking](../beeldtest/LEESMIJ.md)).
+   Wat verandert moet bewust zijn; dan `npm run beelden -- --vernieuw`.
 6. **Benaderingen markeren**; prijs en offertetekst nakijken.
 7. **Documenteren** (overdracht, uitleg, skill), publiceren en het doorstuurpakket vernieuwen.
 
@@ -135,6 +169,16 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 - **Delen binnen elkaars omtrek houden.** Een rug die buiten de onderbouw uitstak, gaf vinnen en strepen.
 - **Snelheid meten:** met een gebundeld script in node; de eerste keer met `tsx` geeft een veel te hoge tijd.
 - **Twee vlakken op exact dezelfde plaats** geven vlekken (z-fighting): laat het ene deel net binnen het andere liggen.
+- **Eenheden:** de voorbeelden van three.js rekenen in meter, onze scène in cm. Een afstand of dikte uit een voorbeeld
+  (bv. 0,1 voor de fijne contactschaduw) doet bij ons niets: maal 100.
+- **Nabewerking in de scène loopt één beeld achter.** Een effect dat via `builtinShadowContext` of `builtinAOContext`
+  in de scène zelf werkt, werd op de WebGL2-weg pas berekend nadat de scène getekend was: spookranden van het vorige
+  standpunt. Eerst apart berekenen (een kleine pijplijn naar een doel van 4 × 4 pixels), dan de scène tekenen.
+- **Effecten die over meerdere beelden opbouwen** (TRAA, tijdsfilters) passen slecht bij een weergave die alleen
+  tekent als er iets verandert: ze vragen 8 à 16 schermbeelden na elke wijziging, en een foto voor de offerte ook. Ze
+  rekenen hun geschiedenis maar één keer per schermbeeld bij, dus snel na elkaar tekenen helpt niet.
+- **Geen Math.random in texturen:** dan ziet het parket er bij elke keer laden anders uit, en kan de beeldvergelijking
+  niets vergelijken. Gebruik `vasteReeks(sleutel)` in `drie-d.ts`.
 - **Meer:** de skills `zetel-3d` (`.claude/skills/zetel-3d/SKILL.md`) en `bouw-woning`
   (`.claude/skills/bouw-woning/SKILL.md`).
 

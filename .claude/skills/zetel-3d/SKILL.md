@@ -169,6 +169,14 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - Start Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` voor WebGL zonder GPU.
 - Menu (3/11): `[data-weergave]` = modellen, ontwerp, offerte, sofa, kast, beheer (Beheer opent `#materialen` of `#catalogus`; tabbladen `[data-beheer="stoffen"]` en `[data-cat]`). De startopstellingen zitten ingeklapt in `#o-opnieuw` (eerst `open = true`) en vragen een tweede klik als er al een ontwerp is ("Klik nogmaals"). *Alles wissen* bestaat niet meer: dat is *Leeg tekenvlak*.
 
+## Beeldvergelijking (sinds 5/11)
+- `npm run beelden` bouwt beide demo's en vergelijkt een vaste reeks 3D-beelden (Doha, Montego, Kotor, Kotor in de woonkamer, Husk, Pebble, Stockholm, woning, raam) met `beeldtest/referentie/` (script `scripts/beeldvergelijking.mjs`, Playwright + pixelmatch). Meer dan 0,05 % anders = melding; verschilstroken in `beeldtest/uitslag/`. Na een bewuste wijziging: `-- --vernieuw` en de referenties mee committen. Draait in swiftshader (WebGL2-weg); geen vervanging voor een test op de M5.
+- Deterministisch: dezelfde versie geeft 0,00 %. Daarom geen `Math.random` in getekende texturen; gebruik `vasteReeks(sleutel)` (`drie-d.ts`).
+
+## Nabewerking: wat getest en niet opgenomen is (5/11)
+- SSS (`three/addons/tsl/display/SSSNode.js`) via `builtinShadowContext` en GTAO via `builtinAOContext` met een voorpass: bijna geen zichtbaar verschil, extra tekenronde. TRAA: even goed als MSAA 4×, iets zachter. Zie `docs/proeven/3d-motor-proeven-0411.md`.
+- Valkuilen als je het toch opnieuw probeert: afstanden in cm (voorbeelden in meter); effecten in de scenecontext liepen één beeld achter tot ze vooraf apart berekend werden (kleine `RenderPipeline` naar een `RenderTarget(4, 4)`); TRAA en andere tijdsfilters rekenen één keer per schermbeeld (`updateBeforeType` FRAME), dus `beeld()`/`foto()` zouden meerdere schermbeelden moeten wachten.
+
 ## Valkuilen
 - Vergeet de rotatie niet: test elke nieuwe vorm bij 0, 90, 180 en 270.
 - Vooraanzicht: achterste elementen eerst tekenen (sortering op voorrand), anders bedekken ze de voorste.

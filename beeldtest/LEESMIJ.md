@@ -1,0 +1,61 @@
+# Beeldvergelijking van de 3D
+
+Een vaste reeks beelden van de zeteldemo en de bouwdemo, om een achteruitgang op te merken voor ze bij de klant komt:
+een schaduw die verdwijnt, een onderdeel dat verschuift, een fout bij het tekenen.
+
+## Gebruik (in de root van de repo)
+
+```bash
+npm run beelden
+```
+
+Bouwt beide demo's, maakt de beelden en vergelijkt ze met `referentie/`. Duurt ±2 minuten.
+
+```bash
+npm run beelden -- --vernieuw
+```
+
+Na een **bewuste** wijziging aan de 3D: eerst de verschilbeelden nakijken, dan de nieuwe beelden als referentie vastleggen
+(en mee committen).
+
+Extra: `node scripts/beeldvergelijking.mjs --zonder-bouw` (de gebouwde pagina's niet opnieuw bouwen) en
+`--alleen doha,kotor` (alleen de beelden waarvan de naam zo begint).
+
+## Uitslag
+
+- In de terminal: per beeld hoeveel procent anders is. Meer dan 0,05 % is "te veel".
+- In `uitslag/` (niet in git): elk nieuw beeld, en per beeld dat verschilt een strook
+  **referentie | nu | verschil**, met de verschillen in rood.
+- Afsluitcode 1 als een beeld te veel verschilt of als de pagina een fout gaf.
+
+## De reeks
+
+| Beeld | Waarom |
+|---|---|
+| `doha-schuin`, `montego-schuin` | doorlopende zetel, ook in een boog |
+| `doha-boven-daglicht` | slagschaduw en contactschaduw (de fout van 5/11) |
+| `kotor-schuin` | hoeksofa met chaise, poten, sierkussens |
+| `kotor-woonkamer` | decor met parket, raam en glas |
+| `husk-schuin` | strakke arm (eigen doorsnede) |
+| `pebble-schuin` | kuipfauteuil met verdekte voet |
+| `stockholm-schuin` | ronde poef |
+| `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
+
+Allemaal bij kwaliteit *Mooi*, venster 1400 × 950.
+
+## Wat het niet doet
+
+- **Geen fouten vinden die er al waren.** De referentie is gewoon het vorige beeld. De vierkante schaduw onder Doha
+  zat er weken in; dit hulpmiddel had dat niet gezien, wel als ze later terugkwam.
+- **Geen M5.** Het draait in Chromium zonder grafische kaart (de WebGL2-weg), zoals in de cloud. WebGPU op het toestel
+  in de toonzaal blijft een eigen test.
+- Na een update van Chromium kan alles een fractie verschuiven. Dan de verschilbeelden nakijken en vernieuwen.
+
+## Waarom het betrouwbaar is
+
+Dezelfde versie geeft exact hetzelfde beeld (0,00 % verschil). Daarvoor tekenen de texturen van vloer, wand en hout met
+een vaste toevalsreeks (`vasteReeks` in `drie-d.ts`), en wacht het script tot het canvas stilstaat (twee keer na elkaar
+hetzelfde beeld). Proef op 5/11: de vierkante voet onder Pebble en de Stockholm-poef tijdelijk teruggezet, en beide
+beelden werden gemeld (0,94 % en 0,21 %), met de voet in het rood.
+
+Hulpmiddelen: Playwright (Apache 2.0), pixelmatch (ISC), pngjs (MIT).

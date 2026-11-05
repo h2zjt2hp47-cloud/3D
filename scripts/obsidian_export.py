@@ -30,6 +30,7 @@ NOTITIES = {
     'docs/zachte-vormen.md': ('Zachte vormen - zetels in 3D', ['configurator', 'zetels', '3d'], ZETELS),
     'docs/echte-3d-modellen.md': ('Echte 3D-modellen - proef', ['configurator', 'zetels', '3d', 'onderzoek'], ZETELS),
     'docs/proeven/3d-motor-proeven-0411.md': ('Proeven 3D-motor (WebGPU, glas, weefsel)', ['configurator', '3d', 'proef', 'webgpu'], 'alle'),
+    'beeldtest/LEESMIJ.md': ('Beeldvergelijking 3D', ['configurator', '3d', 'kwaliteit', 'test'], 'alle'),
     'docs/onderzoek-bouw-ramen-deuren.md': ('Onderzoek bouw - pijnpunten ramen en deuren', ['configurator', 'bouw', 'onderzoek'], BOUW),
     'docs/analyse-bouw-woning-demo.md': ('Analyse bouw - woningconfigurator', ['configurator', 'bouw', 'analyse'], BOUW),
     'docs/begrippen-bouw.md': ('Begrippenlijst bouw', ['configurator', 'bouw', 'begrippen'], BOUW),
@@ -51,7 +52,7 @@ def omzetten(tekst: str) -> str:
     def link(m):
         doel = os.path.basename(m.group(2))
         return f'[[{TITEL_VAN[doel]}]]' if doel in TITEL_VAN else m.group(0)
-    return re.sub(r'\[([^\]]+)\]\(((?:docs/)?[A-Za-z0-9_.\-]+\.md)\)', link, tekst)
+    return re.sub(r'\[([^\]]+)\]\(((?:\.\./)?(?:[A-Za-z0-9_\-]+/)*[A-Za-z0-9_.\-]+\.md)\)', link, tekst)
 
 
 def frontmatter(titel, tags, klant=ZETELS):
