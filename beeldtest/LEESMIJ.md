@@ -28,6 +28,10 @@ Extra: `node scripts/beeldvergelijking.mjs --zonder-bouw` (de gebouwde pagina's 
   **referentie | nu | verschil**, met de verschillen in rood.
 - Afsluitcode 1 als een beeld te veel verschilt of als de pagina een fout gaf.
 
+Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
+
+![Referentie, nu en verschil](../docs/afbeeldingen/beeldvergelijking-voorbeeld.png)
+
 ## De reeks
 
 | Beeld | Waarom |
