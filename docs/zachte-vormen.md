@@ -182,7 +182,8 @@ Nu:
   (`ruimtelijk.ts`).
 - **Schaal:** een eigen zachte vorm (`glad`) met ronde uiteinden. Ze loopt van rechtsachter (3 cm onder de zitting, dus
   in de zitting) over de rug, het hoogst linksachter, tot linksvoor op ±half de hoogte boven de zitting (`kuip.ts`,
-  `scheef`). Ronde plattegrond, 16 cm dik. Zitting en schaal smelten bewust **niet** samen: dan werd het één klomp. Apart
+  `scheef`). 16 cm dik. Plattegrond (zitting en schaal): een afgeronde rechthoek zoals op de foto, niet rond. De punten
+  van de schaal liggen op gelijke afstanden (anders golfde de bovenkant bij een afgeronde rechthoek). Zitting en schaal smelten bewust **niet** samen: dan werd het één klomp. Apart
   blijft er een zachte vouw waar de schaal tegen de zitting drukt.
 - **Op de vloer:** de schaal begint 3 cm onder de vloer, zodat haar platte onderkant (die rafels gaf) niet te zien is.
 - **Lichte vlekjes** op een oplopende, gebogen wand: op de knikpunten van het pad rekende de motor de helling als nul.
@@ -193,8 +194,7 @@ tekening in de offerte). Het vooraanzicht toont de zitting nog als kussen op een
 veranderen niet; de andere kuipfauteuils (Tumble, Manon, Satie …) blijven zoals ze waren (tests). Kussendikte en
 comfort zie je bij Pebble niet meer in 3D (één blok).
 
-Benadering uit één kleine foto (400 px, één standpunt): hoe ver de schaal links naar voren loopt, de dikte en de
-plattegrond van de zitting (op de foto eerder een afgeronde rechthoek; een afgerond grondvlak gaf vlekken op de schaal)
-moeten op een tweede foto of bij de klant nagekeken worden.
+Benadering uit één kleine foto (400 px, één standpunt): hoe ver de schaal links naar voren loopt, de dikte van de schaal
+en hoe hoekig de zitting is, moeten op een tweede foto of bij de klant nagekeken worden.
 
-![Pebble: de productfoto, vanmorgen, nu in drie standpunten en het vooraanzicht](afbeeldingen/pebble-kiezel.jpg)
+![Pebble: de productfoto, vanmorgen, nu schuin, van voren, van boven en het vooraanzicht](afbeeldingen/pebble-kiezel.jpg)

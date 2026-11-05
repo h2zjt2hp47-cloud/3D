@@ -208,7 +208,7 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug die naar armhoogte zakt en vlak doorloopt', teken: { vorm: 'afgerond', plan: 'afgerond', dikte: 13, boog: 130, voorBoven: 17, armVanaf: 0.6 } },
       { code: 'omhullend', label: 'Omhullend', uitleg: 'Wand loopt ver rond, armen laag vooraan', teken: { vorm: 'omhullend', plan: 'rond', dikte: 17, boog: 140, voorBoven: 9, armVanaf: 1 } },
       { code: 'trommel', label: 'Trommel', uitleg: 'Ronde trommel, rondom even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 14, boog: 138, voorBoven: 22, armVanaf: 1, vlak: true } },
-      { code: 'organisch', label: 'Organisch', uitleg: 'Zachte kiezel als zitting; de schaal is aan één kant hoog en loopt aan de andere kant schuin in de zitting weg', teken: { vorm: 'organisch', plan: 'rond', dikte: 16, boog: 118, voorBoven: 1, armVanaf: 1, organisch: true, scheef: true } },
+      { code: 'organisch', label: 'Organisch', uitleg: 'Zachte kiezel als zitting; de schaal is aan één kant hoog en loopt aan de andere kant schuin in de zitting weg', teken: { vorm: 'organisch', plan: 'afgerond', dikte: 16, boog: 118, voorBoven: 1, armVanaf: 1, organisch: true, scheef: true } },
       { code: 'schelp', label: 'Schelp op frame', uitleg: 'Dunne, gebogen rugschaal boven de zitting, op het frame', teken: { vorm: 'schelp', plan: 'afgerond', dikte: 6, boog: 98, voorBoven: 20, armVanaf: 1, zwevend: true } },
       { code: 'hoekig', label: 'Hoekig', uitleg: 'Rechte rug en armen', teken: { vorm: 'hoekig' } },
     ],

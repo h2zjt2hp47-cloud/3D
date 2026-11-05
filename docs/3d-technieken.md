@@ -179,7 +179,8 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
   rekenen hun geschiedenis maar één keer per schermbeeld bij, dus snel na elkaar tekenen helpt niet.
 - **Een gebogen wand die oploopt:** op de knikpunten van het pad moet de helling meetellen (gemiddelde van de stukken
   ernaast), anders lichte vlekjes om de 2 cm. Hou de stijging ook niet te steil, en laat een wand niet eindigen op
-  exact de hoogte van een ander vlak (flikkeren): liever een paar cm erin.
+  exact de hoogte van een ander vlak (flikkeren): liever een paar cm erin. Verdeel de punten op gelijke afstanden en
+  laat de hoogte de afstand volgen, niet de hoek: bij een afgeronde rechthoek golfde de bovenkant anders.
 - **Geen Math.random in texturen:** dan ziet het parket er bij elke keer laden anders uit, en kan de beeldvergelijking
   niets vergelijken. Gebruik `vasteReeks(sleutel)` in `drie-d.ts`.
 - **Meer:** de skills `zetel-3d` (`.claude/skills/zetel-3d/SKILL.md`) en `bouw-woning`

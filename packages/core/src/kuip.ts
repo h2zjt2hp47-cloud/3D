@@ -98,8 +98,20 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
     // Van rechtsachter (−30°) over het midden achteraan (−90°) naar linksvoor (−90° − boog); het hoogst linksachter (−140°).
     // Het stijgende stuk rechts is lang genoeg om niet te steil te worden (een te steile bovenkant gaf vlekjes in de 3D).
     const tRechts = -30, tLinks = -90 - k.boog, tTop = -140;
-    pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, tRechts, tLinks, stappen * 2);
-    const uTop = (tRechts - tTop) / (tRechts - tLinks);
+    // Eerst fijn bemonsterd, dan op gelijke afstanden langs de wand: bij een afgerond grondvlak liggen punten op gelijke
+    // hoeken ongelijk verdeeld, en dan golfde de bovenkant (de hoogte volgt de afstand langs de wand, niet de hoek).
+    const F = 600, fijn = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, tRechts, tLinks, F);
+    const afstand = [0];
+    for (let i = 1; i <= F; i++) afstand.push(afstand[i - 1]! + Math.hypot(fijn[i]![0] - fijn[i - 1]![0], fijn[i]![1] - fijn[i - 1]![1]));
+    const totaal = afstand[F]!, N = stappen * 2 + 1;
+    let j = 0;
+    pad = Array.from({ length: N }, (_, i) => {
+      const doel = (totaal * i) / (N - 1);
+      while (j < F - 1 && afstand[j + 1]! < doel) j++;
+      const f = Math.max(0, Math.min(1, (doel - afstand[j]!) / (afstand[j + 1]! - afstand[j]! || 1)));
+      return [rond1(fijn[j]![0] + f * (fijn[j + 1]![0] - fijn[j]![0])), rond1(fijn[j]![1] + f * (fijn[j + 1]![1] - fijn[j]![1]))] as Punt;
+    });
+    const uTop = afstand[Math.round(((tRechts - tTop) / (tRechts - tLinks)) * F)]! / totaal;
     // Links vooraan nog ±half de hoogte boven de zitting (de schaal staat daar tot op de vloer). Rechts verdwijnt de schaal
     // in de zitting: haar bovenkant eindigt 3 cm onder de zitting, niet erop (twee vlakken op dezelfde hoogte flikkeren).
     const links = voor + (rug - voor) * 0.5, rechts = zitBoven - 3;
