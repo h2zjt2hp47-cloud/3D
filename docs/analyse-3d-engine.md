@@ -25,11 +25,16 @@ van Missing Link (6/11), **[inschatting]** = mijn inschatting, na te kijken.
    De bouwdemo leent die weergave nu al via een omweg (`import … from '../../demo-web/src/drie-d.js'`). Dat is het
    eerste teken dat ze een eigen pakket moet worden.
 4. **Voorgestelde eerste stap:** de 3D-weergave losmaken tot een eigen pakket, zonder zichtbare wijziging (± 2 à 3
-   weken **[inschatting]**). Daarna één proef binnen Missing Link (machine in 3D of werf in 3D) en één klein proefspel
-   dat gegevens uit Missing Link gebruikt (*laad de bestelwagen*, zie §9). Zo test je de twee doelen tegelijk.
-5. **Eerst te beslissen:** wat "games" precies moet zijn (§5). Voor spellen in de browser en spelelementen in Missing
-   Link volstaat deze aanpak. Voor "echte" games (Steam, console, grote werelden) is een andere engine nodig, zoals
-   Godot of Unity. Dan deel je wel de 3D-bestanden en de gegevens, maar niet de code.
+   weken **[inschatting]**). Daarna één proef binnen Missing Link (machine in 3D of werf in 3D) en één speelbaar
+   prototype voor Steam (zie §5a en §9). Zo test je de twee doelen tegelijk.
+5. **Games = Steam** (antwoord van Jonas, 6/11; uitwerking in §5a). Dat kan op twee manieren:
+   - **Met dezelfde engine**, verpakt als programma voor de computer (Electron) met de Steam-functies erbij. Dat past
+     bij een spel dat dicht bij de wereld van Missing Link ligt (bouwen, inrichten, beheren, puzzelen) met verzorgde,
+     maar geen topgrafiek, voor pc en Steam Deck.
+   - **Met Godot**, als apart spoor, voor een groot 3D-spel met personages of later consoles. Dan deel je met Missing
+     Link alleen de 3D-bestanden en de gegevens, niet de code.
+
+   Voorstel: eerst een speelbaar prototype op de eigen engine (4 à 6 weken), dan een beslismoment.
 
 ---
 
@@ -112,10 +117,84 @@ Dit bepaalt de keuze het meest. Drie smaken:
 |---|---|---|
 | **A. Spelelementen in Missing Link** (gamification) | Ontwerpen als in een bouwspel, opdrachten tijdens de opleiding, een badge bij de eerste offerte | Ja, volledig. Dezelfde engine. |
 | **B. Kleine spellen in de browser of op een tablet** | *Richt je kamer in*, *bouw je veranda*, *laad de bestelwagen*; als marketing voor een klant of als apart product | Ja. Met spellus, physics, invoer en geluid erbij (§7, laag 3b). |
-| **C. "Echte" games** | Een spel voor Steam of een console, grote open werelden, personages, online met veel spelers | Nee. Daarvoor is een volledige game-engine met editor nodig (Godot, Unity, Unreal). Wat je wel deelt: de 3D-bestanden (glTF), de stoffen als afbeeldingen, en de gegevens via de API. |
+| **C. "Echte" games** | Een spel voor Steam of een console, grote open werelden, personages, online met veel spelers | Deels. Een bescheiden spel voor pc en Steam Deck kan met onze engine in een schil (Electron). Voor een groot 3D-spel of consoles is een volledige game-engine met editor nodig (Godot, Unity). Dan deel je alleen de 3D-bestanden (glTF), de stoffen als afbeeldingen en de gegevens. Zie §5a. |
 
-**Mijn advies:** begin met A en B. Die versterken Missing Link en de configurator. C is een ander vak, met een ander
-team en een andere markt. Kies dat alleen als er een concreet spel en een budget is.
+**Oorspronkelijk advies:** begin met A en B. Die versterken Missing Link en de configurator. C is een ander vak, met een
+ander team en een andere markt. Kies dat alleen als er een concreet spel en een budget is.
+
+**Antwoord van Jonas (6/11): Steam.** Dat is smaak C. Hieronder wat dat betekent.
+
+---
+
+## 5a. Games voor Steam
+
+### Wat Steam vraagt
+
+| Eis | Uitleg | Gevolg |
+|---|---|---|
+| **Een programma, geen webpagina** | Steam installeert een programma op Windows (en eventueel Mac, Linux en Steam Deck) | Een webspel moet verpakt worden in een "schil" (Electron), of je gebruikt een game-engine die zelf een programma maakt |
+| **Steam-functies** | Prestaties (achievements), opslaan in de cloud, vrienden, de Steam-overlay | Koppeling met Steamworks (de gratis set van Valve); voor Electron bestaat `steamworks.js` **[inschatting, licentie nakijken]** |
+| **Controller** | Op de Steam Deck en voor het label *Deck Verified* moet het spel met een controller werken en moet de tekst leesbaar zijn **[inschatting]** | Invoer met gamepad vanaf het begin, niet achteraf |
+| **Altijd vlot** | Constant ±60 beelden per seconde, ook op een gewone laptop en de Steam Deck | Prestatiebudget per scène en meten op echte toestellen |
+| **Instellingen** | Resolutie, grafische kwaliteit, geluid, toetsen | Onze kwaliteitstrappen *Snel* / *Mooi* worden een volwaardig menu |
+| **Kosten** | ±100 dollar per spel om het op Steam te zetten (*Steam Direct*); Valve houdt ±30 % van de verkoop **[inschatting, nakijken]** | Weinig drempel; de echte kost zit in maken, testen en verkopen |
+| **Een product op zich** | Winkelpagina, trailer, marketing, updates, vragen van spelers | Iemand moet dit trekken: een ander vak dan een ERP verkopen |
+
+### Drie wegen
+
+| Weg | Wat | Sterk | Zwak |
+|---|---|---|---|
+| **W1. Eigen engine in een schil** | Onze engine op three.js (§7), verpakt met Electron, met `steamworks.js` voor de Steam-functies | Echt **één engine** voor Missing Link én het spel: elke verbetering helpt beide. Al het 3D-werk hergebruikt. Claude kan het bouwen en testen in deze omgeving (zoals de beeldvergelijking). Snel een eerste speelbare versie. Er bestaan spellen op Steam die zo gemaakt zijn (bv. CrossCode met HTML5) **[inschatting]**. | Minder rekenkracht dan een echte game-engine: grote werelden en veel personages lopen sneller vast. **Geen consoles** langs deze weg. Geen editor voor tekenaars of leveldesigners: die moeten we zelf maken. Het programma is ±100 MB (op Steam geen probleem). |
+| **W2. Godot voor het spel** | Een volwaardige game-engine met editor (MIT, geen afdracht op de verkoop) | Gemaakt voor games: physics, animatie, personages, editor voor tekenaars. Maakt zelf programma's voor Windows, Mac, Linux. Consoles via gespecialiseerde partners **[inschatting]**. | Een tweede engine naast die van Missing Link: de code wordt niet gedeeld, alleen de 3D-bestanden (glTF), de texturen en de gegevens. Andere programmeertaal (GDScript of C#). Minder goed te testen in de cloud. |
+| **W3. Unity** | De bekendste engine voor kleine en middelgrote spellen | Grootste aanbod aan kennis, uitbreidingen en mensen; consoles rechtstreeks | Licentievoorwaarden die al wijzigden; C#; zwaar; geen gedeelde code met Missing Link |
+
+Unreal laten we weg: sterk voor topgrafiek, maar te zwaar voor een kleine ploeg en het spel dat hier past.
+
+### Beoordeling voor Steam **[inschatting]**
+
+| Criterium | W1. Eigen engine + schil | W2. Godot | W3. Unity |
+|---|---|---|---|
+| Gedeeld met Missing Link | ++ | − | − |
+| Eerste speelbare versie | ++ | + | + |
+| Groot 3D-spel (personages, open wereld) | − | + | ++ |
+| Consoles later | − | + | ++ |
+| Editor voor tekenaars en leveldesign | − | ++ | ++ |
+| Licentie en kosten | ++ | ++ | 0 |
+| Te bouwen en testen door Claude in de cloud | ++ | + | 0 |
+
+### Advies
+
+De keuze hangt af van **het soort spel**:
+
+- **Een spel dicht bij de wereld van Missing Link** (bouwen, inrichten, renoveren, een werf of atelier beheren,
+  puzzelen zoals *Laad de bestelwagen*), met een verzorgde stijl en geen topgrafiek, voor pc en Steam Deck → **W1**.
+  Dan heb je echt één engine voor beide, en dat is net de vraag.
+- **Een groot 3D-spel** met personages, een open wereld of consoles vanaf het begin → **W2 (Godot)**, als apart spoor.
+  Missing Link houdt de engine op three.js; je deelt de 3D-bestanden en de gegevens.
+- **W3 (Unity)** alleen als er een team bijkomt dat Unity al kent, of als consoles van bij de start moeten.
+
+**Voorstel:** begin met een **speelbaar prototype op W1** (4 à 6 weken **[inschatting]**): één spelidee, controller,
+opslaan, één prestatie, als testversie op Steam. Daarna een **beslismoment**: is het leuk, en blijft het vlot op een
+Steam Deck? Ja → verder op W1. Wordt het spel te groot voor de webtechniek → overstappen naar Godot. Je verliest dan
+weinig: de 3D-bestanden zijn glTF, en de spelregels staan als gegevens (laag 0), niet in de tekencode.
+
+### Gevolgen voor de lagen (§7)
+
+- **Laag 3b (spel) wordt groter:** controller (Gamepad API), instellingenmenu, opslaan (lokaal en Steam Cloud),
+  prestaties, een vast ritme van 60 beelden per seconde, menu's en pauze.
+- **Laag 4 krijgt een Steam-koppeling** naast de koppeling met Missing Link. De engine weet niets van Steam, net zoals
+  ze niets weet van Missing Link.
+- **WebGPU en WebGL2 blijven allebei nodig.** Op Linux en de Steam Deck is WebGPU in Electron nog niet overal
+  beschikbaar **[inschatting, nakijken]**: de terugval op WebGL2 die we nu al hebben, is daar net nuttig.
+
+### Extra risico's bij Steam
+
+1. **Een spel verkopen is een vak op zich:** winkelpagina, trailer, community, updates. Reken dat mee, los van de
+   techniek.
+2. **Tekenwerk:** een spel vraagt veel meer 3D-inhoud dan een configurator (omgevingen, voorwerpen, eventueel
+   personages). Kopen, laten maken of zelf maken in Blender, en de licentie per bestand nakijken.
+3. **Prestaties pas laat zien:** daarom meten op een Steam Deck of een gewone laptop vanaf het prototype.
+4. **Consoles** (PlayStation, Xbox, Switch) zijn langs W1 niet mogelijk. Wil je die zeker later, kies dan nu al W2.
 
 ---
 
@@ -143,7 +222,8 @@ team en een andere markt. Kies dat alleen als er een concreet spel en een budget
 | Onderhoud door een kleine ploeg (met AI) | − | ++ | + | + | + | 0 |
 
 **Aanbeveling: optie 2.** Babylon.js is het reserveplan als games later zwaarder doorwegen dan Missing Link. Godot is
-de keuze voor smaak C, als apart spoor.
+de keuze voor smaak C, als apart spoor. Voor Steam (de keuze van Jonas) staat de afweging in §5a: optie 2 in een
+schil (W1) voor een prototype, met Godot (W2) als overstap als het spel daarvoor te groot wordt.
 
 ---
 
@@ -255,12 +335,14 @@ Regel uit de kennisbank: **modellen van klanten niet verzinnen**. Wat uit foto's
 |---|---|---|---|
 | **A. Losmaken** | De weergave (laag 1) en de interactie (laag 2) worden een eigen pakket met een nette, beschreven ingang. Zetel- en bouwdemo gebruiken dat pakket. | Niets zichtbaar anders; de beeldvergelijking blijft gelijk. Basis voor alles wat volgt. | 2–3 weken |
 | **B. Eerste zakelijke proef** | *Machine in 3D*: een gratis GLB van een machine, klikken op een onderdeel toont het samengesteld artikel uit Missing Link (alleen lezen), opengewerkte weergave. Of *werf in 3D*: posities gekleurd per status. | Een demo om aan klanten in de machinebouw of de bouw te tonen | 2–4 weken |
-| **C. Eerste spelproef** | Spellus, invoer (ook gamepad), physics (Rapier: open source, Apache-2.0), geluid. Proefspel ***Laad de bestelwagen***: de artikels van een echte leveringsbon (maten, gewicht) stapel je in een bestelwagen; physics controleert of het past en stabiel staat. | Bewijs dat dezelfde engine games kan, met een brug naar Missing Link (een laadplan). | 3–4 weken |
-| **D. Uitbreiden op vraag** | Editor om scènes samen te stellen, animatie (deuren, machines), samen kijken met meerdere gebruikers, AR op vraag | Alleen wat een klant of spel echt vraagt | Per onderdeel |
+| **C. Steam-prototype** (W1, §5a) | Spellus, controller, physics (Rapier: open source, Apache-2.0), geluid, opslaan, instellingenmenu. Verpakt met Electron, met één prestatie via Steamworks, als testversie op Steam (niet publiek). Spelidee te kiezen met Jonas; voorbeeld ***Laad de bestelwagen***: voorwerpen met echte maten en gewicht stapel je in een bestelwagen, physics controleert of het past en stabiel staat. | Een speelbare versie op pc en Steam Deck, en een eerlijke meting van de prestaties | 4–6 weken |
+| **C'. Beslismoment** | Is het leuk? Blijft het vlot op de Steam Deck? Moeten er ooit consoles komen? | Verder op W1, of overstappen naar Godot (W2) met dezelfde 3D-bestanden | – |
+| **D. Uitbreiden op vraag** | Editor om scènes samen te stellen, animatie (deuren, machines), samen kijken met meerdere gebruikers, AR op vraag; voor het spel: levels, menu's, winkelpagina | Alleen wat een klant of spel echt vraagt | Per onderdeel |
 
-**Waarom *Laad de bestelwagen* als proefspel?** Het gebruikt beide kanten van de engine: gegevens uit Missing Link
-(leveringsbon, artikelmaten, gewicht) en spelonderdelen (slepen, physics, punten). Werkt het, dan is het tegelijk een
-spel en een nuttig hulpmiddel voor het magazijn.
+**Waarom *Laad de bestelwagen* als voorbeeld?** Het gebruikt beide kanten van de engine: spelonderdelen (slepen,
+physics, punten) en dezelfde soort gegevens als Missing Link (maten, gewicht). In het spel zijn het verzonnen
+voorwerpen; binnen Missing Link wordt dezelfde code een laadplan voor een echte leveringsbon. Het spel op Steam heeft
+geen verbinding met Missing Link nodig.
 
 ---
 
@@ -287,8 +369,14 @@ spel en een nuttig hulpmiddel voor het magazijn.
 
 ## 11. Open vragen voor Jonas
 
-1. **Wat bedoel je met games:** A (spelelementen in Missing Link), B (kleine spellen in de browser) of C ("echte"
-   games)? En voor wie: klanten van Missing Link, hun klanten, of een eigen product?
+1. ~~Wat bedoel je met games?~~ **Steam** (6/11). Nieuwe vragen daarbij:
+   - **Welk soort spel?** Bouwen, inrichten, beheren of puzzelen (past bij W1), of een groot 3D-spel met personages
+     (eerder Godot)? Heb je al een idee?
+   - **Consoles ooit?** Zo ja, dan nu al Godot of Unity.
+   - **Alleen spelen of met meerdere spelers online?**
+   - **Wie maakt de tekeningen en 3D-modellen,** en wie trekt de verkoop op Steam (winkelpagina, community)?
+   - **Moet het spel iets met Missing Link te maken hebben** (bv. een spel over een maakbedrijf, als reclame), of
+     deelt het alleen de techniek?
 2. **Welke toepassing in Missing Link eerst:** machine in 3D, werf in 3D, of iets anders uit §4?
 3. **Moet de engine ook apart verkocht worden**, zoals de configurator?
 4. **Op welke toestellen:** tablets op de werf, telefoons, computers in de toonzaal?
@@ -301,8 +389,8 @@ spel en een nuttig hulpmiddel voor het magazijn.
 ## 12. Advies in één zin
 
 Bouw geen eigen engine van nul. Maak van de 3D die er al is een eigen pakket in lagen op three.js, met de zakelijke en
-de spelonderdelen als aparte uitbreidingen. Bewijs de aanpak met één proef in Missing Link en één klein spel dat
-gegevens uit Missing Link gebruikt.
+de spelonderdelen als aparte uitbreidingen. Bewijs de aanpak met één proef in Missing Link en één speelbaar
+Steam-prototype in een Electron-schil, en kies na dat prototype bewust tussen verder op de eigen engine of Godot.
 
 ## Meer lezen
 
