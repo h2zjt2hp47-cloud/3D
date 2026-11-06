@@ -26,6 +26,7 @@ NOTITIES = {
     'docs/onderzoek-zetelconfigurators.md': ('Onderzoek zetelconfigurators', ['configurator', 'zetels', 'onderzoek'], ZETELS),
     'docs/marktonderzoek-verkoopbare-app.md': ('Marktonderzoek verkoopbare app en game', ['configurator', 'onderzoek', 'markt'], 'alle'),
     'docs/marktonderzoek-appstore.md': ('Marktonderzoek eigen App Store-app', ['onderzoek', 'markt', 'app'], 'alle'),
+    'docs/analyse-app-missing-link.md': ('Analyse app voor Missing Link', ['missing-link', 'app', 'analyse'], 'alle'),
     'docs/fase0-productkennis-meubels.md': ('Fase 0 - productkennis meubels', ['configurator', 'zetels', 'klant', 'sjabloon'], ZETELS),
     '.claude/skills/zetel-3d/SKILL.md': ('Skill - 3D-logica zetels', ['configurator', 'zetels', 'skill', '3d'], ZETELS),
     'docs/3d-technieken.md': ('3D-technieken - kennisbank', ['configurator', '3d', 'kennis', 'zetels', 'bouw'], 'alle'),
