@@ -38,6 +38,7 @@ import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, t
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
 import { bewaarBestand, dataUrlNaarBlob } from './bewaren.js';
+import { openKamer } from './kamer.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
@@ -798,6 +799,8 @@ function start3DInstellingen() {
     if (url) downloadBeeld(url, '3d');
   });
   $('#o-3d-groot').append(grootSchermKnop($('#o-tekenvlak'), () => viewer?.formaat()));
+  // De zetel in een foto van de eigen kamer (06-11): een eigen venster met een kopie van de zetel zoals hij nu in de 3D staat.
+  $('#o-3d-kamer').addEventListener('click', () => openKamer(viewer));
   // Fotorealistische foto: path tracing met voortgang en annuleren; meer monsters op een computer dan op een tablet.
   let bezig: AbortController | null = null;
   const voortgang = $('#o-3d-voortgang');

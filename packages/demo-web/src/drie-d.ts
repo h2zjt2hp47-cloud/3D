@@ -47,6 +47,11 @@ export interface Viewer3D {
    */
   fotoRealistisch?(o: { stappen: number; breedte?: number; opVoortgang?: (deel: number) => void; signaal?: AbortSignal; opMethode?: (m: 'webgpu' | 'webgl', reden?: string) => void }): Promise<string | null>;
   standpunt(naam: Standpunt): void;
+  /**
+   * Kopie van de zetel voor een andere scène ("In mijn kamer"): de meshes delen geometrie en materiaal met deze
+   * weergave; met de contactschaduw, het omgevingslicht en het licht zoals hier. Null zolang er geen zetel is.
+   */
+  kopie?(): ZetelKopie | null;
   /** Losse instellingen bovenop decor en licht (vloer, muur, maten, draaien …). */
   instellen?(w: Partial<Weergave3D>): void;
   /** Element in de 3D aanduiden met een kader (null = niets). */
@@ -55,6 +60,15 @@ export interface Viewer3D {
 }
 
 export type Standpunt = 'schuin' | 'voor' | 'boven' | 'zij' | 'achter' | 'ooghoogte';
+/** Zie `Viewer3D.kopie`. `kader`: de zetel in cm (x, z = hoek, b, d, h). Lichtsterktes zoals in three.js. */
+export interface ZetelKopie {
+  groep: any;
+  kader: { x: number; z: number; b: number; d: number; h: number };
+  omgeving: any;
+  omgevingSterkte: number;
+  belichting: number;
+  licht: { zon: number; zonKleur: number; hemel: number; hemelKleur: number; grondKleur: number; vul: number };
+}
 export type EchtToestand = 'getoond' | 'laden' | 'benadering' | 'fout' | 'geen';
 
 /** Vloeren die los van het decor te kiezen zijn. */
@@ -2260,6 +2274,18 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       } catch {
         return null;
       }
+    },
+    kopie() {
+      if (!groep.children.length) return null;
+      const g = new THREE.Group();
+      // clone(true): nieuwe meshes, dezelfde geometrie en materialen (niet weggooien zolang de kopie getoond wordt).
+      for (const c of groep.children) g.add(c.clone(true));
+      if (contact.visible) g.add(contact.clone());
+      return {
+        groep: g, kader: { ...kader }, omgeving: scene.environment, omgevingSterkte: scene.environmentIntensity ?? 1,
+        belichting: renderer.toneMappingExposure,
+        licht: { zon: zon.intensity, zonKleur: zon.color.getHex(), hemel: hemel.intensity, hemelKleur: hemel.color.getHex(), grondKleur: hemel.groundColor.getHex(), vul: vul.intensity },
+      };
     },
     standpunt(naam) {
       if (naam === 'voor') { hoekH = 0; hoekV = 0.12; }
