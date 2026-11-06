@@ -442,6 +442,67 @@ main.catalogus { display: block; }
 [hidden] { display: none !important; }
 /*HUISSTIJL*/
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---------- In mijn kamer (06-11): zetel in een foto van de eigen kamer ---------- */
+body.heeft-kamer { overflow: hidden; }
+.kamer { position: fixed; inset: 0; z-index: 60; background: var(--achtergrond); color: var(--inkt); display: flex; flex-direction: column; }
+.kamer[hidden] { display: none; }
+.kamer-kop { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--lijn); background: var(--vlak); flex-wrap: wrap; }
+.kamer-kop h2 { margin: 0; font-family: var(--display); font-weight: 500; font-size: 1.35rem; }
+.kamer-uitleg { color: var(--zacht); font-size: 14px; flex: 1; min-width: 200px; }
+.kamer-kop button { min-height: 40px; }
+.kamer-inhoud { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; }
+.kamer-podium-vak { min-width: 0; min-height: 0; padding: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.kamer-podium { position: relative; background: #2a2d2c; border-radius: 6px; overflow: hidden; user-select: none; -webkit-user-select: none; flex: none; }
+.kamer-podium[data-modus="zetel"] { cursor: grab; }
+.kamer-podium[data-modus="hoeken"], .kamer-podium[data-modus="meten"] { cursor: crosshair; }
+.kamer-laag { position: absolute; inset: 0; width: 100%; height: 100%; }
+.kamer-laag canvas, .kamer-fotobeeld { display: block; width: 100% !important; height: 100% !important; }
+#kamer-lagen { pointer-events: none; overflow: visible; }
+.kamer-hoek { pointer-events: all; cursor: move; }
+.kamer-greep { fill: rgba(255,255,255,0.001); }
+.kamer-stip { fill: #ff3b30; stroke: #fff; }
+.kamer-vorm { fill: rgba(255, 59, 48, 0.12); stroke: #ff3b30; stroke-linejoin: round; }
+.kamer-maat, .kamer-nummer { fill: #fff; stroke: rgba(0,0,0,.7); paint-order: stroke; font-family: var(--tekst); font-weight: 600; text-anchor: middle; }
+.kamer-klaar { opacity: .6; }
+.kamer-klaar .kamer-vorm { fill: none; }
+.kamer-podium.sleept #kamer-lagen { visibility: hidden; }
+.kamer-podium.sleept { cursor: grabbing; }
+.kamer-meetpunt { fill: #ffd60a; stroke: #000; }
+.kamer-meetlijn { stroke: #ffd60a; stroke-dasharray: 6 4; }
+.kamer-loep { position: absolute; width: 150px; height: 150px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 16px rgba(0,0,0,.45); pointer-events: none; }
+.kamer-leeg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; color: #e9ece9; font-size: 15px; gap: 4px; }
+.kamer-leeg p { margin: 0; max-width: 460px; }
+.kamer-paneel { border-left: 1px solid var(--lijn); background: var(--vlak); overflow-y: auto; padding: 8px 16px 16px; display: flex; flex-direction: column; gap: 4px; }
+.kamer-paneel section { border-bottom: 1px solid var(--lijn); padding: 8px 0 10px; display: flex; flex-direction: column; gap: 8px; }
+.kamer-paneel h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.kamer-paneel label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--zacht); }
+.kamer-paneel label.vink { flex-direction: row; align-items: center; gap: 8px; color: var(--inkt); }
+.kamer-paneel select, .kamer-paneel input[type="number"] { font: inherit; font-size: 15px; padding: 6px 8px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 40px; width: 100%; }
+.kamer-paneel input[type="range"] { width: 100%; accent-color: var(--accent); min-height: 28px; }
+.kamer-paneel button { min-height: 40px; }
+.kamer-paneel button:not(.tweede) { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; }
+.kamer-paneel button:disabled { opacity: .45; cursor: default; }
+.kamer-rij { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
+.kamer-rij label { flex: 1; min-width: 80px; }
+.kamer-klein { margin: 0; font-size: 13px; color: var(--zacht); line-height: 1.4; }
+.kamer-teller { font-size: 13px; color: var(--zacht); flex: 1; }
+.kamer-stap.uit h3, .kamer-stap.uit .kamer-klein { opacity: .5; }
+.kamer-bestand input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.kamer-melding { margin: 8px 0; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--let-op) 14%, var(--vlak)); border: 1px solid color-mix(in srgb, var(--let-op) 45%, var(--lijn)); font-size: 14px; line-height: 1.4; }
+.kamer-melding.fout { background: color-mix(in srgb, var(--fout) 12%, var(--vlak)); border-color: color-mix(in srgb, var(--fout) 45%, var(--lijn)); }
+.kamer-proef { margin-top: 6px; font-size: 14px; }
+.kamer-proef summary { cursor: pointer; color: var(--zacht); padding: 6px 0; }
+.kamer-proef > * + * { margin-top: 8px; }
+@media (max-width: 900px) {
+  .kamer-inhoud { display: flex; flex-direction: column; overflow-y: auto; }
+  .kamer-podium-vak { flex: none; padding: 8px; }
+  .kamer-paneel { border-left: 0; border-top: 1px solid var(--lijn); overflow: visible; }
+  .kamer-uitleg { display: none; }
+}
+@media (pointer: coarse) {
+  .kamer-paneel button, .kamer-paneel select, .kamer-paneel input[type="number"] { min-height: 44px; }
+}
 </style>
 </head>
 <body>
@@ -571,6 +632,7 @@ main.catalogus { display: block; }
       <label title="Proef: onderbouw, armen en rug smelten samen tot één zachte vorm, zoals een echt gestoffeerde zetel"><span>Vormen</span><select id="o-3d-vormen"><option value="blokken">Blokken</option><option value="zacht">Zacht (proef)</option></select></label>
       <button type="button" class="tweede" id="o-3d-foto" title="Het huidige beeld als PNG (meteen)">Foto</button>
       <button type="button" class="tweede" id="o-3d-fotoreal" title="Echte lichtberekening (path tracing): duurt tot ruim een minuut; het beeld wordt al tijdens het rekenen getoond">Fotorealistische foto</button>
+      <button type="button" class="tweede" id="o-3d-kamer" title="De zetel in een foto van je eigen kamer, op de juiste schaal (de foto blijft op dit toestel)">In mijn kamer</button>
       <span id="o-3d-groot"></span>
       <span id="o-3d-prijs" class="drie-d-prijs" aria-live="polite"></span>
       <details class="drie-d-meer">

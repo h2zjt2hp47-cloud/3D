@@ -32,6 +32,7 @@ packages/
       offerte.ts        Offerte met meerdere posities, vrije regels, korting en btw
       gevels.ts         Gevelaanzichten uit de plattegrond, met kettingmaten
       werf.ts           Inmeting (bestelmaat, haaksheid) en meerwerk t.o.v. het akkoord
+      kamerfoto.ts      Zetel in eigen kamer: camera van een foto uit vier hoeken van een A4/tegel op de vloer
     voorbeelden/
       maatkast.ts       Kast op maat (prijs = kostprijs stuklijst + opslag)
       sofa.ts           Sofa op maat per cm: recht, chaise longue, hoeksofa; prijstabel × stofgroep,
@@ -52,6 +53,7 @@ packages/
       woning.ts         Voorbeeldwoning met 9 ruimtes, 10 ramen/deuren, binnendeuren en inrichting
       demo.ts           Commandoregel-demo
       galerij.ts        Maakt galerij.html met tekeningen en prijzen van voorbeeldconfiguraties
+      maatproef.ts      Nagebootste maatproef voor "In mijn kamer" (npm run maatproef -w @configurator/core)
     test/               Automatische tests
   demo-web/             Klikbare demo, gebundeld tot één HTML-bestand. Menu in drie stappen:
                         - 1 · Modellen: kies een model en pas het vrij aan
@@ -59,7 +61,7 @@ packages/
                           materiaal en opties per element, aanpassingen voor de hele zetel,
                           vooraanzicht en 3D (three.js 0.187, gebundeld), ongedaan maken,
                           ontwerpmodus: vorm van elk element (rugdikte, kussens, zachtheid,
-                          rugvorm, houten frame)
+                          rugvorm, houten frame); "In mijn kamer": de zetel in een foto van de eigen kamer
                         - 3 · Offerte: overzicht met tekeningen, omschrijving en prijs; kopiëren, afdrukken/PDF
                         - Andere configurators: Sofa en Kast op maat (formulier uit het productmodel)
                         - Beheer: stoffen, elementen, opties, eigen modellen, catalogus delen
