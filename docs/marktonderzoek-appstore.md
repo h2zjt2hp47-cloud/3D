@@ -9,7 +9,8 @@
   1. **“Past het?”** — met de iPhone (LiDAR) deur, gang en trap opmeten en in 3D laten zien of een zetel, kast of bed erdoor kan, inclusief de draaibeweging. Bijna de helft van de online kopers bestelde ooit iets dat niet door de deur of de trap kon [bron, enquête van een AR-bedrijf]; winkels leggen de schuld bij de klant en rekenen 10–30 % terugnamekosten aan [bron]. Er bestaan een paar jonge apps, maar geen in het Nederlands en geen die de draai door een trap in 3D toont [bron].
   2. **“Huisboekje”** — alle verplichtingen en het onderhoud van je Belgische woning op één plek, met herinneringen (ketelonderhoud, keuringen, rookmelders, EPC, renovatieplicht, garanties) en facturen die automatisch gelezen worden. De Vlaamse Woningpas bewaart documenten maar stuurt geen herinneringen [bron]; de bekende buitenlandse apps (HomeZada, Centriq) kennen de Belgische regels niet [bron].
 - **Game:** puzzelspellen rond meubels verschuiven bestaan al bij de vleet (PIVOT! PIVOT!, Move Masters, Pack It Up) [bron], en de mobiele gamesmarkt groeit niet meer (omzet +0,2 %, downloads −7 %) [bron]. Een game alleen als **extra modus in “Past het?”** (een verhuispuzzel met dezelfde 3D), niet als apart product.
-- **Advies:** begin met **“Past het?”**: klein te bouwen, makkelijk te tonen in een filmpje (gratis reclame via TikTok/Reels), één duidelijk moment waarop mensen het nodig hebben, en later ook te verkopen aan meubelwinkels.
+- **Tweede ronde (§4.8–4.15):** acht extra opties onderzocht. Nieuwe koploper: **“Oplevering”**, een app waarmee een Belgische particulier de oplevering van zijn nieuwbouw of verbouwing goed doet (gebreken met foto op het grondplan, checklist per vak, pdf bij het proces-verbaal). In Nederland bestaat zoiets alleen via een bouwbedrijf; voor de Belgische particulier vonden we niets. Samen met Past het?, Verhuis en Huisboekje vormt het een **familie van woon-apps** voor hetzelfde publiek.
+- **Advies (eerste ronde):** begin met **“Past het?”**: klein te bouwen, makkelijk te tonen in een filmpje (gratis reclame via TikTok/Reels), één duidelijk moment waarop mensen het nodig hebben, en later ook te verkopen aan meubelwinkels.
 
 ## 2. Hoe de App Store er nu bij staat
 
@@ -73,19 +74,70 @@ De e-factuur via Peppol is sinds 2026 verplicht [bron], maar de markt is al druk
 ### 4.7 Nederlandstalige educatieve kinderapps zonder reclame
 Kinderapps zitten vol reclame (100 % van de gratis apps voor kinderen onder 5 jaar in een Amerikaans onderzoek) [bron], maar we vonden geen cijfers over een tekort aan Nederlandstalig aanbod. **Te weinig bewijs**; buiten jouw domein.
 
+### 4.8 “Oplevering” — je nieuwbouw of verbouwing correct laten opleveren ★ nieuw, sterk
+- **Probleem:** bij de oplevering van een nieuwbouw of grote verbouwing teken je een proces-verbaal; wat er niet in staat, is moeilijk nog te claimen. In België zijn er een voorlopige en een definitieve oplevering (Wet Breyne bij sleutel-op-de-deur) en een tienjarige aansprakelijkheid [te controleren]. Het gaat om veel geld, en de koper doet dit één keer in zijn leven, zonder ervaring [inschatting].
+- **Wat er al is:** in Nederland *De Voorschouw* (gebreken aanduiden op het grondplan met foto's), maar enkel met een account van een bouwbedrijf (homeDNA) [bron]. Verder alleen apps voor professionals: ArchiSnapper (Deltek), Sitemate, MoreApp [bron]. Een app voor de Belgische particulier vonden we niet [bron: niets gevonden].
+- **Het gat:** een checklist per ruimte en per vak (schrijnwerk, tegels, elektriciteit, sanitair…), gebreken met foto op het grondplan, een nette pdf om bij het proces-verbaal te voegen, en herinneringen (wanneer de definitieve oplevering, wanneer de waarborg vrijkomt) [inschatting].
+- **Verdienen:** eenmalig € 9,99–19,99 op een moment met veel op het spel; later een versie voor bouwpromotoren, architecten of bouwbegeleiders die ze aan hun klanten geven [inschatting].
+- **Bouwen:** eenvoudig tot middel (lijsten, foto's, pdf). Sluit perfect aan op “Huisboekje” (na de oplevering loopt de woning daar verder).
+
+### 4.9 Opmeet-app voor ramen en deuren (voor de vakman)
+- **Wat er al is:** *MrWindow* en *Windowmaker Measure* (Engelstalig), algemene opmeet-apps zoals Photo Measures [bron]. Geen Nederlandstalige app die een **opmeetstaat** maakt zoals een Belgische schrijnwerker die gebruikt (maten, draairichting, vulling, foto, opmerkingen per positie) [bron: niets gevonden].
+- **Plus:** vakmensen betalen wél voor tijdwinst (± € 10–30 per maand) [inschatting]; jouw kennis van ramen en de flow van opmeten tot bestelling is hier het grootste voordeel.
+- **Min:** het is weer een vakmensentool en ligt dicht bij je werk en bij de bouwdemo. Bespreek dit zeker eerst met je werkgever. De markt is klein (aantal schrijnwerkers in België niet gevonden).
+
+### 4.10 “Verhuis” — alles rond een Belgische verhuis in één app
+- **Probleem:** adreswijziging binnen 8 werkdagen bij de gemeente, meterstanden, energie, internet, post doorsturen, verzekering [bron]. Dozen inpakken en terugvinden.
+- **Wat er al is:** checklists als pdf of webpagina (CallMePower, Dewaele, Belfius, stad Gent) en de doorstuurdienst van bpost [bron]. Geen app gevonden die checklist, meterstanden (foto met datum) en een dozen-inventaris met QR-codes samenbrengt [bron: niets gevonden].
+- **Opgelet:** wie gratis checklists aanbiedt, verdient aan doorverwijzingen (energiecontracten) [inschatting]; een betaalde app moet echt meer doen.
+- **Beste vorm:** als uitbreiding van “Past het?” (zelfde moment: je verhuist en koopt meubels), niet als aparte app.
+
+### 4.11 Klusrekenaar met LiDAR (verf, behang, tegels, vloer)
+- **Wat er al is:** veel scan-apps (Scan Home, DesignScanner, pCon.scan, Polycam) en XR Scan dat oppervlakken berekent, maar voor professionals [bron]. Geen app gevonden die een kamerscan omzet in liters verf, rollen behang of dozen tegels met snijverlies [bron: niets gevonden].
+- **Min:** mensen betalen weinig voor een rekenhulp; verdienen kan via een bouwmarkt of merk (boodschappenlijst) [inschatting]. Middelmatige kans.
+
+### 4.12 Offerte-check voor particulieren
+Een offerte van een aannemer laten uitleggen en vergelijken. **Al ingenomen**: SCOPR.ai (Limburg) haalde € 1 miljoen op en werkt al in Vlaanderen, en in Brussel bestaat een gratis platform [bron]. Afgeraden, ook al past het bij jouw kennis van offertes.
+
+### 4.13 Mantelzorg-coördinatie
+Familie, buren en vrijwilligers afstemmen rond de zorg voor een ouder (agenda, taken, wie gaat wanneer). In Nederland bestaat *Fello* [bron]; in België ligt er sinds juni 2026 een federaal actieplan mantelzorg, en planning en coördinatie staan bij de noden van mantelzorgers [bron]. Er is behoefte, maar gebruikers betalen weinig; dit gaat eerder via een ziekenfonds of OCMW. Buiten jouw domein.
+
+### 4.14 Nog drie game-richtingen
+- **Gezellige puzzel voor iPad, eenmalig betalen:** *A Little to the Left* (opruimen en schikken) kost $ 9,99 op iOS en heeft naar schatting ± 310 000 installaties [bron, schatting]; *Townscaper* kwam voor $ 4,99 naar mobiel [bron]. Zulke games werken dus op iPad, maar ze worden snel nagemaakt en de opbrengst per maand blijft bescheiden [bron]. *Tiny Glade* bestaat nog niet op mobiel [bron]: een ontspannen bouwspel op iPad is een open plek, maar wel een grote bouw.
+- **Stadsspel met gps:** al druk bezet in België (Geoteam in 20+ steden, Funkey aan € 30 per persoon voor bedrijven) [bron]. Afgeraden.
+- **Spel dat jongeren warm maakt voor bouw- of houtberoepen:** de sector zoekt volk, maar we vonden geen bestaand spel en ook geen koper die ervoor betaalt [bron: niets gevonden]. Alleen met een sectorfonds als opdrachtgever.
+
+### 4.15 Tuinplanner
+Druk bezet; de meeste tuinapps verdienen naar schatting minder dan $ 10 000 per maand [bron]. Afgeraden.
+
 ## 5. Scorebord
 
 Score 1 (zwak) tot 5 (sterk); totaal = som van de vijf.
 
 | Idee | Probleem/vraag | Gat (weinig concurrentie) | Haalbaar te bouwen | Iemand betaalt | Jouw voordeel | Totaal |
 |---|---|---|---|---|---|---|
+| 4.8 Oplevering | 4 | 4 | 4 | 3 | 5 | **20** |
+| 4.9 Opmeet-app ramen (vakman) | 4 | 3 | 3 | 4 | 5 | **19** ¹ |
 | 4.1 Past het? | 4 | 3 | 3 | 3 | 4 | **17** |
 | 4.2 Huisboekje | 3 | 4 | 4 | 2 | 4 | **17** |
+| 4.10 Verhuis | 3 | 3 | 4 | 2 | 3 | 15 |
+| 4.12 Offerte-check | 4 | 1 | 3 | 2 | 5 | 15 |
 | 4.5 Stoffeer-game | 3 | 4 | 1 | 3 | 3 | 14 |
 | 4.6 Werkbon + Peppol | 4 | 1 | 2 | 3 | 4 | 14 |
+| 4.11 Klusrekenaar | 3 | 3 | 3 | 2 | 3 | 14 |
 | 4.3 Brief simpel | 4 | 2 | 3 | 1 | 3 | 13 |
 | 4.4 Verhuispuzzel | 3 | 2 | 3 | 2 | 3 | 13 |
+| 4.13 Mantelzorg | 4 | 3 | 3 | 1 | 2 | 13 |
+| 4.14 Gezellige iPad-puzzel | 3 | 2 | 2 | 3 | 2 | 12 |
+| 4.14 Stadsspel | 3 | 1 | 3 | 3 | 2 | 12 |
+| 4.15 Tuinplanner | 3 | 1 | 3 | 2 | 1 | 10 |
 | 4.7 Kinderapps | ? | ? | 3 | 2 | 1 | — |
+
+¹ Scoort hoog, maar ligt dicht bij je huidige werk: eerst met de werkgever bespreken.
+
+**Een familie van woon-apps.** De sterkste ideeën (Oplevering, Past het?, Verhuis, Huisboekje) richten zich allemaal op dezelfde mensen op de grote momenten rond een woning: kopen of bouwen → opleveren → verhuizen en inrichten → onderhouden. Eén merk, één website, en elke app verwijst naar de volgende. Dat maakt reclame goedkoper en elke klant meer waard [inschatting].
+
+**Volgorde:** begin met **Oplevering** (hoogste score, hoge inzet voor de koper dus betaalbereid, eenvoudig te bouwen, jouw bouwkennis telt) of met **Past het?** (beter te tonen in een filmpje). Huisboekje en Verhuis volgen als uitbreidingen.
 
 **Waarom 4.1 vóór 4.2, bij gelijke score:** “Past het?” is beter te tonen (een filmpje van een zetel die door een trap draait verkoopt zichzelf), het nut is meteen duidelijk op één moment, en mensen betalen eerder voor een probleem van nu dan voor een herinnering voor later. “Huisboekje” is een goede tweede app, liefst met een partner die betaalt.
 
@@ -122,6 +174,8 @@ Score 1 (zwak) tot 5 (sterk); totaal = som van de vijf.
 - Hoe vaak leveringen mislukken bij Belgische meubelwinkels (zelf vragen).
 - De Belgische woonverplichtingen per regio (lijst voor “Huisboekje”).
 - Of KBC MyHome of een bank- of verzekeringsapp al herinneringen voor woningonderhoud heeft.
+- Belgische regels rond oplevering (Wet Breyne, voorlopige en definitieve oplevering, waarborg) en of er toch een Belgische opleverapp voor particulieren bestaat (App Store zelf doorzoeken).
+- Aantal nieuwbouw- en renovatiedossiers per jaar in België (Statbel, bouwvergunningen) als maat voor de markt van “Oplevering”.
 
 ## 9. Bronnen
 
@@ -148,3 +202,14 @@ Score 1 (zwak) tot 5 (sterk); totaal = som van de vijf.
 **Werkbon/Peppol en kinderapps**
 - [Accountable — beste Peppol-software](https://www.accountable.eu/nl-be/blog/beste-peppol-e-facturatiesoftware/) · [Partena — e-facturatie verplicht](https://www.partena-professional.be/nl/nieuws/gestructureerde-elektronische-facturatie-verplicht-vanaf-01-01-2026)
 - [iCulture — reclame in kinderapps](https://www.iculture.nl/nieuws/kinderapps-vol-met-advertenties/) · [Kennisnet — leerzame apps](https://www.kennisnet.nl/mijnkindonline/files/125_leerzame_apps_en_websites.pdf)
+
+**Tweede ronde**
+- [De Voorschouw (oplevering, NL)](https://mwm.ai/apps/voorschouw/1034313633) · [ArchiSnapper opleverapp](https://www.deltek.com/nl-nl/architecture-and-engineering/archisnapper/punch-list-app) · [MoreApp opleverinspectie](https://moreapp.com/en/blog/handover-inspection-app) · [AVROTROS Radar — gebreken bij oplevering](https://radar.avrotros.nl/nieuws/item/vereniging-eigen-huis-wees-alert-op-gebreken-bij-oplevering-nieuwbouwwoningen/)
+- [MrWindow](https://apps.apple.com/us/app/id6747648184) · [Windowmaker Measure](https://apps.apple.com/app/id6740228358) · [Photo Measures](https://computerwoche.de/a/photo-measures-and-measured-for-ios,2510239)
+- [CallMePower — verhuischecklist](https://callmepower.be/nl/verhuizen/proces/checklist) · [Wikifin — wie verwittigen bij verhuis](https://www.wikifin.be/nl/woning-en-hypothecaire-lening/adreswijziging-verhuizen/wat-moet-je-doen-als-je-binnen-belgie) · [Stad Gent — checklist](https://stad.gent/nl/burgerzaken/nieuws-evenementen/checklist-verhuizen-naar-gent)
+- [Scan Home](https://apps.apple.com/be/app/scan-home/id1544396075?l=nl) · [DesignScanner](https://apps.apple.com/be/app/designscanner/id6468659434?l=nl) · [XR Scan](https://apps.apple.com/us/app/xrscan/id1554055881)
+- [Techleap — SCOPR.ai haalt € 1 miljoen op](https://finder.techleap.nl/news/feed/scopr-ai-raises-1m-for-ai-renovation) · [Brussels Times — gratis offertevergelijking](https://www.brusselstimes.com/2280576/brussels-platform-uses-ai-to-help-homeowners-compare-renovation-quotes-for-free)
+- [iCulture — Fello](https://www.iculture.nl/nieuws/fello-app-mantelzorg-planning/) · [Actieplan Mantelzorg (juni 2026)](https://vandenbroucke.belgium.be/sites/default/files/2026-06/Actieplan-Mantelzorg-NL-23.06.2026.pdf) · [Webinar mantelzorgcheck (mei 2026)](https://www.mantelzorgers.be/sites/default/files/2026-06/webinar_mantelzorgcheck_28_mei_2026.pdf)
+- [Secret Mode — A Little to the Left op iOS](https://wearesecretmode.com/news/a-little-to-the-left-ios-out-now) · [AppGoblin — schatting A Little to the Left](https://appgoblin.info/apps/1613352146) · [TouchArcade — Townscaper mobiel](https://toucharcade.com/2021/09/21/townscaper-mobile-release-date-price-ios-android-preorder-raw-fury-city-building-game/) · [Dot Esports — Tiny Glade niet op mobiel](https://dotesports.com/general/news/is-tiny-glade-coming-to-ios-or-android-answered)
+- [Funkey — GPS City Adventure](https://funkey.be/en/activity/gps-city-adventure) · [Geoteam](https://eventplanner.ie/bedrijven/3997_geoteam.html)
+- [ScreensDesign — tuinplanner-apps](https://screensdesign.com/categories/garden-planner-apps/) · [AppGoblin — AI Garden Design](https://appgoblin.info/apps/6744179402)
