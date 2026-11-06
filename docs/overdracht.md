@@ -6,6 +6,7 @@
 |---|---|
 | Analyse en stappenplan | `docs/configurator-analyse-en-stappenplan.md` (incl. beslissingen en voortgangstabel) |
 | Onderzoek zetelconfigurators | `docs/onderzoek-zetelconfigurators.md` |
+| Marktonderzoek verkoopbare app / game (6/11) | `docs/marktonderzoek-verkoopbare-app.md`: gaten in de markt, opties met score, wat nog ontbreekt om te verkopen |
 | Fase 0-sjabloon (productkennis klant) | `docs/fase0-productkennis-meubels.md`, nog in te vullen met de klant |
 | Motor (`packages/core`) | Klaar voor demo: formules, regels, prijstabellen, korting, stuklijst, materialen, vrij ontwerp met opties, vormgeving (ontwerpmodus), vooraanzicht, 3D-opbouw, collectie van 42 modellen, opzet-elementen, catalogus-controle, vrije hoogtes. Daarnaast voor de bouw: raam/deur-model, plattegrond (`plattegrond.ts`, `plattegrondsvg.ts`), gevels en gevelmaterialen (`gevels.ts`), offerte met posities (`offerte.ts`) en de maatlijstlezer (`voorbeelden/maatlijst.ts`). Echte 3D-modellen als proef (`echt3d.ts`), zachte vormen (`zachtevorm.ts`) en de doorlopende opbouw (`doorlopend.ts`), zie hieronder. **249 tests groen.** |
 | Klikbare demo (`packages/demo-web`) | Tabbladen: Modellen · Sofa op maat · Vrij ontwerp (tekenen in boven- én vooraanzicht, verplaatsen, vrije hoogtes, 3D, ontwerpmodus, rugleuningen en kussens) · Kast op maat · Materialen · **Catalogus** (editor: elementen, opties, modellen, delen) |

@@ -24,6 +24,7 @@ NOTITIES = {
     'docs/configurator-analyse-en-stappenplan.md': ('Analyse en stappenplan', ['configurator', 'analyse', 'stappenplan'], 'alle'),
     'README.md': ('Technische opbouw (README)', ['configurator', 'techniek'], 'alle'),
     'docs/onderzoek-zetelconfigurators.md': ('Onderzoek zetelconfigurators', ['configurator', 'zetels', 'onderzoek'], ZETELS),
+    'docs/marktonderzoek-verkoopbare-app.md': ('Marktonderzoek verkoopbare app en game', ['configurator', 'onderzoek', 'markt'], 'alle'),
     'docs/fase0-productkennis-meubels.md': ('Fase 0 - productkennis meubels', ['configurator', 'zetels', 'klant', 'sjabloon'], ZETELS),
     '.claude/skills/zetel-3d/SKILL.md': ('Skill - 3D-logica zetels', ['configurator', 'zetels', 'skill', '3d'], ZETELS),
     'docs/3d-technieken.md': ('3D-technieken - kennisbank', ['configurator', '3d', 'kennis', 'zetels', 'bouw'], 'alle'),
