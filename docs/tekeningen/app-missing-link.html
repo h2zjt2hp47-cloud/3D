@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tekeningen — app Missing Link voor techniekers</title>
+<style>
+  /* Vaste kleuren van Missing Link (toepassing/src/app/globals.css). Ze dragen een betekenis en zijn niet instelbaar. */
+  :root {
+    --achtergrond: #faf6f1; --kaart: #ffffff; --kaart-zacht: #fdfbf8;
+    --tekst: #2e2a26; --tekst-zacht: #6b6057; --rand: #e7dfd6; --rand-zacht: #efe8df;
+    --accent: #3f6b52; --succes: #d9e6da; --succes-tekst: #2f5741;
+    --waarschuwing: #f3d9a0; --waarschuwing-tekst: #7a5312;
+    --fout: #a8402c; --fout-zacht: #f8e8e4; --stip: #e0a06f; --tabbalk: #f0e8de;
+    --titel: "Newsreader", Georgia, "Times New Roman", serif;
+    --letter: "Karla", -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  /* De twee kleuren die een firma zelf kiest (tabel firmahuisstijl), plus wat eruit volgt. */
+  body[data-stijl="ml"]    { --actie: #aa5c3b; --actie-donker: #9c5134; --zijbalk: #35523f; --zijbalk-tekst: #cddbd1; --logo-tekst: "ML"; --firma: "Missing Link"; }
+  body[data-stijl="firma"] { --actie: #1f5fa8; --actie-donker: #194f8d; --zijbalk: #1d2b44; --zijbalk-tekst: #c9d3e3; --logo-tekst: "DT"; --firma: "Delta Techniek"; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #ece6de; color: var(--tekst); font-family: var(--letter); }
+  .kop { max-width: 1500px; margin: 0 auto; padding: 28px 32px 8px; }
+  .kop h1 { font-family: var(--titel); font-weight: 500; font-size: 30px; margin: 0 0 6px; }
+  .kop p { margin: 4px 0; color: var(--tekst-zacht); max-width: 980px; line-height: 1.45; }
+  .knoppen { display: flex; gap: 8px; margin: 14px 0 6px; flex-wrap: wrap; align-items: center; }
+  .knoppen button { font: inherit; border: 1px solid var(--rand); background: #fff; padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+  .knoppen button[aria-pressed="true"] { background: var(--tekst); color: #fff; border-color: var(--tekst); }
+  .legende { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--tekst-zacht); margin-top: 6px; }
+  .label { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .02em; padding: 3px 8px; border-radius: 999px; }
+  .label.web { background: var(--succes); color: var(--succes-tekst); }
+  .label.app { background: #e4dcf3; color: #4a3a73; }
+
+  .rooster { max-width: 1500px; margin: 0 auto; padding: 18px 32px 48px; display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 34px 26px; }
+  figure { margin: 0; }
+  figcaption { margin-top: 12px; font-size: 13.5px; line-height: 1.45; color: var(--tekst-zacht); }
+  figcaption b { color: var(--tekst); font-size: 14.5px; display: block; margin-bottom: 3px; }
+
+  /* Telefoon */
+  .gsm { width: 330px; height: 690px; margin: 0 auto; border-radius: 46px; background: #1b1a19; padding: 11px; box-shadow: 0 18px 40px rgba(60,40,20,.18); position: relative; }
+  .gsm.android { border-radius: 30px; }
+  .scherm { width: 100%; height: 100%; border-radius: 36px; overflow: hidden; background: var(--achtergrond); display: flex; flex-direction: column; position: relative; font-size: 14px; }
+  .android .scherm { border-radius: 22px; }
+  .statusbalk { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 12.5px; font-weight: 700; color: #fff; background: var(--zijbalk); flex-shrink: 0; position: relative; }
+  .ios .statusbalk::after { content: ""; position: absolute; left: 50%; top: 9px; width: 96px; height: 26px; margin-left: -48px; background: #1b1a19; border-radius: 20px; }
+  .android .statusbalk::after { content: ""; position: absolute; left: 50%; top: 13px; width: 13px; height: 13px; margin-left: -6px; background: #1b1a19; border-radius: 50%; }
+  .balk { background: var(--zijbalk); color: #fff; padding: 6px 16px 14px; flex-shrink: 0; }
+  .balk .rij { display: flex; align-items: center; gap: 10px; }
+  .logo { width: 30px; height: 30px; border-radius: 8px; background: #fff; color: var(--zijbalk); font-weight: 800; font-size: 13px; display: grid; place-items: center; flex-shrink: 0; }
+  .logo::before { content: var(--logo-tekst); }
+  .firma::before { content: var(--firma); }
+  .balk .titel { font-family: var(--titel); font-size: 21px; font-weight: 500; }
+  .balk .klein { color: var(--zijbalk-tekst); font-size: 12.5px; margin-top: 2px; }
+  .inhoud { flex: 1; overflow: hidden; padding: 12px 12px 0; display: flex; flex-direction: column; gap: 10px; }
+  .kaart { background: var(--kaart); border: 1px solid var(--rand); border-radius: 14px; padding: 12px 13px; }
+  .kaart.actief { border-color: var(--actie); box-shadow: 0 0 0 1px var(--actie) inset; }
+  .uur { font-weight: 800; font-size: 13px; color: var(--tekst-zacht); }
+  .klant { font-weight: 700; font-size: 15.5px; margin: 2px 0 1px; }
+  .adres { color: var(--tekst-zacht); font-size: 13px; }
+  .wat { font-size: 13px; margin-top: 6px; }
+  .met { font-size: 12px; color: var(--accent); font-weight: 700; margin-top: 4px; }
+  .knoprij { display: flex; gap: 8px; margin-top: 10px; }
+  .knop { flex: 1; text-align: center; padding: 10px 8px; border-radius: 11px; font-weight: 700; font-size: 14px; border: 1px solid var(--rand); background: var(--kaart); color: var(--tekst); }
+  .knop.hoofd { background: var(--actie); border-color: var(--actie); color: #fff; }
+  .knop.groot { padding: 14px; font-size: 15.5px; }
+  .melding { border-radius: 12px; padding: 10px 12px; font-size: 13px; display: flex; gap: 8px; align-items: center; }
+  .melding.wacht { background: var(--waarschuwing); color: var(--waarschuwing-tekst); font-weight: 700; }
+  .melding.goed { background: var(--succes); color: var(--succes-tekst); font-weight: 700; }
+  .stip { width: 9px; height: 9px; border-radius: 50%; background: var(--stip); flex-shrink: 0; }
+  .tabs { margin-top: auto; display: flex; background: var(--kaart); border-top: 1px solid var(--rand); padding: 8px 6px 20px; flex-shrink: 0; }
+  .android .tabs { padding-bottom: 14px; }
+  .tab { flex: 1; text-align: center; font-size: 11px; color: var(--tekst-zacht); }
+  .tab i { display: block; width: 22px; height: 22px; margin: 0 auto 3px; border-radius: 6px; border: 2px solid currentColor; }
+  .tab.aan { color: var(--actie); font-weight: 700; }
+  .zweef { position: absolute; right: 18px; bottom: 82px; width: 54px; height: 54px; border-radius: 18px; background: var(--actie); color: #fff; font-size: 30px; display: grid; place-items: center; box-shadow: 0 6px 16px rgba(0,0,0,.2); }
+  .vier { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vier .knop { padding: 16px 8px; font-size: 15px; }
+  .regel { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rand-zacht); font-size: 13.5px; }
+  .regel:last-child { border-bottom: 0; }
+  .regel span:last-child { color: var(--tekst-zacht); text-align: right; }
+  .zoek { background: var(--kaart); border: 1px solid var(--rand); border-radius: 12px; padding: 11px 12px; color: var(--tekst-zacht); display: flex; justify-content: space-between; align-items: center; }
+  .scan { font-size: 12px; font-weight: 700; color: var(--actie); border: 1.5px solid var(--actie); border-radius: 8px; padding: 3px 8px; }
+  .kopje { font-size: 12px; font-weight: 800; color: var(--tekst-zacht); text-transform: uppercase; letter-spacing: .05em; margin: 4px 2px -2px; }
+  .aantal { display: flex; align-items: center; gap: 10px; }
+  .aantal b { min-width: 18px; text-align: center; }
+  .rond { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--rand); display: grid; place-items: center; font-weight: 800; background: #fff; }
+  .tekenvlak { height: 150px; border: 2px dashed var(--rand); border-radius: 14px; background: #fff; position: relative; }
+  .tekenvlak svg { position: absolute; inset: 0; }
+  .veld { border: 1px solid var(--rand); border-radius: 10px; padding: 10px 12px; background: #fff; font-size: 13.5px; }
+  .gedempt { color: var(--tekst-zacht); font-size: 12.5px; }
+  .vinkje { width: 64px; height: 64px; border-radius: 50%; background: var(--succes); color: var(--succes-tekst); display: grid; place-items: center; font-size: 34px; margin: 24px auto 4px; font-weight: 800; }
+  .midden { text-align: center; }
+  .wachtrij .regel span:last-child { font-weight: 700; color: var(--waarschuwing-tekst); }
+
+  /* Vergrendelscherm */
+  .vergrendel { background: linear-gradient(160deg, #2a3a4f, #4d5c4a); color: #fff; }
+  .vergrendel .statusbalk { background: transparent; }
+  .klok { text-align: center; font-size: 64px; font-weight: 300; margin-top: 18px; letter-spacing: -1px; }
+  .datum { text-align: center; font-size: 15px; opacity: .85; }
+  .bericht { margin: 12px 12px 0; background: rgba(255,255,255,.88); color: var(--tekst); border-radius: 18px; padding: 12px 13px; font-size: 13px; }
+  .bericht .van { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--tekst-zacht); margin-bottom: 4px; }
+  .bericht .van .logo { width: 20px; height: 20px; font-size: 9px; border-radius: 5px; background: var(--zijbalk); color: #fff; }
+  .bericht .knoprij .knop { padding: 8px; font-size: 13px; }
+  .live { margin: 10px 12px 0; background: rgba(20,20,20,.82); border-radius: 22px; padding: 13px 15px; display: flex; align-items: center; gap: 12px; }
+  .live .tijd { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; color: #b9e6c6; }
+
+  /* NFC en laser */
+  .nfc { margin: 18px auto 6px; width: 132px; height: 132px; border-radius: 50%; border: 3px solid var(--actie); display: grid; place-items: center; position: relative; }
+  .nfc::before, .nfc::after { content: ""; position: absolute; inset: -16px; border-radius: 50%; border: 2px solid var(--actie); opacity: .35; }
+  .nfc::after { inset: -32px; opacity: .15; }
+  .nfc span { font-weight: 800; color: var(--actie); font-size: 15px; }
+  .fiche .regel span:first-child { color: var(--tekst-zacht); }
+  .fiche .regel span:last-child { color: var(--tekst); font-weight: 700; }
+  .maat { white-space: nowrap; font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .maat small { font-size: 15px; color: var(--tekst-zacht); font-weight: 700; }
+  .verbonden { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--succes-tekst); }
+  .verbonden::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #3c8a5a; }
+  .vak { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .raam { height: 104px; border: 3px solid var(--tekst); border-radius: 4px; position: relative; margin: 2px 30px; background: linear-gradient(135deg, #eef4f8, #fff); }
+  .raam::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; border-left: 3px solid var(--tekst); }
+  .pijl { font-size: 12px; font-weight: 800; color: var(--actie); text-align: center; }
+  .noot { max-width: 1500px; margin: 0 auto; padding: 0 32px 40px; font-size: 13.5px; color: var(--tekst-zacht); line-height: 1.5; }
+  .noot h2 { font-family: var(--titel); font-weight: 500; color: var(--tekst); font-size: 22px; margin: 6px 0; }
+  .stalen { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+  .staal { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--rand); border-radius: 999px; padding: 4px 10px 4px 4px; font-size: 12.5px; }
+  .staal i { width: 20px; height: 20px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body data-stijl="ml">
+
+<div class="kop">
+  <h1>Tekeningen — de app van Missing Link voor techniekers</h1>
+  <p>Eerste schetsen voor iPhone en Android, volgens <code>ANALYSE-APP-TECHNIEKERS.md</code> (§2 en §7) en de aanvulling over wat een app toevoegt. Alle gegevens zijn verzonnen. De technieker ziet nooit een bedrag. Een werkbon die zonder bereik ontstaat, krijgt nog geen nummer.</p>
+  <p><b>Huisstijl van de firma:</b> de app neemt dezelfde twee kleuren en hetzelfde logo over die de firma in Missing Link instelt (tabel <code>firmahuisstijl</code> en <code>firmalogo</code>). De <i>actiekleur</i> kleurt de knoppen, de <i>zijbalkkleur</i> kleurt de bovenbalk. De kleuren met een betekenis (gelukt, wacht, fout) liggen vast, zoals in Missing Link.</p>
+  <div class="knoppen" role="group" aria-label="Huisstijl">
+    <button type="button" data-kies="ml" aria-pressed="true">Standaard Missing Link</button>
+    <button type="button" data-kies="firma" aria-pressed="false">Voorbeeldfirma “Delta Techniek” (verzonnen)</button>
+  </div>
+  <div class="legende">
+    <span><span class="label web">Kan ook in de browser</span> zelfde scherm als in de webapp</span>
+    <span><span class="label app">Alleen in de app</span> vraagt iets van de telefoon dat de browser op iPhone niet kan</span>
+  </div>
+</div>
+
+<div class="rooster">
+
+  <!-- 1 Koppelen -->
+  <figure>
+    <div class="gsm ios"><div class="scherm">
+      <div class="statusbalk"><span>7:38</span><span>5G ▮▮▮</span></div>
+      <div class="balk"><div class="rij"><div class="logo"></div><div><div class="titel">Welkom</div><div class="klein firma"></div></div></div></div>
+      <div class="inhoud">
+        <div class="kaart midden">
+          <div class="klant">Meld deze gsm aan</div>
+          <div class="adres" style="margin:4px 0 12px">Scan de code die kantoor toont bij jouw naam, of meld je aan met je gewone gegevens.</div>
+          <svg width="150" height="150" viewBox="0 0 21 21" style="display:block;margin:0 auto;background:#fff" aria-hidden="true">
+            <path fill="#2e2a26" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM14 0h7v7h-7zM15 1v5h5V1zM16 2h3v3h-3zM0 14h7v7H0zM1 15v5h5v-5zM2 16h3v3H2zM8 0h1v2H8zM10 1h2v1h-2zM8 3h3v1H8zM12 3h1v3h-1zM9 5h2v2H9zM8 8h2v1H8zM11 8h3v2h-3zM15 8h2v1h-2zM18 8h3v1h-3zM0 9h2v1H0zM3 8h2v2H3zM5 10h3v1H5zM9 10h1v3H9zM14 10h1v1h-1zM16 10h3v2h-3zM20 10h1v3h-1zM1 12h3v1H1zM11 12h2v2h-2zM15 13h1v2h-1zM17 13h2v1h-2zM8 14h2v1H8zM12 15h2v1h-2zM18 15h3v1h-3zM9 16h2v2H9zM14 17h3v1h-3zM19 17h1v2h-1zM8 19h4v1H8zM13 19h2v2h-2zM16 19h2v2h-2z"/>
+          </svg>
+          <div class="knoprij"><div class="knop hoofd">Code scannen</div></div>
+          <div class="knoprij"><div class="knop">Aanmelden met naam en wachtwoord</div></div>
+        </div>
+        <div class="kaart"><div class="gedempt">Daarna vraagt de app: “Hoe heet deze gsm?” — voorstel <b>GSM Tom</b>. Kantoor kan dit toestel later apart intrekken.</div></div>
+      </div>
+    </div></div>
+    <figcaption><b>1 · Koppelen (eenmalig)</b><span class="label web">Kan ook in de browser</span> In de app blijft de sleutel veilig op het toestel (sleutelhanger, Face ID). Het logo en de kleuren komen meteen van de firma.</figcaption>
+  </figure>
+
+  <!-- 2 Mijn dag (iPhone) -->
+  <figure>
+    <div class="gsm ios"><div class="scherm">
+      <div class="statusbalk"><span>7:42</span><span>4G ▮▮▯</span></div>
+      <div class="balk"><div class="rij"><div class="logo"></div><div><div class="titel">Mijn dag</div><div class="klein">Vrijdag 6 november · bijgewerkt 7:42</div></div></div></div>
+      <div class="inhoud">
+        <div class="melding wacht"><span class="stip"></span>2 bonnen wachten op verbinding</div>
+        <div class="kaart actief">
+          <div class="uur">08:00 – 10:00 · Interventie</div>
+          <div class="klant">Bakkerij Van Hove</div>
+          <div class="adres">Stationsstraat 14, 8790 Waregem</div>
+          <div class="wat">Oven 2 valt uit bij opwarmen</div>
+          <div class="knoprij"><div class="knop">Navigeer</div><div class="knop hoofd">Start</div></div>
+        </div>
+        <div class="kaart">
+          <div class="uur">10:30 – 16:00 · Werf</div>
+          <div class="klant">Nieuwbouw Dewitte</div>
+          <div class="adres">Kortrijkseweg 201, 8791 Beveren-Leie</div>
+          <div class="wat">Bekabeling verdieping 1</div>
+          <div class="met">met Jan</div>
+          <div class="knoprij"><div class="knop">Navigeer</div><div class="knop">Start</div></div>
+        </div>
+      </div>
+      <div class="zweef">+</div>
+      <div class="tabs"><div class="tab aan"><i></i>Mijn dag</div><div class="tab"><i></i>Bonnen</div><div class="tab"><i></i>Mijn wagen</div><div class="tab"><i></i>Meer</div></div>
+    </div></div>
+    <figcaption><b>2 · Mijn dag — startscherm</b><span class="label web">Kan ook in de browser</span> 0 tikken: de app opent op vandaag. Vegen = morgen. “+” = onvoorziene opdracht. Een gele balk als er iets op de telefoon wacht: nooit stil.</figcaption>
+  </figure>
+
+  <!-- 3 Mijn dag (Android) -->
+  <figure>
+    <div class="gsm android"><div class="scherm">
+      <div class="statusbalk"><span>7:42</span><span>4G ▮▮▯</span></div>
+      <div class="balk"><div class="rij"><div class="logo"></div><div><div class="titel">Mijn dag</div><div class="klein">Vrijdag 6 november · bijgewerkt 7:42</div></div></div></div>
+      <div class="inhoud">
+        <div class="melding goed"><span class="stip" style="background:#3c8a5a"></span>Alles verstuurd</div>
+        <div class="kaart">
+          <div class="uur">08:00 – 10:00 · Interventie</div>
+          <div class="klant">Bakkerij Van Hove</div>
+          <div class="adres">Stationsstraat 14, 8790 Waregem</div>
+          <div class="wat">Oven 2 valt uit bij opwarmen</div>
+          <div class="knoprij"><div class="knop">Navigeer</div><div class="knop hoofd">Start</div></div>
+        </div>
+        <div class="kaart">
+          <div class="uur">10:30 – 16:00 · Werf</div>
+          <div class="klant">Nieuwbouw Dewitte</div>
+          <div class="adres">Kortrijkseweg 201, 8791 Beveren-Leie</div>
+          <div class="met">met Jan</div>
+        </div>
+      </div>
+      <div class="zweef" style="border-radius:16px">+</div>
+      <div class="tabs"><div class="tab aan"><i></i>Mijn dag</div><div class="tab"><i></i>Bonnen</div><div class="tab"><i></i>Mijn wagen</div><div class="tab"><i></i>Meer</div></div>
+    </div></div>
+    <figcaption><b>3 · Mijn dag op Android</b><span class="label web">Kan ook in de browser</span> Dezelfde schermen en woorden op beide toestellen: één code. Alleen de rand van het toestel verschilt.</figcaption>
+  </figure>
+
+  <!-- 4 Werkbon -->
+  <figure>
+    <div class="gsm ios"><div class="scherm">
+      <div class="statusbalk"><span>8:14</span><span>4G ▮▯▯</span></div>
+      <div class="balk"><div class="klein">‹ Mijn dag</div><div class="titel" style="font-size:19px">Bakkerij Van Hove</div><div class="klein">WB2026-0142 · Stationsstraat 14, Waregem</div></div>
+      <div class="inhoud">
+        <div class="melding goed">Bezig sinds 08:12</div>
+        <div class="vier">
+          <div class="knop">Uren</div><div class="knop">Materiaal</div>
+          <div class="knop">Foto</div><div class="knop">Notitie</div>
+        </div>
+        <div class="kaart">
+          <div class="kopje" style="margin:0 0 4px">Op deze bon</div>
+          <div class="regel"><span>Verplaatsing</span><span>07:52 – 08:12</span></div>
+          <div class="regel"><span>Werk Tom</span><span>08:12 – …</span></div>
+          <div class="regel"><span>Thermostaat oven type K</span><span>1 st</span></div>
+          <div class="regel"><span>Foto's</span><span>▢ ▢ 2</span></div>
+        </div>
+        <div class="kaart"><div class="gedempt"><b>Machine:</b> Oven Wiesheu E2 · serienr. 44718 · garantie tot 03/2027</div></div>
+      </div>
+      <div style="padding:10px 12px 22px"><div class="knop hoofd groot">Laten tekenen</div></div>
+    </div></div>
+    <figcaption><b>4 · De werkbon</b><span class="label web">Kan ook in de browser</span> Vier grote knoppen, met één hand te bedienen. Wat er al op staat, zonder prijzen. Onderaan de volgende stap.</figcaption>
+  </figure>
+
+  <!-- 5 Materiaal -->
+  <figure>
+    <div class="gsm ios"><div class="scherm">
+      <div class="statusbalk"><span>9:02</span><span>4G ▮▯▯</span></div>
+      <div class="balk"><div class="klein">‹ Werkbon</div><div class="titel">Materiaal</div></div>
+      <div class="inhoud">
+        <div class="zoek"><span>Zoek artikel…</span><span class="scan">Scannen</span></div>
+        <div class="kopje">In mijn wagen</div>
+        <div class="kaart">
+          <div class="regel"><span>Thermostaat oven type K<br><span class="gedempt">nog 3 in de wagen</span></span><span class="aantal"><span class="rond">−</span><b>1</b><span class="rond">+</span></span></span></div>
+          <div class="regel"><span>Zekering 16 A<br><span class="gedempt">nog 12 in de wagen</span></span><span class="aantal"><span class="rond">−</span><b>0</b><span class="rond">+</span></span></span></div>
+          <div class="regel"><span>Kabel XVB 3G2,5<br><span class="gedempt">per meter · nog 40 m</span></span><span class="aantal"><span class="rond">−</span><b>0</b><span class="rond">+</span></span></span></div>
+        </div>
+        <div class="kopje">Laatst gebruikt</div>
+        <div class="kaart">
+          <div class="regel"><span>Relais 230 V</span><span class="aantal"><span class="rond">+</span></span></div>
+          <div class="regel"><span>Kabelschoen 6 mm²</span><span class="aantal"><span class="rond">+</span></span></div>
+        </div>
+      </div>
+      <div style="padding:10px 12px 22px"><div class="knop hoofd groot">Toevoegen (1)</div></div>
+    </div></div>
+    <figcaption><b>5 · Materiaal uit mijn wagen</b><span class="label web">Kan ook in de browser</span> Eerst wat in de eigen wagen ligt, met het aantal. <span class="label app">Alleen in de app</span> “Scannen” leest de EAN-code live en betrouwbaar met de scanner van de telefoon.</figcaption>
+  </figure>
+
+  <!-- 6 Laten tekenen -->
+  <figure>
+    <div class="gsm ios"><div class="scherm" style="background:#fff">
+      <div class="statusbalk"><span>9:40</span><span>4G ▮▯▯</span></div>
+      <div class="balk"><div class="rij"><div class="logo"></div><div><div class="titel" style="font-size:19px">Voor akkoord</div><div class="klein firma"></div></div></div></div>
+      <div class="inhoud">
+        <div class="kaart" style="background:var(--kaart-zacht)">
+          <div class="regel"><span>Werk</span><span>08:12 – 09:35</span></div>
+          <div class="regel"><span>Verplaatsing</span><span>07:52 – 08:12</span></div>
+          <div class="regel"><span>Thermostaat oven type K</span><span>1 st</span></div>
+          <div class="regel"><span>Notitie</span><span>Thermostaat vervangen, oven getest</span></div>
+        </div>
+        <div class="tekenvlak">
+          <svg viewBox="0 0 300 150" aria-hidden="true"><path d="M30 105 C 55 40, 80 40, 85 95 S 120 130, 140 70 S 175 40, 190 90 S 230 120, 265 60" fill="none" stroke="#2e2a26" stroke-width="3" stroke-linecap="round"/></svg>
+          <div class="gedempt" style="position:absolute;left:12px;bottom:8px">Teken hier met je vinger</div>
+        </div>
+        <div class="veld">Naam: <b>Lien Van Hove</b></div>
+      </div>
+      <div style="padding:10px 12px 22px;display:flex;flex-direction:column;gap:8px"><div class="knop hoofd groot">Getekend</div><div class="knop">Kan niet tekenen</div></div>
+    </div></div>
+    <figcaption><b>6 · Laten tekenen</b><span class="label web">Kan ook in de browser</span> Een scherm voor de klant, met het logo van de firma. Wat getekend wordt, gaat als één momentopname mee met de handtekening. Geen prijzen, tenzij de firma dat zelf aanzet.</figcaption>
+  </figure>
+
+  <!-- 7 Afwerken zonder bereik -->
+  <figure>
+    <div class="gsm android"><div class="scherm">
+      <div class="statusbalk"><span>9:42</span><span>Geen bereik</span></div>
+      <div class="balk"><div class="titel">Afgewerkt</div><div class="klein">Bakkerij Van Hove</div></div>
+      <div class="inhoud">
+        <div class="vinkje">✓</div>
+        <div class="midden"><div class="klant">Klaar</div><div class="adres">Wordt verstuurd zodra er bereik is.<br>Je mag de gsm wegsteken.</div></div>
+        <div class="kaart wachtrij">
+          <div class="kopje" style="margin:0 0 4px">Op deze telefoon</div>
+          <div class="regel"><span>Werkbon Bakkerij Van Hove</span><span>wacht</span></div>
+          <div class="regel"><span>3 foto's</span><span>wacht</span></div>
+          <div class="regel"><span>Handtekening</span><span>wacht</span></div>
+        </div>
+        <div class="kaart"><div class="gedempt"><span class="label app">Alleen in de app</span> Verstuurt ook als de app dicht is. In de browser op iPhone moet de technieker de app open houden tot alles weg is.</div></div>
+      </div>
+      <div style="padding:10px 12px 18px"><div class="knop hoofd groot">Naar Mijn dag</div></div>
+    </div></div>
+    <figcaption><b>7 · Afwerken zonder bereik</b><span class="label web">Kan ook in de browser</span> de wachtrij en de duidelijke toestand. <span class="label app">Alleen in de app</span> versturen op de achtergrond, en opslag die iOS niet wist.</figcaption>
+  </figure>
+
+  <!-- 8 Vergrendelscherm -->
+  <figure>
+    <div class="gsm ios"><div class="scherm vergrendel">
+      <div class="statusbalk"><span></span><span>5G ▮▮▮</span></div>
+      <div class="klok">10:27</div>
+      <div class="datum">vrijdag 6 november</div>
+      <div class="bericht">
+        <div class="van"><span class="logo"></span><span>Missing Link · nu</span></div>
+        <b>Ben je op de werf Nieuwbouw Dewitte?</b><br>Je planning zegt 10:30 – 16:00, met Jan.
+        <div class="knoprij"><div class="knop hoofd">Starten</div><div class="knop">Nog niet</div></div>
+      </div>
+      <div class="live">
+        <div><div style="font-size:12px;opacity:.75">Werkbon loopt</div><div style="font-weight:700">Bakkerij Van Hove</div></div>
+        <div class="tijd">1:23</div>
+      </div>
+      <div class="bericht" style="margin-top:10px">
+        <div class="van"><span class="logo"></span><span>Missing Link · 7:55</span></div>
+        <b>Je planning van maandag is gewijzigd</b><br>Nieuw: 08:00 interventie Garage Desmet.
+      </div>
+    </div></div>
+    <figcaption><b>8 · Vergrendelscherm</b><span class="label app">Alleen in de app</span> De telefoon merkt zelf dat hij bij het werfadres is en vraagt “Starten?”. Er gaat geen locatie naar de server (Missing Link houdt nooit gps bij). De lopende werkbon staat met de tijd op het vergrendelscherm. Meldingen bij een gewijzigde planning.</figcaption>
+  </figure>
+
+  <!-- 9 Machine via NFC -->
+  <figure>
+    <div class="gsm android"><div class="scherm">
+      <div class="statusbalk"><span>13:05</span><span>4G ▮▮▯</span></div>
+      <div class="balk"><div class="klein">‹ Werkbon</div><div class="titel">Machine</div></div>
+      <div class="inhoud">
+        <div class="nfc"><span>Gevonden</span></div>
+        <div class="midden gedempt" style="margin-top:16px">Gsm tegen de sticker op de machine gehouden</div>
+        <div class="kaart fiche">
+          <div class="klant" style="margin-bottom:4px">Heftruck Linde H25</div>
+          <div class="regel"><span>Serienummer</span><span>H2X391P04417</span></div>
+          <div class="regel"><span>Garantie</span><span>tot 15/04/2027</span></div>
+          <div class="regel"><span>Laatste onderhoud</span><span>02/09/2026 · Tom</span></div>
+          <div class="regel"><span>Teller</span><span>3.412 u</span></div>
+        </div>
+        <div class="knoprij"><div class="knop">Verhaal</div><div class="knop hoofd">Teller invullen</div></div>
+      </div>
+      <div class="tabs"><div class="tab"><i></i>Mijn dag</div><div class="tab aan"><i></i>Bonnen</div><div class="tab"><i></i>Mijn wagen</div><div class="tab"><i></i>Meer</div></div>
+    </div></div>
+    <figcaption><b>9 · Machine herkennen</b><span class="label app">Alleen in de app</span> Met NFC: de gsm tegen de sticker op de machine, en de fiche gaat open met garantie, laatste onderhoud en teller. Een QR-code scannen kan ook in de browser, maar trager.</figcaption>
+  </figure>
+
+  <!-- 10 Opmeten met laser -->
+  <figure>
+    <div class="gsm ios"><div class="scherm">
+      <div class="statusbalk"><span>14:20</span><span>4G ▮▮▯</span></div>
+      <div class="balk"><div class="klein">‹ Opmeting Woning Claeys</div><div class="titel">Positie 3 · Keuken</div></div>
+      <div class="inhoud">
+        <div class="verbonden">Laserafstandsmeter verbonden</div>
+        <div class="kaart">
+          <div class="pijl">← breedte →</div>
+          <div class="raam"></div>
+          <div class="vak" style="margin-top:10px">
+            <div><div class="gedempt">Breedte</div><div class="maat">1.235 <small>mm</small></div><div class="gedempt" style="color:var(--succes-tekst);font-weight:700">ontvangen van de meter</div></div>
+            <div><div class="gedempt">Hoogte</div><div class="maat" style="color:var(--rand)">—</div><div class="gedempt">druk op de meter</div></div>
+          </div>
+        </div>
+        <div class="kaart">
+          <div class="regel"><span>Type</span><span>Draai-kip, 2 vakken</span></div>
+          <div class="regel"><span>Draairichting</span><span>links</span></div>
+          <div class="regel"><span>Foto</span><span>▢ 1</span></div>
+        </div>
+      </div>
+      <div style="padding:10px 12px 22px"><div class="knop hoofd groot">Volgende positie</div></div>
+    </div></div>
+    <figcaption><b>10 · Opmeten met de laserafstandsmeter</b><span class="label app">Alleen in de app</span> Voor ramen en deuren: de maat komt via Bluetooth rechtstreeks uit de meter in de opmeting, zonder overtikken. Op iPhone kan de browser geen Bluetooth.</figcaption>
+  </figure>
+
+</div>
+
+<div class="noot">
+  <h2>Hoe de huisstijl van de firma overgenomen wordt</h2>
+  <p>Missing Link bewaart per firma twee kleuren en een logo (tabellen <code>firmahuisstijl</code> en <code>firmalogo</code>). De app leest die bij het koppelen en bij elke update, en past ze zo toe:</p>
+  <div class="stalen">
+    <span class="staal"><i style="background:var(--actie)"></i>Actiekleur → knoppen, actieve tab, “+”</span>
+    <span class="staal"><i style="background:var(--zijbalk)"></i>Zijbalkkleur → bovenbalk en statusbalk</span>
+    <span class="staal"><i style="background:var(--succes)"></i>Gelukt (vast)</span>
+    <span class="staal"><i style="background:var(--waarschuwing)"></i>Wacht (vast)</span>
+    <span class="staal"><i style="background:var(--fout)"></i>Fout (vast)</span>
+  </div>
+  <p>Dezelfde regel als in Missing Link: een kleur die op wit niet leesbaar genoeg is, wordt al bij het kiezen geweigerd (<code>lib/huisstijl.ts</code>). Daardoor kan een firma met een rood logo nooit een rode knop krijgen die op een foutmelding lijkt. Het app-icoon op het beginscherm kan het logo van de firma dragen, als de firma een eigen app krijgt. Bij één gedeelde app blijft het icoon dat van Missing Link en verschijnt het logo van de firma binnen de app.</p>
+  <p>Lettertypes: titels in Newsreader, tekst in Karla, zoals Missing Link. Op een toestel zonder die letters valt de tekening terug op de systeemletter.</p>
+</div>
+
+<script>
+  document.querySelectorAll('[data-kies]').forEach(function (knop) {
+    knop.addEventListener('click', function () {
+      document.body.dataset.stijl = knop.dataset.kies;
+      document.querySelectorAll('[data-kies]').forEach(function (k) { k.setAttribute('aria-pressed', String(k === knop)); });
+    });
+  });
+  var vraag = new URLSearchParams(location.search).get('stijl');
+  if (vraag) { var k = document.querySelector('[data-kies="' + vraag + '"]'); if (k) k.click(); }
+</script>
+</body>
+</html>
