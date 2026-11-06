@@ -6,6 +6,9 @@
 
 ## 1. Kort antwoord
 
+> **Aanvulling 6/11:** de vraag “we kunnen al offline in de browser, wat voegt een app dan toe?” is uitgewerkt in **§12**, op basis van de stand van `proef/samen` (3201f953a) die Jonas aanleverde. Kort: offline in de browser dekt vandaag alleen Mijn week en “Klaar”, en staat standaard uit. De werkbon zelf werkt nog niet zonder bereik. Dat moet sowieso gebouwd worden, of het nu een website of een app wordt. Een app voegt daarbovenop vooral toe: betrouwbare opslag, versturen op de achtergrond, Bluetooth en NFC, meldingen, “ben je op de werf?” zonder gps te bewaren, en de integratie met de telefoon zelf.
+
+
 - **Ja, een app voegt echt iets toe, maar vooral buiten het kantoor.** Op kantoor volstaat de website. Wie op de baan zit (technieker, monteur, plaatser, werfleider, verkoper bij de klant, zaakvoerder onderweg) heeft dingen nodig die een website op de gsm slecht of niet doet: **werken zonder bereik, de camera, de klant laten tekenen, meldingen, en alles in één of twee tikken**.
 - **De grootste winst zit bij de technieker**: de papieren werkbon verdwijnt, uren en materiaal komen dezelfde dag binnen, en kantoor kan sneller factureren. De techniekersanalyse heeft dit al tot op het scherm uitgewerkt (12 schermen, bouwstappen A1–A9, ± 18 bouwdagen, eerste bruikbare versie ± 8,5) [ML].
 - **De markt verwacht het.** Alle Belgische en Nederlandse concurrenten hebben een app voor op de baan (Robaws met Wappy, Teamleader, Simpro, Simple-Simon, Outsmart, Odoo) [bron]. Zonder app verlies je verkoopgesprekken bij installateurs, elektriciens en machinebedrijven: precies de sectoren van de drie pilots (ramen en deuren, machines, elektricien) [ML].
@@ -125,7 +128,7 @@ Uit de techniekersanalyse en de stand van de code [ML]:
 
 ## 10. Nog te verifiëren
 
-- De stand van werkbon, planning en Mijn week op `proef/samen` of op de live versie (hier alleen `main` van 7/10 gezien).
+- De stand van werkbon, planning en Mijn week: zie §12 (overzicht van 6/11 op `proef/samen`); een nieuwe meting op echte toestellen ontbreekt nog.
 - De datum “Checkin@Work vanaf 1 april 2027” in `PROJECTEN.md`: de bronnen spreken over een regeling die al geldt voor werven vanaf € 500.000.
 - De stand van de wet op tijdsregistratie (Kamer, FOD WASO).
 - Prijzen van Robaws/Wappy, Teamleader, Simple-Simon en Outsmart per technieker (offerte vragen).
@@ -149,3 +152,68 @@ Uit de techniekersanalyse en de stand van de code [ML]:
 
 **Missing Link (repo `h2zjt2hp47-cloud/missing-link`, `main` 7/10)**
 - `cloud/analyse/ANALYSE-APP-TECHNIEKERS.md` · `cloud/PAKKETPLAN-PLANNING.md` · `cloud/BESLISSINGEN-25-26-09.md` · `cloud/analyse/LATER.md` · `PROJECTEN.md` · `toepassing/api/openapi.yaml` · `db/DOCUMENTOPSLAG.md`
+
+## 12. Aanvulling 6/11: wat voegt een app toe als de browser al offline kan?
+
+*Op basis van het overzicht “Wat Missing Link vandaag biedt voor onderweg (06-11)”, gelezen op `proef/samen` 3201f953a (niet zelf nagekeken; de metingen M1 van 16/10 en M2 van 25/10 zijn ouder).*
+
+### 12.1 Wat de browser vandaag zonder bereik doet
+
+| Zonder bereik | Stand [ML, overzicht 6/11] |
+|---|---|
+| Schakelaar “Werkbonnen zonder verbinding” | **staat standaard uit** |
+| Mijn week lezen, ook bij een koude start | werkt als de schakelaar aan staat (M1) |
+| “Klaar” melden, blijft op het toestel tot de server het heeft | werkt als de schakelaar aan staat |
+| Werkbon openen, uren, materiaal, foto, handtekening, afwerken | **werkt niet**; op 25/10 ging een ingave verloren terwijl het scherm “niets verloren” meldde (M2) |
+| Synchroniseren via de API | niet gevonden |
+| Pushberichten | niet gevonden |
+
+**Eerste conclusie:** het grote gat is niet “browser of app”, maar **de werkbon zonder bereik**. Dat werk (wachtrij, uuid op het toestel, nummer pas bij binnenkomst, conflicten, “afmelden wist”, geraamd op 18–27 werkdagen in `ANALYSE-OFFLINE-WERKBON.md`) is nodig voor een website én voor een app. Een app bespaart dat werk niet. De fout uit M2 (ingave weg terwijl het scherm “niets verloren” zegt) moet hoe dan ook eerst opgelost worden: geen enkele app lost dat op.
+
+### 12.2 Wat alleen een app (of een schil rond de webapp) toevoegt
+
+| # | Wat | Browser op iPhone | App of schil | Waarom het telt voor Missing Link |
+|---|---|---|---|---|
+| 1 | **Opslag die blijft** | Safari mag opgeslagen gegevens wissen; “blijvend bewaren” vragen kan, maar Safari beslist zelf, en het helpt vooral als de site op het beginscherm staat [bron: WebKit] | eigen opslag van de app, wordt niet gewist | een werkbon die uren op de telefoon wacht, mag nooit verdwijnen |
+| 2 | **Versturen op de achtergrond** | geen Background Sync op iPhone [bron: firt.dev]: versturen gebeurt alleen met de app open | foto's en bonnen gaan door zodra er bereik is, ook met de app dicht [bron: Capacitor-plugins] | de technieker steekt zijn gsm weg na het afwerken; nu moet hij wachten tot alles verstuurd is |
+| 3 | **Bluetooth** | geen Web Bluetooth op iPhone [bron: firt.dev] | ja [bron: Capacitor-plugins] | **ramen en deuren**: maten rechtstreeks uit een laserafstandsmeter (Leica DISTO, Bosch GLM) in de opmeting [bron]; labelprinter in het magazijn |
+| 4 | **NFC** | geen Web NFC op iPhone [bron: firt.dev] | ja [bron] | **machines**: tik met de gsm op een sticker op de machine en de fiche gaat open |
+| 5 | **Scannen** | QR of barcode via de camera kan met een bibliotheek, maar trager en minder betrouwbaar [inschatting] | live scannen met de scanner van het toestel (ML Kit) [bron] | materiaal met EAN-code, machineplaatjes, picklijsten |
+| 6 | **Meldingen** | kan op iPhone vanaf iOS 16.4, alleen als de app op het beginscherm staat [bron]; Missing Link heeft nog geen push | betrouwbaar, met knoppen in de melding | “je planning van morgen is gewijzigd”, “nieuwe dringende interventie” |
+| 7 | **“Ben je op de werf?” zonder gps te bewaren** | geen geofence | de telefoon merkt zelf dat hij bij het werfadres is en vraagt “Starten?”; er gaat geen locatie naar de server [inschatting] | past bij “nooit gps bijhouden” én helpt bij Checkin@Work en tijdsregistratie |
+| 8 | **Integratie met de telefoon** | beperkt | widget “Mijn dag” op het beginscherm; lopende werkbon met tijd op het vergrendelscherm (Live Activity) [bron]; foto's of pdf's uit een andere app “delen naar” een werkbon of project; Siri/Opdrachten (“start werkbon”) | minder tikken, minder vergeten uren |
+| 9 | **Veiligheid en beheer** | sleutel in browseropslag | sleutel in de sleutelhanger van de telefoon, Face ID, en voor grotere klanten beheer via MDM (serveradres en sleutel uitrollen, op afstand wissen) [inschatting] | een verloren gsm, een klant met eigen IT |
+| 10 | **Installeren** | op iPhone handmatig “Zet op beginscherm”, zonder voorstel [bron]; offline staat nu standaard uit | uit de store of via een link; offline kan standaard aan | techniekers zijn geen IT'ers: één installatieweg die altijd werkt |
+
+**Wat een app níet toevoegt:** rechten (dezelfde als het scherm), “nooit een bedrag voor de technieker”, de API met sleutels per toestel: die bestaan al [ML]. Ook inspreken via het toetsenbord en de camera werken al in de browser.
+
+### 12.3 Welke soort app
+
+- **Een schil rond de bestaande webapp (bv. Capacitor)**, geen volledig eigen app. Reden: de schermen, de offline-werkbon en de rechten worden één keer gebouwd, en de schil voegt alleen de extra's van §12.2 toe, één voor één [inschatting]. Een volledig eigen app zou de hele API nodig hebben, en daar ontbreken nog routes (uren, verhuur, synchronisatie) [ML].
+- **Bouwen op de Mac mini**: daar kan Xcode draaien; op de MacBook wordt niets gebouwd [ML].
+- **Verdelen als niet-publieke app** (alleen via een link) of privé per klant via Apple Business Manager [bron, zie §3].
+
+### 12.4 Volgorde
+
+1. **Eerst in de browser, ongeacht de app**:
+   - de werkbon zonder bereik (eerste versie volgens `ANALYSE-OFFLINE-WERKBON.md`);
+   - de MUST-fouten uit M2, vooral de ingave die verloren ging;
+   - offline standaard aan zetten voor de pilots;
+   - een nieuwe meting op echte iPhones en Androids.
+2. **Dan de schil, zodra één van deze dingen waar is** (vooraf vastleggen):
+   - (a) iPhones verliezen bonnen of foto's in de proef;
+   - (b) techniekers moeten wachten tot alles verstuurd is;
+   - (c) een pilot wil Bluetooth, NFC of scannen;
+   - (d) push is nodig en moet betrouwbaar zijn.
+3. **Per pilot de eerste extra**:
+   - ramen en deuren: de laserafstandsmeter via Bluetooth in de opmeting. Dit is de duidelijkste winst die alleen een app kan geven;
+   - machines: NFC of QR op de machine, en een foto van de tellerstand;
+   - elektricien: foto's op de achtergrond versturen en materiaal scannen.
+
+### 12.5 Bronnen bij deze aanvulling
+
+- [firt.dev — wat webapps op iOS kunnen](https://firt.dev/notes/pwa-ios/) (Web Bluetooth, Web NFC en Background Sync niet ondersteund)
+- [WebKit — opslagbeleid](https://webkit.org/updates) · [WebKit-bug over de 7-dagenlimiet](https://bugs.webkit.org/show_bug.cgi?id=211775) · [OSNews — verduidelijking WebKit over webapps op het beginscherm](https://www.osnews.com/?p=131566)
+- [MagicBell — push en beperkingen op iPhone](https://www.magicbell.com/blog/pwa-ios-limitations-safari-support-complete-guide)
+- [Capawesome — Capacitor-plugins](https://capawesome.io/plugins) · [Capacitor ML Kit (scannen)](https://github.com/capawesome-team/capacitor-mlkit) · [Awesome Capacitor (NFC, Bluetooth LE, uploaden op de achtergrond, Live Activities)](https://www.trackawesomelist.com/riderx/awesome-capacitor)
+- [Leica DISTO — apps en verbinding](https://shop.leica-geosystems.com/measurement-tools/disto/blog/leica-disto-apps-connectivity-and-functionality-all-users) · [Leica DISTO — compatibele apps](https://www.contractors-tools.com/leica-disto-apps/) · [SketchUp-forum — Bosch-metingen overzetten](https://forums.sketchup.com/t/transferring-measurements-from-bosch-to-sketchup-in-dwg/144919)
