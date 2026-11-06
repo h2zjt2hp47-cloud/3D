@@ -1,5 +1,7 @@
 # Marktonderzoek: welke verkoopbare app (of game) kunnen we maken, en wat ontbreekt er op de markt?
 
+*Voor een eigen app in de App Store, los van dit project: zie [marktonderzoek-appstore.md](marktonderzoek-appstore.md).*
+
 *Opgesteld op 6 november 2026. Labels: **[bron]** = gevonden in een bron (zie §11), **[inschatting]** = eigen redenering, nog te toetsen. Marktcijfers van onderzoeksbureaus verschillen sterk onderling: lees ze als grootte-orde, niet als feit.*
 
 ## 1. Kort antwoord
