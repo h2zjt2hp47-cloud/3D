@@ -446,15 +446,19 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // recht afgesneden in de onderbouw steekt. Twee aparte zachte delen: waar de schaal tegen de zitting drukt, blijft
           // een vouw zoals op de productfoto (de zitting is daarom een kussen). Benadering uit de foto. Prijs en tekeningen
           // lezen dit niet.
-          const kiezel = kp.organisch && !kp.zwevend;
+          // Ook de koepelrug (Tumble, 10/11): een ronde zitting in de stof met een zachte rug erop, zoals op de foto.
+          const kiezel = (kp.organisch || kp.plat > 0) && !kp.zwevend;
           const basisBoven = kiezel ? zithoogte : opb.basis.boven;
-          omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel ? stof : donker, basisPlan, { afronding: kp.organisch ? 12 : 4, ...(kiezel ? { glad: true } : {}) });
+          // Trommel (Quin, Satie): vooraan is de ronde onderbouw vrij, dus in de stof zelf en niet donker zoals binnen in een kuip.
+          omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel || kp.vlak ? stof : donker, basisPlan, { afronding: kp.organisch ? 12 : kp.plat > 0 ? 9 : 4, ...(kiezel ? { glad: true } : {}) });
           if (kussenDik && !kiezel) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
           const pad = opb.wand.pad.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
           const xs = pad.map((q) => q[0]), zs = pad.map((q) => q[1]), half = opb.wand.dikte / 2;
           // Kiezel op een verdekte voet: de schaal staat op de vloer (zoals op de foto). Ze begint net onder de vloer, zodat
           // haar platte onderkant niet te zien is (die gaf rafels in de zachte vorm). Alleen de 3D; het vooraanzicht niet.
-          const wandOnder = kiezel && P <= 8 ? -3 : opb.wand.onder;
+          // Koepelrug: de rug staat op de ronde zitting (begint 14 cm onder de bovenkant ervan); tot op de vloer stak ze
+          // onderaan naast de zitting uit.
+          const wandOnder = kp.plat > 0 ? zithoogte - 14 : kiezel && P <= 8 ? -3 : opb.wand.onder;
           blokken.push({
             code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
             x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),

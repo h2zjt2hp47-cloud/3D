@@ -209,7 +209,7 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'omhullend', label: 'Omhullend', uitleg: 'Wand loopt ver rond, armen laag vooraan', teken: { vorm: 'omhullend', plan: 'rond', dikte: 17, boog: 140, voorBoven: 9, armVanaf: 1 } },
       // Koepel (Tumble, 10/11): een ronde zitting als een trommel, met een dikke rug die alleen de achterste helft omsluit
       // en aan beide kanten rond naar de zitting zakt.
-      { code: 'koepel', label: 'Koepelrug op ronde zitting', uitleg: 'Ronde zitting, dikke rug rond de achterste helft die naar de zitting zakt', teken: { vorm: 'koepel', plan: 'rond', dikte: 20, boog: 104, voorBoven: 1, armVanaf: 1 } },
+      { code: 'koepel', label: 'Koepelrug op ronde zitting', uitleg: 'Ronde zitting, dikke rug rond de achterste helft die naar de zitting zakt', teken: { vorm: 'koepel', plan: 'rond', dikte: 20, boog: 100, voorBoven: 1, armVanaf: 1, plat: 0.55 } },
       // Trommel (Quin, Satie): op de foto's een dunne wand rond de achterste helft, vooraan is de ronde zitting vrij
       // (tot 10/11 een dikke wand die bijna helemaal rond liep).
       { code: 'trommel', label: 'Trommel', uitleg: 'Ronde zitting met een dunne wand rond de achterste helft, even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 8, boog: 100, voorBoven: 22, armVanaf: 1, vlak: true } },

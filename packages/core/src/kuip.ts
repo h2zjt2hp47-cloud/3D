@@ -20,6 +20,8 @@ export interface KuipParameters {
   voorBoven: number;
   /** Deel van de boog (0–1) waarna de wand op armhoogte vlak verder loopt (1 = geleidelijk tot vooraan). */
   armVanaf: number;
+  /** Deel van de boog (0–1) vanaf het midden achteraan dat op volle rughoogte blijft voor de wand begint te zakken (koepelrug). */
+  plat: number;
   /** Schelp: de rug staat op de zitting in plaats van op de vloer (losse schaal op een frame). */
   zwevend: boolean;
   /** Organisch: dikke, zachte vormen, de zitting zit diep in de kuip. */
@@ -46,6 +48,7 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
     boog: Math.max(60, Math.min(178, getal('boog', 150))),
     voorBoven: getal('voorBoven', 14),
     armVanaf: Math.max(0.2, Math.min(1, getal('armVanaf', 1))),
+    plat: Math.max(0, Math.min(0.9, getal('plat', 0))),
     zwevend: teken.zwevend === true,
     organisch: teken.organisch === true,
     vlak: teken.vlak === true,
@@ -130,7 +133,9 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
     pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, -90 - k.boog, -90 + k.boog, stappen * 2);
     hoogtes = pad.map((_, i) => {
       const u = Math.abs(i - stappen) / stappen; // 0 = midden achteraan, 1 = einde van de wand
-      const t = Math.min(1, u / k.armVanaf);
+      // Met `plat` blijft het midden op volle hoogte en zakt de wand pas daarna (koepelrug: van voren een brede rug met
+      // ronde schouders, geen punt).
+      const t = Math.min(1, Math.max(0, u - k.plat) / Math.max(0.05, k.armVanaf - k.plat));
       return rond1(voor + (rug - voor) * (0.5 + 0.5 * Math.cos(Math.PI * t)));
     });
   }

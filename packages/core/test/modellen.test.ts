@@ -198,8 +198,24 @@ describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse 
     expect(rug.glad).toBe(true);
     expect(rug.y).toBeLessThan(0); // platte onderkant onder de vloer
   });
-  it('andere kuipfauteuils blijven zoals ze waren (donkere onderbouw, los zitkussen, wand op de onderbouw)', () => {
-    for (const code of ['tumble', 'manon', 'satie']) {
+  it('Tumble (koepelrug): ronde zitting in de stof met een zachte rug erop, breed bovenaan en met ronde schouders', () => {
+    const b = blokken('tumble'), basis = b.find((x) => x.code === 'e1.basis')!, rug = b.find((x) => x.code === 'e1.rug')!;
+    expect(basis.soort).toBe('kussen');
+    expect(basis.glad).toBe(true);
+    expect(basis.y + basis.h).toBe(45); // de zitting loopt tot de zithoogte (productpagina)
+    expect(b.some((x) => x.code === 'e1.zitkussen')).toBe(false);
+    expect(rug.glad).toBe(true);
+    expect(rug.y).toBe(31); // de rug staat op de zitting, niet op de vloer
+    const h = rug.hoogtes!, midden = Math.floor(h.length / 2);
+    expect(h[midden]).toBe(75);
+    // Meer dan de helft van de boog op volle hoogte (geen punt), daarna zakt de rug tot net boven de zitting.
+    expect(h.filter((x) => x === 75).length).toBeGreaterThan(h.length * 0.5);
+    expect(h[0]!).toBeLessThan(48);
+    expect(h[h.length - 1]!).toBeLessThan(48);
+  });
+
+  it('andere kuipfauteuils blijven zoals ze waren (onderbouw met een los zitkussen, wand op de onderbouw)', () => {
+    for (const code of ['manon', 'satie', 'milton']) {
       const b = blokken(code), basis = b.find((x) => x.code === 'e1.basis')!, rug = b.find((x) => x.code === 'e1.rug')!;
       expect(basis.soort, code).toBe('stof');
       expect(basis.glad, code).toBeUndefined();

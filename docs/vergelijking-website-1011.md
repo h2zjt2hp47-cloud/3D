@@ -57,12 +57,14 @@ De 3D **opent voortaan in deze kamer**. *Studio* (lege achtergrond) en de andere
 
 ## 5. Fauteuils zonder rechte vormen
 
+![Fauteuils naast hun foto](afbeeldingen/fauteuils-vergelijking-1011.jpg)
+
 | Fauteuil | Verschil met de foto | Aangepast |
 |---|---|---|
 | **Pebble** | Op de foto duidelijk breder dan hoog (±1,34 : 1); bij ons 85 breed en 92 hoog | 110 breed, 84 hoog, kleur van de foto. De pagina geeft geen maten voor de fauteuil: benadering |
 | **Karl** | De rug is een ovaal kussen achter de zitting, zonder vleugels naar voren; maten op de pagina: 68 × 72 × 75 | Maten overgenomen, de schelp loopt minder ver rond |
-| **Tumble** | Een ronde zitting als een trommel, met een dikke rug rond de achterste helft die naar de zitting zakt; bij ons een wand die bijna helemaal rond liep tot op de vloer | Nieuwe vorm *Koepelrug op ronde zitting*, maten van de pagina (78 × 86 × 75, zithoogte 45) |
-| **Quin** | Een dunne wand rond de achterste helft, vooraan is de ronde zitting vrij, grote losse kussens; bij ons een dikke wand bijna helemaal rond en smalle rolkussens | Vorm *Trommel* aangepast (dunne wand, halve omtrek, bredere kussens), maten van de pagina (91 × 91 × 78) |
+| **Tumble** | Een ronde zitting als een trommel, met een dikke rug rond de achterste helft, breed bovenaan en met ronde schouders; bij ons een wand die bijna helemaal rond liep tot op de vloer, met een klein kussen erin | Nieuwe vorm *Koepelrug op ronde zitting*: de zitting is één ronde vorm in de stof, de rug staat erop. Maten van de pagina (78 × 86 × 75, zithoogte 45) |
+| **Quin** | Een dunne wand rond de achterste helft, vooraan is de ronde zitting vrij, grote losse kussens; bij ons een dikke wand bijna helemaal rond, smalle rolkussens en een donkere onderbouw | Vorm *Trommel* aangepast (dunne wand, halve omtrek, bredere kussens, onderbouw in de stof), maten van de pagina (91 × 91 × 78) |
 | **Satie** | Zelfde opbouw als Quin; de pagina geeft diameters 70, 110 en 130 | Zelfde vorm, de kleinste maat (70) |
 | **Manon**, **Milton**, **Mabel 1-zit** | Vorm klopt in grote lijnen | Maten van de productpagina overgenomen |
 

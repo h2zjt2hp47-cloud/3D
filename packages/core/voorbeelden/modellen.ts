@@ -242,10 +242,10 @@ export const zetelModellen: ModelDefinitie[] = [
     vormgeving: { zachtheid: 6, rugdikte: 12, rughoogte: 75 }, elementen: rij([['fauteuil', 68, 72, { kuipvorm: 'schelp' }]]),
   }, 'F-Karl', MATEN_WEBSITE),
   model('tumble', 'Tumble', FAUTEUIL, 'Ronde fauteuil in bouclé: een ronde zitting met een dikke, ronde rug rond de achterste helft, op een verdekte voet.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons', zitting: 'vaste_zitting' },
+    hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
     // Productpagina (10/11): breedte 78, diepte 86, hoogte 75, zithoogte 45. Op de foto staat de rug op een ronde zitting
     // die vooraan vrij is (tot dan een wand die bijna helemaal rond liep, tot op de vloer).
-    vormgeving: { zachtheid: 9, zithoogte: 45, rughoogte: 75 }, elementen: rij([['fauteuil', 78, 86, { kuipvorm: 'koepel' }]]),
+    vormgeving: { zachtheid: 9, zithoogte: 45, rughoogte: 75, kussendikte: 16 }, elementen: rij([['fauteuil', 78, 86, { kuipvorm: 'koepel' }]]),
   }, 'F-Tumble', MATEN_WEBSITE),
   model('ross', 'Ross', FAUTEUIL, 'Compacte fauteuil met afgeronde rug op hoge houten poten.', {
     hoofdmateriaal: 'katoen_naturel', opties: { poten: 'cilinder', poothoogte: 'hoog', hout: 'eik_naturel' },
