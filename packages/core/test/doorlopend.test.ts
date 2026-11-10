@@ -75,8 +75,12 @@ describe('doorlopende opbouw', () => {
     const zs = rug.pad!.map((p) => p[1]);
     const midden = Math.min(...zs);
     // De rug stopt aan beide kanten op de rechte achterkant (minstens 40 % van het eindelement ver), met een ronde kop.
-    expect(rug.pad![0]![0]).toBeGreaterThan(50);
-    expect(rug.pad![rug.pad!.length - 1]![0]).toBeLessThan(210);
+    // Hij zit niet in het midden (foto van boven): links blijft ±45 cm zitting vrij, rechts een groot rond stuk.
+    const begin = rug.pad![0]![0], einde = rug.pad![rug.pad!.length - 1]![0];
+    expect(begin).toBeGreaterThan(35);
+    expect(begin).toBeLessThan(55);
+    expect(einde).toBeLessThan(210);
+    expect(260 - einde).toBeGreaterThan(begin + 15);
     expect(zs[0]! - midden).toBeGreaterThan(5); // ook daar al naar voren door de boog
     expect(zs[zs.length - 1]! - midden).toBeGreaterThan(5);
     expect(new Set(rug.hoogtes)).toEqual(new Set([77])); // overal even hoog: de ronde kop komt van de wand zelf

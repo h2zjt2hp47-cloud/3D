@@ -63,7 +63,9 @@ export const zetelModellen: ModelDefinitie[] = [
   // ---------------- Sofa's ----------------
   model('kotor', 'Kotor', SOFA, 'Diepe, lage sofa met chaise longue rechts, losse rugkussens, slanke arm op karkashoogte en een lage houten bank aan de zijkant.', {
     hoofdmateriaal: 'linnen_travertin',
-    opties: { poten: 'conisch', hout: 'eik_zwart', rug: 'los', comfort: 'dons' },
+    // Foto's (10/11 opnieuw bekeken): slanke, donkere taps toelopende poten en een lichte eiken plank aan de zijkant
+    // (tot dan zwart gebeitst hout voor allebei).
+    opties: { poten: 'metaal_staaf', metaal: 'zwart', rug: 'los', comfort: 'dons' },
     // Maten van de productpagina: zithoogte 44, karkas 70, met rugkussen 92, arm 70 hoog en 15 breed, diepte 105, zitdiepte 65.
     vormgeving: { zithoogte: 44, rughoogte: 92, armhoogte: 70, karkashoogte: 70, rugdikte: 16, rugkussendikte: 24, kussendikte: 18, zachtheid: 7 },
     elementen: [
@@ -101,11 +103,12 @@ export const zetelModellen: ModelDefinitie[] = [
     // Productpagina: diepte 99, zithoogte 39, hoogte 77, zitdiepte 60. Op de foto's: één vaste zitting zonder los kussen,
     // en een ronde rug die aan beide kanten met een ronde kop stopt, ±20 % voor het uiteinde (de zitting loopt verder).
     // De boog (uiteinden 30 cm naar voren) en die rugverdeling zijn een benadering uit de foto's; in de tekening blijven
-    // het twee afgeronde elementen.
+    // het twee afgeronde elementen. Op de foto van boven (10/11) zit de rug niet in het midden: aan één kant loopt hij
+    // bijna tot het uiteinde, aan de andere kant blijft een groot rond stuk zitting vrij. Daarom een smal en een breed deel.
     vormgeving: { zithoogte: 39, rughoogte: 77, zachtheid: 10, rugvorm: 'rond', rugdikte: 30, kussendikte: 18, opbouw: 'doorlopend', bocht: 30 },
     elementen: [
-      ...rij([['rond_einde', 130, 99, { ronde_kant: 'links', rug_rond: 'recht' }], ['rond_einde', 130, 99, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
-      sierkussen('e3', 70, 28, 'chenille_camel'), sierkussen('e4', 140, 28, 'katoen_kalk'),
+      ...rij([['rond_einde', 95, 99, { ronde_kant: 'links', rug_rond: 'recht' }], ['rond_einde', 165, 99, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
+      sierkussen('e3', 60, 28, 'chenille_camel'), sierkussen('e4', 108, 28, 'katoen_kalk'),
     ],
   }, 'Montego', MATEN_WEBSITE),
   model('nestor', 'Nestor', SOFA, 'Grote hoeksofa (hoek rechts) met dikke losse rugkussens, slanke armen en een lage, verdekte voet.', {
@@ -142,13 +145,16 @@ export const zetelModellen: ModelDefinitie[] = [
       sierkussen('e8', 34, 44, 'katoen_kalk'), sierkussen('e9', 140, 44, 'vmat_salie'), sierkussen('e10', 280, 44, 'katoen_kalk'), sierkussen('e11', 420, 44, 'vmat_salie'),
     ],
   }, 'Pula', MATEN_WEBSITE),
-  model('frejus', 'Fréjus', SOFA, 'Sofa met chaise longue links, zachte losse rugkussens en slanke donkere poten. Geen productpagina met maten: verhoudingen zoals Kotor.', {
+  model('frejus', 'Fréjus', SOFA, 'Lage sofa met chaise longue links, dikke losse zit- en rugkussens, lage slanke armen, korte zwarte pootjes en een donker houten bijzetblad rechts.', {
     hoofdmateriaal: 'linnen_travertin',
+    // Productpagina (10/11): rugkussen 100 × 60 met een extra kussen 60 × 50, pootjes uit beuk, 8 cm hoog, zwart. Geen
+    // andere maten. Uit de foto's (benadering): een dunne onderbouw laag bij de grond met dikke zitkussens erop, lage
+    // armen net boven de zitting, en rechts naast de arm een donker houten blad op dezelfde lage onderbouw.
     opties: { poten: 'cilinder', hout: 'eik_zwart', rug: 'los_dons', comfort: 'dons' },
-    vormgeving: { rughoogte: 88, armhoogte: 66, karkashoogte: 66, rugdikte: 16, rugkussendikte: 24, kussendikte: 18, zachtheid: 7 },
+    vormgeving: { poothoogte: 8, zithoogte: 42, rughoogte: 86, armhoogte: 58, karkashoogte: 62, rugdikte: 16, rugkussendikte: 24, kussendikte: 22, zachtheid: 7 },
     elementen: [
-      ...rij([['arm', 18, 165, strak], ['chaise', 90, 165, metRug], ['zit', 95, 100], ['zit', 95, 100], ['arm', 18, 100, strak]]),
-      sierkussen('e6', 24, 38, 'velours_terracotta'), sierkussen('e7', 112, 38, 'velours_terracotta'), sierkussen('e8', 205, 38, 'katoen_kalk'),
+      ...rij([['arm', 18, 165, strak], ['chaise', 90, 165, metRug], ['zit', 100, 100], ['zit', 100, 100], ['arm', 18, 100, strak], ['console', 60, 100, { console_uitvoering: 'bank' }]]),
+      sierkussen('e7', 24, 38, 'velours_terracotta'), sierkussen('e8', 112, 38, 'linnen_travertin'), sierkussen('e9', 215, 38, 'linnen_travertin'), sierkussen('e10', 262, 38, 'velours_terracotta'),
     ],
   }),
   model('gozo', 'Gozo', SOFA, 'Modulaire, blokvormige hoeksofa met dikke rugblokken, brede armblokken en zonder zichtbare poten.', {
@@ -163,27 +169,32 @@ export const zetelModellen: ModelDefinitie[] = [
       sierkussen('e7', 125, 40, 'sunny_taupe'), sierkussen('e8', 240, 40, 'katoen_naturel'),
     ],
   }),
-  model('azar', 'Azar', SOFA, 'Strakke, lage sofa in leder met open chaise longue links, dikke vaste rug en brede blokarm, zonder zichtbare poten.', {
+  model('azar', 'Azar', SOFA, 'Strakke, lage sofa in leder met open chaise longue links, dikke vaste rug en een blokarm die even hoog is als de rug, zonder zichtbare poten.', {
     hoofdmateriaal: 'leder_cognac',
-    opties: { poten: 'verdekt', poothoogte: 'laag', zithoogte: 'laag', rug: 'vast', comfort: 'schuim', naad: 'stiksel' },
-    vormgeving: { rugdikte: 24, kussendikte: 18, zachtheid: 2 },
+    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast', zitting: 'vaste_zitting', comfort: 'schuim', naad: 'stiksel' },
+    // Technische tekening op de productpagina (10/11 overgenomen): hoogte 74, arm 22 breed en 74 hoog (even hoog als de
+    // rug), zithoogte 40, diepte 98, zitdiepte 67 (rug ±30 dik), blokvormig, op lage voetjes.
+    vormgeving: { zithoogte: 40, rughoogte: 74, armhoogte: 74, rugdikte: 30, kussendikte: 18, zachtheid: 1 },
     elementen: [
-      ...rij([['chaise', 95, 170, zonderRug], ['zit', 100, 100], ['zit', 100, 100], ['arm', 30, 100, strak]]),
-      sierkussen('e5', 100, 22, 'melange_middernacht'), sierkussen('e6', 150, 22, 'melange_middernacht'), sierkussen('e7', 240, 22, 'vmat_kastanje'),
+      ...rij([['chaise', 95, 170, zonderRug], ['zit', 100, 98], ['zit', 100, 98], ['arm', 22, 98, strak]]),
+      // Vóór de rug van 30 cm (anders steken de kussens in de rug).
+      sierkussen('e5', 100, 32, 'melange_middernacht'), sierkussen('e6', 150, 32, 'melange_middernacht'), sierkussen('e7', 240, 32, 'vmat_kastanje'),
     ],
-  }),
-  model('amusette', 'Amusette', SOFA, 'Compacte tweezit met strakke armen, één doorlopend zitkussen en een vaste, licht hellende rug.', {
-    hoofdmateriaal: 'velours_petrol',
-    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast', comfort: 'schuim' },
+  }, 'Azar', MATEN_WEBSITE),
+  model('amusette', 'Amusette', SOFA, 'Compacte tweezit met strakke armen, een vaste zitting met ronde voorkant tot op de grond en een vaste, licht hellende rug.', {
+    // Op de foto een vlak geweven stof in grijsblauw (gemeten ±#375464): dichter bij Wol Oceaan dan bij Velours Petrol.
+    hoofdmateriaal: 'wol_oceaan',
+    // Foto's (10/11): de zitting is één stuk dat met een ronde voorkant tot op de grond loopt, geen los zitkussen.
+    opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast', zitting: 'vaste_zitting', comfort: 'schuim' },
     // Technische tekening: zithoogte 40, arm 15 breed en 60 hoog, diepte 80, zitdiepte 55, hoogte 71.
-    vormgeving: { zithoogte: 40, rughoogte: 71, armhoogte: 60, rugdikte: 25, kussendikte: 16, zachtheid: 4, rugvorm: 'hellend' },
+    vormgeving: { zithoogte: 40, rughoogte: 71, armhoogte: 60, rugdikte: 25, kussendikte: 16, zachtheid: 7, rugvorm: 'hellend' },
     elementen: rij([['arm', 15, 80, strak], ['zit', 140, 80], ['arm', 15, 80, strak]]),
   }, 'Amusette', MATEN_WEBSITE),
   model('attribute', 'Attribute', SOFA, 'Tweezit met brede, lage armen, twee zitkussens met bies en dikke losse rugkussens op een verdekte voet.', {
     hoofdmateriaal: 'wol_grijs',
     opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los', comfort: 'veren', naad: 'bies' },
     // Technische tekening: arm 23 breed en 55 hoog, zithoogte 45, diepte 100, zitdiepte 57, karkas 69, met rugkussen 87.
-    vormgeving: { zithoogte: 45, rughoogte: 87, armhoogte: 55, karkashoogte: 69, rugdikte: 18, rugkussendikte: 25, kussendikte: 18, zachtheid: 5 },
+    vormgeving: { zithoogte: 45, rughoogte: 87, armhoogte: 55, karkashoogte: 69, rugdikte: 18, rugkussendikte: 25, kussendikte: 18, zachtheid: 3 },
     elementen: [
       ...rij([['arm', 23, 100, strak], ['zit', 90, 100], ['zit', 90, 100], ['arm', 23, 100, strak]]),
       sierkussen('e5', 28, 41, 'katoen_kaki'), sierkussen('e6', 70, 41, 'rib_mosterd'),
@@ -217,13 +228,18 @@ export const zetelModellen: ModelDefinitie[] = [
   }),
 
   // ---------------- Fauteuils ----------------
-  model('pebble', 'Pebble', FAUTEUIL, 'Zachte, organische fauteuil met hoge, ronde rug, zonder zichtbare poten.', {
-    hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt', poothoogte: 'laag', rughoogte: 'hoog', comfort: 'dons' },
-    vormgeving: { zachtheid: 10 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'organisch' }]]),
+  model('pebble', 'Pebble', FAUTEUIL, 'Lage, brede organische fauteuil: een zachte kiezel als zitting met een scheve, ronde rug, zonder zichtbare poten.', {
+    // Foto van voren (10/11 opgemeten): duidelijk breder dan hoog, ±1,34 : 1. Met een zithoogte van 42 cm geeft dat
+    // ±115 cm breed en ±85 cm hoog (tot dan 85 breed en 92 hoog: te smal en te hoog). De productpagina geeft voor de
+    // fauteuil geen maten (alleen voor de poef), dus dit blijft een benadering; 110 cm is de grens van het element.
+    hoofdmateriaal: 'chenille_camel', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
+    vormgeving: { zachtheid: 10, zithoogte: 42, rughoogte: 84 }, elementen: rij([['fauteuil', 110, 90, { kuipvorm: 'organisch' }]]),
   }, 'F-Pebble'),
   model('karl', 'Karl', FAUTEUIL, 'Loungestoel met gebogen rug en zitting in bouclé op een houten frame met hoge poten.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', rug: 'vast' },
-    vormgeving: { zachtheid: 6, rugdikte: 12 }, elementen: rij([['fauteuil', 72, 78, { kuipvorm: 'schelp' }]]),
+    // Productpagina (10/11): breedte 68, hoogte 75, diepte 72. Op de foto's is de rug een ovaal kussen achter de zitting,
+    // zonder vleugels naar voren (de schelp liep tot dan te ver rond).
+    vormgeving: { zachtheid: 6, rugdikte: 12, rughoogte: 75 }, elementen: rij([['fauteuil', 68, 72, { kuipvorm: 'schelp' }]]),
   }, 'F-Karl'),
   model('tumble', 'Tumble', FAUTEUIL, 'Ronde kuipfauteuil in bouclé, op een verdekte voet.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
