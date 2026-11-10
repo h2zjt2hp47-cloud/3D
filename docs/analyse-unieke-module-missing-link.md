@@ -133,7 +133,7 @@ CRM, offertes, facturen via Peppol (verplicht sinds 1/1/2026), projecten, planni
 - Faalkosten in de Nederlandse bouw: gemiddeld 5 % van de omzet, door slechte voorbereiding en communicatie (ABN AMRO, 2019). Belgische cijfers niet gevonden.
 - Vlaamse bouw: ± 17.000 vacatures; werfleider en calculator zijn knelpuntberoepen (Embuild, VDAB). Wie een offerte sneller en met minder kennis kan maken, lost dus een personeelsprobleem op.
 - Vier op de tien bouwbedrijven werken nog op papier; 41 % verdeelt de administratie over meerdere pakketten (Exact KMO Barometer 2025).
-- **Niet gevonden:** cijfers over doorlooptijd van offertes of niet-gefactureerd meerwerk. Er zijn wel concrete vragen en discussies (§4.6), maar hoe groot het lek is, blijft een **[inschatting]** tot je het bij eigen klanten navraagt.
+- **Niet gevonden:** cijfers over doorlooptijd van offertes of niet-gefactureerd meerwerk. Er zijn wel concrete vragen en discussies (§4.6), en Jonas bevestigt uit de praktijk dat meerwerk een moeilijk gegeven is (10/11). Hoe groot het lek is, blijft een **[inschatting]**.
 
 ### 4.6 Concrete vragen die bedrijven online stellen [zoekresultaat]
 
@@ -282,6 +282,8 @@ Dit past bij de beslissing van 31/10: het blijft een aparte app die met Missing 
 | 5 | **AI leest lijsten:** prijslijst van een leverancier → artikels en prijstabellen, met controlescherm. | Maakt *Product* herhaalbaar voor de tweede en derde klant. Een eerste proef kan al in stap 1, met de prijslijst van de meubelmaker. |
 | 6 | **Portaal:** klant tekent offerte en meerwerk online; daarna dealers en interieurinrichters. | Bouwt op 3 en 4; alleen zinvol als die lopen. |
 
+**Meerwerk bevestigd als pijnpunt (10/11):** de meerwerkbon (verschil met de offerte, vrije regels, handtekening van de klant, doorrekenen) is het deel van *Werf* dat het minst inrichting vraagt. Zodra de koppeling uit stap 2 er is, kan het als eerste stuk van stap 4 uitgerold worden, los van ramenlijst en inmeting.
+
 **Gevolg van "meubelmaker eerst":** de scoretabel in §6 zette de werfketting net voor, omdat de configurator per klant het meeste inrichting vraagt. Dat nadeel blijft. Hou het klein door bij de eerste klant met één productfamilie te beginnen (sofa's), en de inrichting meteen als sjabloon voor een volgende meubelmaker op te zetten.
 
 In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing Link zelf, niet bij deze module. Wel te plannen vóór april 2027.
@@ -307,7 +309,7 @@ In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing
 ## 8. Open vragen voor Jonas
 
 1. ~~Voor wie is Missing Link eerst bedoeld?~~ **Beide; eerste opstart is de meubelmaker met de zetelconfigurator** (beslist 10/11).
-2. **Meerwerk:** herken je bij je klanten dat meerwerk vaak niet of te laat gefactureerd wordt? Online vond ik wel discussies (§4.6), maar geen cijfers, en in België vooral van de kant van de klant.
+2. ~~Herken je dat meerwerk een probleem is?~~ **Ja: Jonas bevestigt uit de praktijk dat meerwerk een moeilijk gegeven is** (10/11). Nog te verfijnen: waar loopt het precies mis (niet genoteerd op de werf, geen akkoord van de klant, vergeten bij de factuur, discussie over de prijs)? Dat bepaalt wat de meerwerkbon eerst moet kunnen.
 3. **Machines (G):** is machinehandel en -verhuur een bewuste doelgroep? Dan verdient die een eigen onderzoek.
 4. **Koppeling met raamsoftware:** wil je die in Missing Link? Voor ramenplaatsers is het een voorwaarde naast de eigen configurator (zie [`onderzoek-raamsoftware.md`](onderzoek-raamsoftware.md)).
 5. **Actiepunt 0.3** staat nog open: de betekenis van de offerteregelvelden bevestigen.
