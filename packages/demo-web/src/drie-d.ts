@@ -97,6 +97,15 @@ export const STANDAARD_WEERGAVE: Weergave3D = { vloer: 'decor', muur: 'decor', t
 /** Decors voor de zetel: vloer, muur, tapijt en een paar spullen. */
 export const DECORS = {
   studio: { label: 'Studio', achtergrond: '#f2f1ed' },
+  // Salon (10/11): de kamer van de productfoto's van Doha als voorbeeld: lichte wanden met kaderlijsten, hoog raam met
+  // lichte gordijnen, grijze eiken vloer, rond oudroze tapijt, ronde houten salontafel, zwarte staanlamp, takken in een
+  // vaas en een lijntekening aan de wand. Onze eigen benadering met de bestaande bouwstenen, geen kopie van de foto.
+  salon: {
+    label: 'Salon', achtergrond: '#e4dfd7', vloer: { soort: 'parket', kleur: '#b3a48f' }, muur: { soort: 'verf', kleur: '#ddd6cb' }, wanden: 'hoek',
+    raam: { kader: '#f3f1ec', gordijn: '#efe9de', zicht: 'stad' }, afwerking: { soort: 'lijsten', kleur: '#e6e0d6' },
+    tapijt: { kleur: '#c9a79b', rand: '#b9928a', vorm: 'rond' }, tafel: 'hout_rond', lamp: 'staand', plant: 'tak',
+    kunst: { stijl: 'lijnen', kleuren: ['#d9d0c0', '#f4f0e8', '#1c1c1c'], lijst: '#cbb99a' }, zon: 15,
+  },
   kamer: {
     label: 'Woonkamer', achtergrond: '#e7e2da', vloer: { soort: 'parket', kleur: '#9a7552' }, muur: { soort: 'verf', kleur: '#e6dfd3' }, wanden: 'hoek',
     raam: { kader: '#f4f2ed', gordijn: '#e8dfcf', zicht: 'tuin' }, afwerking: { soort: 'lambrisering', kleur: '#efe9df' },

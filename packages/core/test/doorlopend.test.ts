@@ -50,7 +50,11 @@ describe('doorlopende opbouw', () => {
     const basis = b.find((x) => x.code.endsWith('.basis'))!;
     expect(Math.min(...zit[0]!.omtrek!.map((p) => p[1]))).toBeLessThan(1);
     expect(Math.max(...basis.omtrek!.map((p) => p[0]))).toBeLessThan(Math.max(...xs) - 2.5);
-    expect(basis.afronding!).toBeGreaterThan(basis.h * 0.4);
+    // De zijkant van de onderbouw is bijna recht (foto's): een kleine afronding, geen halve cirkel.
+    expect(basis.afronding!).toBeGreaterThan(basis.h * 0.15);
+    expect(basis.afronding!).toBeLessThan(basis.h * 0.35);
+    // De zitting (bovenste band) is hoger dan de onderbouw.
+    expect(zit[0]!.h).toBeGreaterThan(basis.h * 1.5);
     expect(b.filter((x) => x.code.includes('.rugkussen'))).toHaveLength(3);
     expect(b.some((x) => x.code.endsWith('.voet') && x.soort === 'donker')).toBe(true); // verdekte voet
     // De sierkussens blijven.

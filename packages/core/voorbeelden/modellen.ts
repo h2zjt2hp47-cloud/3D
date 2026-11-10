@@ -85,8 +85,10 @@ export const zetelModellen: ModelDefinitie[] = [
     // - een lage rug (armhoogte 65, armbreedte 20 volgens de productpagina) die links om het uiteinde draait als
     //   armleuning en rechts vóór het ronde uiteinde stopt; aan beide kanten zakt hij in een kwartronde naar de zitting;
     // - drie grote losse rugkussens.
-    // Benadering uit de foto's: breedte ±300 (uit de verhouding met de hoogte van 84 cm), loungedeel 145 diep, zitting 22.
-    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 22, zachtheid: 9, rugvorm: 'rond', opbouw: 'doorlopend' },
+    // Benadering uit de foto's: breedte ±300 (uit de verhouding met de hoogte van 84 cm), loungedeel 145 diep.
+    // De bovenste band (de zitting) is op de foto duidelijk hoger dan de onderste en heeft een rechte zijkant met een
+    // zachte rand: zitting 25 op een onderbouw van ±13, zachtheid 6 (kleinere afronding, minder bolle rugkussens).
+    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 25, zachtheid: 6, rugvorm: 'rond', opbouw: 'doorlopend' },
     elementen: [
       ...rij([['rond_einde', 115, 145, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 95, 110], ['rond_einde', 90, 110, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
       // Zoals op de foto: een cognackleurig sierkussen tussen het eerste en tweede rugkussen en een kleiner lichtgrijs ervoor.

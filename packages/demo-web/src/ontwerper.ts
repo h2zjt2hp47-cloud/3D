@@ -781,11 +781,13 @@ function markeerOptieFouten() {
 const SLEUTEL_3D = 'configurator-demo.3d.v1';
 type Instellingen3D = { decor: DecorNaam; licht: LichtNaam; kwaliteit: Kwaliteit; weergave: Weergave3D };
 function instellingen3D(): Instellingen3D {
-  const standaard: Instellingen3D = { decor: 'studio', licht: 'studio', kwaliteit: window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi', weergave: { ...STANDAARD_WEERGAVE } };
+  // Sinds 10/11 opent de 3D in een kamer (Salon); Studio (lege achtergrond) blijft een keuze.
+  const standaard: Instellingen3D = { decor: 'salon', licht: 'studio', kwaliteit: window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi', weergave: { ...STANDAARD_WEERGAVE } };
   try {
     const o = JSON.parse(laad(SLEUTEL_3D) ?? '{}');
     return {
-      decor: o.decor in DECORS ? o.decor : standaard.decor,
+      // Wie nog de oude standaard (Studio) bewaard had, krijgt één keer de kamer; een latere keuze voor Studio blijft.
+      decor: o.decor in DECORS && (o.decor !== 'studio' || o.kamer) ? o.decor : standaard.decor,
       licht: o.licht in LICHTEN ? o.licht : standaard.licht,
       kwaliteit: o.kwaliteit === 'snel' || o.kwaliteit === 'mooi' ? o.kwaliteit : standaard.kwaliteit,
       weergave: { ...STANDAARD_WEERGAVE, ...(o.weergave && typeof o.weergave === 'object' ? o.weergave : {}) },
@@ -816,7 +818,7 @@ function start3DInstellingen() {
   licht.replaceChildren(...Object.entries(LICHTEN).map(([k, v]) => el('option', { value: k }, v.label)));
   decor.value = i.decor; licht.value = i.licht; kwal.value = i.kwaliteit;
   let weergave3D: Weergave3D = i.weergave;
-  const bewaarInst = () => bewaar(SLEUTEL_3D, JSON.stringify({ decor: decor.value, licht: licht.value, kwaliteit: kwal.value, weergave: weergave3D }));
+  const bewaarInst = () => bewaar(SLEUTEL_3D, JSON.stringify({ decor: decor.value, licht: licht.value, kwaliteit: kwal.value, weergave: weergave3D, kamer: 1 }));
   // Meer instellingen: vloer, muur, tapijt, spullen, lens, helderheid, zon, maten, draaien.
   const vloer = $<HTMLSelectElement>('#o-3d-vloer'), muur = $<HTMLSelectElement>('#o-3d-muur'), tapijt = $<HTMLSelectElement>('#o-3d-tapijt');
   const muurKleur = $<HTMLInputElement>('#o-3d-muurkleur'), tapijtKleur = $<HTMLInputElement>('#o-3d-tapijtkleur');

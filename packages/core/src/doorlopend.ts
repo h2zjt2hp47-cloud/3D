@@ -198,11 +198,13 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     nieuw.push({ code: `${id}.${code}`, soort, vorm: 'blok', ...kaderVan(omtrekW), y: r2(y), h: r2(h), kleur, omtrek: omtrekW, glad: true, ...extra });
   };
   const zitOnder = Math.max(P + 4, hg.zithoogte - kussenDik);
-  // Twee banden, zoals op de foto's van Doha: buiten de zitting (het zitkussen, rondom), de onderbouw 3 cm terug, allebei
-  // dik en rond met een diepe naad ertussen. Een vaste zitting (Montego) is één ronde vorm van de voet tot de zitting.
+  // Twee banden, zoals op de foto's van Doha: buiten de zitting (het zitkussen, rondom), de onderbouw 3 cm terug, met een
+  // diepe naad ertussen. De zijkant van de onderbouw is bijna recht (afronding ±0,3 × de hoogte; tot 10/11 was dat 0,47:
+  // een bolle worst, op de foto's is de zijkant recht). Een vaste zitting (Montego) is één ronde vorm van de voet tot de
+  // zitting.
   const metKussen = kussenDik > 0;
   const insetBasis = metKussen ? 3.5 : 0.5, hb = zitOnder - P;
-  const rondBasis = Math.max(2, Math.min(hb / 2 - 0.01, hb * (metKussen ? 0.47 : 0.36) * (0.6 + 0.04 * v.zachtheid)));
+  const rondBasis = Math.max(2, Math.min(hb / 2 - 0.01, hb * (metKussen ? 0.3 : 0.36) * (0.6 + 0.04 * v.zachtheid)));
   // Voet: verdekt (donker, ver naar binnen) of een plint; met een hoes loopt de onderbouw tot op de vloer. De voet staat
   // in de schaduw onder de zetel: de gewone vorm volstaat (geen zachte vorm nodig, dat spaart rekentijd).
   if (potVorm === 'verdekt' || potVorm === 'plint') {
