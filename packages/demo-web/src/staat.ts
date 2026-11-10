@@ -95,11 +95,34 @@ function metDieperEindelement(c: OntwerpCatalogus): OntwerpCatalogus {
   return { ...c, typen: c.typen.map((t) => (t.code === 'rond_einde' && t.diepte.max === 120 ? { ...t, diepte: { ...t.diepte, max: 160 } } : t)) };
 }
 
+/**
+ * Een bewaarde catalogus bijwerken met de fauteuilvormen van 10/11: de nieuwe vorm "koepel" toevoegen (Tumble gebruikt
+ * ze) en de schelp en de trommel vervangen als ze nog de oude standaard hebben. Een zelf aangepaste vorm blijft.
+ */
+function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
+  const nieuw = zetelCatalogus.opties?.find((x) => x.code === 'kuipvorm');
+  if (!nieuw || !c.opties?.some((x) => x.code === 'kuipvorm')) return c;
+  const oud: Record<string, { dikte: number; boog: number }> = { schelp: { dikte: 6, boog: 98 }, trommel: { dikte: 14, boog: 138 } };
+  return {
+    ...c,
+    opties: c.opties.map((g) => {
+      if (g.code !== 'kuipvorm') return g;
+      const keuzes = g.keuzes.map((k) => {
+        const o = oud[k.code], n = nieuw.keuzes.find((x) => x.code === k.code);
+        return o && n && k.teken?.dikte === o.dikte && k.teken?.boog === o.boog ? structuredClone(n) : k;
+      });
+      const koepel = nieuw.keuzes.find((x) => x.code === 'koepel');
+      if (koepel && !keuzes.some((k) => k.code === 'koepel')) keuzes.splice(Math.max(0, keuzes.findIndex((k) => k.code === 'trommel')), 0, structuredClone(koepel));
+      return { ...g, keuzes };
+    }),
+  };
+}
+
 function startCatalogus(): { catalogus: OntwerpCatalogus; modellen: ModelDefinitie[] } {
   try {
     const c = JSON.parse(lees(SLEUTEL_CATALOGUS) ?? 'null') as OntwerpCatalogus | null;
     const m = JSON.parse(lees(SLEUTEL_MODELLEN) ?? '[]') as ModelDefinitie[];
-    const catalogus = c && Array.isArray(c.typen) ? metDieperEindelement(metNieuweChaise(c)) : structuredClone(zetelCatalogus);
+    const catalogus = c && Array.isArray(c.typen) ? metNieuweKuipvormen(metDieperEindelement(metNieuweChaise(c))) : structuredClone(zetelCatalogus);
     const modellen = Array.isArray(m) ? m : [];
     if (controleerCatalogus(catalogus, [...zetelModellen, ...modellen]).length === 0) return { catalogus, modellen };
   } catch {

@@ -126,6 +126,13 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - **Bestanden:** `demo-web/modellen3d/<sleutel>.glb` (+ `<sleutel>.jpg` voor de modelkaart, `BRON.md` met licentie). `bouw.mjs` sluit ze alleen in de gewone demo in (`/*MODELLEN3D*/`), niet in de huisstijlversie. `staat.ts` toont proefmodellen alleen als hun bestand er is (`proefModellenNu`).
 - **Een bestand voorbereiden:** lampen en camera's eruit, kleurvarianten eruit, texturen verkleinen (zie `docs/echte-3d-modellen.md`). Meet de maten en de zithoogte in het bestand, en kies elementtypes die binnen de catalogusgrenzen vallen (arm ≤ 40 cm, afgerond eindelement ≥ 80 cm). Wat de klant moet aanleveren, staat in dat document.
 
+## Vergelijken met de productfoto's (10/11)
+- Verslag en werkwijze: `docs/vergelijking-website-1011.md`. De website is bereikbaar in de cloudomgeving *3D* (`www.corneille-silence.be`); in een andere omgeving geeft de proxy 403.
+- `window.__zetel3d.kijk({ hoekH, hoekV, afstand })` zet de camera exact (radialen, cm), zonder animatie: render vanuit het standpunt van de foto en leg beide naast elkaar. Meet eerst de verhouding breedte : hoogte op de foto.
+- **Doorlopende zetel:** met losse rugkussens zakt de lage rug aan een afgerond uiteinde naar de zitting (`zakt` in `doorlopend.ts`: kwart sinus over ±1,3 × de hoogte boven de zitting, het uiteinde 4 cm onder de zitting; een punt net bóven de zitting gaf een bolletje, een loodrechte punt rafels). Met een omloop (`rug_rond: rond`) tot 42 % van de diepte; zonder omloop loopt de rug nog 7 % de achterhoek in. Een vaste rug houdt een ronde kop. De onderbouw onder een los zitkussen heeft een bijna rechte zijkant (afronding 0,3 × hoogte).
+- **Kuipvormen:** `koepel` (Tumble: ronde zitting, dikke rug rond de achterste helft), `trommel` (dunne wand, halve omtrek, brede kussens), `schelp` (ovaal rugkussen, boog 66). Een bewaarde catalogus wordt bijgewerkt in `staat.ts` (`metNieuweKuipvormen`).
+- **Decor Salon** (`DECORS.salon`): de standaard sinds 10/11; `instellingen3D()` zet een bewaarde standaard *Studio* één keer om (vlag `kamer`).
+
 ## Zachte vormen (proef 4/11, `core/src/zachtevorm.ts`)
 - **`zachteVorm(blokken, { raster 2, overgang 4, overgangBinnen 10, minAfronding 1,25 × raster, buren, tegelCm })`**: maakt van gestoffeerde blokken één dichte vorm. Werkwijze:
   - afstandsveld per blok: `balk` (ook met kantel, zelfde draaiing als de weergave: rond de onderkant in het midden), `rol`, `wand` (kuipwand), `omtrekBlok`, `profielVorm`;

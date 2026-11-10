@@ -207,7 +207,12 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'rond', label: 'Rond (kuip)', uitleg: 'Ronde kuip: rug loopt geleidelijk over in de armen', teken: { vorm: 'rond', plan: 'rond', dikte: 15, boog: 138, voorBoven: 12, armVanaf: 1 } },
       { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug die naar armhoogte zakt en vlak doorloopt', teken: { vorm: 'afgerond', plan: 'afgerond', dikte: 13, boog: 130, voorBoven: 17, armVanaf: 0.6 } },
       { code: 'omhullend', label: 'Omhullend', uitleg: 'Wand loopt ver rond, armen laag vooraan', teken: { vorm: 'omhullend', plan: 'rond', dikte: 17, boog: 140, voorBoven: 9, armVanaf: 1 } },
-      { code: 'trommel', label: 'Trommel', uitleg: 'Ronde trommel, rondom even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 14, boog: 138, voorBoven: 22, armVanaf: 1, vlak: true } },
+      // Koepel (Tumble, 10/11): een ronde zitting als een trommel, met een dikke rug die alleen de achterste helft omsluit
+      // en aan beide kanten rond naar de zitting zakt.
+      { code: 'koepel', label: 'Koepelrug op ronde zitting', uitleg: 'Ronde zitting, dikke rug rond de achterste helft die naar de zitting zakt', teken: { vorm: 'koepel', plan: 'rond', dikte: 20, boog: 104, voorBoven: 1, armVanaf: 1 } },
+      // Trommel (Quin, Satie): op de foto's een dunne wand rond de achterste helft, vooraan is de ronde zitting vrij
+      // (tot 10/11 een dikke wand die bijna helemaal rond liep).
+      { code: 'trommel', label: 'Trommel', uitleg: 'Ronde zitting met een dunne wand rond de achterste helft, even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 8, boog: 100, voorBoven: 22, armVanaf: 1, vlak: true } },
       { code: 'organisch', label: 'Organisch', uitleg: 'Zachte kiezel als zitting; de schaal is aan één kant hoog en loopt aan de andere kant schuin in de zitting weg', teken: { vorm: 'organisch', plan: 'afgerond', exponent: 2.6, dikte: 24, boog: 150, voorBoven: 1, armVanaf: 1, organisch: true, scheef: true } },
       { code: 'schelp', label: 'Schelp op frame', uitleg: 'Dunne, gebogen rugschaal boven de zitting, op het frame', teken: { vorm: 'schelp', plan: 'afgerond', dikte: 9, boog: 66, voorBoven: 20, armVanaf: 1, zwevend: true } },
       { code: 'hoekig', label: 'Hoekig', uitleg: 'Rechte rug en armen', teken: { vorm: 'hoekig' } },

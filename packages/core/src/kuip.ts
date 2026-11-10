@@ -146,12 +146,13 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   // Losse rugkussens tegen de wand achteraan.
   const rugkussens: KuipOpbouw['rugkussens'] = [];
   if (losseRug) {
-    const aantal = Math.max(1, Math.min(3, Math.round((B - 2 * w) / 30)));
+    // Een trommel heeft grote, brede kussens (één per ±45 cm, zoals op de foto's van Quin en Satie); anders smallere.
+    const aantal = Math.max(1, Math.min(3, Math.round((B - 2 * w) / (k.vlak ? 45 : 30))));
     const breed = (B - 2 * w - 6) / aantal;
     for (let i = 0; i < aantal; i++) {
       // Bij een trommel steken de kussens boven de wand uit tot de rughoogte.
       const top = k.vlak ? Math.max(h.rugH, rug + 12) : rug;
-      rugkussens.push({ lx: w + 3 + i * breed, ly: w - 3, lb: breed - 1, ld: 16, y: zitBoven, h: Math.max(20, (top - zitBoven) * (k.vlak ? 0.95 : 0.85)) });
+      rugkussens.push({ lx: w + 3 + i * breed, ly: w - 3, lb: breed - 1, ld: k.vlak ? 20 : 16, y: zitBoven, h: Math.max(20, (top - zitBoven) * (k.vlak ? 0.95 : 0.85)) });
     }
   }
   return { plan, wand: { pad, hoogtes, dikte: w, onder }, zit, basis: { onder: h.P, boven: basisBoven }, rugkussens };

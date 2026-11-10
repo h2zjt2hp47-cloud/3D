@@ -240,11 +240,13 @@ export const zetelModellen: ModelDefinitie[] = [
     // Productpagina (10/11): breedte 68, hoogte 75, diepte 72. Op de foto's is de rug een ovaal kussen achter de zitting,
     // zonder vleugels naar voren (de schelp liep tot dan te ver rond).
     vormgeving: { zachtheid: 6, rugdikte: 12, rughoogte: 75 }, elementen: rij([['fauteuil', 68, 72, { kuipvorm: 'schelp' }]]),
-  }, 'F-Karl'),
-  model('tumble', 'Tumble', FAUTEUIL, 'Ronde kuipfauteuil in bouclé, op een verdekte voet.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
-    vormgeving: { zachtheid: 9 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'omhullend' }]]),
-  }, 'F-Tumble'),
+  }, 'F-Karl', MATEN_WEBSITE),
+  model('tumble', 'Tumble', FAUTEUIL, 'Ronde fauteuil in bouclé: een ronde zitting met een dikke, ronde rug rond de achterste helft, op een verdekte voet.', {
+    hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons', zitting: 'vaste_zitting' },
+    // Productpagina (10/11): breedte 78, diepte 86, hoogte 75, zithoogte 45. Op de foto staat de rug op een ronde zitting
+    // die vooraan vrij is (tot dan een wand die bijna helemaal rond liep, tot op de vloer).
+    vormgeving: { zachtheid: 9, zithoogte: 45, rughoogte: 75 }, elementen: rij([['fauteuil', 78, 86, { kuipvorm: 'koepel' }]]),
+  }, 'F-Tumble', MATEN_WEBSITE),
   model('ross', 'Ross', FAUTEUIL, 'Compacte fauteuil met afgeronde rug op hoge houten poten.', {
     hoofdmateriaal: 'katoen_naturel', opties: { poten: 'cilinder', poothoogte: 'hoog', hout: 'eik_naturel' },
     vormgeving: { zachtheid: 5, rugdikte: 12 }, elementen: rij([['fauteuil', 65, 65, { kuipvorm: 'afgerond' }]]),
@@ -255,16 +257,19 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'F-Amusette'),
   model('quin', 'Quin', FAUTEUIL, 'Ronde draaifauteuil met losse rugkussens in velours.', {
     hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons' },
-    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 90, 90, { kuipvorm: 'trommel' }]]),
-  }, 'F-Quin'),
+    // Productpagina (10/11): breedte 91, diepte 91, hoogte 78, zithoogte 45, 4 kussens inbegrepen.
+    vormgeving: { zachtheid: 8, zithoogte: 45, rughoogte: 78 }, elementen: rij([['fauteuil', 91, 91, { kuipvorm: 'trommel' }]]),
+  }, 'F-Quin', MATEN_WEBSITE),
   model('satie', 'Satie', FAUTEUIL, 'Ronde kuipfauteuil met los rugkussen in velours, op een verdekte voet.', {
     hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los' },
-    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'trommel' }]]),
-  }, 'F-Satie'),
+    // Productpagina (10/11): diameter 70 (1 kussen), 110 (4 kussens) of 130 (5 kussens), hoogte 70. Hier de kleinste.
+    vormgeving: { zachtheid: 7, rughoogte: 70 }, elementen: rij([['fauteuil', 70, 70, { kuipvorm: 'trommel' }]]),
+  }, 'F-Satie', MATEN_WEBSITE),
   model('mabel-1', 'Mabel 1-zit', FAUTEUIL, 'Afgeronde fauteuil in bouclé op slanke donkere poten.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart' },
-    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 75, 75, { kuipvorm: 'afgerond' }]]),
-  }, 'F-Mabel1'),
+    // Productpagina (10/11): breedte 68, diepte 65, hoogte 76, zithoogte 45.
+    vormgeving: { zachtheid: 7, zithoogte: 45, rughoogte: 76 }, elementen: rij([['fauteuil', 68, 65, { kuipvorm: 'afgerond' }]]),
+  }, 'F-Mabel1', MATEN_WEBSITE),
   model('sullivan', 'Sullivan', FAUTEUIL, 'Fauteuil met hoge, afgeronde rug op een draaivoet; bijpassende hocker.', {
     hoofdmateriaal: 'wol_grijs', opties: { poten: 'draaivoet', rughoogte: 'hoog' },
     vormgeving: { zachtheid: 6 }, elementen: rij([['fauteuil', 80, 85, { kuipvorm: 'afgerond' }]]),
@@ -275,12 +280,14 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'F-Fraser'),
   model('milton', 'Milton', FAUTEUIL, 'Ronde draaifauteuil met hoge rug in zachte stof.', {
     hoofdmateriaal: 'linnen_travertin', opties: { poten: 'draaivoet', rughoogte: 'hoog' },
-    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 75, 75, { kuipvorm: 'rond' }]]),
-  }, 'F-Milton'),
+    // Productpagina (10/11): breedte 70, diepte 68, hoogte 72, zithoogte 40.
+    vormgeving: { zachtheid: 7, zithoogte: 40, rughoogte: 72 }, elementen: rij([['fauteuil', 70, 68, { kuipvorm: 'rond' }]]),
+  }, 'F-Milton', MATEN_WEBSITE),
   model('manon', 'Manon', FAUTEUIL, 'Omhullende, ronde fauteuil op een verdekte voet.', {
     hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag' },
-    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'omhullend' }]]),
-  }, 'F-Manon'),
+    // Productpagina (10/11): breedte 75, diepte 70, hoogte 75, zithoogte 42.
+    vormgeving: { zachtheid: 8, zithoogte: 42, rughoogte: 75 }, elementen: rij([['fauteuil', 75, 70, { kuipvorm: 'omhullend' }]]),
+  }, 'F-Manon', MATEN_WEBSITE),
   model('mabel-2', 'Mabel 2-zit', FAUTEUIL, 'Kleine tweezit met afgeronde rug en lage armen op slanke donkere poten.', {
     hoofdmateriaal: 'wol_oceaan', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', rug: 'vast' },
     vormgeving: { rugvorm: 'rond', zachtheid: 6 }, elementen: rij([['arm', 12, 82, { armstijl: 'rond', armhoogte: 'laag' }], ['zit', 140, 82], ['arm', 12, 82, { armstijl: 'rond', armhoogte: 'laag' }]]),
