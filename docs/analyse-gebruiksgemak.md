@@ -383,7 +383,7 @@ Aanleiding: "Neem je onze zetelconfigurator nog eens volledig onder handen? Graa
 | Alleen linnen en velours hadden een echte reliëf- en glanskaart; de andere weefsels een eenvoudiger reliëf dat de fotomodus niet toont. | **Alle negen weefsels** (ook effen, bouclé, chenille, wol, rib, jacquard, leder) hebben een reliëf- en glanskaart, vier keer fijner getekend. In het gewone beeld is de winst klein: het weefsel is scherper van dichtbij, van op afstand zie je geen verschil. De fotomodus kan het reliëf van elke stof nu lezen (het oude reliëf negeerde ze); of dat zichtbaar beter is, moet op de M5 blijken (zie *Getest*). |
 | Het 3D-beeld in de offerte was zo groot als het vak op het scherm. | Een eigen opname van 1400 px breed: scherp op papier, ook als de 3D klein naast de tekening stond. |
 
-Gecontroleerd: de beeldvergelijking gaf na de camerawijziging 0,00 % verschil op alle tien beelden. De weefselkaarten veranderen de beelden wel; de referentiebeelden zijn vernieuwd na controle van de verschillen.
+Gecontroleerd: de beeldvergelijking gaf 0,00 % verschil op alle tien beelden, zowel na de camerawijziging als na de weefselkaarten. Op de afstand van die testbeelden is het weefsel dus niet te onderscheiden van vroeger; het verschil zit alleen in het beeld van dichtbij. De referentiebeelden zijn niet gewijzigd.
 
 **Meer functies**
 

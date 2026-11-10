@@ -10,34 +10,48 @@ const blokken = (o: Ontwerp) => bouw3D(o, zetelCatalogus, standaardMaterialen).b
 const perElement = (o: Ontwerp): Ontwerp => ({ ...o, vormgeving: { ...o.vormgeving, opbouw: 'elementen' } });
 
 describe('doorlopende opbouw', () => {
-  it('Doha: één onderbouw, één zitkussen, één lage rug rond de uiteinden en vier rugkussens; geen losse elementen meer', () => {
+  it('Doha: één onderbouw, één zitkussen, één lage rug die aan de uiteinden naar de zitting zakt en drie rugkussens; geen losse elementen meer', () => {
     const o = model('doha');
     const b = blokken(o);
     expect(b.some((x) => x.code === 'e1.zitkussen' || x.code === 'e3.zitkussen' || x.code === 'e1.rugrond')).toBe(false);
     const zit = b.filter((x) => x.code.endsWith('.zitkussen'));
     expect(zit).toHaveLength(1);
     expect(zit[0]!.omtrek!.length).toBeGreaterThan(40);
-    // Over de hele lengte, links dieper (loungedeel 145 cm, rechts 110 cm).
+    // Over de hele lengte (±300 cm, benadering uit de foto's), links dieper (loungedeel 145 cm, rechts 110 cm).
     const xs = zit[0]!.omtrek!.map((p) => p[0]);
     expect(Math.min(...xs)).toBeLessThan(3);
-    expect(Math.max(...xs)).toBeGreaterThan(357);
+    expect(Math.max(...xs)).toBeGreaterThan(297);
     const dieptebij = (x: number) => Math.max(...zit[0]!.omtrek!.filter((p) => Math.abs(p[0] - x) < 8).map((p) => p[1]));
-    expect(dieptebij(75)).toBeGreaterThan(dieptebij(200) + 25);
-    // De rug: overal op karkashoogte (65), aan beide uiteinden een korte omloop als armleuning (tot ±32 % van de diepte).
+    expect(dieptebij(60)).toBeGreaterThan(dieptebij(200) + 25);
+    // De rug: in het midden op karkashoogte (65); aan beide uiteinden zakt hij in een kwartronde tot net onder de
+    // bovenkant van de zitting (42), zoals de armleuning op de foto's.
     const rug = b.find((x) => x.code.endsWith('.rug'))!;
     expect(rug.vorm).toBe('kuipwand');
-    expect(new Set(rug.hoogtes)).toEqual(new Set([65]));
-    expect(rug.pad![0]![1]).toBeGreaterThan(40); // links: tot ±46 cm naar voren op het loungedeel (145 diep)
-    expect(rug.pad![0]![1]).toBeLessThan(52);
-    expect(rug.pad![rug.pad!.length - 1]![1]).toBeGreaterThan(30); // rechts: ±35 cm (110 diep)
-    expect(rug.pad![rug.pad!.length - 1]![1]).toBeLessThan(40);
+    const hoogtes = rug.hoogtes!;
+    expect(Math.max(...hoogtes)).toBe(65);
+    expect(hoogtes[Math.floor(hoogtes.length / 2)]).toBe(65);
+    expect(hoogtes[0]!).toBeCloseTo(38, 0);
+    expect(hoogtes[hoogtes.length - 1]!).toBeCloseTo(38, 0);
+    // Het zakt gelijkmatig: geen sprong groter dan 12 cm tussen twee punten, en nergens terug omhoog naar het uiteinde toe.
+    for (let i = 1; i < hoogtes.length; i++) expect(Math.abs(hoogtes[i]! - hoogtes[i - 1]!)).toBeLessThan(12);
+    const top = hoogtes.indexOf(65), laatsteTop = hoogtes.lastIndexOf(65);
+    for (let i = 1; i <= top; i++) expect(hoogtes[i]!).toBeGreaterThanOrEqual(hoogtes[i - 1]!);
+    for (let i = laatsteTop + 1; i < hoogtes.length; i++) expect(hoogtes[i]!).toBeLessThanOrEqual(hoogtes[i - 1]!);
+    // Links draait de rug om het uiteinde tot ±42 % van de diepte van het loungedeel (145): een armleuning.
+    expect(rug.pad![0]![1]).toBeGreaterThan(52);
+    expect(rug.pad![0]![1]).toBeLessThan(66);
+    // Rechts stopt hij vóór het ronde uiteinde (hooguit een klein stuk de achterhoek in): de zitting loopt verder.
+    const einde = rug.pad![rug.pad!.length - 1]!;
+    expect(einde[1]).toBeLessThan(25);
+    expect(einde[0]).toBeLessThan(290);
+    expect(einde[0]).toBeGreaterThan(255);
     expect(rug.y).toBe(zit[0]!.y); // de rug staat op de onderbouw, achter het zitkussen
     // Twee banden: het zitkussen rondom (ook achteraan), de onderbouw 3 cm terug, met een ronde rand.
     const basis = b.find((x) => x.code.endsWith('.basis'))!;
     expect(Math.min(...zit[0]!.omtrek!.map((p) => p[1]))).toBeLessThan(1);
     expect(Math.max(...basis.omtrek!.map((p) => p[0]))).toBeLessThan(Math.max(...xs) - 2.5);
     expect(basis.afronding!).toBeGreaterThan(basis.h * 0.4);
-    expect(b.filter((x) => x.code.includes('.rugkussen'))).toHaveLength(4);
+    expect(b.filter((x) => x.code.includes('.rugkussen'))).toHaveLength(3);
     expect(b.some((x) => x.code.endsWith('.voet') && x.soort === 'donker')).toBe(true); // verdekte voet
     // De sierkussens blijven.
     expect(b.filter((x) => x.code.startsWith('e4.') || x.code.startsWith('e5.')).length).toBeGreaterThan(0);

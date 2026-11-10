@@ -47,6 +47,8 @@ export interface Viewer3D {
    */
   fotoRealistisch?(o: { stappen: number; breedte?: number; opVoortgang?: (deel: number) => void; signaal?: AbortSignal; opMethode?: (m: 'webgpu' | 'webgl', reden?: string) => void }): Promise<string | null>;
   standpunt(naam: Standpunt): void;
+  /** De camera op een exacte stand zetten, zonder animatie (voor tests en om te vergelijken met een foto): hoeken in radialen, afstand in cm. */
+  kijk?(s: { hoekH?: number; hoekV?: number; afstand?: number }): void;
   /** Losse instellingen bovenop decor en licht (vloer, muur, maten, draaien …). */
   instellen?(w: Partial<Weergave3D>): void;
   /** Element in de 3D aanduiden met een kader (null = niets). */
@@ -2386,6 +2388,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       if (naam === 'ooghoogte') { naar.hoekH = -0.25; naar.afstand *= 0.85; naar.hoekV = Math.asin(Math.max(-0.2, Math.min(0.95, (155 - doel.y) / naar.afstand))); }
       // Glijdend naar het standpunt (en terug naar het midden als het beeld verschoven was).
       vliegNaar(naar);
+    },
+    kijk(s) {
+      stopBeweging();
+      if (s.hoekH !== undefined) hoekH = s.hoekH;
+      if (s.hoekV !== undefined) hoekV = s.hoekV;
+      if (s.afstand !== undefined) afstand = Math.min(2500, Math.max(120, s.afstand));
+      plaatsCamera();
     },
     instellen(w) {
       // Alleen opnieuw opbouwen wat veranderd is: een schuifregelaar mag het decor niet bij elke stap herbouwen.

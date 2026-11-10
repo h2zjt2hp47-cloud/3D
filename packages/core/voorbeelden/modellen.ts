@@ -78,16 +78,19 @@ export const zetelModellen: ModelDefinitie[] = [
   model('doha', 'Doha', SOFA, 'Organische sofa met afgeronde lounge-uiteinden, grote losse rugkussens en een zachte, ronde lijn.', {
     hoofdmateriaal: 'boucle_belize',
     opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los_dons', comfort: 'dons' },
-    // Productpagina: diepte 110, zithoogte 42, karkas 65, met rugkussen 84, zitdiepte 62.
-    // Op de foto's één doorlopende zetel: twee dikke ronde banden (de zitting van ±22 cm boven een dunnere onderbouw),
-    // een lage rug die aan beide uiteinden kort omdraait als armleuning (armhoogte 65, armbreedte 20 volgens de
-    // productpagina) met losse rugkussens erop, links een dieper, rond loungedeel (diepte 145 en zittingdikte 22 zijn een
-    // benadering uit de foto's), op een verdekte voet.
+    // Productpagina: diepte 110, zithoogte 42, karkas 65, met rugkussen 84, zitdiepte 62. De breedte staat er niet.
+    // Op de twee foto's van de productpagina (opnieuw vergeleken op 10/11) één doorlopende zetel:
+    // - twee dikke ronde banden (de zitting van ±22 cm boven een dunnere onderbouw), op een verdekte voet;
+    // - links een dieper, rond loungedeel met een korte S-bocht naar de rest; rechts een rond uiteinde;
+    // - een lage rug (armhoogte 65, armbreedte 20 volgens de productpagina) die links om het uiteinde draait als
+    //   armleuning en rechts vóór het ronde uiteinde stopt; aan beide kanten zakt hij in een kwartronde naar de zitting;
+    // - drie grote losse rugkussens.
+    // Benadering uit de foto's: breedte ±300 (uit de verhouding met de hoogte van 84 cm), loungedeel 145 diep, zitting 22.
     vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 22, zachtheid: 9, rugvorm: 'rond', opbouw: 'doorlopend' },
     elementen: [
-      ...rij([['rond_einde', 150, 145, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 100, 110], ['rond_einde', 110, 110, { ronde_kant: 'rechts', rug_rond: 'rond' }]]),
-      // Zoals op de foto: een oranje sierkussen en een kleiner lichtgrijs ervoor, links van het midden.
-      sierkussen('e4', 100, 44, 'velours_terracotta'), sierkussen('e5', 136, 50, 'chenille_parel', 40),
+      ...rij([['rond_einde', 115, 145, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 95, 110], ['rond_einde', 90, 110, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
+      // Zoals op de foto: een cognackleurig sierkussen tussen het eerste en tweede rugkussen en een kleiner lichtgrijs ervoor.
+      sierkussen('e4', 72, 44, 'chenille_camel'), sierkussen('e5', 108, 50, 'chenille_parel', 40),
     ],
   }, 'Doha', MATEN_WEBSITE),
   model('montego', 'Montego', SOFA, 'Lage, gebogen sofa in bouclé zonder armen, op een verdekte voet: één doorlopende vorm in een boog, met een vaste zitting en een vaste rug die korter is dan de zitting.', {

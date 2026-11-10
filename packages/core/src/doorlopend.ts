@@ -103,13 +103,14 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   const hL = hoeken(rondeKant(eerste, 'links'), dL, eerste.breedte), hR = hoeken(rondeKant(laatste, 'rechts'), dR, laatste.breedte);
   /**
    * Diepte bij x: die van het element daar, met een zachte overgang naar een buur met een andere diepte (zoals het
-   * loungedeel van Doha). Hoe groter het verschil, hoe breder de overgang: 1,6 × het verschil aan elke kant, tussen 25 en
-   * 70 cm, hooguit de helft van elk element en niet in de ronde voorhoeken.
+   * loungedeel van Doha). Hoe groter het verschil, hoe breder de overgang: 1,15 × het verschil aan elke kant, tussen 25 en
+   * 70 cm, hooguit de helft van elk element en niet in de ronde voorhoeken. (Tot 10/11 was dat 1,6 ×: op de foto's van
+   * Doha is de S-bocht tussen het loungedeel en de rest korter en duidelijker.)
    */
   const overgangen = rij.slice(0, -1).flatMap((e, i) => {
     const volgende = rij[i + 1]!, grens = e.x + e.breedte, a = e.diepte, b = volgende.diepte;
     if (a === b) return [];
-    const T = Math.min(70, Math.max(25, 1.6 * Math.abs(b - a)), e.breedte / 2, volgende.breedte / 2, grens - (X0 + hL.voor + 2), X1 - hR.voor - 2 - grens);
+    const T = Math.min(70, Math.max(25, 1.15 * Math.abs(b - a)), e.breedte / 2, volgende.breedte / 2, grens - (X0 + hL.voor + 2), X1 - hR.voor - 2 - grens);
     return T > 1 ? [{ grens, a, b, T }] : [];
   });
   const diepteBij = (x: number) => {
@@ -230,9 +231,16 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   // kop (de armleuning van Doha), of de rug stopt met een ronde kop waar de achterkant recht wordt (minstens 40 % van het
   // eindelement ver, Montego).
   const w = RUG / 2, wi = w + (metKussen ? 1 : 0), rugOnder = metKussen ? zitOnder : P;
+  // Met losse rugkussens is de rug een laag karkas dat aan een afgerond uiteinde in een kwartronde naar de zitting zakt,
+  // zoals de armleuning van Doha op de foto's (10/11). Een vaste, hoge rug (Montego) houdt een rechte, ronde kop.
+  const zakt = losseRug && frameRug - hg.zithoogte >= 8;
+  // Waarover de rug zakt: ±1,3 × de hoogte boven de zitting (een kwartronde, zoals op de foto's), tussen 20 en 45 cm.
+  const ZAK = Math.min(45, Math.max(20, 1.3 * (frameRug - hg.zithoogte)));
+  let rugBeginX = X0, rugEindX = X1;
   {
     const st = omtrekStukken(wi);
-    const tot = (d: number) => Y0 + d * 0.32;
+    // Een zakkende omloop komt verder naar voren (het lage stuk telt mee): tot ±42 % van de diepte, anders 32 %.
+    const tot = (d: number) => Y0 + d * (zakt ? 0.42 : 0.32);
     const pad: P2[] = [];
     const hoog: number[] = [];
     /** Het deel van een ketting (y loopt op) tot op hoogte `grens`, met het laatste punt precies op de grens. */
@@ -247,12 +255,18 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       return uit;
     };
     // Waar de rug begint en eindigt op de rechte achterkant (als hij niet om het uiteinde loopt).
-    const beginX = omL ? st.xa + st.aL : rondL ? Math.max(st.xa + st.aL, X0 + 0.4 * eerste.breedte) : st.xa;
-    const eindX = omR ? st.xb - st.aR : rondR ? Math.min(st.xb - st.aR, X1 - 0.4 * laatste.breedte) : st.xb;
+    const beginX = omL || (zakt && rondL) ? st.xa + st.aL : rondL ? Math.max(st.xa + st.aL, X0 + 0.4 * eerste.breedte) : st.xa;
+    const eindX = omR || (zakt && rondR) ? st.xb - st.aR : rondR ? Math.min(st.xb - st.aR, X1 - 0.4 * laatste.breedte) : st.xb;
+    rugBeginX = beginX; rugEindX = eindX;
     // Links: van de achterhoek langs de zijkant tot ±32 % van de diepte; dan omgekeerd (van vooraan naar achter), zodat
     // de rug van links naar rechts loopt. Overal op karkashoogte: de ronde kop komt van de wand zelf.
     const wrapL: P2[] = omL ? totGrens(zonderDubbel([...st.links, ...st.achterL].reverse().concat([...st.voorL].reverse()), false), tot(dL)).reverse() : [[beginX, st.yb]];
-    const wrapR: P2[] = omR ? totGrens(zonderDubbel([...st.achterR, ...st.rechts, ...st.voorR], false), tot(dR)) : [[eindX, st.yb]];
+    // Een zakkende rug zonder omloop loopt nog een klein stuk de achterhoek in (±7 % van de diepte), zodat het lage
+    // eind voorbij het laatste rugkussen te zien is (Doha rechts).
+    const stukje = (d: number) => Y0 + wi + d * 0.07;
+    if (zakt && rondL && !omL) wrapL.splice(0, wrapL.length, ...totGrens(zonderDubbel([...st.achterL].reverse(), false), stukje(dL)).reverse());
+    const wrapR: P2[] = omR ? totGrens(zonderDubbel([...st.achterR, ...st.rechts, ...st.voorR], false), tot(dR))
+      : zakt && rondR ? totGrens(zonderDubbel([...st.achterR], false), stukje(dR)) : [[eindX, st.yb]];
     for (const p of wrapL) { pad.push(p); hoog.push(frameRug); }
     for (const p of st.achterkant) if (p[0] > beginX + 0.5 && p[0] < eindX - 0.5) { pad.push(p); hoog.push(frameRug); }
     for (const p of wrapR) { pad.push(p); hoog.push(frameRug); }
@@ -262,6 +276,21 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       const q = padSchoon[padSchoon.length - 1];
       if (!q || Math.hypot(p[0] - q[0], p[1] - q[1]) > 0.5) { padSchoon.push(p); hoogSchoon.push(hoog[i]!); }
     });
+    // Zakken naar de zitting aan een afgerond uiteinde: een kwartronde over de laatste ZAK cm van het pad (hooguit een
+    // derde van de rug). Het uiteinde duikt 4 cm onder de bovenkant van de zitting: zo loopt de rug in de zitting weg,
+    // zonder knobbel aan de punt (een eind net bóven de zitting gaf een bolletje).
+    if (zakt && padSchoon.length > 3) {
+      const lengte = [0];
+      for (let i = 1; i < padSchoon.length; i++) lengte.push(lengte[i - 1]! + Math.hypot(padSchoon[i]![0] - padSchoon[i - 1]![0], padSchoon[i]![1] - padSchoon[i - 1]![1]));
+      const totaal = lengte[lengte.length - 1]!, zak = Math.min(ZAK, totaal / 3), laag = Math.max(rugOnder + 2, hg.zithoogte - 4);
+      // Een kwart sinus in plaats van een kwart cirkel: bijna dezelfde ronding, maar aan de punt niet loodrecht (een
+      // loodrechte punt gaf rafels in de zachte vorm).
+      const kwart = (afstand: number) => laag + (frameRug - laag) * Math.sin((Math.min(1, afstand / zak) * Math.PI) / 2);
+      padSchoon.forEach((_, i) => {
+        if (rondL) hoogSchoon[i] = Math.min(hoogSchoon[i]!, kwart(lengte[i]!));
+        if (rondR) hoogSchoon[i] = Math.min(hoogSchoon[i]!, kwart(totaal - lengte[i]!));
+      });
+    }
     const padW = gebogen(padSchoon);
     const k = kaderVan(padW);
     nieuw.push({
@@ -273,8 +302,10 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   if (losseRug) {
     // Van de omloop (of het begin van de rug) tot de andere kant, tegen de binnenkant van de rug.
     const st = omtrekStukken(0);
-    const x0 = omL ? st.xa + hL.achter * 0.75 : rondL ? Math.max(X0 + hL.achter, X0 + 0.4 * eerste.breedte) : st.xa + 2;
-    const x1 = omR ? st.xb - hR.achter * 0.75 : rondR ? Math.min(X1 - hR.achter, X1 - 0.4 * laatste.breedte) : st.xb - 2;
+    // Bij een zakkende rug: in de hoek van de omloop, vlak naast de arm; aan een uiteinde zonder omloop tot waar de
+    // achterkant recht is (het lage eind van de rug steekt er nog voorbij, zoals op de foto's van Doha).
+    const x0 = omL ? (zakt ? st.xa + Math.max(RUG + 6, hL.achter * 0.45) : st.xa + hL.achter * 0.75) : rondL ? (zakt ? rugBeginX + 2 : Math.max(X0 + hL.achter, X0 + 0.4 * eerste.breedte)) : st.xa + 2;
+    const x1 = omR ? (zakt ? st.xb - Math.max(RUG + 6, hR.achter * 0.45) : st.xb - hR.achter * 0.75) : rondR ? (zakt ? rugEindX - 2 : Math.min(X1 - hR.achter, X1 - 0.4 * laatste.breedte)) : st.xb - 2;
     const n = Math.max(1, Math.round((x1 - x0) / 75)), breed = (x1 - x0) / n;
     const kantel = { graden: rond1(v.rugvorm === 'hellend' ? 14 : 2 + v.zachtheid * 0.8), richting: 'z-' as const };
     for (let i = 0; i < n; i++) {
