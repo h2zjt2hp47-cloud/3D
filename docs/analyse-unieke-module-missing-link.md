@@ -231,7 +231,11 @@ Gezocht op forums van pakketten (Odoo, Epicor, ERPNext, Jobber), vakforums (WOOD
 
 - **Wat:** uitbouwen wat er al in zit (inruil, huur, tweedehands onderdelen, machinetypes) naar onderhoudscontracten en servicehistoriek per machine.
 - **Sterk:** staat deels al in het pakket **[Missing Link]**; de bouw- en installatiepakketten doen dit niet **[inschatting]**.
-- **Zwak:** kleine doelgroep; ik heb deze markt niet onderzocht. Te bekijken als aparte vraag.
+- **Zwak:** kleinere doelgroep dan bouw; ik heb deze markt nog niet onderzocht.
+- **Beslist (10/11): machinehandel en -verhuur is een bewuste doelgroep.** De score in §6 (15) is dus te laag: ze ging uit van een toevallige nevenfunctie. Nog te doen, als eigen onderzoek:
+  - wat Missing Link hier al kan (machines, machinetypes en contracten zijn via de AI-koppeling nog niet te lezen, dus dat moet uit het pakket zelf of van Jonas komen);
+  - wat de pakketten voor machinehandel en verhuur aanbieden en waar ze tekortschieten;
+  - of de configurator hier past: een machine met opties samenstellen (machinetype + onderdelen) is hetzelfde principe als een zetel met opties.
 
 ---
 
@@ -310,7 +314,7 @@ In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing
 
 1. ~~Voor wie is Missing Link eerst bedoeld?~~ **Beide; eerste opstart is de meubelmaker met de zetelconfigurator** (beslist 10/11).
 2. ~~Herken je dat meerwerk een probleem is?~~ **Ja: Jonas bevestigt uit de praktijk dat meerwerk een moeilijk gegeven is** (10/11). Nog te verfijnen: waar loopt het precies mis (niet genoteerd op de werf, geen akkoord van de klant, vergeten bij de factuur, discussie over de prijs)? Dat bepaalt wat de meerwerkbon eerst moet kunnen.
-3. **Machines (G):** is machinehandel en -verhuur een bewuste doelgroep? Dan verdient die een eigen onderzoek.
+3. ~~Is machinehandel en -verhuur een bewuste doelgroep?~~ **Ja, bewuste doelgroep** (Jonas, 10/11). Volgende stap: een eigen onderzoek voor deze doelgroep (zie kandidaat G in §5).
 4. **Koppeling met raamsoftware:** wil je die in Missing Link? Voor ramenplaatsers is het een voorwaarde naast de eigen configurator (zie [`onderzoek-raamsoftware.md`](onderzoek-raamsoftware.md)).
 5. **Actiepunt 0.3** staat nog open: de betekenis van de offerteregelvelden bevestigen.
 
