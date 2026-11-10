@@ -53,6 +53,7 @@
 **Bouwdemo online (privé artifact):** https://claude.ai/artifact/FaTp1zVvy9YePyarithjyh (slug `760c021f-8602-482d-b4c1-d41a3bcaa890`). Opnieuw publiceren: `npm run build -w @configurator/bouw-web`, dan `publish_files` met `packages/bouw-web/dist/bouw-configurator.html` als `index.html`.
 
 **Demo online (privé artifact):** https://claude.ai/artifact/BtVKYeQKC7szR1ZwW97VB1
+- **Niet bijgewerkt op 10/11:** de pagina was vanuit de sessie van die dag niet bereikbaar ("artifact not found"). De wijzigingen van 10/11 staan dus alleen in de repo en in het gebouwde bestand `packages/demo-web/dist/configurator-demo.html`; opnieuw publiceren kan in een sessie die de pagina wel kan openen, of als nieuwe pagina.
 - slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie: zie publicatie van 31/10 (catalogus-editor)
 - Productfoto's: eerst `python3 -I packages/demo-web/scripts/haal_fotos.py` (vraagt netwerktoegang tot corneille-silence.be), dan bouwen. De foto's staan in `packages/demo-web/fotos/` en worden niet in git bewaard.
 - Opnieuw publiceren: `npm run build -w @configurator/demo-web`, dan `publish_files` met `dist/configurator-demo.html` als `index.html`, met slug + base_version.
