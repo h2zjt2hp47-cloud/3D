@@ -221,6 +221,31 @@ main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
 .modelrij .modelnaam { margin: 0; }
 .ongedaanrij { display: inline-flex; gap: 4px; }
 .ongedaanrij button { white-space: nowrap; }
+.bewaarrij { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.bewaarvak { border: 1px solid var(--lijn); border-radius: 8px; padding: 8px; margin: 6px 0; background: var(--papier); }
+.bewaarvak .knoppenrij { margin-top: 6px; }
+.bewaarvak p { margin: 0 0 4px; }
+.bewaarstatus { margin: 2px 0 8px; min-height: 1.2em; }
+.bewaarstatus.fout { color: #a3271b; }
+/* Mijn ontwerpen (bij 1 · Modellen) */
+.mijnbalk { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.mijnbalk p { margin: 0; flex: 1 1 320px; }
+.mijnbalk button, .dossierkaart .knoppenrij button { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.modellenraster .dossierkaart .knoppenrij button:not(.hoofd):not(.bevestig) { background: transparent; color: var(--accent); }
+.dossierkaart .knoppenrij button.hoofd { background: var(--accent); color: var(--vlak); }
+/* Klant en offerte */
+.offertevelden { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 4px 14px; margin: 6px 0 2px; }
+.offertevelden .maatveld { margin: 0 0 6px; }
+.offertevelden .maatveld input { width: 100%; box-sizing: border-box; text-align: left; }
+.offertevelden .breed2 { grid-column: 1 / -1; }
+.offertevelden textarea { width: 100%; box-sizing: border-box; min-height: 64px; resize: vertical; }
+.offertekop { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 10px 0 14px; font-size: .95rem; }
+.offertekop p { margin: 0; white-space: pre-line; }
+.offertekop .rechts { text-align: right; }
+.offerte-opmerking { white-space: pre-line; }
+.offerteklant { border: 1px solid var(--lijn); border-radius: 8px; padding: 8px 12px; margin: 10px 0; background: var(--papier); }
+.offerteklant > summary { cursor: pointer; font-weight: 600; }
+.offerteklant .maatveld .klein { font-weight: 400; }
 /* 3D-voorbeeld naast de tekening (alleen op een breed scherm, waar de rechterkolom naast de tekening staat). */
 .voorbeeld3d { padding-bottom: 10px; }
 .voorbeeld3d .kaartkop { margin-bottom: 8px; }
@@ -250,6 +275,7 @@ main.offerte { grid-template-columns: minmax(0, 1fr); max-width: 980px; }
   /* Een afgedrukte offerte toont nooit kostprijs of marge, ook niet buiten de klantweergave. */
   header, footer, .geen-afdruk, #foutmelding, #beheer-tabs, .intern { display: none !important; }
   .alleen-afdruk { display: block; }
+  .offertekop.alleen-afdruk { display: grid; }
   .merkregel { font-size: 1.3rem; letter-spacing: .12em; font-variant: small-caps; margin: 0 0 8px; }
   body { background: #fff; }
   main:not(#view-offerte) { display: none !important; }
@@ -525,6 +551,16 @@ main.catalogus { display: block; }
 <main id="view-ontwerp" class="ontwerp" hidden>
   <aside class="kaart gereedschap" aria-label="Gereedschap">
     <div class="modelrij"><p id="o-model" class="modelnaam"></p><span class="ongedaanrij"><button type="button" id="o-ongedaan" class="tweede klein-knop" title="Ongedaan maken (Ctrl+Z)">↶ Ongedaan</button><button type="button" id="o-opnieuw-doen" class="tweede klein-knop" title="Opnieuw doen wat je ongedaan maakte (Ctrl+Y)">↷ Opnieuw</button></span></div>
+    <div class="bewaarrij">
+      <button type="button" id="o-bewaar" class="tweede klein-knop" title="Dit ontwerp bewaren bij Mijn ontwerpen (in deze browser)">Bewaren</button>
+      <button type="button" id="o-mijn" class="tweede klein-knop">Mijn ontwerpen</button>
+    </div>
+    <div id="o-bewaarvak" class="bewaarvak" hidden>
+      <label class="maatveld breed" for="o-bewaarnaam"><span>Naam van het ontwerp</span><input id="o-bewaarnaam" maxlength="80" autocomplete="off"></label>
+      <p class="klein" id="o-bewaaruitleg"></p>
+      <div class="knoppenrij"><button type="button" id="o-bewaar-ok">Bewaar</button><button type="button" class="tweede" id="o-bewaar-annuleer">Annuleer</button></div>
+    </div>
+    <p id="o-bewaarstatus" class="klein bewaarstatus" role="status"></p>
     <h2>Elementen</h2>
     <div id="o-gereedschap" class="knoppenlijst" role="group" aria-label="Gereedschap"></div>
     <p id="o-hint" class="klein"></p>
@@ -570,7 +606,7 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" data-standpunt="boven">Boven</button>
       <button type="button" class="tweede" data-standpunt="achter">Achter</button>
       <button type="button" class="tweede" data-standpunt="ooghoogte" title="Zoals een staande klant de zetel ziet (155 cm)">Ooghoogte</button>
-      <span class="klein">Sleep om te draaien, klik op een deel om het te kiezen; zoomen met Ctrl (⌘) + scrollen of knijpen; pijltjes en + − met het toetsenbord.</span>
+      <span class="klein">Sleep om te draaien, klik op een deel om het te kiezen, dubbelklik om erop in te zoomen. Verschuiven: rechtermuisknop, Shift + slepen of twee vingers. Zoomen: Ctrl (⌘) + scrollen of knijpen. Toetsenbord: pijltjes en + −.</span>
     </div>
     <div id="o-3d-instellingen" class="drie-d-instellingen" hidden>
       <label><span>Stof</span><select id="o-3d-stof"></select></label>

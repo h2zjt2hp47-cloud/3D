@@ -38,6 +38,7 @@ import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, t
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
 import { bewaarBestand, dataUrlNaarBlob } from './bewaren.js';
+import { bewaarDossier, dossierAlsBestand, geldigTot, getDossiers, leesOfferte, legeKlant, legeOfferte, nieuweReferentie, opDossiers, type Dossier, type OfferteGegevens } from './dossiers.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
@@ -46,6 +47,22 @@ const MAGNEET = 6; // cm
 const typen = { get: (code: string) => getCatalogus().typen.find((t) => t.code === code) };
 
 let ontwerp: Ontwerp = laadOntwerp();
+/**
+ * Het dossier waarin gewerkt wordt: de gegevens van de offerte (klant, referentie …) en, als het ontwerp bewaard is bij
+ * Mijn ontwerpen, onder welke naam. Overleeft een herlaadbeurt, zoals het ontwerp zelf.
+ */
+const SLEUTEL_DOSSIER = 'configurator-demo.dossier.v1';
+let dossier: { id?: string; naam: string; offerte: OfferteGegevens; bewaardAls?: string } = laadDossier();
+function laadDossier(): typeof dossier {
+  try {
+    const d = JSON.parse(laad(SLEUTEL_DOSSIER) ?? 'null') as Partial<typeof dossier> | null;
+    if (d && typeof d === 'object') return { id: typeof d.id === 'string' ? d.id : undefined, naam: typeof d.naam === 'string' ? d.naam : '', offerte: leesOfferte(d.offerte), bewaardAls: typeof d.bewaardAls === 'string' ? d.bewaardAls : undefined };
+  } catch { /* geen bewaard dossier */ }
+  return { naam: '', offerte: legeOfferte() };
+}
+const bewaarDossierStaat = () => bewaar(SLEUTEL_DOSSIER, JSON.stringify(dossier));
+/** Wat bewaard wordt, als tekst: om te zien of er sinds het bewaren iets veranderd is. */
+const dossierToestand = () => JSON.stringify([ontwerp, dossier.offerte]);
 let geselecteerd: string | null = null;
 let gereedschap: string = 'selecteren'; // of een elementtype
 let resultaat: OntwerpResultaat;
@@ -113,7 +130,65 @@ function toonOngedaan() {
 function gewijzigd() {
   bewaar(SLEUTEL, JSON.stringify(ontwerp));
   herbereken();
+  toonBewaarStatus();
 }
+
+// ---------- Mijn ontwerpen: bewaren onder een naam ----------
+function toonBewaarStatus(melding?: string, fout = false) {
+  const vak = document.querySelector<HTMLElement>('#o-bewaarstatus');
+  if (!vak) return;
+  const aantal = getDossiers().length;
+  $('#o-mijn').textContent = aantal ? `Mijn ontwerpen (${aantal})` : 'Mijn ontwerpen';
+  vak.classList.toggle('fout', fout);
+  if (melding) { vak.textContent = melding; return; }
+  const bestaat = dossier.id && getDossiers().some((d) => d.id === dossier.id);
+  vak.textContent = !bestaat ? '' : dossier.bewaardAls === dossierToestand() ? `Bewaard als “${dossier.naam}”.` : `“${dossier.naam}”: gewijzigd sinds het bewaren.`;
+}
+/** Voorstel voor de naam: het model en de klant, bv. "Kotor · Janssens". */
+function naamVoorstel(): string {
+  const model = getModellen().find((x) => x.code === ontwerp.model)?.naam ?? 'Eigen ontwerp';
+  return dossier.offerte.klant.naam ? `${model} · ${dossier.offerte.klant.naam}` : model;
+}
+function bewaarOnderNaam(naam: string) {
+  // Zelfde naam als het geopende ontwerp: bijwerken. Een andere naam: als nieuw ontwerp bewaren (het oude blijft).
+  const bijwerken = dossier.id && naam.trim() === dossier.naam;
+  // Een kopie onder een andere naam is een andere offerte: een eigen referentie.
+  if (dossier.id && !bijwerken && getDossiers().some((d) => d.id === dossier.id)) dossier.offerte.referentie = nieuweReferentie();
+  const uit = bewaarDossier({ id: bijwerken ? dossier.id : undefined, naam, ontwerp, offerte: dossier.offerte });
+  if ('fout' in uit) { toonBewaarStatus(uit.fout, true); return false; }
+  dossier = { ...dossier, id: uit.id, naam: uit.naam, bewaardAls: dossierToestand() };
+  bewaarDossierStaat();
+  toonBewaarStatus();
+  return true;
+}
+function startBewaren() {
+  const vak = $('#o-bewaarvak'), naam = $<HTMLInputElement>('#o-bewaarnaam');
+  const sluit = () => { vak.hidden = true; };
+  $('#o-bewaar').addEventListener('click', () => {
+    vak.hidden = !vak.hidden;
+    if (vak.hidden) return;
+    const bestaat = dossier.id && getDossiers().some((d) => d.id === dossier.id);
+    naam.value = bestaat ? dossier.naam : naamVoorstel();
+    $('#o-bewaaruitleg').textContent = bestaat ? 'Zelfde naam: het bewaarde ontwerp bijwerken. Een andere naam: als nieuw ontwerp bewaren.' : 'Bewaard in deze browser, samen met de gegevens van de klant.';
+    naam.focus();
+    naam.select();
+  });
+  const ok = () => { if (bewaarOnderNaam(naam.value)) sluit(); };
+  $('#o-bewaar-ok').addEventListener('click', ok);
+  naam.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ok(); } else if (ev.key === 'Escape') sluit(); });
+  $('#o-bewaar-annuleer').addEventListener('click', sluit);
+  opDossiers(() => toonBewaarStatus());
+  toonBewaarStatus();
+}
+/** Opent een bewaard ontwerp (of een ontwerp uit een bestand, zonder id) in de ontwerper. */
+export function openDossier(d: { id?: string; naam: string; ontwerp: Ontwerp; offerte: OfferteGegevens }) {
+  laadInOntwerper(d.ontwerp);
+  dossier = { id: d.id, naam: d.naam, offerte: leesOfferte(d.offerte) };
+  dossier.bewaardAls = d.id ? dossierToestand() : undefined;
+  bewaarDossierStaat();
+  toonBewaarStatus();
+}
+export const huidigDossier = (): { naam: string; ontwerp: Ontwerp; offerte: OfferteGegevens } => ({ naam: dossier.naam || naamVoorstel(), ontwerp: structuredClone(ontwerp), offerte: structuredClone(dossier.offerte) });
 
 const klem = (w: number, min: number, max: number) => Math.min(max, Math.max(min, w));
 const elementVan = (id: string | null) => ontwerp.elementen.find((e) => e.id === id);
@@ -631,6 +706,9 @@ export const huidigOntwerp = () => structuredClone(ontwerp);
 /** Laadt een ontwerp (bv. een model uit de collectie) in de ontwerper. */
 export function laadInOntwerper(nieuw: Ontwerp) {
   onthoud();
+  // Een ander ontwerp: niet meer gekoppeld aan het bewaarde (bewaren maakt een nieuw); de klant blijft dezelfde.
+  dossier = { naam: '', offerte: { ...dossier.offerte, referentie: '' } };
+  bewaarDossierStaat();
   ontwerp = structuredClone(nieuw);
   geselecteerd = null;
   vulHoofdmateriaal();
@@ -1473,6 +1551,86 @@ function toonEigenschappen() {
  * Stap 3 · Offerte: een overzicht om aan de klant te tonen, te kopiëren of af te drukken. Gebouwd uit dezelfde
  * gegevens als het ontwerp: omschrijving (core/ontwerptekst.ts), prijs, boven- en vooraanzicht en het 3D-beeld.
  */
+/** Klant en kenmerken van de offerte als tekst: voor de afdruk en voor "Kopieer offertetekst". */
+function offerteKop(): { klant: string[]; kenmerken: string[] } {
+  const o = dossier.offerte, k = o.klant;
+  return {
+    klant: [k.naam, k.adres, [k.postcode, k.gemeente].filter(Boolean).join(' '), k.email, k.telefoon].filter(Boolean),
+    kenmerken: [
+      o.referentie ? `Referentie: ${o.referentie}` : '',
+      `Datum: ${new Date().toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      `Geldig tot: ${geldigTot(o)}`,
+      o.levertermijn ? `Levertermijn: ${o.levertermijn}` : '',
+    ].filter(Boolean),
+  };
+}
+/** De offertetekst met klant, referentie en opmerking erbij (de omschrijving van de zetel komt uit de motor). */
+function volledigeOffertetekst(regels: string[]): string {
+  const kop = offerteKop();
+  return [
+    ...(kop.klant.length ? ['Klant:', ...kop.klant.map((x) => `  ${x}`)] : []),
+    ...kop.kenmerken,
+    '',
+    ...regels,
+    ...(dossier.offerte.opmerking ? ['', 'Opmerking:', dossier.offerte.opmerking] : []),
+  ].join('\n');
+}
+/** Formulier "Klant en offerte" (alleen op het scherm) met het blok dat op papier komt. */
+function offerteFormulier(): { formulier: HTMLElement; afdruk: HTMLElement; opmerking: HTMLElement } {
+  const afdruk = el('div', { class: 'offertekop alleen-afdruk' });
+  const opmerking = el('div', { class: 'alleen-afdruk' });
+  const geldig = el('span', { class: 'klein' });
+  const vulAfdruk = () => {
+    const kop = offerteKop();
+    afdruk.replaceChildren(el('p', {}, kop.klant.join('\n')), el('p', { class: 'rechts' }, kop.kenmerken.join('\n')));
+    opmerking.replaceChildren(...(dossier.offerte.opmerking ? [el('h3', {}, 'Opmerking'), el('p', { class: 'offerte-opmerking' }, dossier.offerte.opmerking)] : []));
+    geldig.textContent = `Geldig tot ${geldigTot(dossier.offerte)}`;
+  };
+  const formulier = el('details', { class: 'geen-afdruk offerteklant' });
+  // Open zolang er nog geen klant is; daarna ingeklapt met de naam in de titel.
+  if (!dossier.offerte.klant.naam) formulier.setAttribute('open', '');
+  const titel = el('summary');
+  const toonTitel = () => { titel.textContent = dossier.offerte.klant.naam ? `Klant en offerte: ${dossier.offerte.klant.naam}${dossier.offerte.referentie ? ` · ${dossier.offerte.referentie}` : ''}` : 'Klant en offerte invullen'; };
+  const velden = el('div', { class: 'offertevelden' });
+  const gewijzigdVeld = () => { bewaarDossierStaat(); vulAfdruk(); toonTitel(); toonBewaarStatus(); };
+  const veld = (label: string, waarde: string, zet: (w: string) => void, attrs: Record<string, string> = {}, klasse = '') => {
+    const id = `of-${label.toLowerCase().replace(/[^a-z]+/g, '-')}`;
+    const lab = el('label', { class: `maatveld${klasse ? ` ${klasse}` : ''}`, for: id });
+    const invoer = el('input', { id, type: 'text', value: waarde, ...attrs }) as HTMLInputElement;
+    invoer.addEventListener('input', () => { zet(invoer.value); gewijzigdVeld(); });
+    lab.append(el('span', {}, label), invoer);
+    velden.append(lab);
+    return lab;
+  };
+  const o = dossier.offerte, k = o.klant;
+  veld('Naam klant', k.naam, (w) => { k.naam = w; }, { autocomplete: 'off', maxlength: '200' });
+  veld('Straat en nummer', k.adres, (w) => { k.adres = w; }, { autocomplete: 'off', maxlength: '200' });
+  veld('Postcode', k.postcode, (w) => { k.postcode = w; }, { autocomplete: 'off', maxlength: '12', inputmode: 'numeric' });
+  veld('Gemeente', k.gemeente, (w) => { k.gemeente = w; }, { autocomplete: 'off', maxlength: '200' });
+  veld('E-mail', k.email, (w) => { k.email = w; }, { type: 'email', autocomplete: 'off', maxlength: '200' });
+  veld('Telefoon', k.telefoon, (w) => { k.telefoon = w; }, { type: 'tel', autocomplete: 'off', maxlength: '40' });
+  veld('Referentie', o.referentie, (w) => { o.referentie = w; }, { maxlength: '40', title: 'Eigen kenmerk; het offertenummer komt later uit het ERP' });
+  veld('Geldig (dagen)', String(o.geldigDagen), (w) => { const n = Math.round(Number(w)); if (n >= 1 && n <= 365) o.geldigDagen = n; }, { type: 'number', min: '1', max: '365', inputmode: 'numeric' }).append(geldig);
+  veld('Levertermijn', o.levertermijn, (w) => { o.levertermijn = w; }, { maxlength: '200', placeholder: 'bv. 8 tot 10 weken' });
+  const opm = el('label', { class: 'maatveld breed2', for: 'of-opmerking' });
+  const tekstvak = el('textarea', { id: 'of-opmerking', maxlength: '2000', placeholder: 'Afspraken met de klant, levering, plaatsing …' }) as HTMLTextAreaElement;
+  tekstvak.value = o.opmerking;
+  tekstvak.addEventListener('input', () => { o.opmerking = tekstvak.value; gewijzigdVeld(); });
+  opm.append(el('span', {}, 'Opmerking op de offerte'), tekstvak);
+  velden.append(opm);
+  const nieuw = el('button', { type: 'button', class: 'tweede klein-knop' }, 'Nieuwe klant (velden leegmaken)') as HTMLButtonElement;
+  bevestigKnop(nieuw, 'Klik nogmaals: gegevens wissen', () => {
+    dossier.offerte = { ...legeOfferte(), klant: legeKlant(), referentie: nieuweReferentie() };
+    bewaarDossierStaat();
+    toonBewaarStatus();
+    toonOfferte();
+  }, () => Boolean(k.naam || k.adres || k.email || k.telefoon || o.opmerking));
+  formulier.append(titel, velden, nieuw, el('p', { class: 'klein' }, 'De gegevens blijven in deze browser en gaan mee als je het ontwerp bewaart.'));
+  vulAfdruk();
+  toonTitel();
+  return { formulier, afdruk, opmerking };
+}
+
 export function toonOfferte() {
   herbereken(false);
   const r = resultaat;
@@ -1491,6 +1649,10 @@ export function toonOfferte() {
     vak.replaceChildren(kaart);
     return;
   }
+  // Klant en offerte: een eigen referentie zodra er een ontwerp is (het echte offertenummer komt uit het ERP).
+  if (!dossier.offerte.referentie) { dossier.offerte.referentie = nieuweReferentie(); bewaarDossierStaat(); }
+  const klantblok = offerteFormulier();
+  kaart.append(klantblok.afdruk, klantblok.formulier);
   // Beelden: bovenaanzicht, vooraanzicht en (als de 3D al getoond werd) het 3D-beeld zoals het nu staat.
   const beelden = el('div', { class: 'offertebeelden' });
   const figuur = (titel: string, inhoud: string | HTMLElement) => {
@@ -1507,8 +1669,8 @@ export function toonOfferte() {
     // Staat er een echt 3D-model in beeld, dan hoort de naamsvermelding (licentie) bij het beeld.
     const bron = $('#o-3d-bron');
     const titel = bron.hidden ? '3D' : `3D, echt 3D-model (proef). ${bron.textContent}`;
-    // Tekenen en meteen lezen: met WebGPU kan het canvas niet later gelezen worden.
-    const url = viewer.beeld?.('image/jpeg', 0.9);
+    // Een eigen opname op vaste breedte (scherp op papier, ook als de 3D klein naast de tekening stond).
+    const url = viewer.foto?.({ breedte: 1400, type: 'image/jpeg', kwaliteit: 0.88 }) ?? viewer.beeld?.('image/jpeg', 0.9);
     if (url) figuur(titel, el('img', { src: url, alt: '3D-beeld van de zetel' }));
   }
   kaart.append(beelden);
@@ -1539,6 +1701,7 @@ export function toonOfferte() {
     if (!r.geldig) kaart.append(el('p', { class: 'offertewaarschuwing' }, 'Dit ontwerp heeft nog fouten: los ze op bij 2 · Ontwerpen voor je de offerte doorstuurt.'));
     kaart.append(ul);
   }
+  kaart.append(klantblok.opmerking);
   kaart.append(el('p', { class: 'klein' }, 'Demo: prijzen, maten en stofverbruik zijn voorbeelden. Modellen zijn een benadering op basis van de productfoto.'));
   const knoppen = el('div', { class: 'acties geen-afdruk' });
   const knop = (tekst: string, f: () => void, klasse = '') => {
@@ -1548,7 +1711,16 @@ export function toonOfferte() {
   };
   const melding = el('span', { class: 'klein', role: 'status' });
   knop('Afdrukken of bewaren als PDF', () => window.print());
-  knop('Kopieer offertetekst', () => void kopieer(regels.join('\n'), melding), 'tweede');
+  knop('Kopieer offertetekst', () => void kopieer(volledigeOffertetekst(regels), melding), 'tweede');
+  knop('Bewaren bij Mijn ontwerpen', () => {
+    // Al bewaard: bijwerken onder dezelfde naam; anders onder de voorgestelde naam (model en klant).
+    const naam = dossier.id && getDossiers().some((d) => d.id === dossier.id) ? dossier.naam : naamVoorstel();
+    melding.textContent = bewaarOnderNaam(naam) ? `Bewaard als “${dossier.naam}”.` : 'Bewaren lukte niet: bewaar het ontwerp als bestand.';
+  }, 'tweede');
+  knop('Bewaar als bestand', () => {
+    const b = dossierAlsBestand(huidigDossier());
+    void bewaarBestand(b.bestandsnaam, new Blob([b.inhoud], { type: 'application/json' }));
+  }, 'tweede');
   knop('← Terug naar ontwerpen', () => { location.hash = 'ontwerp'; }, 'tweede');
   knoppen.append(melding);
   kaart.append(knoppen);
@@ -1709,6 +1881,7 @@ export function startOntwerper() {
   });
   $('#o-ongedaan').addEventListener('click', ongedaan);
   $('#o-opnieuw-doen').addEventListener('click', opnieuwDoen);
+  startBewaren();
   $('#o-naar-offerte').addEventListener('click', () => { location.hash = 'offerte'; });
   $('#o-kopieer').addEventListener('click', () => {
     // Volledige omschrijving (ook keuzes per element, getekende hoogtes, vormgeving en korting): zie core/ontwerptekst.ts.

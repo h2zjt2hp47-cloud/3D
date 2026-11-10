@@ -4,9 +4,9 @@
  */
 import { kiesProduct, startConfigurator } from './configurator.js';
 import { startMaterialen } from './materialen-ui.js';
-import { modelOntwerp, startModellen } from './modellen-ui.js';
+import { kiesMijnOntwerpen, modelOntwerp, startModellen } from './modellen-ui.js';
 import { startCatalogusEditor } from './catalogus-ui.js';
-import { huidigOntwerp, kiesWeergave, laadInOntwerper, startOntwerper, toonOfferte } from './ontwerper.js';
+import { huidigOntwerp, kiesWeergave, laadInOntwerper, openDossier, startOntwerper, toonOfferte } from './ontwerper.js';
 import { $, bewaar, getKorting, laad, setKorting } from './staat.js';
 
 const weergaven = ['modellen', 'ontwerp', 'offerte', 'sofa', 'kast', 'materialen', 'catalogus'] as const;
@@ -132,7 +132,14 @@ function openModel(code: string) {
   kiesWeergave('3d');
   window.scrollTo(0, 0);
 }
-veilig('Modellen', () => startModellen(openModel));
+veilig('Modellen', () => startModellen(openModel, (d) => {
+  toon('ontwerp');
+  openDossier(d);
+  kiesWeergave('3d');
+  window.scrollTo(0, 0);
+}));
+// Knop "Mijn ontwerpen" in de ontwerper: naar het modellenscherm, op de eigen bewaarde ontwerpen.
+$('#o-mijn').addEventListener('click', () => veilig('Navigatie', () => { toon('modellen'); kiesMijnOntwerpen(); window.scrollTo(0, 0); }));
 veilig('Catalogus', () => startCatalogusEditor({ huidigOntwerp, openModel }));
 /** Een adres (#…) naar een weergave; #beheer opent het laatst gebruikte beheerscherm. */
 const naarWeergave = (code: string): Weergave | null => (code === 'beheer' ? laatsteBeheer : weergaven.includes(code as Weergave) ? (code as Weergave) : null);

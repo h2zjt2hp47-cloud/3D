@@ -33,8 +33,8 @@ export interface Viewer3D {
   licht?(naam: LichtNaam): void;
   /** Snel (lichter voor tablets) of mooi (scherper beeld en schaduwen). */
   kwaliteit?(k: Kwaliteit): void;
-  /** Foto van het huidige beeld in hoge resolutie (PNG als data-URL). */
-  foto?(): string | null;
+  /** Foto van het huidige beeld in hoge resolutie (standaard PNG van ±2400 px; met `breedte`, `type` en `kwaliteit` een eigen formaat). */
+  foto?(o?: { breedte?: number; type?: string; kwaliteit?: number }): string | null;
   /** Het beeld zoals het nu op het scherm staat (tekenen en meteen lezen; met WebGPU kan het canvas niet later gelezen worden). */
   beeld?(type?: string, kwaliteit?: number): string | null;
   /**
@@ -1567,14 +1567,18 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // ---------- camera (eenvoudige orbit) ----------
   let doel = new THREE.Vector3(115, 35, 50);
   let afstand = 420, hoekH = -0.6, hoekV = 0.42;
+  /** Verschuiving van het mikpunt t.o.v. het midden van de zetel (rechtermuisknop, Shift + slepen of twee vingers). */
+  const schuif = new THREE.Vector3();
+  const mik = new THREE.Vector3();
   const plaatsCamera = () => {
     hoekV = Math.min(1.45, Math.max(0.05, hoekV));
+    mik.copy(doel).add(schuif);
     camera.position.set(
-      doel.x + afstand * Math.cos(hoekV) * Math.sin(hoekH),
-      doel.y + afstand * Math.sin(hoekV),
-      doel.z + afstand * Math.cos(hoekV) * Math.cos(hoekH),
+      mik.x + afstand * Math.cos(hoekV) * Math.sin(hoekH),
+      mik.y + afstand * Math.sin(hoekV),
+      mik.z + afstand * Math.cos(hoekV) * Math.cos(hoekH),
     );
-    camera.lookAt(doel);
+    camera.lookAt(mik);
     wandenNaarCamera();
     if (scene.fog) {
       const g = Math.max(kader.b, kader.d, 120);
@@ -1583,13 +1587,70 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     render();
   };
+  // ---------- vloeiende beweging: glijden naar een standpunt, uitloop na het draaien ----------
+  const rustig = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  type Stand = { hoekH: number; hoekV: number; afstand: number; schuif?: any };
+  let vlucht = 0, uitloop = 0, vluchtDoel: Stand | null = null;
+  let snelH = 0, snelV = 0, laatsteBeweging = 0;
+  const zetStand = (s: Stand) => {
+    hoekH = s.hoekH; hoekV = s.hoekV; afstand = s.afstand;
+    if (s.schuif) schuif.copy(s.schuif); else schuif.set(0, 0, 0);
+  };
+  /** Stop een lopende beweging; `naarEinde` zet de camera meteen op het eindpunt (voor een foto of een beeld). */
+  function stopBeweging(naarEinde = false) {
+    cancelAnimationFrame(vlucht); cancelAnimationFrame(uitloop);
+    vlucht = uitloop = 0;
+    if (naarEinde && vluchtDoel) { zetStand(vluchtDoel); plaatsCamera(); }
+    vluchtDoel = null;
+  }
+  /** Glij in ±0,4 s naar een stand (kortste draairichting); zonder animatie als de gebruiker minder beweging vraagt. */
+  function vliegNaar(naar: Stand, ms = 420) {
+    stopBeweging();
+    vluchtDoel = naar;
+    if (!klaar || rustig?.matches || bezigMetFoto || document.hidden) { stopBeweging(true); return; }
+    const van = { hoekH, hoekV, afstand, schuif: schuif.clone() };
+    const eindSchuif = naar.schuif ?? new THREE.Vector3();
+    let dH = (naar.hoekH - van.hoekH) % (2 * PI);
+    if (dH > PI) dH -= 2 * PI; else if (dH < -PI) dH += 2 * PI;
+    const start = performance.now();
+    const stap = (nu: number) => {
+      const t = Math.min(1, (nu - start) / ms);
+      if (t >= 1) { vlucht = 0; zetStand(naar); vluchtDoel = null; plaatsCamera(); return; }
+      const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      hoekH = van.hoekH + dH * e;
+      hoekV = van.hoekV + (naar.hoekV - van.hoekV) * e;
+      afstand = van.afstand + (naar.afstand - van.afstand) * e;
+      schuif.lerpVectors(van.schuif, eindSchuif, e);
+      plaatsCamera();
+      vlucht = requestAnimationFrame(stap);
+    };
+    vlucht = requestAnimationFrame(stap);
+  }
+  /** Het mikpunt verschuiven in het vlak van het scherm, binnen de omgeving van de zetel. */
+  function verschuif(dx: number, dy: number) {
+    const perPx = (2 * afstand * Math.tan((camera.fov * PI) / 360)) / (renderer.domElement.clientHeight || 400);
+    camera.updateMatrixWorld();
+    schuif.addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), -dx * perPx);
+    schuif.addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1), dy * perPx);
+    const max = Math.max(kader.b, kader.d, 120) * 0.9;
+    schuif.x = Math.min(max, Math.max(-max, schuif.x));
+    schuif.z = Math.min(max, Math.max(-max, schuif.z));
+    schuif.y = Math.min(kader.h + 60 - doel.y, Math.max(5 - doel.y, schuif.y));
+    plaatsCamera();
+  }
   let vorige: { x: number; y: number } | null = null;
   const aanwijzers = new Map<number, { x: number; y: number }>();
-  let knijpAfstand = 0;
+  let knijpAfstand = 0, knijpMidden: { x: number; y: number } | null = null;
+  let schuifModus = false;
   let drukStart: { x: number; y: number } | null = null;
+  renderer.domElement.addEventListener('contextmenu', (ev: Event) => ev.preventDefault());
   renderer.domElement.addEventListener('pointerdown', (ev: PointerEvent) => {
     if (bezigMetFoto) return;
     pauzeerDraaien();
+    stopBeweging();
+    snelH = snelV = 0;
+    // Rechter- of middelste muisknop, of Shift + slepen: verschuiven in plaats van draaien.
+    schuifModus = ev.button === 2 || ev.button === 1 || ev.shiftKey;
     drukStart = aanwijzers.size === 0 ? { x: ev.clientX, y: ev.clientY } : null;
     renderer.domElement.setPointerCapture(ev.pointerId);
     aanwijzers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
@@ -1603,27 +1664,58 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       if (knijpAfstand) afstand = Math.min(2500, Math.max(120, afstand * (knijpAfstand / d)));
       knijpAfstand = d;
-      plaatsCamera();
+      // Twee vingers samen verschuiven: het beeld schuift mee.
+      const midden = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      if (knijpMidden) verschuif(midden.x - knijpMidden.x, midden.y - knijpMidden.y); else plaatsCamera();
+      knijpMidden = midden;
       return;
     }
     if (!vorige) return;
-    hoekH -= (ev.clientX - vorige.x) * 0.008;
-    hoekV += (ev.clientY - vorige.y) * 0.006;
+    const dx = ev.clientX - vorige.x, dy = ev.clientY - vorige.y;
     vorige = { x: ev.clientX, y: ev.clientY };
+    if (schuifModus) { verschuif(dx, dy); return; }
+    // Snelheid onthouden (afgevlakt) voor de uitloop na het loslaten.
+    const nu = performance.now(), dt = Math.max(4, nu - laatsteBeweging);
+    snelH = 0.5 * snelH + 0.5 * ((-dx * 0.008) / dt);
+    snelV = 0.5 * snelV + 0.5 * ((dy * 0.006) / dt);
+    laatsteBeweging = nu;
+    hoekH -= dx * 0.008;
+    hoekV += dy * 0.006;
     plaatsCamera();
   });
   const los = (ev: PointerEvent) => {
+    const eenVinger = aanwijzers.size === 1;
     // Klik zonder slepen: het element onder de muis kiezen.
-    if (ev.type === 'pointerup' && drukStart && aanwijzers.size === 1 && Math.hypot(ev.clientX - drukStart.x, ev.clientY - drukStart.y) < 5) kies(ev);
+    const klik = ev.type === 'pointerup' && drukStart && eenVinger && Math.hypot(ev.clientX - drukStart.x, ev.clientY - drukStart.y) < 5;
+    if (klik) kies(ev);
+    // Uitloop: wie met een zwaai loslaat, ziet de zetel nog even doordraaien en zacht stilvallen.
+    else if (ev.type === 'pointerup' && eenVinger && !schuifModus && !rustig?.matches && performance.now() - laatsteBeweging < 90 && Math.hypot(snelH, snelV) > 0.0007) {
+      let vorig = performance.now();
+      const stap = (nu: number) => {
+        const dt = Math.min(40, nu - vorig);
+        vorig = nu;
+        hoekH += snelH * dt; hoekV += snelV * dt;
+        const rem = Math.exp(-dt / 240);
+        snelH *= rem; snelV *= rem;
+        plaatsCamera();
+        uitloop = Math.hypot(snelH, snelV) > 0.00008 ? requestAnimationFrame(stap) : 0;
+      };
+      uitloop = requestAnimationFrame(stap);
+    }
     drukStart = null;
     aanwijzers.delete(ev.pointerId);
     knijpAfstand = 0;
+    knijpMidden = null;
     vorige = null;
   };
   renderer.domElement.addEventListener('pointerup', los);
   const straal = new THREE.Raycaster();
   function kies(ev: PointerEvent) {
     if (!opties.opKlik) return;
+    opties.opKlik(elementBij(ev));
+  }
+  /** Het element onder een punt van het scherm (null = naast de zetel). */
+  function elementBij(ev: { clientX: number; clientY: number }): string | null {
     const r = renderer.domElement.getBoundingClientRect();
     straal.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camera);
     const raak = straal.intersectObjects(groep.children, true).find((h: any) => h.object.name || h.object.parent?.name);
@@ -1631,20 +1723,31 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const echt = raak?.object.parent?.userData?.echt as Echt3DPlaatsing | undefined;
     if (echt) {
       const x = raak.point.x;
-      opties.opKlik((echt.elementen.find((e) => x >= e.x0 && x <= e.x1) ?? echt.elementen[0]!).id);
-      return;
+      return (echt.elementen.find((e) => x >= e.x0 && x <= e.x1) ?? echt.elementen[0]!).id;
     }
     // Zachte vorm: het element met het dichtste deel bij de klik.
     const delen = raak?.object.userData?.delen as { id: string; box: any }[] | undefined;
     if (delen?.length) {
       let beste = delen[0]!, afstand = Infinity;
       for (const d of delen) { const a = d.box.distanceToPoint(raak.point); if (a < afstand) { afstand = a; beste = d; } }
-      opties.opKlik(beste.id);
-      return;
+      return beste.id;
     }
     const naam: string = raak ? raak.object.name || raak.object.parent.name : '';
-    opties.opKlik(naam ? naam.split('.')[0]! : null);
+    return naam ? naam.split('.')[0]! : null;
   }
+  // Dubbelklik op een deel: erop inzoomen; nog eens (of naast de zetel): terug naar de hele zetel.
+  renderer.domElement.addEventListener('dblclick', (ev: MouseEvent) => {
+    if (bezigMetFoto) return;
+    pauzeerDraaien();
+    const geheel = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5) * lensFactor();
+    const id = elementBij(ev);
+    const box = id ? doosVanElement(id) : null;
+    if (!box || box.isEmpty()) { vliegNaar({ hoekH, hoekV, afstand: geheel }); return; }
+    const naar = box.getCenter(new THREE.Vector3()).sub(doel), maat = box.getSize(new THREE.Vector3());
+    const dichtbij = Math.max(120, Math.max(maat.x, maat.y, maat.z) * 2.2) * lensFactor();
+    if (schuif.distanceTo(naar) < 6 && Math.abs(afstand - dichtbij) < 12) vliegNaar({ hoekH, hoekV, afstand: geheel });
+    else vliegNaar({ hoekH, hoekV, afstand: dichtbij, schuif: naar });
+  });
   // Toetsenbord: pijltjes draaien, + en − zoomen, 0 = standaardbeeld.
   renderer.domElement.tabIndex = 0;
   renderer.domElement.setAttribute('role', 'application');
@@ -1662,6 +1765,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     else return;
     ev.preventDefault();
     pauzeerDraaien();
+    stopBeweging();
     plaatsCamera();
   });
   // Automatisch draaien (toonzaal): rustig rond; pauzeert 3 s na bediening.
@@ -1714,19 +1818,24 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     staaf(rechts - 5, k.h, k.z, rechts + 5, k.h, k.z);
     label(`${Math.round(k.h)} cm`, rechts + 4, k.h / 2, k.z);
   }
+  /** Het kader rond alle delen van één element (blokken, stuk van een echt 3D-model, delen van een zachte vorm). */
+  function doosVanElement(id: string) {
+    const box = new THREE.Box3();
+    for (const c of groep.children) {
+      if (c.name.startsWith(`${id}.`)) box.expandByObject(c);
+      // Echt 3D-model: het stuk van dit element.
+      const p = c.userData?.echt as Echt3DPlaatsing | undefined;
+      const e = p?.elementen.find((x) => x.id === id);
+      if (p && e) box.union(new THREE.Box3(new THREE.Vector3(e.x0, 0, p.z), new THREE.Vector3(e.x1, p.h, p.z + p.d)));
+      // Zachte vorm: de delen van dit element.
+      for (const d of (c.userData?.delen ?? []) as { id: string; box: any }[]) if (d.id === id) box.union(d.box);
+    }
+    return box;
+  }
   function zetMarkering() {
     if (markeerKader) { scene.remove(markeerKader); markeerKader.geometry?.dispose(); markeerKader = null; }
     if (!markeerId) return;
-    const box = new THREE.Box3();
-    for (const c of groep.children) {
-      if (c.name.startsWith(`${markeerId}.`)) box.expandByObject(c);
-      // Echt 3D-model: het stuk van dit element.
-      const p = c.userData?.echt as Echt3DPlaatsing | undefined;
-      const e = p?.elementen.find((x) => x.id === markeerId);
-      if (p && e) box.union(new THREE.Box3(new THREE.Vector3(e.x0, 0, p.z), new THREE.Vector3(e.x1, p.h, p.z + p.d)));
-      // Zachte vorm: de delen van dit element.
-      for (const d of (c.userData?.delen ?? []) as { id: string; box: any }[]) if (d.id === markeerId) box.union(d.box);
-    }
+    const box = doosVanElement(markeerId);
     if (box.isEmpty()) return;
     box.expandByScalar(1.5);
     markeerKader = new THREE.Box3Helper(box, new THREE.Color('#3f5a52'));
@@ -1745,6 +1854,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       return;
     }
     ev.preventDefault();
+    stopBeweging();
     afstand = Math.min(2500, Math.max(120, afstand * (1 + Math.sign(ev.deltaY) * 0.1)));
     plaatsCamera();
   }, { passive: false });
@@ -2143,7 +2253,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const grootte = Math.max(kader.b, kader.d, 120);
       zetZon();
       vul.position.set(doel.x + grootte, grootte * 0.6, doel.z - grootte);
-      if (veranderd) afstand = Math.max(200, grootte * 1.5);
+      // Andere zetel of andere maat: terug naar het geheel (een lopende beweging of verschuiving zou ernaast mikken).
+      if (veranderd) { stopBeweging(); schuif.set(0, 0, 0); afstand = Math.max(200, grootte * 1.5); }
       if (decorNaam !== 'studio' || !scene.fog) zetDecor(s);
       plaatsCamera();
     },
@@ -2169,15 +2280,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       schaduwOpnieuw();
       viewer.formaat();
     },
-    foto() {
-      // Even renderen op hoge resolutie (3× of minstens 2400 px breed), beeld nemen, terugzetten.
+    foto(o = {}) {
+      // Even renderen op hoge resolutie (3× of minstens 2400 px breed, of de gevraagde breedte), beeld nemen, terugzetten.
       try {
+        stopBeweging(true);
         const oud = renderer.getPixelRatio();
         const b = houder.clientWidth || 600;
-        renderer.setPixelRatio(Math.min(Math.max(3, 2400 / b), maxBreedte() / b));
+        renderer.setPixelRatio(Math.min(o.breedte ? o.breedte / b : Math.max(3, 2400 / b), maxBreedte() / b));
         viewer.formaat();
         render(true);
-        const url = renderer.domElement.toDataURL('image/png');
+        const url = renderer.domElement.toDataURL(o.type ?? 'image/png', o.kwaliteit);
         renderer.setPixelRatio(oud);
         viewer.formaat();
         return url;
@@ -2188,6 +2300,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     async fotoRealistisch({ stappen, breedte = 1800, opVoortgang, signaal, opMethode }) {
       const oudMist = scene.fog, oudContact = contact.visible, oudIntensiteit = scene.environmentIntensity;
       const oudMaten = matenGroep.visible, oudKader = markeerKader?.visible;
+      stopBeweging(true);
       bezigMetFoto = true;
       let glRenderer: any = null, pt: any = null;
       try {
@@ -2255,6 +2368,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     },
     beeld(type = 'image/png', kwaliteit = 0.92) {
       try {
+        stopBeweging(true);
         render(true);
         return renderer.domElement.toDataURL(type, kwaliteit);
       } catch {
@@ -2262,15 +2376,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       }
     },
     standpunt(naam) {
-      if (naam === 'voor') { hoekH = 0; hoekV = 0.12; }
-      if (naam === 'boven') { hoekH = 0; hoekV = 1.45; }
-      if (naam === 'zij') { hoekH = Math.PI / 2; hoekV = 0.15; }
-      if (naam === 'schuin') { hoekH = -0.6; hoekV = 0.42; }
-      if (naam === 'achter') { hoekH = Math.PI + 0.5; hoekV = 0.3; }
-      afstand = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5) * lensFactor();
+      const naar: Stand = { hoekH, hoekV, afstand: Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5) * lensFactor() };
+      if (naam === 'voor') { naar.hoekH = 0; naar.hoekV = 0.12; }
+      if (naam === 'boven') { naar.hoekH = 0; naar.hoekV = 1.45; }
+      if (naam === 'zij') { naar.hoekH = Math.PI / 2; naar.hoekV = 0.15; }
+      if (naam === 'schuin') { naar.hoekH = -0.6; naar.hoekV = 0.42; }
+      if (naam === 'achter') { naar.hoekH = Math.PI + 0.5; naar.hoekV = 0.3; }
       // Ooghoogte: recht van voren, zoals een staande klant (camera op 155 cm), iets dichterbij.
-      if (naam === 'ooghoogte') { hoekH = -0.25; afstand *= 0.85; hoekV = Math.asin(Math.max(-0.2, Math.min(0.95, (155 - doel.y) / afstand))); }
-      plaatsCamera();
+      if (naam === 'ooghoogte') { naar.hoekH = -0.25; naar.afstand *= 0.85; naar.hoekV = Math.asin(Math.max(-0.2, Math.min(0.95, (155 - doel.y) / naar.afstand))); }
+      // Glijdend naar het standpunt (en terug naar het midden als het beeld verschoven was).
+      vliegNaar(naar);
     },
     instellen(w) {
       // Alleen opnieuw opbouwen wat veranderd is: een schuifregelaar mag het decor niet bij elke stap herbouwen.
