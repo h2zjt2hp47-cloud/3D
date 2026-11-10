@@ -1,6 +1,8 @@
 # Missing Link uitbreiden met een unieke module — analyse
 
-*Versie 1 — 10 november 2026*
+*Versie 2 — 10 november 2026*
+
+> **Beslist door Jonas op 10/11/2026:** Missing Link richt zich op **beide** doelgroepen (bouw en installatie, en maakbedrijven). De **eerste opstart is de meubelmaker met de zetelconfigurator**. De volgorde in §7.2 is daaraan aangepast: eerst *Product*, daarna *Werf*.
 
 Vraag: met welke module kan Missing Link zich onderscheiden van de andere pakketten voor KMO's? Dit document vergelijkt zeven kandidaten en doet een voorstel. Het bouwt voort op [`configurator-analyse-en-stappenplan.md`](configurator-analyse-en-stappenplan.md) (de configurator zelf) en [`analyse-bouw-woning-demo.md`](analyse-bouw-woning-demo.md) (de bouwdemo).
 
@@ -22,7 +24,7 @@ Vraag: met welke module kan Missing Link zich onderscheiden van de andere pakket
 3. **Dat is precies wat hier al als demo staat.** De zetelconfigurator en de bouwdemo (plattegrond, ramen, gevels, offerte, werf met inmeting en meerwerkbon) werken, met 249 tests **[eigen werk]**. Wat ontbreekt, is de server en de koppeling met Missing Link.
 4. **AI is de versneller, niet de module.** Missing Link heeft al een koppeling waarmee een AI-assistent offertes, projecten en facturen leest en schrijft **[Missing Link]**. Bij de Belgische KMO-pakketten vond ik dat nergens als officieel onderdeel **[zoekresultaat]**. Die voorsprong is tijdelijk: Teamleader, Vertuoza en Odoo brachten in 2026 elk een eigen AI-assistent uit. Gebruik AI dus om de unieke module sneller in te richten en te bedienen, niet als verkoopargument op zich.
 5. **De vragen online wijzen dezelfde kant uit.** De scherpste vragen gaan over prijzen uit maten (breedte × hoogte, tot in de productie) en over opmeten en meerwerk; voor een dealerportaal vond ik geen enkele vraag (§4.6) **[zoekresultaat]**.
-6. **Voorstel:** één module **"Tekenen tot factuur"** (werknaam), in twee smaken op dezelfde motor: *Product* (meubels, later ramen en deuren, carrosserie) en *Werf* (plattegrond, ramenlijst, inmeting, meerwerkbon). Begin met wat het breedst inzetbaar is en het minst productkennis per klant vraagt: **de werfketting** (§7).
+6. **Voorstel:** één module **"Tekenen tot factuur"** (werknaam), in twee smaken op dezelfde motor: *Product* (meubels, later ramen en deuren, carrosserie) en *Werf* (plattegrond, ramenlijst, inmeting, meerwerkbon). **Beslist:** beide smaken komen er; de eerste opstart is de meubelmaker met de zetelconfigurator (§7).
 
 ---
 
@@ -269,15 +271,18 @@ AI loopt door beide: lijsten inlezen bij de inrichting (D) en de assistent voor 
 
 Dit past bij de beslissing van 31/10: het blijft een aparte app die met Missing Link koppelt en ook los verkocht kan worden. Voor een klant van Missing Link voelt het als een module.
 
-### 7.2 Volgorde
+### 7.2 Volgorde (aangepast na de beslissing van 10/11)
 
-| Stap | Wat | Waarom eerst |
+| Stap | Wat | Waarom in deze volgorde |
 |---|---|---|
-| 1 | **Server en koppeling met Missing Link**: projecten bewaren, offerte wegschrijven als offerteregels (fase 3 uit het stappenplan). Eerst de betekenis van `keuzegroep`, `optie_sleutel`, `vereist_sleutel` en `berekening` bevestigen (actiepunt 0.3). | Zonder dit blijft alles een demo in de browser. Nodig voor elke smaak. |
-| 2 | **Werf, smal:** ramenlijst → offerte → inmeting → meerwerkbon, gekoppeld aan project, order en factuur. De plattegrond en de gevels blijven beschikbaar maar zijn geen voorwaarde. | Breed inzetbaar, weinig inrichting per klant, sluit aan op bestaande onderdelen. |
-| 3 | **Product, met één pilootklant:** de zetelconfigurator met echte gegevens (fase 0.2: prijslijst, stofgroepen, toegelaten opties). | Het zichtbaarste verkoopargument; één echte klant is het bewijs. |
-| 4 | **AI leest lijsten:** prijslijst van een leverancier → artikels en prijstabellen, met controlescherm. | Maakt stap 3 herhaalbaar voor de tweede en derde klant. |
-| 5 | **Portaal:** klant tekent offerte en meerwerk online; daarna dealers. | Bouwt op 2 en 3; alleen zinvol als die lopen. |
+| 1 | **Echte gegevens van de meubelmaker** (fase 0.2): prijslijst per model, maat en stofgroep, stofverbruik, toegelaten opties per model, levertermijnen. Sjabloon: [`fase0-productkennis-meubels.md`](fase0-productkennis-meubels.md). | Zonder echte prijzen en regels blijft het een demo. Dit hangt af van de klant, dus eerst opstarten. |
+| 2 | **Server en koppeling met Missing Link**: ontwerpen en stoffen gedeeld bewaren, klant kiezen, offerte wegschrijven als offerteregels met tekening en 3D-beeld (fase 3 uit het stappenplan). Eerst de betekenis van `keuzegroep`, `optie_sleutel`, `vereist_sleutel` en `berekening` bevestigen (actiepunt 0.3). | Nodig voor elke smaak; kan tegelijk met stap 1 lopen. |
+| 3 | **Product in gebruik bij de meubelmaker:** de zetelconfigurator met de echte gegevens, opties beperkt per model, offerte-PDF, daarna order in Missing Link. | De eerste echte klant is het bewijs en het zichtbaarste verkoopargument. |
+| 4 | **Werf, smal:** ramenlijst → offerte → inmeting → meerwerkbon, gekoppeld aan project, order en factuur. De plattegrond en de gevels blijven beschikbaar maar zijn geen voorwaarde. | De server en de koppeling uit stap 2 worden hergebruikt; breed inzetbaar bij bouw en installatie. |
+| 5 | **AI leest lijsten:** prijslijst van een leverancier → artikels en prijstabellen, met controlescherm. | Maakt *Product* herhaalbaar voor de tweede en derde klant. Een eerste proef kan al in stap 1, met de prijslijst van de meubelmaker. |
+| 6 | **Portaal:** klant tekent offerte en meerwerk online; daarna dealers en interieurinrichters. | Bouwt op 3 en 4; alleen zinvol als die lopen. |
+
+**Gevolg van "meubelmaker eerst":** de scoretabel in §6 zette de werfketting net voor, omdat de configurator per klant het meeste inrichting vraagt. Dat nadeel blijft. Hou het klein door bij de eerste klant met één productfamilie te beginnen (sofa's), en de inrichting meteen als sjabloon voor een volgende meubelmaker op te zetten.
 
 In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing Link zelf, niet bij deze module. Wel te plannen vóór april 2027.
 
@@ -294,14 +299,14 @@ In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing
 | De inrichting per klant slorpt alle tijd op (A) | Sjablonen per sector, AI leest lijsten (D), en per klant beginnen met één productfamilie |
 | Een concurrent bouwt inmeting en meerwerk na (B) | Snelheid, en de koppeling met tekening en configurator, die ze niet hebben |
 | De AI-voorsprong verdwijnt (C) | Niet als hoofdargument verkopen |
-| Te breed beginnen | Stap 2 en 3 elk met één echte klant, pas daarna verbreden |
+| Te breed beginnen | *Product* en *Werf* elk met één echte klant, pas daarna verbreden |
 | Marktgegevens kloppen niet | Alles in §4 is zoekresultaat: nakijken vóór gebruik in verkoop |
 
 ---
 
 ## 8. Open vragen voor Jonas
 
-1. **Voor wie is Missing Link eerst bedoeld?** Bouw en installatie (dan weegt *Werf* het zwaarst) of maakbedrijven (dan *Product*)? De scores in §6 hangen daarvan af.
+1. ~~Voor wie is Missing Link eerst bedoeld?~~ **Beide; eerste opstart is de meubelmaker met de zetelconfigurator** (beslist 10/11).
 2. **Meerwerk:** herken je bij je klanten dat meerwerk vaak niet of te laat gefactureerd wordt? Online vond ik wel discussies (§4.6), maar geen cijfers, en in België vooral van de kant van de klant.
 3. **Machines (G):** is machinehandel en -verhuur een bewuste doelgroep? Dan verdient die een eigen onderzoek.
 4. **Koppeling met raamsoftware:** wil je die in Missing Link? Voor ramenplaatsers is het een voorwaarde naast de eigen configurator (zie [`onderzoek-raamsoftware.md`](onderzoek-raamsoftware.md)).

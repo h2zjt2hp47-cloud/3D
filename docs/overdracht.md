@@ -5,7 +5,7 @@
 | Onderdeel | Status |
 |---|---|
 | Analyse en stappenplan | `docs/configurator-analyse-en-stappenplan.md` (incl. beslissingen en voortgangstabel) |
-| **Unieke module voor Missing Link (10/11)** | `docs/analyse-unieke-module-missing-link.md`: zeven kandidaten vergeleken (configurator, werfketting, AI-assistent, AI leest lijsten, portaal, wettelijke aanleidingen, machines). Voorstel: één module "Tekenen tot factuur" in twee smaken (*Werf* en *Product*) op dezelfde motor, met AI als versneller; eerst de server en de koppeling. Marktgegevens zijn zoekresultaten, nog na te kijken. Vijf open vragen voor Jonas in hoofdstuk 8. |
+| **Unieke module voor Missing Link (10/11)** | `docs/analyse-unieke-module-missing-link.md`: zeven kandidaten vergeleken (configurator, werfketting, AI-assistent, AI leest lijsten, portaal, wettelijke aanleidingen, machines). Voorstel: één module "Tekenen tot factuur" in twee smaken (*Werf* en *Product*) op dezelfde motor, met AI als versneller; concrete vragen van gebruikers online in §4.6. **Beslist door Jonas (10/11): beide doelgroepen, eerste opstart is de meubelmaker met de zetelconfigurator**; daarna de werfketting. Marktgegevens zijn zoekresultaten, nog na te kijken. Open vragen in hoofdstuk 8. |
 | Onderzoek zetelconfigurators | `docs/onderzoek-zetelconfigurators.md` |
 | Fase 0-sjabloon (productkennis klant) | `docs/fase0-productkennis-meubels.md`, nog in te vullen met de klant |
 | Motor (`packages/core`) | Klaar voor demo: formules, regels, prijstabellen, korting, stuklijst, materialen, vrij ontwerp met opties, vormgeving (ontwerpmodus), vooraanzicht, 3D-opbouw, collectie van 42 modellen, opzet-elementen, catalogus-controle, vrije hoogtes. Daarnaast voor de bouw: raam/deur-model, plattegrond (`plattegrond.ts`, `plattegrondsvg.ts`), gevels en gevelmaterialen (`gevels.ts`), offerte met posities (`offerte.ts`) en de maatlijstlezer (`voorbeelden/maatlijst.ts`). Echte 3D-modellen als proef (`echt3d.ts`), zachte vormen (`zachtevorm.ts`) en de doorlopende opbouw (`doorlopend.ts`), zie hieronder. **249 tests groen.** |
@@ -67,6 +67,8 @@
    - Keuzes voor de hele zetel die eenmalig tellen (vaste zitting −3 %, poothoogte), alleen op de elementen waarvoor ze gelden.
    - Vormgeving (houten frame, extra zitkussens, rugvorm en -dikte) alleen aanrekenen waar de 3D ze toont.
    - Korting altijd tussen 0 en 100 %. Onder de kostprijs: een waarschuwing alleen voor de verkoper, geen blokkering.
+
+6. **Unieke module voor Missing Link (10/11):** "Tekenen tot factuur" in twee smaken, *Product* en *Werf*. Missing Link richt zich op beide doelgroepen; **de eerste opstart is de meubelmaker met de zetelconfigurator**, daarna de werfketting (`docs/analyse-unieke-module-missing-link.md` §7.2).
 
 ## Collectie van de klant (website gelezen op 31/10)
 De website (www.corneille-silence.be) toont per model alleen **naam + foto**: geen maten, opties of prijzen. Alle 42 modellen staan in `packages/core/voorbeelden/modellen.ts` als **benadering op basis van de foto**:
