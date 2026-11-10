@@ -5,6 +5,7 @@
 | Onderdeel | Status |
 |---|---|
 | Analyse en stappenplan | `docs/configurator-analyse-en-stappenplan.md` (incl. beslissingen en voortgangstabel) |
+| **Unieke module voor Missing Link (10/11)** | `docs/analyse-unieke-module-missing-link.md`: zeven kandidaten vergeleken (configurator, werfketting, AI-assistent, AI leest lijsten, portaal, wettelijke aanleidingen, machines). Voorstel: één module "Tekenen tot factuur" in twee smaken (*Werf* en *Product*) op dezelfde motor, met AI als versneller; eerst de server en de koppeling. Marktgegevens zijn zoekresultaten, nog na te kijken. Vijf open vragen voor Jonas in hoofdstuk 8. |
 | Onderzoek zetelconfigurators | `docs/onderzoek-zetelconfigurators.md` |
 | Fase 0-sjabloon (productkennis klant) | `docs/fase0-productkennis-meubels.md`, nog in te vullen met de klant |
 | Motor (`packages/core`) | Klaar voor demo: formules, regels, prijstabellen, korting, stuklijst, materialen, vrij ontwerp met opties, vormgeving (ontwerpmodus), vooraanzicht, 3D-opbouw, collectie van 42 modellen, opzet-elementen, catalogus-controle, vrije hoogtes. Daarnaast voor de bouw: raam/deur-model, plattegrond (`plattegrond.ts`, `plattegrondsvg.ts`), gevels en gevelmaterialen (`gevels.ts`), offerte met posities (`offerte.ts`) en de maatlijstlezer (`voorbeelden/maatlijst.ts`). Echte 3D-modellen als proef (`echt3d.ts`), zachte vormen (`zachtevorm.ts`) en de doorlopende opbouw (`doorlopend.ts`), zie hieronder. **249 tests groen.** |
