@@ -23,6 +23,7 @@ NOTITIES = {
     'docs/overdracht.md': ('Overdracht en stand van zaken', ['configurator', 'status'], 'alle'),
     'docs/configurator-analyse-en-stappenplan.md': ('Analyse en stappenplan', ['configurator', 'analyse', 'stappenplan'], 'alle'),
     'docs/analyse-unieke-module-missing-link.md': ('Analyse - unieke module voor Missing Link', ['configurator', 'missing-link', 'analyse', 'strategie'], 'alle'),
+    'docs/analyse-machines-missing-link.md': ('Analyse - machinehandel en -verhuur (Missing Link)', ['missing-link', 'machines', 'analyse', 'strategie'], 'alle'),
     'README.md': ('Technische opbouw (README)', ['configurator', 'techniek'], 'alle'),
     'docs/onderzoek-zetelconfigurators.md': ('Onderzoek zetelconfigurators', ['configurator', 'zetels', 'onderzoek'], ZETELS),
     'docs/fase0-productkennis-meubels.md': ('Fase 0 - productkennis meubels', ['configurator', 'zetels', 'klant', 'sjabloon'], ZETELS),

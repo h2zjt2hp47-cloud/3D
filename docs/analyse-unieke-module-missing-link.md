@@ -232,7 +232,7 @@ Gezocht op forums van pakketten (Odoo, Epicor, ERPNext, Jobber), vakforums (WOOD
 - **Wat:** uitbouwen wat er al in zit (inruil, huur, tweedehands onderdelen, machinetypes) naar onderhoudscontracten en servicehistoriek per machine.
 - **Sterk:** staat deels al in het pakket **[Missing Link]**; de bouw- en installatiepakketten doen dit niet **[inschatting]**.
 - **Zwak:** kleinere doelgroep dan bouw; ik heb deze markt nog niet onderzocht.
-- **Beslist (10/11): machinehandel en -verhuur is een bewuste doelgroep.** De score in §6 (15) is dus te laag: ze ging uit van een toevallige nevenfunctie. Nog te doen, als eigen onderzoek:
+- **Beslist (10/11): machinehandel en -verhuur is een bewuste doelgroep.** Het eigen onderzoek staat in [`analyse-machines-missing-link.md`](analyse-machines-missing-link.md): voorstel is een *Machinedossier* (keuringen volgens de Belgische regels, onderhoud op draaiuren, attesten), daarna een machineconfigurator. De score in §6 is daarop herzien (van 15 naar 21). De vragen van toen:
   - wat Missing Link hier al kan (machines, machinetypes en contracten zijn via de AI-koppeling nog niet te lezen, dus dat moet uit het pakket zelf of van Jonas komen);
   - wat de pakketten voor machinehandel en verhuur aanbieden en waar ze tekortschieten;
   - of de configurator hier past: een machine met opties samenstellen (machinetype + onderdelen) is hetzelfde principe als een zetel met opties.
@@ -251,7 +251,7 @@ Score van 1 (zwak) tot 5 (sterk). De scores zijn mijn inschatting; pas ze aan me
 | D. AI leest lijsten | 4 | 4 | 2 | 3 | 2 | 4 | 19 |
 | E. Portaal klant/dealer | 3 | 3 | 3 | 2 | 1 | 3 | 15 |
 | F. Wettelijke aanleiding | 1 | 4 | 2 | 1 | 2 | 4 | 14 |
-| G. Machines | 3 | 1 | 2 | 3 | 3 | 3 | 15 |
+| G. Machines (herzien 10/11: Machinedossier met Belgische keuringen) | 5 | 2 | 3 | 3 | 4 | 4 | 21 |
 
 **Wat de tabel zegt:**
 
@@ -326,7 +326,7 @@ In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing
 
 1. ~~Voor wie is Missing Link eerst bedoeld?~~ **Beide; eerste opstart is de meubelmaker met de zetelconfigurator** (beslist 10/11).
 2. ~~Herken je dat meerwerk een probleem is?~~ **Ja: Jonas bevestigt uit de praktijk dat meerwerk een moeilijk gegeven is** (10/11). Waar het misloopt: **het meerwerk wordt vergeten op de factuur** (Jonas, 10/11). Zie §7.2 voor wat dat betekent voor de meerwerkbon.
-3. ~~Is machinehandel en -verhuur een bewuste doelgroep?~~ **Ja, bewuste doelgroep** (Jonas, 10/11). Volgende stap: een eigen onderzoek voor deze doelgroep (zie kandidaat G in §5).
+3. ~~Is machinehandel en -verhuur een bewuste doelgroep?~~ **Ja, bewuste doelgroep** (Jonas, 10/11). Uitgewerkt in [`analyse-machines-missing-link.md`](analyse-machines-missing-link.md).
 4. **Koppeling met raamsoftware:** wil je die in Missing Link? Voor ramenplaatsers is het een voorwaarde naast de eigen configurator (zie [`onderzoek-raamsoftware.md`](onderzoek-raamsoftware.md)).
 5. **Actiepunt 0.3** staat nog open: de betekenis van de offerteregelvelden bevestigen.
 

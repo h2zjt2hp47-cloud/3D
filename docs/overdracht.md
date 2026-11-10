@@ -68,7 +68,7 @@
    - Vormgeving (houten frame, extra zitkussens, rugvorm en -dikte) alleen aanrekenen waar de 3D ze toont.
    - Korting altijd tussen 0 en 100 %. Onder de kostprijs: een waarschuwing alleen voor de verkoper, geen blokkering.
 
-6. **Unieke module voor Missing Link (10/11):** "Tekenen tot factuur" in twee smaken, *Product* en *Werf*. Missing Link richt zich op beide doelgroepen; **de eerste opstart is de meubelmaker met de zetelconfigurator**, daarna de werfketting (`docs/analyse-unieke-module-missing-link.md` §7.2). Meerwerk is door Jonas bevestigd als pijnpunt; **machinehandel en -verhuur is een bewuste doelgroep** (eigen onderzoek nog te doen).
+6. **Unieke module voor Missing Link (10/11):** "Tekenen tot factuur" in twee smaken, *Product* en *Werf*. Missing Link richt zich op beide doelgroepen; **de eerste opstart is de meubelmaker met de zetelconfigurator**, daarna de werfketting (`docs/analyse-unieke-module-missing-link.md` §7.2). Meerwerk is door Jonas bevestigd als pijnpunt; **machinehandel en -verhuur is een bewuste doelgroep**: `docs/analyse-machines-missing-link.md` (voorstel: *Machinedossier* met keuringen volgens de Belgische regels en onderhoud op draaiuren, daarna een machineconfigurator; nog niet bekend welk soort machines eerst).
 
 ## Collectie van de klant (website gelezen op 31/10)
 De website (www.corneille-silence.be) toont per model alleen **naam + foto**: geen maten, opties of prijzen. Alle 42 modellen staan in `packages/core/voorbeelden/modellen.ts` als **benadering op basis van de foto**:
