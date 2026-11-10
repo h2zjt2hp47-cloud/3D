@@ -21,7 +21,8 @@ Vraag: met welke module kan Missing Link zich onderscheiden van de andere pakket
 2. **De witte vlek is "visueel verkopen".** Een pakket waarin de verkoper het product of de woning *tekent*, de prijs meteen ziet, de offerte met tekening en 3D-beeld krijgt en waar inmeting en meerwerk op de werf in dezelfde ketting zitten, vond ik bij geen enkel KMO-pakket. In de maakindustrie bestaat het alleen als duur apart pakket (Merkato bij Ridder iQ, Elfsquad, Hive) **[zoekresultaat]**.
 3. **Dat is precies wat hier al als demo staat.** De zetelconfigurator en de bouwdemo (plattegrond, ramen, gevels, offerte, werf met inmeting en meerwerkbon) werken, met 249 tests **[eigen werk]**. Wat ontbreekt, is de server en de koppeling met Missing Link.
 4. **AI is de versneller, niet de module.** Missing Link heeft al een koppeling waarmee een AI-assistent offertes, projecten en facturen leest en schrijft **[Missing Link]**. Bij de Belgische KMO-pakketten vond ik dat nergens als officieel onderdeel **[zoekresultaat]**. Die voorsprong is tijdelijk: Teamleader, Vertuoza en Odoo brachten in 2026 elk een eigen AI-assistent uit. Gebruik AI dus om de unieke module sneller in te richten en te bedienen, niet als verkoopargument op zich.
-5. **Voorstel:** één module **"Tekenen tot factuur"** (werknaam), in twee smaken op dezelfde motor: *Product* (meubels, later ramen en deuren, carrosserie) en *Werf* (plattegrond, ramenlijst, inmeting, meerwerkbon). Begin met wat het breedst inzetbaar is en het minst productkennis per klant vraagt: **de werfketting** (§7).
+5. **De vragen online wijzen dezelfde kant uit.** De scherpste vragen gaan over prijzen uit maten (breedte × hoogte, tot in de productie) en over opmeten en meerwerk; voor een dealerportaal vond ik geen enkele vraag (§4.6) **[zoekresultaat]**.
+6. **Voorstel:** één module **"Tekenen tot factuur"** (werknaam), in twee smaken op dezelfde motor: *Product* (meubels, later ramen en deuren, carrosserie) en *Werf* (plattegrond, ramenlijst, inmeting, meerwerkbon). Begin met wat het breedst inzetbaar is en het minst productkennis per klant vraagt: **de werfketting** (§7).
 
 ---
 
@@ -130,7 +131,55 @@ CRM, offertes, facturen via Peppol (verplicht sinds 1/1/2026), projecten, planni
 - Faalkosten in de Nederlandse bouw: gemiddeld 5 % van de omzet, door slechte voorbereiding en communicatie (ABN AMRO, 2019). Belgische cijfers niet gevonden.
 - Vlaamse bouw: ± 17.000 vacatures; werfleider en calculator zijn knelpuntberoepen (Embuild, VDAB). Wie een offerte sneller en met minder kennis kan maken, lost dus een personeelsprobleem op.
 - Vier op de tien bouwbedrijven werken nog op papier; 41 % verdeelt de administratie over meerdere pakketten (Exact KMO Barometer 2025).
-- **Niet gevonden:** cijfers over doorlooptijd van offertes of niet-gefactureerd meerwerk. Dat meerwerk een groot lek is, blijft een **[inschatting]** tot je het bij eigen klanten navraagt.
+- **Niet gevonden:** cijfers over doorlooptijd van offertes of niet-gefactureerd meerwerk. Er zijn wel concrete vragen en discussies (§4.6), maar hoe groot het lek is, blijft een **[inschatting]** tot je het bij eigen klanten navraagt.
+
+### 4.6 Concrete vragen die bedrijven online stellen [zoekresultaat]
+
+Gezocht op forums van pakketten (Odoo, Epicor, ERPNext, Jobber), vakforums (WOODWEB, Bouwinfo, juridischforum.be) en reviewsites. De pagina's konden niet geopend worden: een **titel** is de letterlijke titel van de draad, een **citaat** is de tekst zoals de zoekmachine ze toonde. Reddit, Facebook, LinkedIn en de wensenlijsten van Teamleader en Robaws waren niet bereikbaar.
+
+**Maatwerk prijzen en configureren (kandidaat A): de meeste en scherpste vragen**
+
+| Vraag (titel van de draad) | Waar |
+|---|---|
+| "Calculate area on quotation/sales order line and use it for pricing and MRP" (van een fabrikant van pvc-ramen en -deuren) | [Odoo-forum](https://www.odoo.com/forum/help-1/calculate-area-on-quotationsales-order-line-and-use-it-for-pricing-and-mrp-288511) |
+| "How to integrate products with customer individual length and width into ordering, procurement, production, stock management" | [Odoo-forum](https://www.odoo.com/forum/help-1/how-to-integrate-products-with-customer-individual-length-and-width-into-ordering-procurement-production-stock-management-288356) |
+| "Set price based off custom product measurements" | [Odoo-forum](https://www.odoo.com/forum/help-1/set-price-based-off-custom-product-measurements-259936) |
+| "Variants with custom manual input of measures (cm/inches) of width and length" | [Odoo-forum](https://www.odoo.com/forum/help-1/variants-with-custom-manual-input-of-measures-cminches-of-width-and-length-250739) |
+| "How to configure customizable BoMs in Odoo" | [Odoo-forum](https://www.odoo.com/nl_NL/forum/help-1/how-to-configure-customizable-boms-in-odoo-247458) |
+| "Pricing Cabinets???", "Bidding Program/spreadsheet" (schrijnwerkers, oudere draden) | [WOODWEB](https://woodweb.com/knowledge_base/Pricing_Cabinets__763359.html) |
+
+**Opmeten en meerwerk (kandidaat B): even scherp**
+
+| Vraag | Waar |
+|---|---|
+| Citaat: "I work in the PVC/uPVC window & door business. Usually, we take measurements on-site and then go back to the office to calculate everything manually." | [Reddit, via een kopie, april 2026](https://reddit.sentinel-team.org/posts/1szqz25/snapshots/2026-04-30T18%3A28%3A31.52385Z) |
+| "Creating projects for windows and doors?" | [Forum Reekon (meettoestellen)](https://forum.reekon.tools/t/creating-projects-for-windows-and-doors/1992) |
+| "Meerkosten terecht?" | [Bouwinfo (België)](https://www.bouwinfo.be/bouwforum/threads/meerkosten-terecht.417053/) |
+| "Verschil in opmeting m² voor factuur" | [Bouwinfo](https://www.bouwinfo.be/bouwforum/threads/verschil-in-opmeting-m%C2%B2-voor-factuur.417345/) |
+| "Factuur stuk duurder dan offerte", "25% verschil tussen factuur en offerte" (kant van de klant) | [juridischforum.be](https://juridischforum.be/viewtopic.php?p=769135) · [tweede draad](https://juridischforum.be/viewtopic.php?p=391275) |
+| Citaat: "The GC told us to get them coming and now doesn't want to pay for them. No change order was signed." (VS, kant van de aannemer) | [Levelset](https://www.levelset.com/payment-help/question/construction-disputed) |
+
+**AI en prijslijsten (kandidaten C en D): echte vragen, maar alleen uit het buitenland**
+
+| Vraag | Waar |
+|---|---|
+| "GPT Actions - Zapier - Jobber": een gebruiker wil dat zijn eigen AI-assistent de offerte rechtstreeks in het pakket opbouwt | [Jobber-community](https://community.getjobber.com/discussions/operations-forum/gpt-actions---zapier---jobber/952/replies/996) |
+| "Challenges getting accurate & competitive quotes — anyone else?": een aannemer gebruikt ChatGPT voor offertes omdat bijna elke job maatwerk is | [Jobber-community](https://community.getjobber.com/discussions/quoting/challenges-getting-accurate--competitive-quotes-%E2%80%94-anyone-else/13386/replies/15009) |
+| "Managing prices for 2000+ Items based on frequent price data imports" | [ERPNext-forum](https://discuss.frappe.io/t/managing-prices-for-2000-items-based-on-frequent-price-data-imports/141726) |
+| "Is there a way to upload a price list from a csv or Excel file, including multiple price breaks for each part?" | [Epicor-forum](https://epiusers.help/t/upload-price-list-w-price-breaks/114337) |
+
+**Weinig of niets gevonden**
+
+- **Portaal (E):** alleen vragen over het online laten tekenen van een offerte in Odoo. Geen enkele vraag van een dealer die zelf wil configureren; wel veel aanbod van leveranciers.
+- **Verplichtingen (F):** geen forumvragen, wel vragenlijsten van sociale secretariaten ([Partena: "Tijdregistratie in 2027: 9 vragen en antwoorden"](https://www.partena-professional.be/nl/node/22663)).
+- **Klachten over Robaws en Bouwsoft:** niets onafhankelijks gevonden. Over Teamleader: "the crm-package is not very customisable" ([Capterra](https://www.capterra.com/p/153190/Teamleader/reviews/)).
+
+**Wat dit zegt:**
+
+- De vraag "hoe reken ik een prijs uit breedte × hoogte en krijg ik dat tot in de productie" komt steeds terug en blijft in een algemeen pakket onopgelost. Dat steunt kandidaat A, ook uitdrukkelijk bij raamfabrikanten.
+- Opmeten op de werf en daarna op kantoor alles met de hand uitrekenen, en discussies over meerwerk dat niet getekend werd, steunen kandidaat B. In België vond ik vooral de kant van de klant ("factuur hoger dan offerte"); de kant van de aannemer alleen uit de VS.
+- Voor het dealerportaal vond ik geen vraag. Dat bevestigt dat E geen start is.
+- Dit zijn voorbeelden, geen telling: ze tonen dat de vraag bestaat, niet hoe groot ze is.
 
 ---
 
@@ -253,7 +302,7 @@ In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing
 ## 8. Open vragen voor Jonas
 
 1. **Voor wie is Missing Link eerst bedoeld?** Bouw en installatie (dan weegt *Werf* het zwaarst) of maakbedrijven (dan *Product*)? De scores in §6 hangen daarvan af.
-2. **Meerwerk:** herken je bij je klanten dat meerwerk vaak niet of te laat gefactureerd wordt? Ik vond er geen cijfers over.
+2. **Meerwerk:** herken je bij je klanten dat meerwerk vaak niet of te laat gefactureerd wordt? Online vond ik wel discussies (§4.6), maar geen cijfers, en in België vooral van de kant van de klant.
 3. **Machines (G):** is machinehandel en -verhuur een bewuste doelgroep? Dan verdient die een eigen onderzoek.
 4. **Koppeling met raamsoftware:** wil je die in Missing Link? Voor ramenplaatsers is het een voorwaarde naast de eigen configurator (zie [`onderzoek-raamsoftware.md`](onderzoek-raamsoftware.md)).
 5. **Actiepunt 0.3** staat nog open: de betekenis van de offerteregelvelden bevestigen.
