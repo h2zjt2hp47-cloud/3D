@@ -19,14 +19,30 @@ export const KAART_PX = 512;
 export const HOOGTE_KLEUR = '#8c8c8c';
 
 /**
- * Weefsels met echte kaarten (proef 04-11): een normal map en een ruwheidskaart in plaats van een bumpMap. De path tracer
- * van de fotomodus leest een normal map wel en een bumpMap niet. De andere weefsels houden de bumpMap tot de proef klopt.
+ * Weefsels met echte kaarten (proef 04-11, alle weefsels sinds 10-11): een normal map en een ruwheidskaart in plaats van
+ * een bumpMap. De path tracer van de fotomodus leest een normal map wel en een bumpMap niet. Een weefsel dat hier niet
+ * staat, valt terug op de bumpMap.
  * `hoek`: hoe steil de flanken van de draden lijken (graden); `glansverschil`: hoeveel gladder de toppen zijn (0 tot 1).
  */
 export const WEEFSELKAART: Partial<Record<Weefsel, { hoek: number; glansverschil: number; vervaging?: number }>> = {
   linnen: { hoek: 30, glansverschil: 0.3 },
   // Velours: zachte pool, dus de hoogte eerst verzacht (anders worden de vlekjes in de tekening harde vierkantjes).
   velours: { hoek: 8, glansverschil: 0.12, vervaging: 4 },
+  // Sinds 10-11 ook de andere weefsels (getuned op het beeld, vóór en na naast elkaar):
+  // fijne binding, bijna vlak;
+  effen: { hoek: 10, glansverschil: 0.1 },
+  // lusjes: diep reliëf, licht verzacht zodat een lus een bolletje wordt en geen schijfje met een harde rand;
+  boucle: { hoek: 58, glansverschil: 0.15 },
+  // zachte ribbels met pluis;
+  chenille: { hoek: 22, glansverschil: 0.15, vervaging: 1 },
+  // korte vezels kriskras;
+  wol: { hoek: 20, glansverschil: 0.1, vervaging: 1 },
+  // ribfluweel: duidelijke ribben, gladdere toppen;
+  rib: { hoek: 36, glansverschil: 0.25, vervaging: 1 },
+  // ingeweven patroon: ondiep, het patroon glanst iets meer;
+  jacquard: { hoek: 16, glansverschil: 0.3, vervaging: 1 },
+  // nerf: ondiepe poriën, verzacht (anders worden het putjes).
+  leder: { hoek: 9, glansverschil: 0.2, vervaging: 2 },
 };
 
 /** Vaste toevalsreeks, zodat een staal er altijd hetzelfde uitziet. */

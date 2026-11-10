@@ -178,6 +178,13 @@ button:disabled { opacity: .45; cursor: default; }
   .drie-d-echt, .drie-d-bron { position: static; max-width: none; margin-top: 6px; box-shadow: none; }
   .drie-d-bron { text-shadow: none; color: var(--zacht, #5d5a52); }
 }
+.drie-d-stalen { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.drie-d-stalen .stalen-voor { font-size: 13px; color: var(--zacht); margin-right: 2px; }
+.drie-d-stalen .stalen-voor strong { color: var(--inkt); font-weight: 600; }
+.drie-d-stalen button.snelstaal { width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 2px solid var(--vlak); outline: 1px solid rgba(0,0,0,.25); background-size: 64px 64px; cursor: pointer; }
+.drie-d-stalen button.snelstaal[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.drie-d-stalen button.snelstaal:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (pointer: coarse) { .drie-d-stalen button.snelstaal { width: 44px; height: 44px; } }
 .drie-d-instellingen { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: end; margin-top: 6px; }
 .drie-d-instellingen label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: var(--zacht); }
 .drie-d-instellingen select { font: inherit; font-size: 14px; padding: 5px 6px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--papier); color: #23262a; min-height: 36px; max-width: 220px; }
@@ -608,6 +615,7 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" data-standpunt="ooghoogte" title="Zoals een staande klant de zetel ziet (155 cm)">Ooghoogte</button>
       <span class="klein">Sleep om te draaien, klik op een deel om het te kiezen, dubbelklik om erop in te zoomen. Verschuiven: rechtermuisknop, Shift + slepen of twee vingers. Zoomen: Ctrl (⌘) + scrollen of knijpen. Toetsenbord: pijltjes en + −.</span>
     </div>
+    <div id="o-3d-stalen" class="drie-d-stalen" hidden></div>
     <div id="o-3d-instellingen" class="drie-d-instellingen" hidden>
       <label><span>Stof</span><select id="o-3d-stof"></select></label>
       <label><span>Decor</span><select id="o-3d-decor"></select></label>

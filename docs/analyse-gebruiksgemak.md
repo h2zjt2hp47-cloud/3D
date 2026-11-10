@@ -359,3 +359,59 @@ De groepering van de elementknoppen volgt de soort element (`tekenstijl`). Een z
 **Beslissingen voor Jonas**
 1. ***Kast op maat*** is geen zetel. Verbergen in de versie in de huisstijl van Corneille & Silence? En *Sofa op maat*, nu het model-gebaseerde ontwerpen het hoofdpad is?
 2. **Offerte:** is dit overzicht wat je bij de klant wil tonen en afdrukken? Volgende stap zou een offertenummer en klantgegevens zijn, en later het doorsturen naar Missing Link.
+
+
+## 12. Zetelconfigurator onder handen genomen (10/11/2026)
+
+Aanleiding: "Neem je onze zetelconfigurator nog eens volledig onder handen? Graag stroomlijnen, 3D-engine verbeteren, meer functies toevoegen." De meubelmaker met de zetelconfigurator is de eerste opstart (beslist 10/11), dus de keuzes mikken op de toonzaal: sneller zien wat je doet, een offerte op naam van een klant, en een ontwerp kunnen terugvinden.
+
+**Stroomlijnen**
+
+| Vroeger | Nu |
+|---|---|
+| De 3D zat achter een tabblad: tijdens het tekenen zag je ze niet. | **3D-voorbeeld naast de tekening**: op een breed scherm staat de 3D klein in de rechterkolom, boven de prijs, en volgt wat je tekent. *Vergroten* opent het tabblad 3D, *Verbergen* zet het voorbeeld uit (onthouden). Op een tablet of smal scherm staat het niet aan (de rechterkolom staat daar onderaan). |
+| Alleen *Ongedaan maken* (open punt 10.5). | **Opnieuw** ernaast, Ctrl+Y of Ctrl+Shift+Z. |
+| Een andere kleur van dezelfde stof: terug naar de stalenkaart links (open punt 9.3). | **Stalenstrook onder de 3D**: de kleuren van de collectie die nu op de zetel ligt. Eén klik wisselt de kleur, voor de hele zetel of voor het gekozen element; *Hele zetel* laat het element los. |
+| De rechterkolom kon langer worden dan het scherm. | De kolom schuift zelf, zodat de prijs en de elementenlijst bereikbaar blijven. |
+
+**3D-engine**
+
+| Vroeger | Nu |
+|---|---|
+| Een standpunt kiezen was een sprong; draaien stopte abrupt. | De camera **glijdt** in ±0,4 s naar het standpunt en **loopt zacht uit** als je met een zwaai loslaat. Wie in het besturingssysteem "minder beweging" kiest, krijgt geen animatie. |
+| Je kon alleen draaien en zoomen. | **Verschuiven**: rechtermuisknop, Shift + slepen of twee vingers. **Dubbelklik** op een deel zoomt erop in; nog eens (of naast de zetel) gaat terug naar het geheel. Een standpunt kiezen zet het beeld weer in het midden. |
+| Alleen linnen en velours hadden een echte reliëf- en glanskaart; de andere weefsels een eenvoudiger reliëf dat de fotomodus niet toont. | **Alle negen weefsels** (ook effen, bouclé, chenille, wol, rib, jacquard, leder) hebben een reliëf- en glanskaart, vier keer fijner getekend. In het gewone beeld is de winst klein: het weefsel is scherper van dichtbij, van op afstand zie je geen verschil. De fotomodus kan het reliëf van elke stof nu lezen (het oude reliëf negeerde ze); of dat zichtbaar beter is, moet op de M5 blijken (zie *Getest*). |
+| Het 3D-beeld in de offerte was zo groot als het vak op het scherm. | Een eigen opname van 1400 px breed: scherp op papier, ook als de 3D klein naast de tekening stond. |
+
+Gecontroleerd: de beeldvergelijking gaf na de camerawijziging 0,00 % verschil op alle tien beelden. De weefselkaarten veranderen de beelden wel; de referentiebeelden zijn vernieuwd na controle van de verschillen.
+
+**Meer functies**
+
+| Functie | Wat |
+|---|---|
+| **Mijn ontwerpen** | *Bewaren* bij 2 · Ontwerpen bewaart het ontwerp onder een naam (voorstel: model en klant). Zelfde naam = bijwerken, andere naam = als nieuw ontwerp. De status toont of er sinds het bewaren iets veranderd is. Bij 1 · Modellen staat het tabblad *Mijn ontwerpen* met tekening, klant, prijs en datum: openen, dupliceren, verwijderen. Hoogstens 60 ontwerpen. |
+| **Als bestand** | Een ontwerp bewaren als `.zetel.json` en op een ander toestel openen (*Open uit bestand*). Het bestand wordt nagekeken tegen de catalogus en de stoffen van dat toestel: een onbekend element wordt geweigerd met de reden, een onbekende stof wordt vervangen en gemeld. Dit vervangt voorlopig "een link naar de configuratie" (open punt 9.6). |
+| **Klant en offerte** | Op 3 · Offerte: naam, adres, e-mail en telefoon van de klant, een eigen referentie (bv. Z-261110-01), geldigheid in dagen met de einddatum, levertermijn en een opmerking. Alles staat op de afdruk en in *Kopieer offertetekst*, en gaat mee bij het bewaren. *Nieuwe klant* maakt de velden leeg. Antwoord op beslissing 11.2. |
+
+**Wat je moet weten**
+
+- Bewaarde ontwerpen en klantgegevens staan **in de browser van dat toestel**, zoals de stoffen en de catalogus. Wordt de browser gewist, dan zijn ze weg; een ander toestel ziet ze niet. *Als bestand* is de reservekopie. Delen tussen toestellen vraagt de server (stap 2 van het stappenplan).
+- De **referentie** is een eigen kenmerk van de demo. Het echte offertenummer komt later uit Missing Link.
+- Kiest de verkoper voor dezelfde klant een ander model, dan blijven de klantgegevens staan en krijgt de offerte een nieuwe referentie.
+
+**Getest**
+
+- In de browser (1440 px, zonder grafische kaart): tekenen met het 3D-voorbeeld, ongedaan en opnieuw, standpunten, dubbelklik, verschuiven, uitloop, stalenstrook, bewaren, bijwerken, als nieuw bewaren, dupliceren, verwijderen, bestand bewaren en weer openen, een fout bestand, de offerte op het scherm en als afdruk. Geen foutmeldingen.
+- Elk weefsel van dichtbij, vóór en na naast elkaar. Bouclé is na de eerste proef bijgesteld (dieper reliëf).
+- De fotomodus met een ribstof, korte proef (8 stappen, 640 px): de foto komt er zonder fouten of zwarte vlakken, maar is bij zo weinig stappen te korrelig om het reliëf te beoordelen.
+- **Niet getest:** op de M5 in de toonzaal (WebGPU, en een volledige fotorealistische foto met de nieuwe weefselkaarten), op een tablet (twee vingers verschuiven), en met echte gebruikers.
+
+**Nog open, als voorstel voor een volgende ronde**
+
+1. **Opties per model beperken** (open punt 3 in de overdracht): nodig voor de echte collectie; wacht op de gegevens van de klant.
+2. **Aanpassingen voor de hele zetel** blijft een lange lijst keuzes. Voorstel: per groep alleen de gekozen waarde tonen en openklappen bij een klik.
+3. **Eigenschappen van het gekozen element** staan nog onder de tekening (open punt 10.7).
+4. **Twee ontwerpen vergelijken** (prijs en beeld naast elkaar) vanuit Mijn ontwerpen.
+5. **Meerdere zetels in één offerte** (sofa en fauteuil voor dezelfde klant): de motor voor offertes met posities bestaat al in de bouwdemo.
+6. **Armen en rug met een eigen vorm**: rolarm, Engelse en schuine arm zijn nog balken (zie `docs/zachte-vormen.md`).
+

@@ -36,7 +36,7 @@ import {
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
 import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type EchtToestand, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
 import { grootSchermKnop, Zoom } from './zoom.js';
-import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
+import { kleurStaal, maakStalenkaart, materiaalOptiesPerCollectie, perCollectie } from './stalen.js';
 import { bewaarBestand, dataUrlNaarBlob } from './bewaren.js';
 import { bewaarDossier, dossierAlsBestand, geldigTot, getDossiers, leesOfferte, legeKlant, legeOfferte, nieuweReferentie, opDossiers, type Dossier, type OfferteGegevens } from './dossiers.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
@@ -935,6 +935,53 @@ function start3DInstellingen() {
   });
 }
 
+/**
+ * Stalenstrook onder de 3D: de kleuren van de collectie die nu op de zetel (of op het gekozen element) ligt, om met één
+ * klik te wisselen. Een andere collectie kies je in de keuzelijst Stof of op de stalenkaart links.
+ */
+function toonStalenstrook() {
+  const strook = document.querySelector<HTMLElement>('#o-3d-stalen');
+  if (!strook) return;
+  strook.hidden = weergave !== '3d' || !ontwerp.elementen.length;
+  if (strook.hidden) return;
+  // Het gekozen element als het stof heeft (geen houten tussenstuk); anders de hele zetel.
+  const gekozenEl = elementVan(geselecteerd);
+  const metStof = gekozenEl && resultaat?.elementen.find((x) => x.id === gekozenEl.id)?.materiaal ? gekozenEl : undefined;
+  const nu = metStof?.materiaal ?? ontwerp.hoofdmateriaal;
+  const collectie = perCollectie(getMaterialen()).find(([, lijst]) => lijst.some((m) => m.code === nu));
+  if (!collectie) { strook.hidden = true; return; }
+  const nummer = metStof ? ontwerp.elementen.indexOf(metStof) + 1 : 0;
+  const voor = el('span', { class: 'stalen-voor' });
+  voor.append(el('strong', {}, collectie[0]), ` voor ${metStof ? `element ${nummer} (${typen.get(metStof.type)?.label ?? ''})` : 'de hele zetel'}:`);
+  const knoppen = collectie[1].slice(0, 14).map((m) => {
+    const b = el('button', { type: 'button', class: 'snelstaal', title: m.naam, 'aria-label': m.naam, 'aria-pressed': String(m.code === nu) }) as HTMLButtonElement;
+    kleurStaal(b, m);
+    b.addEventListener('click', () => {
+      if (m.code === nu) return;
+      onthoud();
+      if (metStof) {
+        // Zelfde stof als de zetel: het element volgt weer het hoofdmateriaal.
+        if (m.code === ontwerp.hoofdmateriaal) delete metStof.materiaal; else metStof.materiaal = m.code;
+        toonEigenschappen();
+      } else {
+        ontwerp.hoofdmateriaal = m.code;
+        $<HTMLSelectElement>('#o-hoofdmateriaal').value = m.code;
+        $<HTMLSelectElement>('#o-3d-stof').value = m.code;
+        stalenkaart?.ververs();
+      }
+      gewijzigd();
+    });
+    return b;
+  });
+  strook.replaceChildren(voor, ...knoppen);
+  if (metStof) {
+    const hele = el('button', { type: 'button', class: 'tweede klein-knop' }, 'Hele zetel') as HTMLButtonElement;
+    hele.title = 'Geen element meer gekozen: de stalen gelden weer voor de hele zetel';
+    hele.addEventListener('click', () => { geselecteerd = null; toonEigenschappen(); tekenCanvas(); });
+    strook.append(hele);
+  }
+}
+
 // ---------- weergave: bovenaanzicht, vooraanzicht, 3D ----------
 /**
  * 3D-voorbeeld naast de tekening: op een breed scherm staat dezelfde 3D-weergave klein in de rechterkolom zolang je
@@ -964,6 +1011,7 @@ export function kiesWeergave(w: typeof weergave = weergave) {
   wissel.setAttribute('aria-expanded', String(!voorbeeldUit));
   $('#o-3d-knoppen').hidden = w !== '3d';
   $('#o-3d-instellingen').hidden = w !== '3d';
+  toonStalenstrook();
   $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'klik een element · sleep de grepen · maten in cm' : 'draai en zoom met muis of vinger';
   kiesGereedschap(gereedschap);
   if (toont3D() && viewer === undefined) {
@@ -1399,6 +1447,7 @@ function toonEigenschappen() {
   const e = elementVan(geselecteerd);
   // Het gekozen element ook in de 3D aanduiden.
   if (toont3D()) viewer?.markeer?.(e ? e.id : null);
+  toonStalenstrook();
   if (!e) {
     vak.replaceChildren(el('p', { class: 'klein' }, 'Klik op een element om het aan te passen, of kies links een element om te tekenen.'));
     return;
@@ -1796,6 +1845,7 @@ function herbereken(alles = true) {
   );
   markeerOptieFouten();
   toonWeergave();
+  toonStalenstrook();
   if (geselecteerd) {
     const er = r.elementen.find((x) => x.id === geselecteerd);
     const prijsVak = document.querySelector('#o-eigenschappen .kaartkop .klein');
