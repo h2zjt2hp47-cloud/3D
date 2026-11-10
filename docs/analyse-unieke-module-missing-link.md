@@ -288,6 +288,18 @@ Dit past bij de beslissing van 31/10: het blijft een aparte app die met Missing 
 
 **Meerwerk bevestigd als pijnpunt (10/11):** de meerwerkbon (verschil met de offerte, vrije regels, handtekening van de klant, doorrekenen) is het deel van *Werf* dat het minst inrichting vraagt. Zodra de koppeling uit stap 2 er is, kan het als eerste stuk van stap 4 uitgerold worden, los van ramenlijst en inmeting.
 
+**Waar het misloopt: vergeten op de factuur (Jonas, 10/11).** Het probleem zit dus niet op de werf maar in de doorstroming naar de administratie. De meerwerkbon moet daarom eerst dit kunnen **[inschatting]**:
+
+| Wat | Waarom |
+|---|---|
+| Elke meerwerkbon hangt aan het project en staat daar als **"nog te factureren"** tot hij op een factuur of vorderingsstaat staat | Niets kan ongemerkt blijven liggen |
+| Bij het opmaken van een factuur of vorderingsstaat voor dat project een **melding**: "er staan nog 2 meerwerkbonnen open (€ …)", met één klik om ze toe te voegen | Het vergeten gebeurt op dat moment, dus daar moet de herinnering staan |
+| Een project **afsluiten** kan niet zolang er meerwerk openstaat (of alleen met een bewuste keuze "niet aanrekenen", met reden) | Laatste vangnet |
+| Een **lijst over alle projecten**: openstaand meerwerk, met bedrag en ouderdom | De zaakvoerder ziet in één blik wat er nog te factureren valt |
+| Meerwerk als **aparte order of aparte regels** op de factuur, met verwijzing naar de getekende bon | De klant herkent waarvoor hij betaalt; minder discussie |
+
+Missing Link heeft de bouwstenen al: projecten met cijfers (geofferteerd, besteld, gefactureerd), werkbonnen, vorderingsstaten en meldingen **[Missing Link]**. De handtekening op de werf (al gebouwd in de bouwdemo) komt daarna; ze lost een ander probleem op (discussie), niet het vergeten.
+
 **Gevolg van "meubelmaker eerst":** de scoretabel in §6 zette de werfketting net voor, omdat de configurator per klant het meeste inrichting vraagt. Dat nadeel blijft. Hou het klein door bij de eerste klant met één productfamilie te beginnen (sofa's), en de inrichting meteen als sjabloon voor een volgende meubelmaker op te zetten.
 
 In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing Link zelf, niet bij deze module. Wel te plannen vóór april 2027.
@@ -313,7 +325,7 @@ In- en uitchecken en tijdsregistratie (2027) horen bij de werkbonnen van Missing
 ## 8. Open vragen voor Jonas
 
 1. ~~Voor wie is Missing Link eerst bedoeld?~~ **Beide; eerste opstart is de meubelmaker met de zetelconfigurator** (beslist 10/11).
-2. ~~Herken je dat meerwerk een probleem is?~~ **Ja: Jonas bevestigt uit de praktijk dat meerwerk een moeilijk gegeven is** (10/11). Nog te verfijnen: waar loopt het precies mis (niet genoteerd op de werf, geen akkoord van de klant, vergeten bij de factuur, discussie over de prijs)? Dat bepaalt wat de meerwerkbon eerst moet kunnen.
+2. ~~Herken je dat meerwerk een probleem is?~~ **Ja: Jonas bevestigt uit de praktijk dat meerwerk een moeilijk gegeven is** (10/11). Waar het misloopt: **het meerwerk wordt vergeten op de factuur** (Jonas, 10/11). Zie §7.2 voor wat dat betekent voor de meerwerkbon.
 3. ~~Is machinehandel en -verhuur een bewuste doelgroep?~~ **Ja, bewuste doelgroep** (Jonas, 10/11). Volgende stap: een eigen onderzoek voor deze doelgroep (zie kandidaat G in §5).
 4. **Koppeling met raamsoftware:** wil je die in Missing Link? Voor ramenplaatsers is het een voorwaarde naast de eigen configurator (zie [`onderzoek-raamsoftware.md`](onderzoek-raamsoftware.md)).
 5. **Actiepunt 0.3** staat nog open: de betekenis van de offerteregelvelden bevestigen.
