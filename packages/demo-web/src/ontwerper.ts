@@ -52,6 +52,8 @@ let resultaat: OntwerpResultaat;
 let weergave: 'boven' | 'voor' | '3d' = 'boven';
 let viewer: Viewer3D | null | undefined;
 const geschiedenis: string[] = [];
+/** Wat ongedaan gemaakt is, om het opnieuw te kunnen doen (leeg na een nieuwe wijziging). */
+const toekomst: string[] = [];
 let volgendeId = 1;
 
 type Actie =
@@ -100,7 +102,12 @@ function nieuwId() {
 function onthoud(voor = JSON.stringify(ontwerp)) {
   if (geschiedenis[geschiedenis.length - 1] !== voor) geschiedenis.push(voor);
   if (geschiedenis.length > 60) geschiedenis.shift();
+  toekomst.length = 0;
+  toonOngedaan();
+}
+function toonOngedaan() {
   $<HTMLButtonElement>('#o-ongedaan').disabled = geschiedenis.length === 0;
+  $<HTMLButtonElement>('#o-opnieuw-doen').disabled = toekomst.length === 0;
 }
 
 function gewijzigd() {
@@ -350,6 +357,11 @@ function opToets(ev: KeyboardEvent) {
     tekenCanvas();
     return;
   }
+  if ((ev.ctrlKey || ev.metaKey) && (ev.key.toLowerCase() === 'y' || (ev.shiftKey && ev.key.toLowerCase() === 'z'))) {
+    ev.preventDefault();
+    opnieuwDoen();
+    return;
+  }
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z') {
     ev.preventDefault();
     ongedaan();
@@ -433,12 +445,23 @@ function dupliceer(id: string) {
 function ongedaan() {
   const vorige = geschiedenis.pop();
   if (!vorige) return;
-  ontwerp = JSON.parse(vorige) as Ontwerp;
+  toekomst.push(JSON.stringify(ontwerp));
+  herstel(vorige);
+}
+/** Opnieuw doen wat ongedaan gemaakt is. */
+function opnieuwDoen() {
+  const volgende = toekomst.pop();
+  if (!volgende) return;
+  geschiedenis.push(JSON.stringify(ontwerp));
+  herstel(volgende);
+}
+function herstel(toestand: string) {
+  ontwerp = JSON.parse(toestand) as Ontwerp;
   if (!elementVan(geselecteerd)) geselecteerd = null;
   toonAanpassingen();
   toonModelVormgeving();
   toonModelNaam();
-  $<HTMLButtonElement>('#o-ongedaan').disabled = geschiedenis.length === 0;
+  toonOngedaan();
   vulHoofdmateriaal();
   toonEigenschappen();
   gewijzigd();
@@ -835,17 +858,37 @@ function start3DInstellingen() {
 }
 
 // ---------- weergave: bovenaanzicht, vooraanzicht, 3D ----------
-export function kiesWeergave(w: typeof weergave) {
+/**
+ * 3D-voorbeeld naast de tekening: op een breed scherm staat dezelfde 3D-weergave klein in de rechterkolom zolang je
+ * tekent (boven- of vooraanzicht), zodat je meteen ziet wat je tekent. Op het tabblad 3D verhuist ze naar het midden.
+ */
+const SLEUTEL_VOORBEELD = 'configurator-demo.3dvoorbeeld.v1';
+const breedScherm = window.matchMedia('(min-width: 1151px)');
+let voorbeeldUit = laad(SLEUTEL_VOORBEELD) === 'uit';
+const voorbeeldActief = () => weergave !== '3d' && !voorbeeldUit && breedScherm.matches;
+const toont3D = () => weergave === '3d' || voorbeeldActief();
+
+export function kiesWeergave(w: typeof weergave = weergave) {
   weergave = w;
   document.querySelectorAll<HTMLButtonElement>('[data-o-weergave]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.oWeergave === w)));
   svg().toggleAttribute('hidden', w !== 'boven');
   $('#o-voor').toggleAttribute('hidden', w !== 'voor');
-  $('#o-3d').hidden = w !== '3d';
+  // De 3D staat in het midden (tabblad 3D) of als voorbeeld in de rechterkolom: één weergave, die verhuist.
+  const houder = $('#o-3d'), voorbeeld = voorbeeldActief();
+  if (w === '3d') { if (houder.parentElement?.id !== 'o-3d-vak') $('#o-3d-vak').prepend(houder); }
+  else if (voorbeeld && houder.parentElement?.id !== 'o-voorbeeld-vak') $('#o-voorbeeld-vak').append(houder);
+  houder.hidden = !(w === '3d' || voorbeeld);
+  $('#o-3d-vak').hidden = w !== '3d';
+  $('#o-voorbeeld-kaart').hidden = w === '3d' || !breedScherm.matches;
+  $('#o-voorbeeld-vak').hidden = $('#o-voorbeeld-uitleg').hidden = voorbeeldUit;
+  const wissel = $('#o-voorbeeld-wissel');
+  wissel.textContent = voorbeeldUit ? 'Tonen' : 'Verbergen';
+  wissel.setAttribute('aria-expanded', String(!voorbeeldUit));
   $('#o-3d-knoppen').hidden = w !== '3d';
   $('#o-3d-instellingen').hidden = w !== '3d';
   $('#o-weergave-uitleg').textContent = w === 'boven' ? 'raster 10 cm · maten in cm' : w === 'voor' ? 'klik een element · sleep de grepen · maten in cm' : 'draai en zoom met muis of vinger';
   kiesGereedschap(gereedschap);
-  if (w === '3d' && viewer === undefined) {
+  if (toont3D() && viewer === undefined) {
     viewer = maak3D($('#o-3d'), {
       zetel: true,
       // Klik op een deel van de zetel in 3D: dat element kiezen (eigenschappen, stof per element).
@@ -872,7 +915,7 @@ export function kiesWeergave(w: typeof weergave) {
 
 function toonWeergave() {
   if (weergave === 'voor') tekenVoorvlak();
-  if (weergave === '3d' && viewer) {
+  if (viewer && toont3D() && !$('#view-ontwerp').hidden) {
     viewer.formaat();
     // Heeft het model een echt 3D-bestand, dan beslist de motor of het past bij het ontwerp zoals het nu is.
     const model = getModellen().find((x) => x.code === ontwerp.model);
@@ -1277,7 +1320,7 @@ function toonEigenschappen() {
   const vak = $('#o-eigenschappen');
   const e = elementVan(geselecteerd);
   // Het gekozen element ook in de 3D aanduiden.
-  if (weergave === '3d') viewer?.markeer?.(e ? e.id : null);
+  if (toont3D()) viewer?.markeer?.(e ? e.id : null);
   if (!e) {
     vak.replaceChildren(el('p', { class: 'klein' }, 'Klik op een element om het aan te passen, of kies links een element om te tekenen.'));
     return;
@@ -1645,6 +1688,13 @@ export function startOntwerper() {
     b.addEventListener('click', () => kiesWeergave(b.dataset.oWeergave as typeof weergave)),
   );
   start3DInstellingen();
+  $('#o-voorbeeld-groot').addEventListener('click', () => kiesWeergave('3d'));
+  $('#o-voorbeeld-wissel').addEventListener('click', () => {
+    voorbeeldUit = !voorbeeldUit;
+    bewaar(SLEUTEL_VOORBEELD, voorbeeldUit ? 'uit' : null);
+    kiesWeergave();
+  });
+  breedScherm.addEventListener('change', () => kiesWeergave());
   document.querySelectorAll<HTMLButtonElement>('[data-standpunt]').forEach((b) =>
     b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as Standpunt)),
   );
@@ -1658,6 +1708,7 @@ export function startOntwerper() {
     stalenkaart?.ververs();
   });
   $('#o-ongedaan').addEventListener('click', ongedaan);
+  $('#o-opnieuw-doen').addEventListener('click', opnieuwDoen);
   $('#o-naar-offerte').addEventListener('click', () => { location.hash = 'offerte'; });
   $('#o-kopieer').addEventListener('click', () => {
     // Volledige omschrijving (ook keuzes per element, getekende hoogtes, vormgeving en korting): zie core/ontwerptekst.ts.
@@ -1712,7 +1763,7 @@ export function startOntwerper() {
   toonModelVormgeving();
   toonModelNaam();
   kiesGereedschap('selecteren');
-  $<HTMLButtonElement>('#o-ongedaan').disabled = true;
+  toonOngedaan();
   herbereken();
   toonEigenschappen();
 }

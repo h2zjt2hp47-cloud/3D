@@ -36,6 +36,8 @@ function toon(w: Weergave) {
   }
   if (w === 'sofa' || w === 'kast') kiesProduct(w, true);
   if (w === 'offerte') toonOfferte();
+  // Het ontwerpscherm komt in beeld: de 3D (tabblad of voorbeeld naast de tekening) starten of bijwerken.
+  if (w === 'ontwerp') kiesWeergave();
   // Sofa en kast zetten zelf hun productnaam (kiesProduct); de andere weergaven hun vaste titel.
   if (w !== 'sofa' && w !== 'kast') $('#productnaam').textContent = TITELS[w];
   // Rechtstreeks naar #catalogus (oude link): het eerste tabblad aanduiden als er nog geen gekozen is.

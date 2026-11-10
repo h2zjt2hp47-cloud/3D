@@ -219,6 +219,15 @@ main.ontwerp { grid-template-columns: 220px minmax(0, 1fr) minmax(300px, 380px);
 .gereedschap { align-self: start; display: grid; gap: 4px; }
 .modelrij { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
 .modelrij .modelnaam { margin: 0; }
+.ongedaanrij { display: inline-flex; gap: 4px; }
+.ongedaanrij button { white-space: nowrap; }
+/* 3D-voorbeeld naast de tekening (alleen op een breed scherm, waar de rechterkolom naast de tekening staat). */
+.voorbeeld3d { padding-bottom: 10px; }
+.voorbeeld3d .kaartkop { margin-bottom: 8px; }
+.voorbeeld3d .voorbeeldknoppen { display: inline-flex; gap: 4px; }
+.voorbeeld3d .drie-d { min-height: 0; }
+.voorbeeld3d p { margin: 6px 0 0; }
+@media (min-width: 1151px) { main.ontwerp > .resultaat { max-height: calc(100vh - 32px); overflow-y: auto; scrollbar-width: thin; } }
 .gereedschapkop { grid-column: 1 / -1; font-family: var(--tekst); font-size: .78rem; font-weight: 600; color: var(--zacht); margin: 8px 0 0; text-transform: uppercase; letter-spacing: .04em; }
 .opnieuw { border-top: 1px solid var(--lijn); margin-top: 8px; padding-top: 4px; }
 .opnieuw > summary { cursor: pointer; padding: 6px 0; font-weight: 600; }
@@ -515,7 +524,7 @@ main.catalogus { display: block; }
 
 <main id="view-ontwerp" class="ontwerp" hidden>
   <aside class="kaart gereedschap" aria-label="Gereedschap">
-    <div class="modelrij"><p id="o-model" class="modelnaam"></p><button type="button" id="o-ongedaan" class="tweede klein-knop" title="Ctrl+Z">↶ Ongedaan maken</button></div>
+    <div class="modelrij"><p id="o-model" class="modelnaam"></p><span class="ongedaanrij"><button type="button" id="o-ongedaan" class="tweede klein-knop" title="Ongedaan maken (Ctrl+Z)">↶ Ongedaan</button><button type="button" id="o-opnieuw-doen" class="tweede klein-knop" title="Opnieuw doen wat je ongedaan maakte (Ctrl+Y)">↷ Opnieuw</button></span></div>
     <h2>Elementen</h2>
     <div id="o-gereedschap" class="knoppenlijst" role="group" aria-label="Gereedschap"></div>
     <p id="o-hint" class="klein"></p>
@@ -527,7 +536,7 @@ main.catalogus { display: block; }
       <div id="o-start" class="knoppenlijst"></div>
     </details>
     <details class="sneltoetsen"><summary>Sneltoetsen</summary>
-      <ul class="klein"><li>Pijltjes: 1 cm verplaatsen (Shift: 10 cm)</li><li>R / Shift+R: draaien</li><li>D: dupliceren</li><li>Delete: verwijderen</li><li>Alt tijdens slepen: zonder magneet</li><li>Ctrl+Z: ongedaan maken</li><li>Esc: stoppen met tekenen</li></ul>
+      <ul class="klein"><li>Pijltjes: 1 cm verplaatsen (Shift: 10 cm)</li><li>R / Shift+R: draaien</li><li>D: dupliceren</li><li>Delete: verwijderen</li><li>Alt tijdens slepen: zonder magneet</li><li>Ctrl+Z: ongedaan maken</li><li>Ctrl+Y: opnieuw</li><li>Esc: stoppen met tekenen</li></ul>
     </details>
   </aside>
   <div class="midden">
@@ -542,7 +551,7 @@ main.catalogus { display: block; }
     </div>
     <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="o-voor" class="voorvlak" tabindex="0" role="application" aria-label="Vooraanzicht: klik, sleep grepen of teken een element" xmlns="http://www.w3.org/2000/svg" hidden></svg>
-    <div class="drie-d-vak"><div id="o-3d" class="drie-d" hidden></div>
+    <div class="drie-d-vak" id="o-3d-vak" hidden><div id="o-3d" class="drie-d" hidden></div>
       <div id="o-3d-echt" class="drie-d-echt" hidden>
         <div class="tabs intern" id="o-3d-echt-keuze" role="group" aria-label="Weergave van het model in 3D">
           <button type="button" data-echt="aan" aria-pressed="true">Echt 3D-model</button>
@@ -602,6 +611,11 @@ main.catalogus { display: block; }
   </section>
   </div>
   <aside class="resultaat" aria-label="Resultaat vrij ontwerp">
+    <section class="kaart voorbeeld3d" id="o-voorbeeld-kaart" hidden>
+      <div class="kaartkop"><h2>3D</h2><span class="voorbeeldknoppen"><button type="button" class="tweede klein-knop" id="o-voorbeeld-groot" title="De 3D groot tonen, met standpunten, decor en licht">Vergroten</button><button type="button" class="tweede klein-knop" id="o-voorbeeld-wissel" aria-expanded="true">Verbergen</button></span></div>
+      <div id="o-voorbeeld-vak"></div>
+      <p class="klein" id="o-voorbeeld-uitleg">Volgt je tekening. Sleep om te draaien, klik op een deel om het te kiezen.</p>
+    </section>
     <section class="kaart" aria-live="polite">
       <div class="kaartkop"><h2>Prijs</h2><span id="o-status" class="status ok"></span></div>
       <div class="prijs"><span id="o-prijs-excl" class="grote-prijs">€ 0,00</span><span id="o-prijs-incl" class="klein"></span></div>
