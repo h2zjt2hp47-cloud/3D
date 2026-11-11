@@ -14,7 +14,8 @@
     "lichtmeting": "node scripts/3d/lichtmeting.mjs",
     "toestelcontrole": "node scripts/3d/toestelcontrole.mjs",
     "werkbank": "npm run build -w @configurator/werkbank-web",
-    "vergelijkblad": "node scripts/3d/vergelijkblad.mjs"
+    "vergelijkblad": "node scripts/3d/vergelijkblad.mjs",
+    "obsidian": "python3 -I scripts/obsidian_export.py"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",

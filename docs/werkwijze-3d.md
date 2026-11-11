@@ -74,7 +74,7 @@ product (bij ramen het profielsysteem) en "foto" als de referentie die je hebt (
 | **3. Maten** | Zekere maten invullen. Ontbreekt er een, leid ze af uit de foto van voren met een maat die je wel kent | Demo: elementen en vormgeving · `modellen.ts` | Elke afgeleide maat staat als benadering in de bron van het model |
 | **4. Afwijkingen** | Alleen wat afwijkt van de bouwstijl: kussendikte, armen, sierkussens, stofkleur | Demo: *Foto ernaast*, *Leg over de 3D* en de schuifbalken | Foto en 3D tonen dezelfde lagen, even dik, in dezelfde kleur |
 | **5. Controle** | Alle modellen naast hun foto leggen en per model oordelen | `npm run controleblad` · `npm run lichtmeting` | Geen model staat nog op *Bijsturen* |
-| **6. Vastleggen** | Testen, referentiebeelden, verslag, publiceren | `npm test` · `npm run typecheck` · `npm run beelden` | Gecommit, gepusht, demo bijgewerkt |
+| **6. Vastleggen** | Testen, referentiebeelden, verslag, publiceren, notities klaarzetten | `npm test` · `npm run typecheck` · `npm run beelden` · `npm run obsidian` | Gecommit, gepusht, demo bijgewerkt, pakket voor Obsidian klaar |
 
 **De vijf vragen van stap 2.** Beantwoord ze voor je één getal invult.
 
@@ -128,6 +128,7 @@ git). Elk commando werkt voor elke bron: `--bron zetels` (standaard), `inrichtin
 | `npm run beelden` | Vergelijkt tien vaste beelden van de echte demo's met de referentie | ±2,5 min |
 | `python3 -I scripts/3d/modelfotos.py` | Haalt per productpagina de grote foto's en elke zin met een maat op, in `fotos-bron` | ±1 min |
 | `npm run werkbank` | Bouwt de werkbankpagina (`packages/werkbank-web/dist/werkbank.html`) om zelf te bladeren | 5 s |
+| `npm run obsidian` | Maakt de notities voor Obsidian als twee pakketten (alles, en alleen deze werkwijze), elk met een plaatsingsopdracht voor wie ze in de kluis zet | 2 s |
 
 Voorbeelden:
 
@@ -172,6 +173,12 @@ driehoeken, of het geheugen stabiel blijft, licht tegenover de staal); (2) of ee
 dat meldt; (3) of WebGL2 en WebGPU hetzelfde beeld geven; (4) of de samengevoegde bouwweergave hetzelfde beeld geeft
 als onderdeel per onderdeel. Hetzelfde rapport start je op een echt toestel met de knop *Toestelcontrole* onderaan de
 werkbankpagina: open ze op de M5, start de controle en kopieer het rapport in het gesprek.
+
+**Notities in Obsidian zetten.** De repo is de bron; Obsidian is een kopie om in te lezen. `npm run obsidian` maakt in
+`obsidian-export/` (kopie in `doorsturen/`) twee zipbestanden: alle notities, en alleen deze werkwijze met haar naslag.
+Bovenaan elk pakket staat `PLAATSEN - lees eerst.md`: waar de notities horen, dat een bestaande notitie vervangen wordt
+en dat de rest van de kluis onaangeroerd blijft. Geef het zipbestand aan het account dat de kluis kan bereiken en zeg:
+"volg PLAATSEN - lees eerst.md". Wijzigen doe je nooit in Obsidian maar in de repo; daarna opnieuw plaatsen.
 
 ## 7. In de demo
 
