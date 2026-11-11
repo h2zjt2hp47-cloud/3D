@@ -331,6 +331,22 @@ raster), de rest 0,00 %; Kotor 171 000 → 198 000 driehoeken, Doha 178 000 → 
 delen. Een vergelijkblad van een hele groep (`npm run vergelijkblad`) toont zo'n gedeelde fout in één oogopslag; kijk
 dus eerst naar de groep, dan pas naar het model.
 
+### 10.1 Na het controleblad (vierde ronde, 11/11)
+
+De tien opmerkingen van Jonas op het controleblad zijn verwerkt; het verslag per model staat in
+`docs/vergelijking-website-1011.md` hoofdstuk 10. Drie lessen voor de werkwijze:
+
+- **Kijk naar alle foto's van de productpagina, niet naar één.** Het controleblad toont één referentiefoto. Bij Pebble,
+  Mabel, Manon en Karl bleek pas uit de andere foto's (van opzij, van voren) hoe de zetel echt is opgebouwd: de schaal
+  van Pebble staat achter de zitting, de rug van Mabel staat óp de zitting, Manon is symmetrisch. Gebruik
+  `npm run vergelijkblad -- --items <model> --bronfotos`, of open de foto's in `fotos-bron/<model>/`.
+- **Een opmerking over de vorm is vaak een opmerking over de opbouw.** "De leuning is kleiner" (Mabel) was niet op te
+  lossen met een lagere rug: de zitting moest een dik blok worden met de rug erop. Vraag dus eerst: uit welke delen
+  bestaat de zetel op de foto, en wat staat op wat?
+- **Reken een rare vorm na voor je aan de getallen draait.** De "oortjes" aan de rug van Karl kwamen niet van zijn
+  maten maar van de motor (punten opeengepakt aan de uiteinden). Schrijf het pad en de hoogtes van de wand uit en kijk
+  of ze zeggen wat je bedoelt.
+
 ## 11. Wat nog niet in deze werkwijze zit
 
 1. **De echte meting op de M5.** De weg (WebGPU) is nagegaan, de snelheid en het scherm niet. Eén keer de knop

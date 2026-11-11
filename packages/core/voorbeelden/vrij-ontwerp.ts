@@ -218,14 +218,15 @@ export const zetelOpties: OptieGroep[] = [
       // dan aan de voet: `helling` voor de rug, `hellingArm` voor de uiteinden, in cm) en is gepolsterd (`bol`). De maat
       // van het element blijft de buitenmaat. Afgeleid uit alle foto's van de productpagina's, dus benaderingen.
       { code: 'rond', label: 'Rond (kuip)', uitleg: 'Ronde kuip: rug loopt geleidelijk over in de armen', teken: { vorm: 'rond', plan: 'rond', dikte: 13, boog: 138, voorBoven: 12, armVanaf: 1, helling: 5, hellingArm: 3, bol: 0.15 } },
-      // Ross: rug met een brede, ronde bovenkant; de armen zakken in één lijn tot vooraan (geen vlak stuk met een knik).
-      { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug met een brede, ronde bovenkant; de armen zakken geleidelijk naar voren', teken: { vorm: 'afgerond', plan: 'afgerond', exponent: 2.8, dikte: 10, boog: 128, voorBoven: 17, armVanaf: 0.95, schouder: 0.24, helling: 5, hellingArm: 2, bol: 0.15 } },
+      // Ross: rug met een brede, ronde bovenkant; de armen zakken in één lijn (geen vlak stuk met een knik) en stoppen op
+      // ±twee derde van de diepte: vooraan steekt de ronde zitting vrij uit (foto's van de productpagina, 11/11).
+      { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug met een brede, ronde bovenkant; de armen zakken geleidelijk naar voren', teken: { vorm: 'afgerond', plan: 'afgerond', exponent: 2.8, dikte: 10, boog: 114, voorBoven: 11, armVanaf: 0.95, schouder: 0.24, helling: 5, hellingArm: 2, bol: 0.15 } },
       // Ton (Mabel 1-zit en 2-zit, foto's van de productpagina 11/11): een dikke zitting over het hele grondvlak met een
       // lage, dunne rug erop die rond de achterste twee derde loopt; haar rand zakt in een bolle lijn tot op de zitting.
       // Een brede ton (tweezit) krijgt vanzelf een rechte rug met ronde hoeken (zie kuip.ts).
       { code: 'ton', label: 'Ton (lage kuip)', uitleg: 'Dikke zitting met een lage, dunne rug erop die rond loopt en vooraan tot op de zitting zakt', teken: { vorm: 'ton', plan: 'afgerond', exponent: 2.5, dikte: 8, boog: 116, voorBoven: 0, armVanaf: 1, schouder: 0.3, opZitting: true, bolVerloop: true, helling: 1.5, hellingArm: 0, bol: 0.12, eindDikte: 0.5 } },
       // Hoge rug (Sullivan): lage armen die halverwege steil oplopen naar een hoge, ronde rug die achterover helt.
-      { code: 'hoog', label: 'Hoge ronde rug', uitleg: 'Hoge, ronde rug die achterover helt, met lage ronde armen', teken: { vorm: 'hoog', plan: 'rond', exponent: 2.3, dikte: 10, boog: 132, voorBoven: 16, armVanaf: 0.7, schouder: 0.2, helling: 11, hellingArm: 3, bol: 0.18 } },
+      { code: 'hoog', label: 'Hoge ronde rug', uitleg: 'Hoge, ronde rug die achterover helt, met lage ronde armen', teken: { vorm: 'hoog', plan: 'rond', exponent: 2.3, dikte: 10, boog: 120, voorBoven: 13, armVanaf: 0.7, schouder: 0.2, helling: 11, hellingArm: 3, bol: 0.18 } },
       // Omhullend (Manon, foto's van de productpagina 11/11): een ronde trommel tot op de vloer met een schaal eromheen
       // die achteraan hoog is en aan beide kanten in een bolle lijn zakt tot op de zitting, op ±twee derde van de diepte;
       // vooraan steekt de trommel vrij uit. (Tot 11/11 een scheve spiraal met één lage arm: zo is de zetel niet.)

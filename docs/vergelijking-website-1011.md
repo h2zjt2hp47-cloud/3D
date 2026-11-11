@@ -218,3 +218,41 @@ vormen bij (*Ton* voor Mabel, *Hoge ronde rug* voor Sullivan).
 Wat nog verschilt: de poten van Ross en Sullivan staan recht (op de foto's schuin, vanuit een ronde voet); Quin heeft op
 de foto vijf losse kussens (bij ons twee); de hellingen zijn geschat uit foto's.
 
+## 10. Vierde ronde (11/11): de opmerkingen van het controleblad
+
+Jonas beoordeelde elf zetels op het controleblad: Kotor akkoord ("dit ziet er zeer goed uit"), tien met een opmerking.
+Elke opmerking is opnieuw naast **alle** foto's van de productpagina gelegd (`fotos-bron/<model>/`), niet alleen naast
+de ene foto van het blad. Bij vier modellen bleek de opbouw zelf anders dan we dachten.
+
+| Model | Opmerking | Wat de foto's tonen | Wat is aangepast |
+|---|---|---|---|
+| Doha | "meer curve, het bovenste kussen is in proportie groter dan het onderste deel" | Een zetel in een boog; een dikke zitting op een dunne onderbouw | De uiteinden buigen 24 cm naar voren; zitting 28 cm op een onderbouw van 10 cm |
+| Montego | "ziet er groter uit en heeft een grotere curve" | Een brede boon met een sterke boog | 285 cm breed (was 260), de uiteinden 60 cm naar voren (was 30) |
+| Karl | "de leuning heeft een andere vorm" | Een ovaal kussen op het frame: bijna rechte bovenkant, een buik onderaan, bijna recht achter de zitting | De rug is een ovaal kussen met ronde hoeken (onderaan een grote straal), zonder vleugels naar voren |
+| Mabel 1-zit | "de leuning is kleiner" | Een dikke zitting over het hele grondvlak; de rug staat erop, is laag en dun en zakt vooraan tot op de zitting | Vorm *Ton* opnieuw gemaakt: zitting 20 cm dik op een dun frame, rug 8 cm dik erop. Geldt ook voor Mabel 2-zit |
+| Manon | "de leuning is meer afgerond" | Symmetrisch: achteraan hoog, aan beide kanten in een ronde lijn tot op de zitting; vooraan steekt de trommel vrij uit | Vorm *Omhullend* opnieuw gemaakt (tot dan een scheve spiraal met één lage arm: zo is de zetel niet) |
+| Pebble | "het samenkomen van leuning en zetel is verticaal, bij ons lopen ze door elkaar" | De zitting is een volle, hoekige kiezel; de schaal staat erachter en rond één hoek, daar een verticale naad | Vorm *Organisch* opnieuw gemaakt: volle zitting, schaal 19 cm dik achteraan en rond de linkerhoek, bovenrand bijna recht naar rechts |
+| Quin | "de voet is groter en minder gecentreerd, de kussens vullen de zetel meer" | De trommel loopt tot vlak boven de vloer op een brede, platte voet; vier grote kussens | Brede draaivoet, trommel 4 cm boven de vloer (was 12), vier kussens van ±37 cm die elkaar overlappen |
+| Ross | "de zitting is in één stuk en ziet er anders uit" | Een ronde zitting uit één stuk die vooraan vrij uitsteekt; de armen zijn laag en stoppen op ±twee derde van de diepte | Vaste zitting uit één stuk; armen korter (boog 114° i.p.v. 128°) en lager (11 cm boven de zitting i.p.v. 17) |
+| Sullivan | "zitting in één stuk" | Een dikke ronde zitting uit één stuk, de armen stoppen voor de voorkant | Vaste zitting uit één stuk; armen iets korter en lager |
+| Wallace | "kan er meer vorm komen in de kussens?" | Grote, los gevulde donskussens met oortjes | Los gevulde kussens: dunnere naad, bollere buik, holle zijden met oortjes, een bovenrand die doorzakt; zitkussen 18 cm |
+
+![Vijf van de tien bijgestuurde zetels naast hun foto](afbeeldingen/controleblad-ronde4-1111-1.jpg)
+
+![De andere vijf naast hun foto](afbeeldingen/controleblad-ronde4-1111-2.jpg)
+
+**Twee fouten in de motor die hierbij boven kwamen** (ze gelden voor meer modellen, elk met een test):
+
+- **Punten op gelijke afstanden langs de wand.** Bij een hoekig grondvlak lagen de punten van de wand opeengepakt aan de
+  uiteinden; de rug zakte dan pas in de laatste centimeters, met een knik (de "oortjes" aan de rug van Karl).
+- **De breedte blijft de buitenmaat, ook in een boog.** Een zetel in een boog werd smaller dan zijn maat: Doha van
+  300 cm werd 263 cm, Montego van 285 cm werd 228 cm. Nu wordt hij langs de boog zoveel langer dat hij van uiteinde tot
+  uiteinde weer zijn breedte heeft.
+
+**Wat een benadering blijft.** Alles is afgeleid uit foto's. Van Pebble, Doha en Montego geeft de productpagina geen
+breedte; de helling en de dikte van de schalen zijn geschat. Pebble bestaat in een linkse en een rechtse uitvoering
+(de foto's tonen beide); wij tonen er één. De poten van Ross en Sullivan staan nog recht (op de foto's schuin).
+
+**Gemeten na de ronde:** 288 tests; beeldvergelijking: Doha, Montego en Pebble veranderd (bewust, referenties
+vernieuwd), Kotor, Husk, Stockholm en de bouwdemo 0,00 %.
+

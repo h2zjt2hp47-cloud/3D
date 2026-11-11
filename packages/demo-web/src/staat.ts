@@ -110,12 +110,13 @@ const VOOR_HELLING: Record<string, { dikte: number; boog: number }> = {
   trommel: { dikte: 8, boog: 100 }, meridienne: { dikte: 12, boog: 112 }, schelp: { dikte: 9, boog: 66 },
 };
 /**
- * De standaard van de vier vormen die na de opmerkingen op het controleblad (11/11) opnieuw naar de foto's zijn gemaakt
- * (Mabel, Manon, Pebble, Karl): dikte, boog en helling van vlak daarvoor, als herkenning.
+ * De standaard van de vormen die na de opmerkingen op het controleblad (11/11) opnieuw naar de foto's zijn gemaakt
+ * (Mabel, Manon, Pebble, Karl) of bijgesteld (Ross, Sullivan): dikte, boog en helling van vlak daarvoor, als herkenning.
  */
 const VOOR_CONTROLEBLAD: Record<string, { dikte: number; boog: number; helling: number }> = {
   ton: { dikte: 9, boog: 112, helling: 6 }, omhullend: { dikte: 10, boog: 142, helling: 6 },
   organisch: { dikte: 26, boog: 150, helling: -9 }, schelp: { dikte: 10, boog: 54, helling: 7 },
+  afgerond: { dikte: 10, boog: 128, helling: 5 }, hoog: { dikte: 10, boog: 132, helling: 11 },
 };
 function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
   const nieuw = zetelCatalogus.opties?.find((x) => x.code === 'kuipvorm');

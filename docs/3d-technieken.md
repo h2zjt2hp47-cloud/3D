@@ -325,6 +325,21 @@ toont op een grof raster kartels; fijner rekenen kost rekentijd bij het opbouwen
 Doeltoestel sinds 11/11: een toestel met een bescheiden grafische kaart (MacBook). Driehoeken zijn daar geen probleem
 (een zetel telt er 200 000 tot 250 000); tekenopdrachten wel (zie hierboven).
 
+## Lessen uit het controleblad (11/11)
+
+- **Hoogte langs een gebogen wand: reken met de afstand, niet met de hoek.** Punten op gelijke hoeken liggen bij een
+  hoekig grondvlak (een afgeronde rechthoek) opeengepakt in de hoeken. Wie de hoogte per punt laat verlopen, krijgt dan
+  een knik. Herverdeel de punten eerst op gelijke afstanden (`gelijkVerdeeld` in `kuip.ts`).
+- **Een kussen dat ergens op een frame hangt, is rondom rond.** De kuipwand had een vlakke onderkant (ze stond altijd
+  ergens op). Voor een rug op een frame (Karl) rondt `kuipwandGeometrie` nu ook de onderkant af en krijgen de hoeken
+  een eigen straal boven en onder (`wandOvaal`). Laat zo'n kussen als één plaat hellen: helt elke doorsnede apart,
+  dan waaieren de lage uiteinden uit als vleugels.
+- **Een los gevuld kussen herken je aan zijn rand, niet aan zijn buik.** Meer bolling alleen maakt een kussen niet
+  losser. Wat het oog leest: een dunne naad, zijden die tussen de hoeken naar binnen trekken (oortjes) en een bovenrand
+  die doorzakt. De onderrand blijft recht: daar rust het kussen (`losGevuld`).
+- **Een maat is een buitenmaat.** Buig je een zetel in een boog, dan wordt hij van uiteinde tot uiteinde korter. Reken
+  de boog zo dat de opgegeven breedte de buitenmaat blijft, anders klopt de 3D niet meer met de maten op de offerte.
+
 ## Safari: het beeld bleef hangen tot je het venster van grootte veranderde (11/11)
 
 Melding van Jonas, de eerste test op een echte MacBook in Safari (WebGPU): elk model bleef het eerste beeld tonen tot hij
