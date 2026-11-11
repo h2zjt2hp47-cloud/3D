@@ -33,17 +33,32 @@ def haal(url):
         return antwoord.read()
 
 
-paginas = [x for x in a.paginas.split(',') if x]
-if not paginas:
+def productpaginas():
+    """Alle productpagina's die op de lijstpagina's staan."""
+    uit = []
     for lijst in a.lijsten.split(','):
         html = haal(f'{a.site}/{lijst}.html').decode('utf-8', 'replace')
         for m in re.finditer(r'<a[^>]*href="/([a-z0-9\-]+)\.html"[^>]*>\s*<img', html, re.I):
-            if m.group(1) not in paginas:
-                paginas.append(m.group(1))
+            if m.group(1) not in uit:
+                uit.append(m.group(1))
+    return uit
+
+
+paginas = [x for x in a.paginas.split(',') if x]
+if not paginas:
+    paginas = productpaginas()
 print(f"{len(paginas)} productpagina's")
 
+alle = None
 for pagina in paginas:
-    html = haal(f'{a.site}/{pagina}.html').decode('utf-8', 'replace')
+    try:
+        html = haal(f'{a.site}/{pagina}.html').decode('utf-8', 'replace')
+    except Exception as fout:
+        # Een pagina die anders heet (mabel → mabel-1-zit): zeggen welke namen erop lijken en verder gaan.
+        alle = alle if alle is not None else productpaginas()
+        lijkt = [x for x in alle if pagina.split('-')[0] in x]
+        print(f'  {pagina}: niet gevonden ({fout}). ' + (f'Bedoel je: {", ".join(lijkt)}?' if lijkt else 'Geen pagina met die naam op de lijsten.'))
+        continue
     map_ = os.path.join(a.uit, pagina)
     os.makedirs(map_, exist_ok=True)
     nummer = 0

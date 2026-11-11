@@ -8,7 +8,7 @@
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
-import { kuipOpbouw, kuipParameters, type Punt } from './kuip.js';
+import { kuipOpbouw, kuipParameters, kuipVoetInzet, type Punt } from './kuip.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, kussenHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, pootHoeken, pootZijden, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -78,6 +78,15 @@ export interface Blok {
   pad?: [number, number][];
   hoogtes?: number[];
   dikte?: number;
+  /**
+   * Kuipwand: helling (cm dat de bovenrand van het hoogste deel verder naar buiten staat dan de voet), helling van de
+   * lage uiteinden, en polstering (hoeveel dikker de wand halverwege is). Zonder: een rechte wand van gelijke dikte.
+   */
+  helling?: number;
+  hellingArm?: number;
+  wandBol?: number;
+  /** Kuipwand: dikte aan de lage uiteinden als deel van de dikte van het hoogste deel (1 = overal even dik). */
+  wandEind?: number;
   /**
    * Profiel (vorm 'profiel'): de doorsnede als punten [s, y, boven]. s = cm opzij van de middenlijn (`pad`), positief naar
    * `uit` (de buitenkant); y = hoogte in cm, absoluut (boven = 0) of onder de bovenkant ter plaatse (boven = 1, dus mee
@@ -251,13 +260,15 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const poefRond = t.tekenstijl === 'poef' && ['rond', 'bol', 'taps'].includes(String(te('poefvorm', 'vorm', 'kiezel')));
         const kuipIn = kuipRond ? Math.min(B, D) * (kuipParameters(opt.get('kuipvorm')?.teken)!.plan === 'rond' ? 0.17 : 0.1) : poefRond ? Math.min(B, D) * 0.19 : 0;
         const binnen = kuipRond || poefRond;
-        const inL = rondL ? Math.min(D / 2, B) * 0.35 : binnen ? kuipIn : ins;
-        const inR = rondR ? Math.min(D / 2, B) * 0.35 : binnen ? kuipIn : ins;
+        // Hellende kuip: de voet is kleiner dan de buitenmaat, de poten staan mee naar binnen.
+        const voetIn = kuipRond ? kuipVoetInzet(kuipParameters(opt.get('kuipvorm')?.teken)!) : { zij: 0, achter: 0 };
+        const inL = rondL ? Math.min(D / 2, B) * 0.35 : binnen ? kuipIn + voetIn.zij : ins;
+        const inR = rondR ? Math.min(D / 2, B) * 0.35 : binnen ? kuipIn + voetIn.zij : ins;
         const yIn = (rond: boolean) => (rond ? D * 0.2 : binnen ? kuipIn : ins);
         // Per hoek (zie pootHoeken): een chaise longue die voorbij de zitting ernaast uitsteekt, houdt vooraan haar poten.
         const hoeken = pootHoeken(ontwerp, catalogus, e);
         const xVan = (k: 'la' | 'lv' | 'ra' | 'rv') => (k[0] === 'l' ? (hoeken[k] === 'grens' ? -dik / 2 : inL) : hoeken[k] === 'grens' ? B - dik / 2 : B - inR - dik);
-        const plaatsen = [['la', xVan('la'), yIn(rondL)], ['ra', xVan('ra'), yIn(rondR)], ['lv', xVan('lv'), D - yIn(rondL) - dik], ['rv', xVan('rv'), D - yIn(rondR) - dik]] as const;
+        const plaatsen = [['la', xVan('la'), yIn(rondL) + voetIn.achter], ['ra', xVan('ra'), yIn(rondR) + voetIn.achter], ['lv', xVan('lv'), D - yIn(rondL) - dik], ['rv', xVan('rv'), D - yIn(rondR) - dik]] as const;
         for (const [k, lx, ly] of plaatsen) {
           if (hoeken[k] === 'geen') continue;
           const extra: Partial<Blok> = potVorm === 'blok' ? {} : { vorm: potVorm === 'conisch' || potVorm === 'kruis' ? 'kegel' : 'cilinder', taps: potVorm === 'conisch' ? 0.55 : potVorm === 'kruis' ? 0.7 : 1 };
@@ -564,7 +575,10 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
             x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),
             y: r2(wandOnder), h: r2(Math.max(...opb.wand.hoogtes) - wandOnder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
-            ...(kiezel ? { glad: true } : {}),
+            helling: opb.wand.helling, hellingArm: opb.wand.hellingArm, wandBol: opb.wand.bol, wandEind: opb.wand.eindDikte,
+            // Sinds de tweede ronde van 11/11 is elke kuipwand een gepolsterde schaal (drie-d.ts, kuipwandGeometrie), ook de
+            // koepelrug (Tumble) en de kiezel (Pebble). Als samengesmolten zachte vorm was de rug een bobbel met een nis
+            // (Tumble) of een boog met een gat eronder (Pebble), met een gerafelde aansluiting op de zitting.
           });
           if (kp.zwevend) {
             // Schelp: twee houten dragers achteraan van het frame tot onder de schaal.

@@ -53,8 +53,25 @@ export interface KuipParameters {
   scheefRechts?: number;
   scheefTop?: number;
   scheefLinks?: number;
+  /**
+   * Bij een scheve schaal: hoe hoog ze aan het rechteruiteinde boven de zitting staat (cm). Standaard −3: ze verdwijnt
+   * in de zitting (Pebble, méridienne). Positief = een lage arm (Manon).
+   */
+  scheefRechtsBoven?: number;
   /** Eigen exponent van het grondvlak (2 = ellips, hoger = hoekiger); leeg = volgens `plan`. */
   exponent?: number;
+  /**
+   * Helling van de rug: zoveel cm staat haar bovenrand verder naar buiten dan haar voet (0 = recht omhoog, negatief =
+   * naar binnen). Een kuip is bovenaan bijna altijd breder dan aan de voet; zonder helling lijkt ze een schutting rond
+   * de zitting. De opgegeven breedte en diepte blijven de buitenmaat: de voet wordt zoveel kleiner.
+   */
+  helling: number;
+  /** Helling van de lage uiteinden (de armen), in cm. */
+  hellingArm: number;
+  /** Polstering: hoeveel dikker de wand halverwege haar hoogte is dan aan de voet en de rand (0 = vlak, 0,3 = bol). */
+  bol: number;
+  /** Dikte van de wand aan de lage uiteinden, als deel van de dikte van de rug (1 = overal even dik, 0,6 = slanke uiteinden). */
+  eindDikte: number;
 }
 
 /** Parameters uit de `teken`-velden van de gekozen kuipvorm; null voor de hoekige fauteuil (rechte rug en armen). */
@@ -74,10 +91,15 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
     organisch: teken.organisch === true,
     vlak: teken.vlak === true,
     scheef: teken.scheef === true,
+    helling: Math.max(-8, Math.min(24, getal('helling', 0))),
+    hellingArm: Math.max(-8, Math.min(24, getal('hellingArm', getal('helling', 0) * 0.35))),
+    bol: Math.max(0, Math.min(0.5, getal('bol', 0.1))),
+    eindDikte: Math.max(0.3, Math.min(1, getal('eindDikte', 1))),
     ...(typeof teken.exponent === 'number' ? { exponent: teken.exponent } : {}),
     ...(typeof teken.scheefRechts === 'number' ? { scheefRechts: teken.scheefRechts } : {}),
     ...(typeof teken.scheefTop === 'number' ? { scheefTop: teken.scheefTop } : {}),
     ...(typeof teken.scheefLinks === 'number' ? { scheefLinks: teken.scheefLinks } : {}),
+    ...(typeof teken.scheefRechtsBoven === 'number' ? { scheefRechtsBoven: teken.scheefRechtsBoven } : {}),
   };
 }
 
@@ -98,8 +120,8 @@ export function superellips(cx: number, cy: number, a: number, b: number, n: num
 export interface KuipOpbouw {
   /** Volledig grondvlak (basis), gesloten omtrek. */
   plan: Punt[];
-  /** Middenlijn van de wand met de bovenhoogte per punt (absoluut, cm), dikte en onderkant (cm). */
-  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number };
+  /** Middenlijn van de wand (aan de voet) met de bovenhoogte per punt (absoluut, cm), dikte, onderkant (cm), helling en polstering. */
+  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number; helling: number; hellingArm: number; bol: number; eindDikte: number };
   /** Omtrek van het zitkussen. */
   zit: Punt[];
   /** Onder- en bovenkant van de basis (cm). */
@@ -108,12 +130,41 @@ export interface KuipOpbouw {
   rugkussens: { lx: number; ly: number; lb: number; ld: number; y: number; h: number }[];
 }
 
+const rond1 = (x: number) => Math.round(x * 10) / 10;
+
+/**
+ * Hoeveel de voet van een hellende kuip binnen de buitenmaat staat (cm): opzij helt de wand tussen arm en rug in,
+ * achteraan volledig, vooraan niet (de uiteinden hellen opzij). Ook de poten staan zoveel naar binnen.
+ */
+export function kuipVoetInzet(k: KuipParameters): { zij: number; achter: number } {
+  // Staat de rug op het zitkussen (méridienne) of op een frame (schelp), dan bepaalt de zitting de buitenmaat en helt
+  // de rug er enkele centimeters voorbij.
+  if (k.opZitting || k.zwevend) return { zij: 0, achter: 0 };
+  return { zij: Math.max(0, k.hellingArm + (k.helling - k.hellingArm) * 0.35), achter: Math.max(0, k.helling * 0.9) };
+}
+
 /**
  * Opbouw van een kuipfauteuil van B × D cm. `P` = poothoogte (onderkant basis), `zithoogte`, `rugH` = rughoogte,
  * `kussenDik` = dikte zitkussen (0 = vaste zitting).
+ *
+ * B en D zijn de buitenmaten, de helling van de wand inbegrepen: helt de rug 8 cm naar achteren, dan staat haar voet
+ * 8 cm verder naar voren en is de voet (onderbouw, zitting) zoveel kleiner dan de bovenrand.
  */
 export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
-  const n = k.exponent ?? exponent(k.plan);
+  const { zij: zijIn, achter: achterIn } = kuipVoetInzet(k);
+  if (zijIn < 0.05 && achterIn < 0.05) return kuipVoet(B, D, h, k, losseRug);
+  const o = kuipVoet(B - 2 * zijIn, D - achterIn, h, k, losseRug);
+  const schuif = ([x, y]: Punt): Punt => [rond1(x + zijIn), rond1(y + achterIn)];
+  return {
+    ...o, plan: o.plan.map(schuif), zit: o.zit.map(schuif), wand: { ...o.wand, pad: o.wand.pad.map(schuif) },
+    rugkussens: o.rugkussens.map((r) => ({ ...r, lx: rond1(r.lx + zijIn), ly: rond1(r.ly + achterIn) })),
+  };
+}
+
+/** De opbouw aan de voet (zonder helling): alles binnen B × D. */
+function kuipVoet(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
+  // Een brede kuip (tweezit: ruim anderhalf keer zo breed als diep) heeft een rechte rug met ronde hoeken, geen ovaal.
+  const n = Math.max(k.exponent ?? exponent(k.plan), B / D > 1.45 && !k.scheef ? 4.2 : 0);
   const w = Math.min(k.dikte, B / 3, D / 3);
   const cx = B / 2, cy = D / 2;
   const plan = superellips(cx, cy, B / 2, D / 2, n, 0, 360, 72).slice(0, -1);
@@ -124,7 +175,6 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   // Trommel: met losse rugkussens blijft de wand laag (de rug komt van de kussens); zonder kussens is de wand zelf de rug
   // en loopt ze achteraan tot de rughoogte (Milton, Fraser).
   const rug = k.vlak ? (losseRug ? voor + 5 : Math.max(h.rugH, voor + 5)) : Math.max(h.rugH, voor + 4);
-  const rond1 = (x: number) => Math.round(x * 10) / 10;
   let pad: Punt[], hoogtes: number[];
   if (k.scheef) {
     // Volgens de productfoto's (pebble-01-6, -13, -18): van rechtsachter (−38°, de schaal komt daar op de zitting uit,
@@ -148,7 +198,7 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
     const uTop = afstand[Math.round(((tRechts - tTop) / (tRechts - tLinks)) * F)]! / totaal;
     // Vooraan links ongeveer op zithoogte (daaronder loopt de ronde kop tot op de vloer). Rechts verdwijnt de schaal in de
     // zitting: haar bovenkant eindigt 3 cm onder de zitting, niet erop (twee vlakken op dezelfde hoogte flikkeren).
-    const links = Math.min(rug, zitBoven + (k.scheefLinks ?? 1)), rechts = zitBoven - 3;
+    const links = Math.min(rug, zitBoven + (k.scheefLinks ?? 1)), rechts = Math.min(rug, zitBoven + (k.scheefRechtsBoven ?? -3));
     // Bol verloop, zoals de rand van een blad: bij de top vlak, naar de uiteinden toe steeds steiler.
     hoogtes = pad.map((_, i) => {
       const u = i / (pad.length - 1);
@@ -200,5 +250,5 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
       rugkussens.push({ lx: w + 3 + i * breed, ly: w - 3, lb: breed - 1, ld: k.vlak ? 20 : 16, y: zitBoven, h: Math.max(20, (top - zitBoven) * (k.vlak ? 0.95 : 0.85)) });
     }
   }
-  return { plan, wand: { pad, hoogtes, dikte: w, onder }, zit, basis: { onder: h.P, boven: basisBoven }, rugkussens };
+  return { plan, wand: { pad, hoogtes, dikte: w, onder, helling: k.helling, hellingArm: k.hellingArm, bol: k.bol, eindDikte: k.eindDikte }, zit, basis: { onder: h.P, boven: basisBoven }, rugkussens };
 }

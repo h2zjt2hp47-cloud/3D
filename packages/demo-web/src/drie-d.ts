@@ -1141,57 +1141,113 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     n.needsUpdate = true;
   }
   /**
-   * Kuipwand: een gestoffeerde wand langs een gebogen middenlijn (`pad`, wereld x/z), met per punt een eigen
-   * bovenhoogte, een volledig afgeronde bovenrand en afgeronde uiteinden. Vorm rond (ox, oy, oz).
+   * Kuipwand: een gepolsterde schaal langs een gebogen middenlijn (`pad`, wereld x/z), met per punt een eigen
+   * bovenhoogte. Vorm rond (ox, oy, oz).
+   *
+   * Herbouwd op 11/11 (melding: "ronde vormen vormen zeker problemen"). Vroeger was dit een rechtopstaande strook met de
+   * punten van de motor als hoeken: zichtbare knikken, geen helling, en open uiteinden waar je de achtergrond als een wit
+   * streepje door zag. Nu:
+   *  - de middenlijn en de hoogtes worden vloeiend bijgemonsterd (om de ±1,5 cm): geen knikken meer;
+   *  - de wand kan **hellen** (`helling`: zoveel cm staat de bovenrand van de rug verder naar buiten dan de voet;
+   *    `hellingArm` voor de lage uiteinden): een kuip is bovenaan breder dan onderaan, zoals op elke foto;
+   *  - de wand is **gepolsterd** (`bol`: zoveel dikker in het midden van de hoogte dan aan de voet en de rand);
+   *  - de bovenrand is een volle ronding en de uiteinden zijn rond en **gesloten**.
    */
-  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0) {
+  function kuipwandGeometrie(pad0: [number, number][], hoogtes0: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0,
+    vorm: { helling?: number; hellingArm?: number; bol?: number; eind?: number } = {}) {
     const w = dikte / 2;
-    const n = pad.length;
-    // Richting en zijwaartse normaal per punt.
+    // Vloeiend bijmonsteren (Catmull-Rom door de punten van de motor), op gelijke afstanden langs de wand.
+    const n0 = pad0.length;
+    const cr = (a: number, b: number, c: number, d: number, t: number) => 0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t * t + (3 * b - a - 3 * c + d) * t * t * t);
+    const bij = (i: number) => Math.max(0, Math.min(n0 - 1, i));
+    const fijn: { x: number; z: number; h: number }[] = [];
+    for (let i = 0; i < n0 - 1; i++) {
+      const [a, b, c, d] = [pad0[bij(i - 1)]!, pad0[i]!, pad0[i + 1]!, pad0[bij(i + 2)]!];
+      const [ha, hb, hc, hd] = [hoogtes0[bij(i - 1)]!, hoogtes0[i]!, hoogtes0[i + 1]!, hoogtes0[bij(i + 2)]!];
+      const stuk = Math.max(1, Math.ceil(Math.hypot(c[0] - b[0], c[1] - b[1]) / 0.75));
+      for (let k = 0; k < stuk; k++) {
+        const t = k / stuk;
+        // De hoogte mag niet doorschieten voorbij haar buren (geen bult voor een vlak stuk).
+        fijn.push({ x: cr(a[0], b[0], c[0], d[0], t), z: cr(a[1], b[1], c[1], d[1], t), h: Math.min(Math.max(hb, hc), Math.max(Math.min(hb, hc), cr(ha, hb, hc, hd, t))) });
+      }
+    }
+    fijn.push({ x: pad0[n0 - 1]![0], z: pad0[n0 - 1]![1], h: hoogtes0[n0 - 1]! });
+    const lengte = [0];
+    for (let i = 1; i < fijn.length; i++) lengte.push(lengte[i - 1]! + Math.hypot(fijn[i]!.x - fijn[i - 1]!.x, fijn[i]!.z - fijn[i - 1]!.z));
+    const totaal = lengte[lengte.length - 1]! || 1, n = Math.max(n0, Math.min(420, Math.ceil(totaal / 1.5) + 1));
+    const pad: [number, number][] = [], hoogtes: number[] = [];
+    for (let i = 0, j = 0; i < n; i++) {
+      const doel = (totaal * i) / (n - 1);
+      while (j < fijn.length - 2 && lengte[j + 1]! < doel) j++;
+      const f = Math.max(0, Math.min(1, (doel - lengte[j]!) / (lengte[j + 1]! - lengte[j]! || 1))), p = fijn[j]!, q = fijn[j + 1]!;
+      pad.push([p.x + f * (q.x - p.x), p.z + f * (q.z - p.z)]);
+      hoogtes.push(p.h + f * (q.h - p.h));
+    }
+    // Richting en zijwaartse normaal per punt; de normaal wijst naar buiten (weg van het midden van de boog).
+    const mx = pad.reduce((t, q) => t + q[0], 0) / n, mz = pad.reduce((t, q) => t + q[1], 0) / n;
+    const midden = pad[Math.floor(n / 2)]!;
     const zij = pad.map((q, i) => {
       const a = pad[Math.max(0, i - 1)]!, c = pad[Math.min(n - 1, i + 1)]!;
       const tx = c[0] - a[0], tz = c[1] - a[1], l = Math.hypot(tx, tz) || 1;
       return { tx: tx / l, tz: tz / l, nx: tz / l, nz: -tx / l };
     });
-    // Profiel (dwarsdoorsnede): onderkant, zijkant op, halve cirkel over de top, zijkant neer.
-    const profiel = (hoog: number, breed: number): [number, number][] => {
-      const r = Math.min(breed, Math.max(0.5, hoog - 0.5));
-      const pts: [number, number][] = [[-breed, 0], [-breed, Math.max(0, hoog - r)]];
-      for (let k = 1; k < 12; k++) { const a = Math.PI - (k / 12) * Math.PI; pts.push([Math.cos(a) * breed, hoog - r + Math.sin(a) * r]); }
-      pts.push([breed, Math.max(0, hoog - r)], [breed, 0]);
+    const mz0 = zij[Math.floor(n / 2)]!;
+    if (mz0.nx * (midden[0] - mx) + mz0.nz * (midden[1] - mz) < 0) for (const r of zij) { r.nx = -r.nx; r.nz = -r.nz; }
+    const hMin = Math.min(...hoogtes), hMax = Math.max(...hoogtes);
+    const helling = vorm.helling ?? 0, hellingArm = vorm.hellingArm ?? helling * 0.35, bol = vorm.bol ?? 0, eindDik = vorm.eind ?? 1;
+    /** Hoe hoog een punt staat tussen het laagste (0) en het hoogste (1) deel van de wand, vloeiend. */
+    const deel = (hoog: number) => { const f = hMax - hMin > 0.5 ? (hoog - hMin) / (hMax - hMin) : 1; return f * f * (3 - 2 * f); };
+    /** Helling van de bovenrand op een punt: de hoge rug helt het meest, de lage uiteinden het minst. */
+    const hellingOp = (hoog: number) => hellingArm + (helling - hellingArm) * deel(hoog);
+    /** Halve dikte op een punt: de lage uiteinden kunnen slanker zijn dan de rug. */
+    const halfOp = (hoog: number) => w * (eindDik + (1 - eindDik) * deel(hoog));
+    // Profiel (dwarsdoorsnede, u = dwars op de wand met + naar buiten, y = hoogte): binnenkant op, volle ronding over de
+    // top, buitenkant neer. `breed` = halve dikte aan de voet; `top` = hoeveel de bovenrand naar buiten staat.
+    const ZIJ = 7, BOOG = 14;
+    const profiel = (hoog: number, breed: number, top: number): [number, number][] => {
+      const r = Math.min(breed, Math.max(0.5, hoog - 0.5)), recht = Math.max(0, hoog - r);
+      const uit = (y: number) => top * Math.pow(Math.max(0, Math.min(1, y / Math.max(1, hoog))), 1.4);
+      const dik = (y: number) => breed * (1 + bol * Math.sin(Math.PI * Math.max(0, Math.min(1, y / Math.max(1, recht)))));
+      const pts: [number, number][] = [];
+      for (let k = 0; k <= ZIJ; k++) { const y = (recht * k) / ZIJ; pts.push([uit(y) - dik(y), y]); }
+      for (let k = 1; k < BOOG; k++) { const a = Math.PI - (k / BOOG) * Math.PI; pts.push([uit(recht) + Math.cos(a) * breed, recht + Math.sin(a) * r]); }
+      for (let k = ZIJ; k >= 0; k--) { const y = (recht * k) / ZIJ; pts.push([uit(y) + dik(y), y]); }
       return pts;
     };
-    // Ringen langs de middenlijn, met afgeronde uiteinden (de breedte loopt als een kwartcirkel af).
-    type Ring = { x: number; z: number; nx: number; nz: number; hoog: number; breed: number };
+    // Ringen langs de middenlijn. De uiteinden zijn in het grondvlak half rond en lopen dicht: de breedte gaat tot nul.
+    type Ring = { x: number; z: number; nx: number; nz: number; hoog: number; breed: number; top: number };
     const ringen: Ring[] = [];
+    const EIND = 9;
     const eind = (i: number, richting: number) => {
-      const q = pad[i]!, r = zij[i]!, hoog = hoogtes[i]! - onder;
-      const stap = richting < 0 ? [ -r.tx, -r.tz ] : [ r.tx, r.tz ];
+      const q = pad[i]!, r = zij[i]!, hoog = Math.max(0.6, hoogtes[i]! - onder), top = hellingOp(hoogtes[i]!), half = halfOp(hoogtes[i]!);
       const reeks: Ring[] = [];
-      for (let k = 5; k >= 1; k--) {
-        const f = k / 5, a = (f * Math.PI) / 2;
-        // Uiteinde: in het grondvlak half rond, de hoogte blijft (geen knik in de arm).
-        reeks.push({ x: q[0] + stap[0]! * w * Math.sin(a), z: q[1] + stap[1]! * w * Math.sin(a), nx: r.nx, nz: r.nz, hoog: Math.max(0.6, hoog), breed: Math.max(0.05, w * Math.cos(a)) });
+      // De neus is ook van opzij rond: de bovenkant zakt naar de punt toe (anders eindigt de wand in een opstaande punt,
+      // die van voren als een hoorntje boven de arm uitsteekt).
+      const zak = Math.min(hoog * 0.3, half * 1.6);
+      for (let k = EIND; k >= 1; k--) {
+        const a = ((k / EIND) * Math.PI) / 2;
+        reeks.push({ x: q[0] + richting * r.tx * half * Math.sin(a), z: q[1] + richting * r.tz * half * Math.sin(a), nx: r.nx, nz: r.nz, hoog: hoog - zak * (1 - Math.cos(a)), breed: k === EIND ? 0 : half * Math.cos(a), top });
       }
       return reeks;
     };
     ringen.push(...eind(0, -1));
-    for (let i = 0; i < n; i++) ringen.push({ x: pad[i]![0], z: pad[i]![1], nx: zij[i]!.nx, nz: zij[i]!.nz, hoog: hoogtes[i]! - onder, breed: w });
+    for (let i = 0; i < n; i++) ringen.push({ x: pad[i]![0], z: pad[i]![1], nx: zij[i]!.nx, nz: zij[i]!.nz, hoog: Math.max(0.6, hoogtes[i]! - onder), breed: halfOp(hoogtes[i]!), top: hellingOp(hoogtes[i]!) });
     ringen.push(...eind(n - 1, 1).reverse());
     // Profiel gesloten met een dubbel eerste punt achteraan (voor een doorlopende textuur rond het profiel).
-    const Q = profiel(10, w).length + 1;
+    const Q = profiel(10, w, 0).length + 1;
     const pos: number[] = [], uvs: number[] = [];
     let langs = 0;
     ringen.forEach((r, i) => {
       if (i > 0) langs += Math.hypot(r.x - ringen[i - 1]!.x, r.z - ringen[i - 1]!.z);
-      const pr = profiel(r.hoog, r.breed);
+      const pr = profiel(r.hoog, r.breed, r.top);
       pr.push(pr[0]!);
-      // Textuurmaat rond het profiel van de volle wand (ook in de afgeronde uiteinden), anders drukt ze samen tot strepen.
-      const ref = profiel(r.hoog, w);
-      ref.push(ref[0]!);
-      let rond = 0;
+      // Textuur rond het profiel op ware grootte, gemeten op het profiel zelf en uitgelijnd op de kruin: zo loopt de
+      // tekening over de bovenrand door tot in de ronde uiteinden, zonder daar samen te drukken tot een ruwe vlek.
+      const omtrek = [0];
+      for (let j = 1; j < pr.length; j++) omtrek.push(omtrek[j - 1]! + Math.hypot(pr[j]![0] - pr[j - 1]![0], pr[j]![1] - pr[j - 1]![1]));
+      const kruin = omtrek[Math.floor((pr.length - 1) / 2)]!;
       pr.forEach(([u, y], j) => {
-        if (j > 0) rond += Math.hypot(ref[j]![0] - ref[j - 1]![0], ref[j]![1] - ref[j - 1]![1]);
+        const rond = omtrek[j]! - kruin;
         pos.push(r.x + r.nx * u - ox, y, r.z + r.nz * u - oz);
         // Textuur langs de wand (cm) en rond het profiel (cm), op ware grootte: geen sprongen in de bocht.
         uvs.push(tegel ? langs / tegel : 0, tegel ? rond / tegel : 0);
@@ -1210,8 +1266,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     geo.computeVertexNormals();
     gelijkeNormalen(geo, ringen.map((_, i) => [i * Q, i * Q + Q - 1]));
     // Draairichting nakijken: de normaal bovenop moet omhoog wijzen; anders alle driehoeken omkeren.
-    const midden = Math.floor(ringen.length / 2) * Q + Math.floor(Q / 2);
-    if (geo.attributes.normal.getY(midden) < 0) {
+    const bovenop = Math.floor(ringen.length / 2) * Q + Math.floor(Q / 2);
+    if (geo.attributes.normal.getY(bovenop) < 0) {
       for (let t = 0; t < idx.length; t += 3) { const k = idx[t + 1]!; idx[t + 1] = idx[t + 2]!; idx[t + 2] = k; }
       geo.setIndex(idx);
       geo.computeVertexNormals();
@@ -1361,7 +1417,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const kader = doosVan(b).expandByScalar(8);
       const buren = sceneBlokken.filter((k) => k.soort === 'kussen' && kader.intersectsBox(doosVan(k)));
       const sleutel = vormSleutel([b], buren);
-      if (!zachteVormen.has(sleutel)) zachteVormen.set(sleutel, zachteVorm([b], { minAfronding: 0, buren }));
+      // Raster van 1,25 cm (was 2): een smalle, uitlopende arm werd op het grove raster hoekig. Kost rekentijd, geen
+      // tekentijd; een toestel met een grafische kaart (ook een bescheiden) tekent de fijnere vorm zonder moeite.
+      if (!zachteVormen.has(sleutel)) zachteVormen.set(sleutel, zachteVorm([b], { minAfronding: 0, buren, raster: 1.25 }));
       const m = zachteMesh([b], buren)!;
       m.name = b.code;
       const naad = profielNaad(b);
@@ -1375,7 +1433,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (b.vorm === 'kuipwand' && b.pad && b.hoogtes) {
       const cxo = b.x + b.b / 2, czo = b.z + b.d / 2;
       const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
-      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm);
+      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, { helling: b.helling, hellingArm: b.hellingArm, bol: b.wandBol, eind: b.wandEind });
       const base = materiaal(b);
       const sleutel = `vc:${base.uuid}`;
       let mat = materialen.get(sleutel);
@@ -1433,19 +1491,20 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       case 'cilinder': {
         if (b.as === 'z' || b.as === 'x') {
           const r = (b.as === 'z' ? Math.min(b.b, b.h) : Math.min(b.d, b.h)) / 2;
-          geo = new THREE.CylinderGeometry(r, r, b.as === 'z' ? b.d : b.b, 28);
+          geo = new THREE.CylinderGeometry(r, r, b.as === 'z' ? b.d : b.b, r > 6 ? 56 : 28);
           geo.rotateX(b.as === 'z' ? Math.PI / 2 : 0);
           if (b.as === 'x') geo.rotateZ(Math.PI / 2);
           y = b.y + r;
         } else {
           const r = Math.min(b.b, b.d) / 2;
-          geo = new THREE.CylinderGeometry(r, r * (b.taps ?? 1), b.h, 20);
+          // Een grote ronde vorm (tafelblad, ronde poef in de bouwweergave) met meer zijden: met 20 zag je de hoeken.
+          geo = new THREE.CylinderGeometry(r, r * (b.taps ?? 1), b.h, r > 6 ? 56 : 20);
           y = b.y + b.h / 2;
         }
         break;
       }
       case 'bol':
-        geo = new THREE.SphereGeometry(Math.min(b.b, b.h) / 2, 12, 8);
+        geo = Math.min(b.b, b.h) > 12 ? new THREE.SphereGeometry(Math.min(b.b, b.h) / 2, 32, 20) : new THREE.SphereGeometry(Math.min(b.b, b.h) / 2, 12, 8);
         y = b.y + b.h / 2;
         break;
       default:
@@ -2413,7 +2472,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       // lange doorlopende zetel): raster van 2,5 cm, ±40 % minder rekenwerk; van op die afstand zie je het verschil niet.
       const kader = delen.reduce((k, b) => k.union(doosVan(b)), new THREE.Box3()), maat = kader.getSize(new THREE.Vector3());
       const groot = maat.x * maat.y * maat.z > 3e6 || maat.x * maat.z > 4e4;
-      zachteVormen.set(vormSleutel(delen, buren), zachteVorm(delen, { buren, raster: groot ? 2.5 : 2 }));
+      // Sinds de tweede ronde van 11/11 fijner (was 2,5 en 2 cm): ronde vormen werden op het grove raster kantig.
+      zachteVormen.set(vormSleutel(delen, buren), zachteVorm(delen, { buren, raster: groot ? 2 : 1.5 }));
       // Niet onbeperkt bewaren (een sofa is al gauw enkele MB): de oudste eerst weg.
       if (zachteVormen.size > 12) zachteVormen.delete(zachteVormen.keys().next().value!);
       zachtGepland = window.setTimeout(volgende, 0);

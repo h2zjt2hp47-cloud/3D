@@ -194,7 +194,7 @@ describe('collectie', () => {
     const wand = tumble.find((b) => b.code === 'e1.rug')!;
     expect(wand.vorm).toBe('kuipwand');
     const midden = Math.floor(wand.hoogtes!.length / 2);
-    expect(wand.hoogtes![midden]).toBeGreaterThan(wand.hoogtes![0]! + 20); // achteraan hoger dan vooraan
+    expect(wand.hoogtes![midden]).toBeGreaterThan(wand.hoogtes![0]! + 10); // achteraan hoger dan aan de uiteinden
     expect(blokken('pebble').some((b) => b.code === 'e1.arm-l')).toBe(false);
     // Schelp (Karl): de rug staat op de zitting, niet op de vloer.
     expect(blokken('karl').find((b) => b.code === 'e1.rug')!.y).toBeGreaterThan(20);
@@ -256,7 +256,7 @@ describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meube
 
 describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse lagen', () => {
   const blokken = (code: string) => bouw3D(structuredClone(zetelModellen.find((m) => m.code === code)!.ontwerp), zetelCatalogus, standaardMaterialen).blokken;
-  it('zitting is één zacht blok in de stof tot op zithoogte, zonder los zitkussen; de schaal is glad en staat op de vloer', () => {
+  it('zitting is één zacht blok in de stof tot op zithoogte, zonder los zitkussen; de schaal helt over de zitting en staat op de vloer', () => {
     const b = blokken('pebble');
     const zit = b.find((x) => x.code === 'e1.basis')!, rug = b.find((x) => x.code === 'e1.rug')!;
     expect(b.some((x) => x.code === 'e1.zitkussen')).toBe(false);
@@ -264,7 +264,11 @@ describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse 
     expect(zit.glad).toBe(true);
     expect(zit.kleur).toBe(rug.kleur); // geen donkere onderbouw meer
     expect(rug.vorm).toBe('kuipwand');
-    expect(rug.glad).toBe(true);
+    // Sinds de tweede ronde van 11/11 een gepolsterde schaal (geen samengesmolten zachte vorm meer): dik, bol, en
+    // bovenaan naar binnen hellend, zoals een kiezel die over de zitting leunt.
+    expect(rug.glad).toBeUndefined();
+    expect(rug.helling).toBeLessThan(0);
+    expect(rug.wandBol).toBeGreaterThan(0.2);
     expect(rug.y).toBeLessThan(0); // platte onderkant onder de vloer
   });
   it('Tumble (koepelrug): ronde zitting in de stof met een zachte rug erop, breed bovenaan en met ronde schouders', () => {
@@ -273,14 +277,19 @@ describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse 
     expect(basis.glad).toBe(true);
     expect(basis.y + basis.h).toBe(45); // de zitting loopt tot de zithoogte (productpagina)
     expect(b.some((x) => x.code === 'e1.zitkussen')).toBe(false);
-    expect(rug.glad).toBe(true);
+    // Een gepolsterde schaal die achterover helt, met slankere uiteinden (geen samengesmolten zachte vorm meer).
+    expect(rug.glad).toBeUndefined();
+    expect(rug.helling).toBeGreaterThan(4);
+    expect(rug.wandEind).toBeLessThan(0.8);
     expect(rug.y).toBe(31); // de rug staat op de zitting, niet op de vloer
     const h = rug.hoogtes!, midden = Math.floor(h.length / 2);
     expect(h[midden]).toBe(75);
-    // Meer dan de helft van de boog op volle hoogte (geen punt), daarna zakt de rug tot net boven de zitting.
-    expect(h.filter((x) => x === 75).length).toBeGreaterThan(h.length * 0.5);
-    expect(h[0]!).toBeLessThan(48);
-    expect(h[h.length - 1]!).toBeLessThan(48);
+    // Een derde van de boog op volle hoogte (geen punt); de uiteinden blijven ruim boven de zitting (foto's: de rug is
+    // tot aan haar ronde uiteinden bijna even hoog).
+    expect(h.filter((x) => x === 75).length).toBeGreaterThan(h.length * 0.3);
+    expect(h[0]!).toBeGreaterThan(45 + 8);
+    expect(h[0]!).toBeLessThan(65);
+    expect(h[h.length - 1]!).toBe(h[0]!);
   });
 
   it('Mabel 2-zit: één gebogen schelp van 145 cm; Mabel Meridienne: de rug hoog rond het linkeruiteinde, schuin naar de zitting', () => {

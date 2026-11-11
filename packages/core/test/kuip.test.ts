@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { bouw3D, tekenVooraanzicht, type Ontwerp } from '../src/index.js';
-import { kuipOpbouw, kuipParameters } from '../src/kuip.js';
+import { kuipOpbouw, kuipParameters, kuipVoetInzet } from '../src/kuip.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -74,9 +74,53 @@ describe('scheve schaal (kuipvorm organisch, Pebble)', () => {
     for (const [x, y] of [...opb.plan, ...pad]) { expect(x).toBeGreaterThanOrEqual(-0.01); expect(x).toBeLessThanOrEqual(85.01); expect(y).toBeGreaterThanOrEqual(-0.01); expect(y).toBeLessThanOrEqual(85.01); }
   });
   it('de andere kuipvormen blijven symmetrisch', () => {
-    for (const v of ['rond', 'afgerond', 'omhullend', 'trommel', 'schelp']) {
+    for (const v of ['rond', 'afgerond', 'ton', 'hoog', 'koepel', 'trommel', 'schelp']) {
       const w = kuipOpbouw(85, 85, h, kuipParameters(teken(v))!, false).wand.hoogtes;
       expect(w[0], v).toBe(w[w.length - 1]);
+    }
+  });
+  it('omhullend (Manon) is een spiraal: links hoger dan rechts, en rechts een lage arm boven de zitting', () => {
+    const w = kuipOpbouw(75, 70, h, kuipParameters(teken('omhullend'))!, false).wand;
+    const rechts = w.hoogtes[0]!, links = w.hoogtes[w.hoogtes.length - 1]!;
+    expect(links).toBeGreaterThan(rechts);
+    expect(rechts).toBeGreaterThan(h.zithoogte + 5); // geen schaal die in de zitting verdwijnt, maar een lage arm
+    expect(Math.max(...w.hoogtes)).toBe(h.rugH);
+  });
+});
+
+describe('hellende, gepolsterde kuipwand (tweede ronde 11/11)', () => {
+  const h = { P: 4, zithoogte: 44, rugH: 92, kussenDik: 12 };
+  it('de maat blijft de buitenmaat: de voet staat zoveel naar binnen als de wand helt', () => {
+    const k = kuipParameters(teken('hoog'))!;
+    expect(k.helling).toBeGreaterThan(5);
+    const inzet = kuipVoetInzet(k);
+    expect(inzet.achter).toBeCloseTo(k.helling * 0.9, 5);
+    const o = kuipOpbouw(72, 80, h, k, false);
+    const xs = o.plan.map((q) => q[0]), ys = o.plan.map((q) => q[1]);
+    expect(Math.min(...xs)).toBeCloseTo(inzet.zij, 0);
+    expect(Math.max(...xs)).toBeCloseTo(72 - inzet.zij, 0);
+    expect(Math.min(...ys)).toBeCloseTo(inzet.achter, 0); // achteraan staat de voet naar voren
+    expect(Math.max(...ys)).toBeCloseTo(80, 0); // vooraan niet
+    expect(o.wand).toMatchObject({ helling: k.helling, hellingArm: k.hellingArm, bol: k.bol });
+  });
+  it('zonder helling verandert er niets, en een rug op het zitkussen of op een frame houdt de volle voet', () => {
+    const recht = kuipParameters({ plan: 'rond', dikte: 12, boog: 130, voorBoven: 12, armVanaf: 1 })!;
+    expect(kuipVoetInzet(recht)).toEqual({ zij: 0, achter: 0 });
+    expect(Math.min(...kuipOpbouw(80, 80, h, recht, false).plan.map((q) => q[0]))).toBeCloseTo(0, 0);
+    for (const v of ['meridienne', 'schelp']) expect(kuipVoetInzet(kuipParameters(teken(v))!), v).toEqual({ zij: 0, achter: 0 });
+  });
+  it('een brede kuip (tweezit) krijgt een rechte rug met ronde hoeken, een smalle blijft rond', () => {
+    const k = kuipParameters(teken('ton'))!;
+    // Hoek van het grondvlak op 45°: bij een hoekiger grondvlak ligt hij dichter bij de hoek van de rechthoek.
+    const hoek = (B: number, D: number) => { const p = kuipOpbouw(B, D, h, k, false).plan; const q = p[Math.round(p.length / 8)]!; return Math.hypot(q[0] - B / 2, q[1] - D / 2) / Math.hypot(B / 2, D / 2); };
+    expect(hoek(145, 75)).toBeGreaterThan(hoek(68, 65) + 0.04);
+  });
+  it('elke standaardvorm heeft een helling binnen de grenzen', () => {
+    for (const v of ['rond', 'afgerond', 'ton', 'hoog', 'omhullend', 'koepel', 'trommel', 'organisch', 'meridienne', 'schelp']) {
+      const k = kuipParameters(teken(v))!;
+      expect(Math.abs(k.helling), v).toBeLessThanOrEqual(24);
+      expect(k.bol, v).toBeGreaterThanOrEqual(0);
+      expect(k.eindDikte, v).toBeGreaterThan(0.29);
     }
   });
 });

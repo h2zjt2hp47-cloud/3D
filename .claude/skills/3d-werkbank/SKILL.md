@@ -37,6 +37,9 @@ bron kiezen, item aanklikken, standpunt, decor, licht, variant; onderaan *Toeste
 ## Het gereedschap (`scripts/3d`, uitvoer in `werkbank/`, niet in git)
 - `werkbank.mjs`: `openWerkbank({ weg })`, `neemBeeld(werkbank, bron, code, opties, { vers })` (met hergebruik per
   vingerafdruk in `werkbank/cache`), `kiesBron`, `kiesItems`, `leesItems`, `leesReeksen`, `leesInstellingen`.
+- `vergelijkblad.mjs`: per item de foto naast onze 3D uit een paar standpunten, enkele items per blad (jpg in
+  `werkbank/bladen`); met `--bronfotos` alle foto's van de productpagina erboven (`fotos-bron/<pagina>`, of `--pagina`).
+  Het middel om zelf kritisch te kijken vóór het controleblad naar de klant gaat; `maakBlad()` in werkbank.mjs.
 - `modelbeelden.mjs`, `controleblad.mjs`, `lichtmeting.mjs`, `toestelcontrole.mjs`: zie de kop van elk bestand en
   `docs/werkwijze-3d.md` hoofdstuk 6. Gemeenschappelijk: `--bron`, `--items`, `--groep`, `--weg`, `--vers`,
   `--zonder-bouw`.

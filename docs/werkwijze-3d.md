@@ -69,7 +69,7 @@ product (bij ramen het profielsysteem) en "foto" als de referentie die je hebt (
 
 | Stap | Wat | Gereedschap | Klaar wanneer |
 |---|---|---|---|
-| **1. Bron** | Alle grote foto's, de maten en de tekening van de productpagina ophalen | `python3 -I scripts/3d/modelfotos.py --paginas kotor` | Je weet welke maten **zeker** zijn (pagina, tekening) en welke je moet afleiden |
+| **1. Bron** | Alle grote foto's, de maten en de tekening van de productpagina ophalen en naast onze 3D leggen | `python3 -I scripts/3d/modelfotos.py --paginas kotor` · `npm run vergelijkblad -- --items kotor --bronfotos` | Je weet welke maten **zeker** zijn (pagina, tekening) en welke je moet afleiden |
 | **2. Opbouw** | De zetel in woorden beschrijven (vijf vragen hieronder) en de **bouwstijl** kiezen | Demo: *Bouwstijl* · `core/voorbeelden/bouwstijlen.ts` | Iemand die de foto niet ziet, kan de zetel uit je beschrijving herkennen |
 | **3. Maten** | Zekere maten invullen. Ontbreekt er een, leid ze af uit de foto van voren met een maat die je wel kent | Demo: elementen en vormgeving · `modellen.ts` | Elke afgeleide maat staat als benadering in de bron van het model |
 | **4. Afwijkingen** | Alleen wat afwijkt van de bouwstijl: kussendikte, armen, sierkussens, stofkleur | Demo: *Foto ernaast*, *Leg over de 3D* en de schuifbalken | Foto en 3D tonen dezelfde lagen, even dik, in dezelfde kleur |
@@ -122,6 +122,7 @@ git). Elk commando werkt voor elke bron: `--bron zetels` (standaard), `inrichtin
 |---|---|---|
 | `npm run controleblad` | Eén pagina met elk item van elke bron: referentiefoto, vorige ronde, 3D nu, maten, bron. Oordeel en opmerking per item | 49 s voor 86 items; daarna alleen wat veranderd is |
 | `npm run modelbeelden` | Beelden uit vaste standpunten, of een reeks: elke keuze van een groep, elk decor, elke lichtsfeer | ±1 s per beeld |
+| `npm run vergelijkblad` | Eén blad (jpg) met per item de foto naast onze 3D uit een paar standpunten; met `--bronfotos` alle foto's van de productpagina erboven. Voor de kritische blik vooraf | ±3 s per item |
 | `npm run lichtmeting` | Meet per lichtsfeer de bovenkant en de voorkant van een ijkblok tegenover de staal | 9 s |
 | `npm run toestelcontrole` | Meet de weergave zelf op elke rekenweg en vergelijkt de wegen (zie hieronder) | ±5 min |
 | `npm run beelden` | Vergelijkt tien vaste beelden van de echte demo's met de referentie | ±2,5 min |
@@ -138,6 +139,8 @@ npm run controleblad -- --nieuwe-ronde                # na het akkoord: nu wordt
 npm run modelbeelden -- --items kotor --standpunten schuin,voor,links --decor fotodoek
 npm run modelbeelden -- --reeks bouwstijl --item attribute   # ook: poten, rug, stof, alles, decors, lichten
 npm run modelbeelden -- --bron woning --standpunten hoog
+npm run vergelijkblad -- --groep Fauteuils            # foto | schuin | voor, vier per blad
+npm run vergelijkblad -- --items ross --bronfotos --standpunten schuin,voor,rechts,achter
 npm run lichtmeting -- --bron ijk-bouw --streng       # afsluitcode 1 als iets buiten de band valt
 npm run toestelcontrole -- --weg webgpu
 ```
@@ -263,9 +266,65 @@ eigen meting nagegaan voor ze gebruikt werd.
 | Beelden zonder grafische kaart gaan tot 3 keer sneller met Mesa llvmpipe dan met swiftshader | [Microlink: faster WebGL screenshots](https://microlink.io/blog/faster-webgl-screenshots) | 186 → 56 ms per beeld (Kotor, 900 px): 3,3 keer |
 | three.js leest de sterkte van het omgevingsbeeld uit `scene.environmentIntensity` (sinds r163); `envMapIntensity` van een materiaal geldt daar niet meer voor | [three.js r163](https://www.github.com/mrdoob/three.js/releases/tag/r163) · [forum three.js](https://discourse.threejs.org/t/release-166-scene-environment-issues-is-this-a-bug-or-is-it-me/68373) | Bevestigd: verwijderen van de materiaalwaarde verandert geen pixel |
 | Het aantal tekenopdrachten weegt zwaarder dan het aantal driehoeken; richtwaarde onder de 100 tot enkele honderden per beeld; samenvoegen per materiaal helpt | [100 Three.js tips](https://www.utsubo.com/blog/threejs-best-practices-100-tips) · [MetaDesign](https://metadesignsolutions.com/blog/threejs-performance-optimization-best-practices) | Woning 3 909 → 153; zetels zaten al goed (27 tot 129) |
-| Vrije meubelmodellen (CC0) voor een inrichting: Kenney Furniture Kit, Poly Haven | [Kenney](https://opengameart.org/content/furniture-kit) · [vergelijking](https://app.cinevva.com/guides/sketchfab-polyhaven-kenney) | Niet gebruikt: de inrichting blijft uit eigen blokken (zie hoofdstuk 10) |
+| Vrije meubelmodellen (CC0) voor een inrichting: Kenney Furniture Kit, Poly Haven | [Kenney](https://opengameart.org/content/furniture-kit) · [vergelijking](https://app.cinevva.com/guides/sketchfab-polyhaven-kenney) | Niet gebruikt: de inrichting blijft uit eigen blokken (zie hoofdstuk 11) |
 
-## 10. Wat nog niet in deze werkwijze zit
+## 10. Ronde vormen (derde ronde, 11/11)
+
+Melding van Jonas: "Ronde vormen vormen zeker problemen, bepaalde zetels zien er helemaal niet correct uit. Een beperkte
+grafische kaart mag gebruikt worden, zoals op mijn MacBook."
+
+**Doeltoestel.** Sindsdien geldt: de 3D mag rekenen op een toestel met een (bescheiden) grafische kaart, zoals een
+MacBook. Fijnere vormen en meer driehoeken zijn dus toegelaten; het aantal tekenopdrachten blijft de grens (hoofdstuk 9).
+
+**Wat er mis was** (vergelijkbladen van alle fauteuils, poufs en ronde sofa's, met alle foto's van de productpagina's):
+
+| Wat je zag | Oorzaak |
+|---|---|
+| Knikken en hoekige "oren" in rug en armen (Ross, Sullivan, Mabel, Milton) | De gebogen wand van een kuip was een rechtopstaande strook met de ±40 punten van de motor als hoeken |
+| Een kuip als een schutting rond de zitting | Geen helling: elke echte kuip is bovenaan breder dan aan de voet, en de rug helt achterover |
+| Witte streepjes aan de uiteinden van de wand (tien modellen) | De uiteinden waren open: je zag de achtergrond door een spleet van een millimeter |
+| Tumble: een nis in de rug en een gerafelde rand | De rug werd samengesmolten tot een zachte vorm op een raster van 2 cm |
+| Pebble: een boog met een gat eronder | Zelfde oorzaak; op de foto's is de rug een volle schelp die over de zitting leunt |
+| Mabel, Sullivan: verkeerd silhouet | Eén vorm ("afgerond") voor drie heel verschillende fauteuils |
+| Manon: symmetrisch, op de foto een spiraal | De vorm kende alleen een symmetrische wand |
+| Esmee: hoekige, uitlopende armen | Rekenraster van 2 cm voor een arm van 18 cm |
+
+**Wat veranderd is.**
+
+1. **De kuipwand is een gepolsterde schaal** (`kuipwandGeometrie` in `drie-d.ts`): vloeiend bijgemonsterd (om de 1,5 cm),
+   met **helling** (de bovenrand staat verder naar buiten dan de voet), **polstering** (dikker halverwege de hoogte),
+   slankere uiteinden waar gevraagd, en ronde, gesloten uiteinden die ook van opzij afgerond zijn.
+2. **De maat blijft de buitenmaat.** Helt de rug 11 cm achterover, dan staat haar voet 10 cm verder naar voren; onderbouw,
+   zitting en poten schuiven mee (`kuipVoetInzet` in `core/src/kuip.ts`).
+3. **Vormen bijgesteld naar alle foto's** en twee nieuwe: *Ton* (Mabel 1-zit en 2-zit: lage kuip, rondom bijna even hoog)
+   en *Hoge ronde rug* (Sullivan). *Omhullend* (Manon) is een spiraal geworden. Een brede kuip krijgt vanzelf een rechte
+   rug met ronde hoeken.
+4. **Fijner rekenraster** voor de zachte vormen: 1,25 cm voor een arm (was 2), 1,5 tot 2 cm voor een doorlopende zetel
+   (was 2 tot 2,5). Grote ronde vormen (tafelblad, bol) hebben meer zijden.
+
+| Vorm (keuze *Vorm fauteuil*) | Model | Helling rug / arm | Wat de foto's toonden |
+|---|---|---|---|
+| Afgerond met armen | Ross | 5 / 2 cm | Brede, ronde bovenkant; armen zakken in één lijn naar voren |
+| Ton | Mabel 1-zit, 2-zit | 6 / 5 cm | Lage kuip die naar boven breder wordt; rug amper hoger dan de armen |
+| Hoge ronde rug | Sullivan | 11 / 3 cm | Hoge rug die achterover helt, lage ronde armen |
+| Omhullend (spiraal) | Manon | 6 / 3 cm | Hoogst linksachter, zakt rond de zitting naar een lage arm rechts |
+| Koepelrug | Tumble | 7 / 2 cm | Dikke gepolsterde rug op een ronde trommel, slankere uiteinden |
+| Trommel | Quin, Satie, Fraser, Milton | 3 / 3 cm | Dunne wand die licht uitwaaiert |
+| Schelp op frame | Karl | 7 / 3 cm | Gepolsterde rugband die achterover helt |
+| Organisch | Pebble | −9 / −2 cm (naar binnen) | Een volle schelp die over de kiezel leunt |
+| Méridienne | Mabel Meridienne | 4 / 4 cm | Rug rond het linkeruiteinde, licht uitwaaierend |
+
+Beelden: `docs/afbeeldingen/fauteuils-ronde3-1111-1.jpg` en `-2.jpg` (foto, schuin, voor). Alles blijft een benadering
+uit foto's; de hellingen zijn geschat, niet gemeten.
+
+**Gemeten na de ronde:** 283 tests; beeldvergelijking: alleen Pebble veranderd (bewust), Doha en Husk 0,03 % (fijner
+raster), de rest 0,00 %; Kotor 171 000 → 198 000 driehoeken, Doha 178 000 → 247 000, zelfde aantal tekenopdrachten.
+
+**Les voor de werkwijze.** De fouten zaten niet in de getallen van één model maar in de bouwsteen die tien modellen
+delen. Een vergelijkblad van een hele groep (`npm run vergelijkblad`) toont zo'n gedeelde fout in één oogopslag; kijk
+dus eerst naar de groep, dan pas naar het model.
+
+## 11. Wat nog niet in deze werkwijze zit
 
 1. **De echte meting op de M5.** De weg (WebGPU) is nagegaan, de snelheid en het scherm niet. Eén keer de knop
    *Toestelcontrole* op de werkbankpagina starten op de M5 en het rapport doorgeven.
@@ -280,7 +339,7 @@ eigen meting nagegaan voor ze gebruikt werd.
    schaduwkaart nog gebruikt werd (gedrag van three.js; het volgende beeld is goed). En zonder grafische kaart is *Snel*
    trager dan *Mooi*; of dat op een echt toestel ook zo is, toont de toestelcontrole.
 
-## 11. Naslag
+## 12. Naslag
 
 | Document | Waarvoor |
 |---|---|

@@ -203,3 +203,18 @@ de studio), *Snel* en *Mooi*, *Blokken* en *Zacht*.
 4. **Stoffen.** De kleuren zijn gemeten op de foto's, maar het zijn onze demostoffen, niet de stoffen van de klant.
 5. **Niet getest op de M5** (WebGPU); alles is gecontroleerd op de WebGL2-weg in de cloud.
 6. **Prijzen** van de aangepaste modellen zijn mee veranderd (andere elementen en opties). Het blijven demowaarden.
+
+## 9. Derde ronde (11/11): ronde vormen
+
+Melding: "Ronde vormen vormen zeker problemen, bepaalde zetels zien er helemaal niet correct uit." Oorzaken, oplossing en
+de tabel per vorm staan in `docs/werkwijze-3d.md` hoofdstuk 10. Kort: de gebogen wand van elke kuipfauteuil is herbouwd
+als een gepolsterde schaal die helt, de vormen zijn bijgesteld naar alle foto's van de productpagina's, en er zijn twee
+vormen bij (*Ton* voor Mabel, *Hoge ronde rug* voor Sullivan).
+
+![De eerste zeven fauteuils naast hun foto, derde ronde](afbeeldingen/fauteuils-ronde3-1111-1.jpg)
+
+![De andere zeven fauteuils naast hun foto, derde ronde](afbeeldingen/fauteuils-ronde3-1111-2.jpg)
+
+Wat nog verschilt: de poten van Ross en Sullivan staan recht (op de foto's schuin, vanuit een ronde voet); Quin heeft op
+de foto vijf losse kussens (bij ons twee); de hellingen zijn geschat uit foto's.
+

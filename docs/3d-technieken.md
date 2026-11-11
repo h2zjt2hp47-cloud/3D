@@ -302,3 +302,26 @@ De woning was dus het probleem, niet de zetel: 697 blokken met tot zes materiale
 maakt er één vorm per materiaal van (alleen in de bouwweergave, niet voor glas). Het beeld blijft hetzelfde (0,02 %
 verschil), het opbouwen gaat van 351 naar 137 ms. Voor een scène met honderden gelijke onderdelen zou `InstancedMesh`
 of `BatchedMesh` nog verder gaan; bij ons zijn de onderdelen verschillend en volstaat samenvoegen.
+
+## Ronde vormen: de gepolsterde schaal (11/11)
+
+Een kuipfauteuil is een gebogen wand (rug die overloopt in de armen) rond een zitting. Drie dingen maken zo'n wand
+geloofwaardig, en ze ontbraken alle drie:
+
+1. **Helling.** Een echte kuip is bovenaan breder dan aan de voet en de rug helt achterover (5 tot 11 cm). Recht omhoog
+   lijkt ze een schutting. De helling is het grootst waar de wand het hoogst is en klein aan de lage uiteinden; een
+   negatieve helling geeft een schelp die over de zitting leunt (Pebble).
+2. **Vloeiende lijn.** De motor geeft ±40 punten met een hoogte; de weergave legt er een vloeiende kromme door
+   (Catmull-Rom) en neemt om de 1,5 cm een doorsnede. De hoogte mag daarbij niet doorschieten voorbij haar buren.
+3. **Polstering en ronde einden.** De doorsnede is dikker halverwege de hoogte, de bovenrand een volle ronding, en het
+   uiteinde is rond in het grondvlak én van opzij (anders eindigt de wand in een opstaande punt). Het uiteinde moet
+   dichtlopen tot breedte nul: een spleet van een millimeter toont de achtergrond als een wit streepje.
+
+De opgegeven maat blijft de buitenmaat: de voet (onderbouw, zitting, poten) schuift zoveel naar binnen als de wand helt.
+Wanneer een samengesmolten zachte vorm (raster) en wanneer een schaal? Een schaal waar de vorm een duidelijke wand is
+(alle kuipen); een zachte vorm waar delen echt in elkaar overvloeien (doorlopende zetel, strakke arm). De zachte vorm
+toont op een grof raster kartels; fijner rekenen kost rekentijd bij het opbouwen, geen tekentijd.
+
+Doeltoestel sinds 11/11: een toestel met een bescheiden grafische kaart (MacBook). Driehoeken zijn daar geen probleem
+(een zetel telt er 200 000 tot 250 000); tekenopdrachten wel (zie hierboven).
+

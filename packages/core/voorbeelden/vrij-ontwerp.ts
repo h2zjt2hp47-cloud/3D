@@ -214,24 +214,32 @@ export const zetelOpties: OptieGroep[] = [
     keuzes: [
       // Vormen van de kuip (zie core/src/kuip.ts): grondvlak, wanddikte, hoe ver de wand rond loopt (graden),
       // hoogte vooraan boven de zitting, vanaf waar de armen vlak lopen. Benaderingen op basis van productfoto's.
-      { code: 'rond', label: 'Rond (kuip)', uitleg: 'Ronde kuip: rug loopt geleidelijk over in de armen', teken: { vorm: 'rond', plan: 'rond', dikte: 15, boog: 138, voorBoven: 12, armVanaf: 1 } },
-      // Sinds 11/11 (foto's van Mabel, Ross en Sullivan): een dunnere wand met een brede, vlakke bovenkant (schouder) in
-      // plaats van een hoge punt in het midden.
-      { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug met een brede bovenkant, die naar armhoogte zakt en vlak doorloopt', teken: { vorm: 'afgerond', plan: 'afgerond', dikte: 11, boog: 130, voorBoven: 15, armVanaf: 0.7, schouder: 0.3 } },
-      // Sinds 11/11 (foto's van Manon): een dunnere wand die iets minder ver rond loopt en vooraan hoger blijft.
-      { code: 'omhullend', label: 'Omhullend', uitleg: 'Wand loopt ver rond, armen laag vooraan', teken: { vorm: 'omhullend', plan: 'rond', dikte: 11, boog: 125, voorBoven: 15, armVanaf: 1 } },
-      // Koepel (Tumble, 10/11): een ronde zitting als een trommel, met een dikke rug die alleen de achterste helft omsluit
-      // en aan beide kanten rond naar de zitting zakt.
-      { code: 'koepel', label: 'Koepelrug op ronde zitting', uitleg: 'Ronde zitting, dikke rug rond de achterste helft die naar de zitting zakt', teken: { vorm: 'koepel', plan: 'rond', dikte: 20, boog: 100, voorBoven: 1, armVanaf: 1, plat: 0.55 } },
-      // Trommel (Quin, Satie): op de foto's een dunne wand rond de achterste helft, vooraan is de ronde zitting vrij
-      // (tot 10/11 een dikke wand die bijna helemaal rond liep).
-      { code: 'trommel', label: 'Trommel', uitleg: 'Ronde zitting met een dunne wand rond de achterste helft, even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 8, boog: 100, voorBoven: 22, armVanaf: 1, vlak: true } },
-      { code: 'organisch', label: 'Organisch', uitleg: 'Zachte kiezel als zitting; de schaal is aan één kant hoog en loopt aan de andere kant schuin in de zitting weg', teken: { vorm: 'organisch', plan: 'afgerond', exponent: 2.6, dikte: 24, boog: 150, voorBoven: 1, armVanaf: 1, organisch: true, scheef: true } },
+      // Sinds de tweede ronde van 11/11 ("ronde vormen vormen zeker problemen"): elke wand helt (de kuip is bovenaan breder
+      // dan aan de voet: `helling` voor de rug, `hellingArm` voor de uiteinden, in cm) en is gepolsterd (`bol`). De maat
+      // van het element blijft de buitenmaat. Afgeleid uit alle foto's van de productpagina's, dus benaderingen.
+      { code: 'rond', label: 'Rond (kuip)', uitleg: 'Ronde kuip: rug loopt geleidelijk over in de armen', teken: { vorm: 'rond', plan: 'rond', dikte: 13, boog: 138, voorBoven: 12, armVanaf: 1, helling: 5, hellingArm: 3, bol: 0.15 } },
+      // Ross: rug met een brede, ronde bovenkant; de armen zakken in één lijn tot vooraan (geen vlak stuk met een knik).
+      { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug met een brede, ronde bovenkant; de armen zakken geleidelijk naar voren', teken: { vorm: 'afgerond', plan: 'afgerond', exponent: 2.8, dikte: 10, boog: 128, voorBoven: 17, armVanaf: 0.95, schouder: 0.24, helling: 5, hellingArm: 2, bol: 0.15 } },
+      // Ton (Mabel 1-zit en 2-zit): een lage kuip die rondom bijna even hoog is en naar boven breder wordt, met de zitting
+      // erin. Een brede ton (tweezit) krijgt vanzelf een rechte rug met ronde hoeken (zie kuip.ts).
+      { code: 'ton', label: 'Ton (lage kuip)', uitleg: 'Lage kuip, rondom bijna even hoog en bovenaan breder dan aan de voet', teken: { vorm: 'ton', plan: 'afgerond', exponent: 2.5, dikte: 9, boog: 112, voorBoven: 22, armVanaf: 1, helling: 6, hellingArm: 5, bol: 0.15 } },
+      // Hoge rug (Sullivan): lage armen die halverwege steil oplopen naar een hoge, ronde rug die achterover helt.
+      { code: 'hoog', label: 'Hoge ronde rug', uitleg: 'Hoge, ronde rug die achterover helt, met lage ronde armen', teken: { vorm: 'hoog', plan: 'rond', exponent: 2.3, dikte: 10, boog: 132, voorBoven: 16, armVanaf: 0.7, schouder: 0.2, helling: 11, hellingArm: 3, bol: 0.18 } },
+      // Omhullend (Manon): de schaal loopt als een spiraal: het hoogst linksachter, links tot vooraan en rechts naar
+      // armhoogte, rond een trommel tot op de vloer.
+      { code: 'omhullend', label: 'Omhullend (spiraal)', uitleg: 'De schaal is linksachter het hoogst en zakt rond de zitting naar een lage arm rechts', teken: { vorm: 'omhullend', plan: 'rond', dikte: 10, boog: 142, voorBoven: 15, armVanaf: 1, scheef: true, scheefRechts: 22, scheefTop: -128, scheefLinks: 20, scheefRechtsBoven: 13, helling: 6, hellingArm: 3, bol: 0.12 } },
+      // Koepel (Tumble): een ronde zitting als een trommel met een dikke, gepolsterde rug rond de achterste helft, die
+      // achterover helt en tot aan haar ronde uiteinden bijna even hoog blijft.
+      { code: 'koepel', label: 'Koepelrug op ronde zitting', uitleg: 'Ronde zitting met een dikke, gepolsterde rug rond de achterste helft', teken: { vorm: 'koepel', plan: 'rond', dikte: 19, boog: 96, voorBoven: 13, armVanaf: 1, plat: 0.38, helling: 7, hellingArm: 2, bol: 0.2, eindDikte: 0.62 } },
+      // Trommel (Quin, Satie): op de foto's een dunne wand rond de achterste helft, vooraan is de ronde zitting vrij.
+      { code: 'trommel', label: 'Trommel', uitleg: 'Ronde zitting met een dunne wand rond de achterste helft, even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 8, boog: 100, voorBoven: 22, armVanaf: 1, vlak: true, helling: 3, hellingArm: 3, bol: 0.1 } },
+      { code: 'organisch', label: 'Organisch', uitleg: 'Zachte kiezel als zitting; de schaal is aan één kant hoog en loopt aan de andere kant schuin in de zitting weg', teken: { vorm: 'organisch', plan: 'afgerond', exponent: 2.6, dikte: 26, boog: 150, voorBoven: 1, armVanaf: 1, organisch: true, scheef: true, helling: -9, hellingArm: -2, bol: 0.3 } },
       // Méridienne (Mabel Meridienne, 11/11): de rug loopt op volle hoogte rond het linkeruiteinde, blijft achteraan op die
       // hoogte tot ±60 % van de breedte en zakt dan kort en steil naar de zitting (±75 %); rechts is de zitting vrij. De rug
       // staat op het zitkussen, dat eronder doorloopt, op een dun houten frame. Benadering uit de productfoto.
-      { code: 'meridienne', label: 'Méridienne (rug rond één uiteinde)', uitleg: 'De rug loopt rond het linkeruiteinde en zakt achteraan schuin naar de zitting', teken: { vorm: 'meridienne', plan: 'afgerond', dikte: 12, boog: 112, voorBoven: 20, armVanaf: 1, scheef: true, scheefRechts: -69, scheefTop: -85, scheefLinks: 27, opZitting: true } },
-      { code: 'schelp', label: 'Schelp op frame', uitleg: 'Dunne, gebogen rugschaal boven de zitting, op het frame', teken: { vorm: 'schelp', plan: 'afgerond', dikte: 9, boog: 66, voorBoven: 20, armVanaf: 1, zwevend: true } },
+      { code: 'meridienne', label: 'Méridienne (rug rond één uiteinde)', uitleg: 'De rug loopt rond het linkeruiteinde en zakt achteraan schuin naar de zitting', teken: { vorm: 'meridienne', plan: 'afgerond', dikte: 12, boog: 112, voorBoven: 20, armVanaf: 1, scheef: true, scheefRechts: -69, scheefTop: -85, scheefLinks: 27, opZitting: true, helling: 4, hellingArm: 4, bol: 0.12 } },
+      // Schelp (Karl): een gepolsterde rugschaal op het frame, die achterover helt.
+      { code: 'schelp', label: 'Schelp op frame', uitleg: 'Gebogen, gepolsterde rugschaal boven de zitting, op het frame', teken: { vorm: 'schelp', plan: 'afgerond', dikte: 10, boog: 54, voorBoven: 16, armVanaf: 1, zwevend: true, helling: 7, hellingArm: 3, bol: 0.3 } },
       { code: 'hoekig', label: 'Hoekig', uitleg: 'Rechte rug en armen', teken: { vorm: 'hoekig' } },
     ],
   },

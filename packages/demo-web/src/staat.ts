@@ -104,6 +104,11 @@ function metSmalleArm(c: OntwerpCatalogus): OntwerpCatalogus {
  * Een bewaarde catalogus bijwerken met de fauteuilvormen van 10/11: de nieuwe vorm "koepel" toevoegen (Tumble gebruikt
  * ze) en de schelp en de trommel vervangen als ze nog de oude standaard hebben. Een zelf aangepaste vorm blijft.
  */
+/** De standaard van elke fauteuilvorm vlak voor de wanden gingen hellen (11/11): dikte en boog als herkenning. */
+const VOOR_HELLING: Record<string, { dikte: number; boog: number }> = {
+  rond: { dikte: 15, boog: 138 }, afgerond: { dikte: 11, boog: 130 }, omhullend: { dikte: 11, boog: 125 }, koepel: { dikte: 20, boog: 100 },
+  trommel: { dikte: 8, boog: 100 }, meridienne: { dikte: 12, boog: 112 }, schelp: { dikte: 9, boog: 66 },
+};
 function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
   const nieuw = zetelCatalogus.opties?.find((x) => x.code === 'kuipvorm');
   if (!nieuw || !c.opties?.some((x) => x.code === 'kuipvorm')) return c;
@@ -115,7 +120,11 @@ function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
       if (g.code !== 'kuipvorm') return g;
       const keuzes = g.keuzes.map((k) => {
         const o = oud[k.code], n = nieuw.keuzes.find((x) => x.code === k.code);
-        return o && n && k.teken?.dikte === o.dikte && k.teken?.boog === o.boog ? structuredClone(n) : k;
+        if (o && n && k.teken?.dikte === o.dikte && k.teken?.boog === o.boog) return structuredClone(n);
+        // Tweede ronde van 11/11: elke wand helt en is gepolsterd. Een vorm die nog de standaard van voordien heeft (geen
+        // helling, zelfde dikte en boog), krijgt de nieuwe; een zelf aangepaste vorm blijft.
+        const v = VOOR_HELLING[k.code];
+        return v && n && k.teken?.helling === undefined && k.teken?.dikte === v.dikte && k.teken?.boog === v.boog ? structuredClone(n) : k;
       });
       // (de kruisvoet staat in een andere groep: zie metNieuwVan1111)
       const koepel = nieuw.keuzes.find((x) => x.code === 'koepel');
@@ -132,7 +141,7 @@ function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
  * fauteuil (Mabel 2-zit). Zonder dat zou de bewaarde catalogus niet meer bij de collectie passen en door de standaard
  * vervangen worden. Wat de gebruiker zelf aanpaste, blijft.
  */
-const NIEUWE_KEUZES: [groep: string, keuze: string][] = [['poten', 'kruis'], ['poefvorm', 'bol'], ['poefvorm', 'taps'], ['console_uitvoering', 'op_basis'], ['kuipvorm', 'meridienne']];
+const NIEUWE_KEUZES: [groep: string, keuze: string][] = [['poten', 'kruis'], ['poefvorm', 'bol'], ['poefvorm', 'taps'], ['console_uitvoering', 'op_basis'], ['kuipvorm', 'meridienne'], ['kuipvorm', 'ton'], ['kuipvorm', 'hoog']];
 /** Hele optiegroepen die er sinds 11/11 bij zijn: het formaat van een sierkussen (lendenkussen bij Nestor). */
 const NIEUWE_GROEPEN = ['kussenformaat'];
 function metNieuwVan1111(c: OntwerpCatalogus): OntwerpCatalogus {

@@ -318,14 +318,14 @@ export const zetelModellen: ModelDefinitie[] = [
     // frame en hoge, schuine poten (±22 cm, benadering).
     hoofdmateriaal: 'velours_smaragd', opties: { poten: 'conisch', hout: 'eik_zwart', naad: 'bies' },
     // Productpagina (10/11): breedte 68, diepte 65, hoogte 76, zithoogte 45.
-    vormgeving: { zachtheid: 6, poothoogte: 22, zithoogte: 45, rughoogte: 76, kussendikte: 17 }, elementen: rij([['fauteuil', 68, 65, { kuipvorm: 'afgerond' }]]),
+    vormgeving: { zachtheid: 6, poothoogte: 22, zithoogte: 45, rughoogte: 76, kussendikte: 17 }, elementen: rij([['fauteuil', 68, 65, { kuipvorm: 'ton' }]]),
   }, 'F-Mabel1', MATEN_WEBSITE),
   model('sullivan', 'Sullivan', FAUTEUIL, 'Fauteuil met hoge, afgeronde rug op een donkere houten kruisvoet; bijpassende hocker.', {
     // Productpagina (11/11): breedte 72, diepte 80, hoogte 93, zithoogte 42. Op de foto's een donkere houten kruisvoet
     // (tot dan een metalen draaivoet).
     // Foto (11/11, benadering): poten ±20 cm en een dun frame onder een dik zitkussen.
     hoofdmateriaal: 'wol_grijs', opties: { poten: 'kruis', hout: 'eik_zwart' },
-    vormgeving: { zachtheid: 6, poothoogte: 20, zithoogte: 42, rughoogte: 93, kussendikte: 17 }, elementen: rij([['fauteuil', 72, 80, { kuipvorm: 'afgerond' }]]),
+    vormgeving: { zachtheid: 6, poothoogte: 20, zithoogte: 42, rughoogte: 93, kussendikte: 17 }, elementen: rij([['fauteuil', 72, 80, { kuipvorm: 'hoog' }]]),
   }, 'F-Sullivan', MATEN_WEBSITE),
   model('fraser', 'Fraser', FAUTEUIL, 'Kleine ronde kuipfauteuil in velours op hoge donkere poten met een kruisverbinding.', {
     // Productpagina (11/11): breedte 61, diepte 61, hoogte 70, zithoogte 44. Op de foto's hoge donkere poten (±22 cm,
@@ -357,7 +357,7 @@ export const zetelModellen: ModelDefinitie[] = [
     // productpagina: uit de foto afgeleid met de zithoogte van de Mabel 1-zit (45 cm): ±145 breed, ±76 hoog (benadering).
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'conisch', hout: 'eik_zwart', rug: 'vast', naad: 'bies' },
     vormgeving: { zachtheid: 6, poothoogte: 22, zithoogte: 45, rughoogte: 76, kussendikte: 17 },
-    elementen: rij([['fauteuil', 145, 75, { kuipvorm: 'afgerond' }]]),
+    elementen: rij([['fauteuil', 145, 75, { kuipvorm: 'ton' }]]),
   }, 'F-Mabel2'),
   model('mabel-meridienne', 'Mabel Meridienne', FAUTEUIL, 'Méridienne in bouclé: de rug loopt hoog rond het linkeruiteinde en zakt achteraan schuin naar de zitting, op een dik zitkussen met bies en slanke donkere poten.', {
     // Foto (11/11, op vraag van Jonas opnieuw nagekeken): geen arm met een chaise, maar één rug die op volle hoogte rond

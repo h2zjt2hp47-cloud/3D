@@ -182,3 +182,29 @@ export async function neemBeeld(werkbank, bron, code, opties = {}, { vers = fals
 
 /** Eén regel voortgang: naam, en of het beeld nieuw getekend is of ongewijzigd uit de vorige ronde komt. */
 export const voortgang = (naam, r) => console.log(`  ${naam.padEnd(34)} ${r.uitCache ? 'ongewijzigd' : `${(r.ms / 1000).toFixed(1)} s`}`);
+
+/**
+ * Zet beelden naast elkaar op één blad (jpg), om veel items in één oogopslag te vergelijken.
+ * `rijen` = [{ titel, ondertitel?, beelden: [{ beeld (Buffer) | null, label }] }]. Geeft het pad van het blad terug.
+ */
+export async function maakBlad(rijen, bestand, { kolomBreedte = 470, hoogte = 300 } = {}) {
+  const { chromium } = laadPlaywright();
+  const kolommen = Math.max(...rijen.map((r) => r.beelden.length));
+  const veilig = (t) => String(t ?? '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  const html = `<!doctype html><meta charset="utf-8"><style>
+    body { margin: 0; padding: 10px; background: #fff; font: 13px/1.3 system-ui, sans-serif; color: #1d2522; width: ${kolommen * (kolomBreedte + 8) + 20}px; }
+    .rij { margin-bottom: 10px; } .rij h2 { font-size: 15px; margin: 0 0 3px; } .rij h2 small { font-weight: 400; color: #5a6661; }
+    .beelden { display: flex; gap: 8px; } figure { margin: 0; width: ${kolomBreedte}px; }
+    figure img, figure div { display: block; width: ${kolomBreedte}px; height: ${hoogte}px; object-fit: contain; background: #eef0ee; }
+    figcaption { font-size: 11px; color: #5a6661; }
+  </style>${rijen.map((r) => `<div class="rij"><h2>${veilig(r.titel)} <small>${veilig(r.ondertitel)}</small></h2><div class="beelden">${r.beelden.map((b) =>
+    `<figure>${b.beeld ? `<img src="data:image/jpeg;base64,${b.beeld.toString('base64')}">` : '<div></div>'}<figcaption>${veilig(b.label)}</figcaption></figure>`).join('')}</div></div>`).join('')}`;
+  const browser = await chromium.launch();
+  try {
+    const pagina = await browser.newPage({ viewport: { width: kolommen * (kolomBreedte + 8) + 40, height: 800 } });
+    await pagina.setContent(html, { waitUntil: 'load' });
+    mkdirSync(path.dirname(bestand), { recursive: true });
+    await pagina.screenshot({ path: bestand, fullPage: true, type: 'jpeg', quality: 82 });
+  } finally { await browser.close(); }
+  return bestand;
+}
