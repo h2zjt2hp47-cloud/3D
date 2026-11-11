@@ -53,7 +53,7 @@
 | Skill | `.claude/skills/zetel-3d/SKILL.md`: hoe de 3D-logica werkt en hoe je een nieuwe vorm toevoegt |
 | Obsidian | `python3 -I scripts/obsidian_export.py` → `obsidian-export/Configurator.zip` (19 notities met links, tags en beelden; + `zetel-3d-skill.zip` en `bouw-woning-skill.zip`). Kopie om door te sturen: `doorsturen/Obsidian - Configurator.zip`. Nieuwe documenten in `docs/` toevoegen aan `NOTITIES` in het script. |
 
-**Bouwdemo online (privé artifact):** https://claude.ai/artifact/FaTp1zVvy9YePyarithjyh (slug `760c021f-8602-482d-b4c1-d41a3bcaa890`). Opnieuw publiceren: `npm run build -w @configurator/bouw-web`, dan `publish_files` met `packages/bouw-web/dist/bouw-configurator.html` als `index.html`.
+**Bouwdemo online (privé artifact):** https://claude.ai/artifact/SJMpxDgunUur7a32wBZVQi (sinds 11/11; het vroegere adres …FaTp1zVvy9YePyarithjyh was niet meer te openen). Opnieuw publiceren: `npm run build -w @configurator/bouw-web`, dan het bestand `packages/bouw-web/dist/bouw-configurator.html` publiceren op dit adres (mogelijkheid `downloads`).
 
 **Demo online (privé artifact):** https://claude.ai/artifact/BtVKYeQKC7szR1ZwW97VB1
 - **Nieuwe pagina sinds 11/11:** https://claude.ai/artifact/DMGw1PmYktTga5o3BPH8s5 (privé, met de toelating `downloads`). Bijgewerkt op 11/11 na de kritische ronde (versie 2, met de productfoto's bij de modellen). De oude pagina hierboven was vanuit de sessie van 10/11 niet bereikbaar ("artifact not found") en is niet bijgewerkt. Bijwerken: bouwen en `packages/demo-web/dist/configurator-demo.html` publiceren met dit adres als `url`.
