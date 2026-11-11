@@ -54,7 +54,7 @@
 **Bouwdemo online (privé artifact):** https://claude.ai/artifact/FaTp1zVvy9YePyarithjyh (slug `760c021f-8602-482d-b4c1-d41a3bcaa890`). Opnieuw publiceren: `npm run build -w @configurator/bouw-web`, dan `publish_files` met `packages/bouw-web/dist/bouw-configurator.html` als `index.html`.
 
 **Demo online (privé artifact):** https://claude.ai/artifact/BtVKYeQKC7szR1ZwW97VB1
-- **Nieuwe pagina sinds 11/11:** https://claude.ai/artifact/DMGw1PmYktTga5o3BPH8s5 (privé, met de toelating `downloads`). De oude pagina hierboven was vanuit de sessie van 10/11 niet bereikbaar ("artifact not found") en is niet bijgewerkt. Bijwerken: bouwen en `packages/demo-web/dist/configurator-demo.html` publiceren met dit adres als `url`.
+- **Nieuwe pagina sinds 11/11:** https://claude.ai/artifact/DMGw1PmYktTga5o3BPH8s5 (privé, met de toelating `downloads`). Bijgewerkt op 11/11 na de kritische ronde (versie 2, met de productfoto's bij de modellen). De oude pagina hierboven was vanuit de sessie van 10/11 niet bereikbaar ("artifact not found") en is niet bijgewerkt. Bijwerken: bouwen en `packages/demo-web/dist/configurator-demo.html` publiceren met dit adres als `url`.
 - slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie: zie publicatie van 31/10 (catalogus-editor)
 - Productfoto's: eerst `python3 -I packages/demo-web/scripts/haal_fotos.py` (vraagt netwerktoegang tot corneille-silence.be), dan bouwen. De foto's staan in `packages/demo-web/fotos/` en worden niet in git bewaard.
 - Opnieuw publiceren: `npm run build -w @configurator/demo-web`, dan `publish_files` met `dist/configurator-demo.html` als `index.html`, met slug + base_version.
