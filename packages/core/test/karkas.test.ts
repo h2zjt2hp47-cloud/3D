@@ -8,15 +8,27 @@ import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 const kotor = zetelModellen.find((m) => m.code === 'kotor')!;
 
 describe('karkas en losse rugkussens', () => {
-  it('Kotor: karkas 70 cm, rugkussens van de zitting (44) tot 92 cm, 24 cm dik, leunen achterover volgens de zachtheid', () => {
+  it('Kotor: karkas 70 cm, rugkussens van de zitting (44) tot 92 cm, 26 cm dik, leunen achterover volgens de zachtheid', () => {
     const s = bouw3D(kotor.ontwerp, zetelCatalogus, standaardMaterialen);
     const b = blokkenVan(s, { id: 'e3' });
     const rug = b.find((x) => x.code === 'e3.rug')!;
     expect(rug.y + rug.h).toBe(70);
-    // Zachtheid 7: 2 + 7 × 0,8 = 7,6° achterover.
-    expect(b.find((x) => x.code === 'e3.rugkussen')).toMatchObject({ y: 44, h: 48, d: 24, kantel: { graden: 7.6 } });
-    const arm = blokkenVan(s, { id: 'e2' }).find((x) => x.code === 'e2.arm')!;
+    // Zachtheid 8: 2 + 8 × 0,8 = 8,4° achterover. Donzen rugkussens zijn losse kussens met een mesrand.
+    expect(b.find((x) => x.code === 'e3.rugkussen')).toMatchObject({ y: 44, h: 48, d: 26, kantel: { graden: 8.4 }, mesrand: true });
+    const arm = blokkenVan(s, { id: 'e5' }).find((x) => x.code === 'e5.arm')!;
     expect(arm.y + arm.h).toBe(70);
+  });
+  it('zitkussen: plat op de onderbouw (kleine afronding onderaan), bovenaan zacht; de onderbouw in de stof zelf', () => {
+    const s = bouw3D(kotor.ontwerp, zetelCatalogus, standaardMaterialen);
+    const b = blokkenVan(s, { id: 'e2' });
+    const kussen = b.find((x) => x.code === 'e2.zitkussen')!, basis = b.find((x) => x.code === 'e2.basis')!;
+    expect(kussen.afrondingOnder!).toBeLessThan(kussen.afronding! / 2);
+    expect(kussen.mesrand).toBeUndefined();
+    // Zelfde kleur en weefsel als het kussen (tot 11/11 een donkerdere, vlakke band).
+    expect(basis.kleur).toBe(kussen.kleur);
+    expect(basis.weefsel).toBe(kussen.weefsel);
+    // Kotor: het kussen steekt vooraan 3 cm over de onderbouw.
+    expect(kussen.z + kussen.d - (basis.z + basis.d)).toBeCloseTo(3, 1);
   });
   it('zonder karkashoogte: zoals vroeger 10 cm onder de rughoogte; zonder losse kussens is het karkas de rug', () => {
     const o: Ontwerp = { hoofdmateriaal: 'linnen_ficelle', opties: { rug: 'los' }, elementen: [{ id: 'z', type: 'zit', x: 0, y: 0, breedte: 95, diepte: 95, rotatie: 0 }] };

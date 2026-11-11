@@ -97,6 +97,9 @@ export const STANDAARD_WEERGAVE: Weergave3D = { vloer: 'decor', muur: 'decor', t
 /** Decors voor de zetel: vloer, muur, tapijt en een paar spullen. */
 export const DECORS = {
   studio: { label: 'Studio', achtergrond: '#f2f1ed' },
+  // Fotodoek (11/11): een grijs achterdoek zoals op de productfoto's van de website (Attribute, Azar, Wallace): de lichte
+  // vloer loopt weg in het grijs, zodat ook een witte of lichte zetel zich goed aftekent.
+  fotodoek: { label: 'Fotodoek (grijs)', achtergrond: '#8e8983' },
   // Salon (10/11): de kamer van de productfoto's van Doha als voorbeeld: lichte wanden met kaderlijsten, hoog raam met
   // lichte gordijnen, grijze eiken vloer, rond oudroze tapijt, ronde houten salontafel, zwarte staanlamp, takken in een
   // vaas en een lijntekening aan de wand. Onze eigen benadering met de bestaande bouwstenen, geen kopie van de foto.
@@ -189,6 +192,33 @@ export const LICHTEN = {
   },
 } as const;
 export type LichtNaam = keyof typeof LICHTEN;
+/**
+ * IJking van het licht voor de zetel (11/11). Gemeten met een blok in drie stoffen (wit, middengrijs, petrol): de
+ * bovenkant was in elke lichtsfeer veel helderder dan de staal (lineair 1,5 tot 2,5 ×) en de voorkant ongeveer gelijk
+ * aan de staal. Gevolg: een lichte zetel brandde uit tot een witte vlek en een kleur zag er op de zitting veel lichter
+ * uit dan op de staal. Doel per sfeer: bovenkant ±1,3 × de staal, voorkant ±0,9 ×, zodat de vorm leesbaar blijft en de
+ * kleur klopt. Alleen voor de zetel: de bouwdemo (woning, raam) houdt de waarden uit LICHTEN.
+ * `belichting` vermenigvuldigt de belichting van het hele beeld; de andere velden vervangen die van LICHTEN.
+ * Gemeten na de ijking (middengrijs, lineair t.o.v. de staal, bovenkant / voorkant): studio 1,46 / 0,89 · daglicht
+ * 1,28 / 0,95 · ochtend 1,17 / 0,90 · fotostudio 1,26 / 0,89 · toonzaal 1,5 / 0,64 (bewust contrastrijk).
+ *
+ * Let op (gevonden op 11/11 bij het nameten van Bewolkt): sinds de overstap naar WebGPU (4/11) telt `omgeving` niet meer
+ * mee voor het licht. three.js leest de sterkte van het omgevingsbeeld van de scène uit `scene.environmentIntensity`;
+ * `envMapIntensity` van een materiaal geldt alleen nog voor een eigen omgevingsbeeld van dat materiaal. Het omgevingslicht
+ * staat dus in elke sfeer op volle sterkte (daarom waren bovenkanten zo fel). De ijking hierboven is met die volle sterkte
+ * gemeten en blijft dus kloppen. `omgevingslicht` zet de echte sterkte (1 = vol); alleen Bewolkt gebruikt het, omdat zijn
+ * omgevingsbeeld het helderst is. Gemeten voor Bewolkt (lineair t.o.v. de staal): bovenkant = belichting × (1,82 ×
+ * omgevingslicht + hemel + 0,6 × zon), voorkant = belichting × (0,65 × omgevingslicht + 0,75 × hemel + 0,3 × zon).
+ * Een volgende stap is `omgeving` overal weer te laten werken en alle sferen opnieuw te ijken (ook de bouwdemo).
+ */
+const ZETEL_LICHT: Partial<Record<LichtNaam, { zonSterkte?: number; hemel?: number; omgeving?: number; hoogte?: number; belichting?: number; omgevingslicht?: number }>> = {
+  studio: { zonSterkte: 0.78, hemel: 0.04, omgeving: 0.36, hoogte: 0.8 },
+  daglicht: { zonSterkte: 0.85, hemel: 0.12, omgeving: 0.3, belichting: 0.72 },
+  ochtend: { belichting: 0.8 },
+  bewolkt: { zonSterkte: 0.1, hemel: 0.8, omgevingslicht: 0.25, belichting: 1.15 },
+  fotostudio: { belichting: 0.8 },
+  spots: { hemel: 0.26, belichting: 0.9 },
+};
 export type Kwaliteit = 'snel' | 'mooi';
 type Hdr = { boven: readonly number[]; onder: readonly number[]; bronnen: readonly (readonly [readonly number[], number, number, readonly number[]])[] };
 
@@ -498,7 +528,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     for (let rij = 0; rij < 4; rij++) {
       const off = (rij % 2) * 60;
       for (let s = -1; s < 2; s++) {
-        g.fillStyle = tint(hex, 0.86 + toeval() * 0.24);
+        // Rustig kleurverschil tussen de planken (tot 11/11 0,86–1,10: de vloer leek een dambord van grote blokken).
+        g.fillStyle = tint(hex, 0.93 + toeval() * 0.12);
         g.fillRect((s * 120 + off) * px, rij * 20 * px, 120 * px, 20 * px);
         for (let n = 0; n < 5; n++) {
           g.fillStyle = `rgba(0,0,0,${0.03 + toeval() * 0.04})`;
@@ -752,38 +783,88 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       .map((o) => ({ x0: o.x, x1: o.x + o.b, y0: o.y, y1: o.y + o.h, z0: o.z, z1: o.z + o.d }));
   }
 
-  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1, buren: Doos[] = [], oorsprong = [0, 0, 0], bolMaat?: number) {
-    const maat = [B, H, D];
-    const plat = maat.indexOf(Math.min(B, H, D)); // as van de dunste maat: daar bolt het kussen
+  /**
+   * `vorm.onder` (liggend kussen): afronding van de onderrand en van de hoeken in het grondvlak; het kussen ligt dan plat
+   * op de onderbouw en alleen de bovenrand rolt om (straal r). `vorm.mesrand`: los kussen van twee lappen die rondom aan
+   * elkaar genaaid zijn: dun aan de naad, dik in het midden, puntige hoeken en licht holle zijden.
+   * Zo bouwen 3D-tekenaars een kussen op (naden eerst, dan vullen); wij rekenen dezelfde vorm uit de maten.
+   * Geeft ook `vervorm`: de plaats en de normaal op het kussen van een punt op de oorspronkelijke balk (voor de naden).
+   */
+  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1, buren: Doos[] = [], oorsprong = [0, 0, 0], bolMaat?: number, vorm: { onder?: number; mesrand?: boolean } = {}) {
+    const vol = [B, H, D];
+    const plat = vol.indexOf(Math.min(B, H, D)); // as van de dunste maat: daar bolt het kussen
+    // Mesrand: aan de naad is het kussen maar een paar cm dik; de rest van de dikte is de bolling in het midden.
+    const mes = vorm.mesrand === true && vulling === 1;
+    // Een sierkussen (±14 cm dik) heeft een dunne rand; een groot donzen rugkussen (±26 cm) een dikke, ronde rand.
+    const randDik = mes ? Math.max(2.4, Math.min(13, vol[plat]! * 0.3 + Math.max(0, vol[plat]! - 16) * 0.6)) : vol[plat]!;
+    const maat = vol.map((m, a) => (a === plat ? Math.min(m, randDik) : m));
     // Bolling: opgegeven door de opbouw (gevulde rug- en sierkussens), anders bescheiden; nooit meer dan het kussen toelaat.
-    const bol = Math.min(bolMaat ?? Math.min(2.2, maat[plat]! * 0.13), maat[plat]! * 0.4) * vulling;
+    const bol = mes ? (vol[plat]! - maat[plat]!) / 2 : Math.min(bolMaat ?? Math.min(2.2, maat[plat]! * 0.13), maat[plat]! * 0.4) * vulling;
+    // Vorm van de bolling: bij een mesrand voller naar de randen toe (macht < 1), zoals een gevuld kussen.
+    const macht = mes ? 0.75 : 1;
+    const a1 = (plat + 1) % 3, a2 = (plat + 2) % 3;
+    // Holle zijden van een los kussen: de naad trekt tussen de hoeken naar binnen, de hoeken blijven als puntjes staan.
+    const knijp = mes ? Math.min(2.4, Math.min(maat[a1]!, maat[a2]!) * 0.04) : 0;
     const zak = vulling === 1 && plat === 1 && B > 30 && D > 30 ? Math.min(0.9, bol * 0.45) : 0;
+    // Sterkte van de onregelmatige vulling (helling van de normaal): alleen bij echte kussens, volgens de bolling.
+    const kreuk = vulling === 1 ? Math.min(0.085, 0.012 + 0.011 * Math.min(bol, 6)) : 0;
     const seg = (l: number) => Math.max(4, Math.min(28, Math.round(l / 3)));
-    const geo = new THREE.BoxGeometry(B, H, D, seg(B), seg(H), seg(D));
-    const half = [B / 2, H / 2, D / 2];
+    const geo = new THREE.BoxGeometry(maat[0]!, maat[1]!, maat[2]!, seg(maat[0]!), seg(maat[1]!), seg(maat[2]!));
+    const half = maat.map((m) => m / 2);
     const rr = Math.max(0.4, Math.min(r, half[0]! - 0.1, half[1]! - 0.1, half[2]! - 0.1));
-    const binnen = half.map((h) => h - rr);
-    const pos = geo.attributes.position, nrm = geo.attributes.normal;
-    const kleuren = new Float32Array(pos.count * 3);
+    // Platte onderkant (alleen een liggend kussen): kleinere straal onderaan en in de hoeken van het grondvlak.
+    const rOnder = plat === 1 && vorm.onder !== undefined ? Math.max(0.4, Math.min(vorm.onder, rr)) : rr;
+    // De bovenste helft is afgerond met rr; in het grondvlak worden haar hoeken daarna scherper getrokken tot ze passen
+    // op de onderste helft (straal rOnder). Dat gebeurt met een superellips: |a|^p + |b|^p = rr^p, p > 2 = hoekiger.
+    const pHoek = rOnder < rr - 0.05 ? 1 / (0.5 - Math.log2(Math.SQRT2 - (Math.SQRT2 - 1) * (rOnder / rr))) : 2;
+    const golf = (a: number, b: number) => Math.sin(a * 0.21 + b * 0.13 + 1.7) * 0.5 + Math.sin(a * 0.11 - b * 0.19 + 0.4) * 0.35 + Math.sin(a * 0.37 + b * 0.31) * 0.15;
     const p = [0, 0, 0], n = [0, 0, 0];
-    for (let i = 0; i < pos.count; i++) {
-      p[0] = pos.getX(i); p[1] = pos.getY(i); p[2] = pos.getZ(i);
-      // Afronden: punt naar het binnenblok trekken en op afstand rr zetten.
-      const c = p.map((v, a) => Math.max(-binnen[a]!, Math.min(binnen[a]!, v)));
+    /** Zet een punt van de balk (rond het midden) op het kussen; het resultaat staat in p en n (n niet genormeerd). */
+    const vervorm = (x: number, y: number, z: number) => {
+      p[0] = x; p[1] = y; p[2] = z;
+      const boven = plat !== 1 || y >= 0;
+      const straal = boven ? rr : rOnder;
+      // Afronden: punt naar het binnenblok trekken en op afstand `straal` zetten.
+      const c = p.map((v, a) => Math.max(-(half[a]! - straal), Math.min(half[a]! - straal, v)));
       const d = p.map((v, a) => v - c[a]!);
       const l = Math.hypot(d[0]!, d[1]!, d[2]!) || 1;
-      for (let a = 0; a < 3; a++) { n[a] = d[a]! / l; p[a] = c[a]! + n[a]! * rr; }
+      for (let a = 0; a < 3; a++) { n[a] = d[a]! / l; p[a] = c[a]! + n[a]! * straal; }
+      // Hoeken in het grondvlak scherper (bovenste helft van een liggend kussen met een platte onderkant).
+      if (boven && pHoek > 2) {
+        const sx = Math.sign(p[0]!) || 1, sz = Math.sign(p[2]!) || 1;
+        const a = Math.abs(p[0]!) - (half[0]! - rr), b = Math.abs(p[2]!) - (half[2]! - rr);
+        if (a > 1e-6 && b > 1e-6) {
+          const l2 = Math.hypot(a, b), lp = Math.pow(Math.pow(a, pHoek) + Math.pow(b, pHoek), 1 / pHoek);
+          const s = l2 / lp;
+          // Afgeleiden van s naar a en b, voor de normaal (omgekeerd getransponeerde van de vervorming).
+          const sa = a / (l2 * lp) - (l2 * Math.pow(a, pHoek - 1)) / Math.pow(lp, pHoek + 1);
+          const sb = b / (l2 * lp) - (l2 * Math.pow(b, pHoek - 1)) / Math.pow(lp, pHoek + 1);
+          const j11 = s + a * sa, j12 = a * sb, j21 = b * sa, j22 = s + b * sb;
+          const na = n[0]! * sx, nb = n[2]! * sz;
+          n[0] = (j22 * na - j21 * nb) * sx;
+          n[2] = (-j12 * na + j11 * nb) * sz;
+          p[0] = sx * (half[0]! - rr + a * s);
+          p[2] = sz * (half[2]! - rr + b * s);
+        }
+      }
       // Bol: verschuiving langs elke as, het sterkst midden op het vlak.
       const u = p.map((v, a) => Math.max(-1, Math.min(1, v / half[a]!)));
       for (let a = 0; a < 3; a++) {
         const o1 = (a + 1) % 3, o2 = (a + 2) % 3;
-        const k = (a === plat ? bol : bol * 0.3) * (1 - u[o1]! * u[o1]!) * (1 - u[o2]! * u[o2]!);
-        p[a] = p[a]! + k * u[a]!;
-        // Normaal mee laten hellen met de bolling (helling van het bolle vlak).
+        const w1 = Math.max(0, 1 - u[o1]! * u[o1]!), w2 = Math.max(0, 1 - u[o2]! * u[o2]!);
         if (a === plat) {
-          const sterk = Math.abs(n[a]!);
-          n[o1] = n[o1]! + bol * 2 * (u[o1]! / half[o1]!) * (1 - u[o2]! * u[o2]!) * sterk;
-          n[o2] = n[o2]! + bol * 2 * (u[o2]! / half[o2]!) * (1 - u[o1]! * u[o1]!) * sterk;
+          const basis = Math.max(1e-4, w1 * w2);
+          p[a] = p[a]! + bol * Math.pow(basis, macht) * u[a]!;
+          // Normaal mee laten hellen met de bolling (helling van het bolle vlak); bij een mesrand begrensd aan de naad.
+          const sterk = Math.abs(n[a]!), helling = macht * Math.pow(Math.max(basis, 0.03), macht - 1);
+          n[o1] = n[o1]! + bol * 2 * (u[o1]! / half[o1]!) * w2 * helling * sterk;
+          n[o2] = n[o2]! + bol * 2 * (u[o2]! / half[o2]!) * w1 * helling * sterk;
+        } else if (mes) {
+          // Holle zijde: de rand komt tussen de hoeken naar binnen (o1 of o2 is de dunne as; de andere loopt langs de rand).
+          const langs = o1 === plat ? o2 : o1;
+          p[a] = p[a]! - knijp * Math.max(0, 1 - u[langs]! * u[langs]!) * u[a]!;
+        } else {
+          p[a] = p[a]! + bol * 0.3 * w1 * w2 * u[a]!;
         }
       }
       // Zitkuil: een lichte indruk midden op een zitkussen (alleen bovenop, bij een liggend kussen).
@@ -794,14 +875,30 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         n[0] = n[0]! - 2 * 2.2 * zak * e * (u[0]! / half[0]!) * sterk;
         n[2] = n[2]! - 2 * 2.2 * zak * e * (u[2]! / half[2]!) * sterk;
       }
+      // Onregelmatige vulling (11/11, naar het echte 3D-model): een gevuld kussen is nooit perfect glad. Een traag golvend
+      // veld kantelt de normaal op de twee grote vlakken een paar graden, zodat het licht er zacht over speelt. Alleen de
+      // schaduwwerking, de vorm zelf verandert niet. Hoe boller (zachter) het kussen, hoe sterker; een strak kussen blijft glad.
+      if (kreuk > 0) {
+        const w1 = p[a1]! + oorsprong[a1]!, w2 = p[a2]! + oorsprong[a2]!, sterk = Math.abs(n[plat]!) * kreuk;
+        // Naar de rand toe uitdoven: daar bepaalt de afronding de vorm.
+        const rand = (1 - u[a1]! * u[a1]!) * (1 - u[a2]! * u[a2]!);
+        n[a1] = n[a1]! + golf(w1, w2) * sterk * rand;
+        n[a2] = n[a2]! + golf(w2 + 40, w1 - 17) * sterk * rand;
+      }
+    };
+    const pos = geo.attributes.position, nrm = geo.attributes.normal;
+    const kleuren = new Float32Array(pos.count * 3);
+    const hoogte = vol[1]!, halfH = hoogte / 2;
+    for (let i = 0; i < pos.count; i++) {
+      vervorm(pos.getX(i), pos.getY(i), pos.getZ(i));
       const nl = Math.hypot(n[0]!, n[1]!, n[2]!) || 1;
-      pos.setXYZ(i, p[0]!, p[1]! + H / 2, p[2]!);
+      pos.setXYZ(i, p[0]!, p[1]! + halfH, p[2]!);
       nrm.setXYZ(i, n[0]! / nl, n[1]! / nl, n[2]! / nl);
       // Schaduw onderaan: van 0,72 (onderkant) naar 1 (bovenste helft).
-      let ao = 0.72 + 0.28 * Math.min(1, Math.max(0, (p[1]! + half[1]!) / (H * 0.6)));
+      let ao = 0.72 + 0.28 * Math.min(1, Math.max(0, (p[1]! + halfH) / (hoogte * 0.6)));
       // Waar het kussen tegen een ander deel ligt (rug, arm, onderbouw): donkerder, zoals in het echt.
       if (buren.length) {
-        const wx = p[0]! + oorsprong[0]!, wy = p[1]! + H / 2 + oorsprong[1]!, wz = p[2]! + oorsprong[2]!;
+        const wx = p[0]! + oorsprong[0]!, wy = p[1]! + halfH + oorsprong[1]!, wz = p[2]! + oorsprong[2]!;
         let dicht = 0;
         for (const q of buren) {
           const dx = Math.max(q.x0 - wx, 0, wx - q.x1), dy = Math.max(q.y0 - wy, 0, wy - q.y1), dz = Math.max(q.z0 - wz, 0, wz - q.z1);
@@ -814,7 +911,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     geo.setAttribute('color', new THREE.BufferAttribute(kleuren, 3));
     pos.needsUpdate = nrm.needsUpdate = true;
-    return { geo, plat, rr, half, bol };
+    /** Punt op het kussen (onderkant op y = 0) met de genormeerde normaal, voor een punt van de balk rond het midden. */
+    const opKussen = (x: number, y: number, z: number, uit = 0) => {
+      vervorm(x, y, z);
+      const nl = Math.hypot(n[0]!, n[1]!, n[2]!) || 1;
+      return new THREE.Vector3(p[0]! + (n[0]! / nl) * uit, p[1]! + halfH + (n[1]! / nl) * uit, p[2]! + (n[2]! / nl) * uit);
+    };
+    return { geo, plat, rr, rOnder, half, bol, mes, opKussen };
   }
 
   /**
@@ -823,7 +926,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    * `omtrek` in wereldcoördinaten; de vorm komt rond (ox, oz) met de onderkant op y = 0.
    * Geeft ook de ringen op de rand (voor de naad): boven en onder, op 45°.
    */
-  function omtrekGeometrie(omtrek: [number, number][], H: number, rr0: number, bol: number, ox: number, oz: number, buren: Doos[] = [], oy = 0, tegel = 0) {
+  function omtrekGeometrie(omtrek: [number, number][], H: number, rr0: number, bol: number, ox: number, oz: number, buren: Doos[] = [], oy = 0, tegel = 0, onder?: number) {
     // 1. Punten rond het midden, tegen de klok in (positieve oppervlakte in x-z).
     let pts = omtrek.map(([x, z]) => [x - ox, z - oz] as [number, number]);
     let opp = 0;
@@ -856,7 +959,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       lengtes.push(lengtes[i]! + Math.hypot(n[0] - q[0], n[1] - q[1]));
     }
     const L = lengtes[glad.length]!;
-    const N = Math.max(36, Math.round(L / 4));
+    // Om de ±3 cm (tot 11/11 om de 4 cm: een ronde poef had zichtbare vlakjes langs de rand).
+    const N = Math.max(48, Math.round(L / 3));
     const vorm: [number, number][] = [];
     for (let k = 0, j = 0; k < N; k++) {
       const t = (k / N) * L;
@@ -888,16 +992,20 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     //    Op 45° van de bovenrand ligt de ring dubbel (zelfde plaats, andere textuurmaat): daar zit ook de naad.
     type Ring = { inset: number; y: number; s: number; plat: boolean };
     const ringen: Ring[] = [];
-    ringen.push({ inset: rr, y: 0, s: 0.0001, plat: true });
-    for (let k = 0; k <= 4; k++) { const t = (-90 + k * 22.5) * Math.PI / 180; ringen.push({ inset: rr * (1 - Math.cos(t)), y: rr + rr * Math.sin(t), s: 1, plat: k === 0 }); }
-    for (let k = 0; k <= 4; k++) {
-      const t = (k * 22.5) * Math.PI / 180, ring = { inset: rr * (1 - Math.cos(t)), y: H - rr + rr * Math.sin(t), s: 1, plat: k > 2 };
+    // Onderrand: met `onder` een kleinere straal (een zitkussen ligt plat op de onderbouw).
+    const rO = onder === undefined ? rr : Math.max(0.4, Math.min(onder, rr));
+    // Stappen per kwartronde: meer bij een grote afronding (een bolle poef had anders knikken in het silhouet).
+    const S = rr > 9 ? 8 : 4, stap = 90 / S;
+    ringen.push({ inset: rO, y: 0, s: 0.0001, plat: true });
+    for (let k = 0; k <= S; k++) { const t = (-90 + k * stap) * Math.PI / 180; ringen.push({ inset: rO * (1 - Math.cos(t)), y: rO + rO * Math.sin(t), s: 1, plat: k === 0 }); }
+    for (let k = 0; k <= S; k++) {
+      const t = (k * stap) * Math.PI / 180, ring = { inset: rr * (1 - Math.cos(t)), y: H - rr + rr * Math.sin(t), s: 1, plat: k > S / 2 };
       ringen.push(ring);
-      if (k === 2) ringen.push({ ...ring, plat: true }); // dubbel op 45°
+      if (k === S / 2) ringen.push({ ...ring, plat: true }); // dubbel op 45°
     }
     const KAP = 9;
     for (let k = 1; k <= KAP; k++) ringen.push({ inset: rr, y: H, s: 1 - k / (KAP + 0.5), plat: true });
-    const naadOnder = 3, naadBoven = 8; // ringen op 45° (onder- en bovenrand)
+    const naadOnder = 1 + S / 2, naadBoven = S + 2 + S / 2; // ringen op 45° (onder- en bovenrand)
     // Omtrek met een dubbel eerste punt achteraan (kolom M = kolom 0) voor een doorlopende textuur rondom.
     const C = M + 1;
     const omtrekLengte = [0];
@@ -1103,42 +1211,78 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     });
   }
 
-  /** Naad rond de twee grote vlakken van een kussen: bies (dikke koord), gewone naad of dubbel sierstiksel. */
+  /**
+   * Naad van een kussen: bies (dikke koord), gewone naad of dubbel sierstiksel. Een kussen met een band heeft een naad
+   * rond elk van de twee grote vlakken; een kussen met een mesrand heeft er één, rondom op de rand.
+   * De lijn loopt over de balk waaruit het kussen gemaakt is en volgt dan dezelfde vervorming als het kussen zelf.
+   */
   function naden(b: Blok, k: ReturnType<typeof kussenGeometrie>) {
     if (!b.naad) return [];
-    const { plat, rr, half } = k;
+    const { plat, rr, rOnder, half } = k, k_ = k;
     const a1 = (plat + 1) % 3, a2 = (plat + 2) % 3;
+    // Plaats van de lijn op de afronding: 45° = op de ribbe van de balk; kleiner = op de zijkant, groter = op het grote vlak.
     const lijnen: { hoek: number; straal: number }[] =
       b.naad.soort === 'bies' ? [{ hoek: 45, straal: 0.55 }]
         : b.naad.soort === 'stiksel' ? [{ hoek: 22, straal: 0.09 }, { hoek: 68, straal: 0.09 }]
-          : [{ hoek: 45, straal: 0.14 }];
+          : [{ hoek: 45, straal: 0.11 }];
     const mat = b.naad.soort === 'bies'
       ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
       : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+    // Een bies in dezelfde stof: iets donkerder dan de stof (ze vangt als ribbel veel licht en werd anders een witte lijn).
+    if (b.naad.soort === 'bies' && b.naad.kleur === b.kleur) mat.color = kleur(tint(b.kleur, 0.84));
     const uit: any[] = [];
-    for (const kant of [1, -1]) {
-      for (const { hoek, straal } of lijnen) {
-        const rad = (hoek * Math.PI) / 180;
-        const opzij = rr * Math.cos(rad), hoogte = (half[plat]! - rr + rr * Math.sin(rad)) * kant;
-        const h1 = half[a1]! - rr, h2 = half[a2]! - rr;
-        const punten: any[] = [];
-        // Afgeronde rechthoek: per hoek een kwartcirkel rond de hoek van het binnenblok.
-        for (const [s1, s2, start] of [[1, 1, 0], [-1, 1, 90], [-1, -1, 180], [1, -1, 270]] as const) {
-          for (let j = 0; j <= 6; j++) {
-            const t = ((start + j * 15) * Math.PI) / 180;
-            const q = [0, 0, 0];
-            q[a1] = s1 * h1 + Math.cos(t) * opzij;
-            q[a2] = s2 * h2 + Math.sin(t) * opzij;
-            q[plat] = hoogte;
-            punten.push(new THREE.Vector3(q[0], q[1]! + half[1]!, q[2]));
-          }
+    /**
+     * Gesloten lijn rond het kussen op een vaste breedtegraad van de afronding (0° = midden op de rand, 45° = op de ribbe,
+     * 90° = op het grote vlak), aan de kant `kant` van de dunne as. De punten liggen op de balk: recht langs de zijden en
+     * in elke hoek een boog rond de hoek van het binnenblok, zodat de lijn ook in de hoeken van het kussen vloeiend loopt
+     * (door de hoek van de balk zelf gaf ze daar een knik). Daarna volgt elk punt de vervorming van het kussen.
+     */
+    const ring = (graden: number, kant: number, straalRand: number, straal: number) => {
+      const phi = (graden * Math.PI) / 180, cp = Math.cos(phi), sp = Math.sin(phi);
+      const i1 = half[a1]! - straalRand, i2 = half[a2]! - straalRand, iDun = graden === 0 ? 0 : kant * (half[plat]! - straalRand);
+      const balk: number[][] = [];
+      for (const [s1, s2, start] of [[1, 1, 0], [-1, 1, 90], [-1, -1, 180], [1, -1, 270]] as const) {
+        for (let j = 0; j <= 6; j++) {
+          const t = ((start + j * 15) * Math.PI) / 180;
+          const d = [0, 0, 0];
+          d[a1] = Math.cos(t) * cp; d[a2] = Math.sin(t) * cp; d[plat] = sp * kant;
+          // Tot op de balk verlengen: de vervorming zet het punt daarna terug op de afronding.
+          const m = Math.max(Math.abs(d[0]!), Math.abs(d[1]!), Math.abs(d[2]!)) || 1;
+          const q = [0, 0, 0];
+          q[a1] = s1 * i1 + (d[a1]! * straalRand) / m; q[a2] = s2 * i2 + (d[a2]! * straalRand) / m; q[plat] = iDun + (d[plat]! * straalRand) / m;
+          balk.push(q);
         }
-        const curve = new THREE.CatmullRomCurve3(punten, true, 'centripetal');
-        const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(220, punten.length * 6), straal, 6, true), mat);
-        m.castShadow = false;
-        m.receiveShadow = true;
-        uit.push(m);
       }
+      const punten: any[] = [];
+      balk.forEach((q, i) => {
+        const volgende = balk[(i + 1) % balk.length]!;
+        const lengte = Math.hypot(volgende[0]! - q[0]!, volgende[1]! - q[1]!, volgende[2]! - q[2]!), delen = Math.max(1, Math.round(lengte / 2.5));
+        for (let k = 0; k < delen; k++) {
+          const f = k / delen;
+          punten.push(k_.opKussen(q[0]! + (volgende[0]! - q[0]!) * f, q[1]! + (volgende[1]! - q[1]!) * f, q[2]! + (volgende[2]! - q[2]!) * f, straal * 0.35));
+        }
+      });
+      const curve = new THREE.CatmullRomCurve3(punten, true, 'centripetal');
+      const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(480, punten.length * 2), straal, 6, true), mat);
+      m.castShadow = false;
+      m.receiveShadow = true;
+      uit.push(m);
+    };
+    if (k.mes) {
+      // Mesrand: één naad rondom, midden op de rand. Een gewone naad zie je daar niet (ze zit in de plooi van de rand):
+      // alleen een bies of sierstiksel tekenen.
+      if (b.naad.soort === 'naad') return uit;
+      for (const { hoek, straal } of lijnen) {
+        if (hoek === 45) ring(0, 1, rr, straal);
+        else ring(18, hoek < 45 ? -1 : 1, rr, straal);
+      }
+      return uit;
+    }
+    // Een gestoffeerd blok (vaste zitting) heeft alleen bovenaan een zichtbare naad: de onderrand staat op of bij de vloer.
+    for (const kant of b.soort === 'stof' && plat === 1 ? [1] : [1, -1]) {
+      // Een liggend kussen met een platte onderkant heeft onderaan een kleinere afronding.
+      const straalRand = plat === 1 && kant < 0 ? rOnder : rr;
+      for (const { hoek, straal } of lijnen) ring(hoek, kant, straalRand, straal);
     }
     return uit;
   }
@@ -1201,20 +1345,33 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       return m;
     }
     // Vrije omtrek (zitting met ronde kant) of een staande gestoffeerde cilinder (ronde poef): gevuld kussen met die vorm.
-    const staandeCilinder = b.vorm === 'cilinder' && !b.as && (b.soort === 'kussen' || b.soort === 'stof') && opties.zetel && (b.taps ?? 1) === 1;
+    const staandeCilinder = b.vorm === 'cilinder' && !b.as && (b.soort === 'kussen' || b.soort === 'stof') && opties.zetel;
     if (b.omtrek || staandeCilinder) {
       const cxo = b.x + b.b / 2, czo = b.z + b.d / 2;
-      const omtrek: [number, number][] = b.omtrek ?? Array.from({ length: 48 }, (_, i) => {
-        const a = (i / 48) * Math.PI * 2;
+      const omtrek: [number, number][] = b.omtrek ?? Array.from({ length: 96 }, (_, i) => {
+        const a = (i / 96) * Math.PI * 2;
         return [cxo + Math.cos(a) * b.b / 2, czo + Math.sin(a) * b.d / 2] as [number, number];
       });
       const rr = b.afronding ?? Math.min(5, b.h / 3);
       const bol = b.soort === 'kussen' ? Math.min(2.2, b.h * 0.13) : Math.min(1, b.h * 0.06);
       // Zonder eigen weefsel: de fijne standaardstructuur (herhaling 0,12) op ± 8 cm, zoals op de gewone blokken.
-      const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
-      const v = omtrekGeometrie(omtrek, b.h, rr, bol, cxo, czo, opties.zetel ? burenVan(b) : [], b.y, tegelCm);
+      // Hout (het frame onder een schelp): de nerf op ±24 cm, anders herhaalt ze om de centimeter.
+      const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : b.soort === 'hout' ? 24 : 1;
+      const v = omtrekGeometrie(omtrek, b.h, rr, bol, cxo, czo, opties.zetel ? burenVan(b) : [], b.y, tegelCm, b.afrondingOnder);
       geo = v.geo;
       vrijeNaden = b.soort === 'kussen' ? v.naadRingen : null;
+      // Taps toelopende poef (bv. Stockholm): hetzelfde gevulde kussen, naar boven toe smaller (taps = onder/boven).
+      // De vorm staat rond haar eigen midden (x en z vanaf het midden, y vanaf de onderkant).
+      const taps = staandeCilinder ? b.taps ?? 1 : 1;
+      if (taps !== 1) {
+        const pos = geo.attributes.position, top = 1 / Math.max(taps, 0.2);
+        for (let i = 0; i < pos.count; i++) {
+          const f = 1 + (top - 1) * Math.min(1, Math.max(0, pos.getY(i) / b.h));
+          pos.setXYZ(i, pos.getX(i) * f, pos.getY(i), pos.getZ(i) * f);
+        }
+        pos.needsUpdate = true;
+        vrijeNaden = null; // de naadringen horen bij de rechte vorm
+      }
       const base = materiaal(b);
       const sleutel = `vc:${base.uuid}`;
       let mat = materialen.get(sleutel);
@@ -1252,7 +1409,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       default:
         // Kussens gevuld en bol; bij de zetel ook de gestoffeerde armen en rug, iets minder bol.
         if (b.afronding && (b.soort === 'kussen' || (opties.zetel && b.soort === 'stof'))) {
-          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz], b.bol);
+          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz], b.bol, { onder: b.afrondingOnder, mesrand: b.mesrand });
           geo = kussen.geo;
           break;
         }
@@ -1267,6 +1424,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     // Stoffoto: textuur op ware grootte op elk vlak, ook bij afgeronde kussens en cilinders.
     if (b.textuur) { const tegel = { b: b.textuurCm ?? 15, h: b.textuurCm ?? 15 }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     else if (b.weefsel && b.weefsel in WEEFSEL_CM) { const cm = WEEFSEL_CM[b.weefsel as Weefsel]; const tegel = { b: cm, h: cm }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
+    // Hout van de zetel (blad, poten, kastje): de nerf op ware grootte (tegel van 16 × 32 cm, nerf in de lengte of naar
+    // boven). Zonder dit herhaalde de nerf op een afgerond blad om de centimeter: een egaal vlak zonder tekening.
+    else if (opties.zetel && b.soort === 'hout' && !b.zijden && geo.attributes.uv && geo.attributes.normal) { const nerf = { b: 16, h: 32 }; wereldUV(geo, [nerf, nerf, nerf, nerf, nerf, nerf], cx, b.y, cz); }
     let mat: any = materiaal(b);
     if (b.zijden && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
       // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z.
@@ -1543,14 +1703,23 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       w.obj.visible = d > 0;
     }
   }
-  function zetLicht() {
+  /** De lichtsfeer zoals ze nu geldt: voor de zetel met de ijking erbij (ZETEL_LICHT). */
+  function lichtNu() {
     const l = LICHTEN[lichtNaam];
+    const ijk = opties.zetel ? ZETEL_LICHT[lichtNaam] ?? {} : {};
+    return { ...l, ...ijk, belichting: ijk.belichting ?? 1, omgevingslicht: ijk.omgevingslicht ?? 1 };
+  }
+  function zetLicht() {
+    const l = lichtNu();
+    renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * l.belichting;
     zon.color.set(l.zon);
     zon.intensity = l.zonSterkte * PI;
     hemel.intensity = l.hemel * PI;
     hemel.color.set(l.hemelKleur);
     OMGEVING = l.omgeving;
     if (opties.zetel) scene.environment = omgevingVoor(lichtNaam);
+    // De echte sterkte van het omgevingslicht (zie ZETEL_LICHT): 1, behalve waar een sfeer het anders vraagt.
+    scene.environmentIntensity = l.omgevingslicht;
     // Alle materialen volgen het omgevingslicht van de sfeer.
     scene.traverse((o: any) => {
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
@@ -1569,7 +1738,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     sc.near = 1;
     sc.far = (grootte + decorMarge) * 5;
     sc.updateProjectionMatrix();
-    const h = LICHTEN[lichtNaam].hoogte;
+    const h = lichtNu().hoogte;
     const a = (weergave.zonRichting * Math.PI) / 180;
     zon.position.set(doel.x + Math.cos(a) * grootte * 1.25, grootte * h, doel.z + Math.sin(a) * grootte * 1.25);
     zon.target.position.copy(doel);
@@ -2089,7 +2258,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     mee.forEach((b, i) => { const w = wortel(i); groepen.set(w, [...(groepen.get(w) ?? []), b]); });
     return [...groepen.values()];
   }
-  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
+  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.afrondingOnder, b.kantel, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
   /** De zachte vorm als mesh (onze stof, schaduw in de hoeken als hoekpuntkleur), of null als ze nog berekend moet worden. */
   function zachteMesh(delen: Blok[], buren: Blok[]) {
     const v = zachteVormen.get(vormSleutel(delen, buren));
@@ -2415,7 +2584,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         camera.fov = weergave.lens;
         camera.updateProjectionMatrix();
       }
-      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
+      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * lichtNu().belichting;
       if (weergave.zonRichting !== oud.zonRichting) zetZon();
       if (weergave.maten !== oud.maten) zetMaten();
       if (((weergave.echtModel !== false) !== (oud.echtModel !== false) || weergave.vormen !== oud.vormen) && laatsteScene) viewer.toon(laatsteScene);

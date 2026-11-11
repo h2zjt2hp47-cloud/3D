@@ -5,7 +5,7 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, kussenHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, pootHoeken, pootZijden, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 import { kuipOpbouw, kuipParameters } from './kuip.js';
 import { strakProfiel, uitlopendProfiel } from './ruimtelijk.js';
@@ -66,12 +66,14 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       naad?.teken?.bies ? { lijndikte: 2.6, lijn: naad.teken.contrast ? '#2b2622' : donkerder(stof, 0.7) } : naad?.teken?.stiksel ? { lijndikte: 1.6 } : {};
 
     // --- Poten / onderbouw ---
-    const potenKeuze: OptieKeuze | undefined = opt.get('poten');
+    // Een houten blad op de doorlopende onderbouw staat op de poten van de zetel (zie ruimtelijk.ts).
+    const opBasis = t.tekenstijl === 'console' && opt.get('console_uitvoering')?.teken?.vorm === 'op_basis';
+    const potenKeuze: OptieKeuze | undefined = (opBasis ? zetel : opt).get('poten');
     const vorm = String(potenKeuze?.teken?.vorm ?? 'conisch');
     const P = vorm === 'plint' ? 4 : vorm === 'verdekt' ? Math.min(hoogtesVan(ontwerp, catalogus, e).poothoogte, 8) : hoogtesVan(ontwerp, catalogus, e).poothoogte;
     const potKleur = potenKeuze?.teken?.metaal ? (potenKeuze.teken.kleur ? String(potenKeuze.teken.kleur) : metaal) : hout;
     const x0 = p.x, x1 = p.x + p.b, inset = Math.min(5, p.b / 6);
-    if (t.tekenstijl !== 'console' && !t.opzet) {
+    if ((t.tekenstijl !== 'console' || opBasis) && !t.opzet) {
       switch (vorm) {
         case 'draaivoet':
           rect(`${e.id}.draaivoet`, x0 + p.b * 0.3, -P, p.b * 0.4, P - 1.5, '#2e2c2a');
@@ -83,7 +85,12 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           rect(`${e.id}.plint`, x0 + 2, -P, p.b - 4, P, hout);
           break;
         case 'verdekt':
-          rect(`${e.id}.verdekt`, x0 + 10, -P, p.b - 20, P, '#3a3a38');
+          {
+            // Tegen een ander element loopt de voet door (één voet onder de hele zetel).
+            const z = e.rotatie === 0 ? pootZijden(ontwerp, catalogus, e) : { links: 'gewoon', rechts: 'gewoon' };
+            const inL = z.links === 'gewoon' ? 10 : 0, inR = z.rechts === 'gewoon' ? 10 : 0;
+            rect(`${e.id}.verdekt`, x0 + inL, -P, p.b - inL - inR, P, '#3a3a38');
+          }
           break;
         case 'slede':
           pad(`${e.id}.slede`, `M${rond(x0 + inset)} ${-P} V0 H${rond(x1 - inset)} V${-P}`, x0, -P, p.b, P, 'none', { lijn: potKleur, lijndikte: 3 });
@@ -93,14 +100,26 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             pad(`${e.id}.poot-${k}`, `M${rond(xm - 3)} ${-P} L${rond(xm)} 0 L${rond(xm + 3)} ${-P}`, xm - 3, -P, 6, P, 'none', { lijn: potKleur, lijndikte: 2 });
           break;
         default: {
-          const breed = vorm === 'blok' ? 6 : vorm === 'cilinder' ? 4 : 5;
-          const onder = vorm === 'conisch' ? 2.4 : breed;
-          for (const [k, xm] of [['l', x0 + inset + breed / 2], ['r', x1 - inset - breed / 2]] as const)
+          // Poten per zetel, niet per element (zie pootZijden): geen poot aan de kant van een armleuning, één poot op de
+          // grens tussen twee zittingen. Alleen bij een niet-gedraaid element; gedraaid staat links/rechts in de diepte.
+          const zijden = e.rotatie === 0 ? pootZijden(ontwerp, catalogus, e) : { links: 'gewoon' as const, rechts: 'gewoon' as const };
+          // Kruisvoet: de verbinding tussen de poten als een lat op een derde van de hoogte.
+          if (vorm === 'kruis' && P >= 10 && zijden.links !== 'geen' && zijden.rechts !== 'geen') rect(`${e.id}.kruis`, x0 + inset + 2, -P * 0.3 - 3.2, p.b - 2 * inset - 4, 3.2, potKleur);
+          const breed = Number(potenKeuze?.teken?.dik ?? (vorm === 'blok' ? 6 : vorm === 'cilinder' ? 4 : 5));
+          const onder = vorm === 'conisch' ? 2.4 : vorm === 'kruis' ? breed * 0.7 : breed;
+          // Per hoek (zie pootHoeken): van voren zie je een poot als er vooraan of achteraan één staat, bv. de voorste poten
+          // van een chaise longue die voorbij de zitting ernaast uitsteekt.
+          const hoeken = e.rotatie === 0 ? pootHoeken(ontwerp, catalogus, e) : { la: 'gewoon' as const, lv: 'gewoon' as const, ra: 'gewoon' as const, rv: 'gewoon' as const };
+          const kant = (a: string, v: string) => (a === 'geen' && v === 'geen' ? 'geen' : a === 'gewoon' || v === 'gewoon' ? 'gewoon' : 'grens');
+          const links = kant(hoeken.la, hoeken.lv), rechts = kant(hoeken.ra, hoeken.rv);
+          for (const [k, xm] of [['l', links === 'grens' ? x0 : x0 + inset + breed / 2], ['r', rechts === 'grens' ? x1 : x1 - inset - breed / 2]] as const) {
+            if ((k === 'l' ? links : rechts) === 'geen') continue;
             pad(
               `${e.id}.poot-${k}`,
               `M${rond(xm - breed / 2)} ${-P} H${rond(xm + breed / 2)} L${rond(xm + onder / 2)} 0 H${rond(xm - onder / 2)} Z`,
               xm - breed / 2, -P, breed, P, potKleur,
             );
+          }
         }
       }
     }
@@ -173,7 +192,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           rect(`${e.id}.rugleuning`, x0, top(rugTop), p.b, rugTop - basis, donker, { afronding: 2 + zacht, ...lijn });
           maxHoogte = Math.max(maxHoogte, rugTop);
         } else if (t.tekenstijl === 'kussen') {
-          const h = t.hoogte ?? Math.round(e.breedte * 0.9);
+          const h = kussenHoogteVan(t, e, opt);
           rect(`${e.id}.kussen`, x0 + 1, top(zithoogte + h), p.b - 2, h, stof, { afronding: Math.min(p.b, h) / 3, ...lijn });
           maxHoogte = Math.max(maxHoogte, zithoogte + h);
         } else {
@@ -266,7 +285,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         const h = t.tekenstijl === 'poef' ? zithoogte - 2 : zithoogte;
         const dik = t.tekenstijl === 'poef' ? 0 : kussenDik;
         const poefvorm = String(te('poefvorm', 'vorm', 'kiezel'));
-        const poefRond = poefvorm === 'vierkant' ? 3 : poefvorm === 'rond' ? 4 + zacht : Math.min(p.b, h - P) / 2.5;
+        const poefRond = poefvorm === 'vierkant' ? 3 : poefvorm === 'rond' || poefvorm === 'taps' ? 4 + zacht : Math.min(p.b, h - P) / 2.5;
         rect(`${e.id}.basis`, x0, top(h - dik), p.b, h - dik - P, t.tekenstijl === 'poef' ? stof : donker, { afronding: t.tekenstijl === 'poef' ? poefRond : 2, ...lijn });
         if (dik) zitkussens(x0 + 1, p.b - 2, top(h), dik);
         if (t.tekenstijl !== 'poef') houtframe(h + 2);
@@ -360,6 +379,14 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         break;
       }
       case 'console': {
+        if (opBasis) {
+          // Houten blad op de doorlopende onderbouw: de gestoffeerde onderbouw met het blad erop.
+          const bovenBasis = zithoogte - v.kussendikte;
+          rect(`${e.id}.basis`, x0, top(bovenBasis), p.b, bovenBasis - P, stof, { afronding: 2, ...lijn });
+          rect(`${e.id}.blad`, x0, top(bovenBasis + 3.6), p.b, 3.6, hout, { afronding: 1 });
+          maxHoogte = Math.max(maxHoogte, bovenBasis + 3.6);
+          break;
+        }
         if (String(opt.get('console_uitvoering')?.teken?.vorm ?? '') === 'bank') {
           const bh = zithoogte - 14;
           rect(`${e.id}.bankblad`, x0, top(bh), p.b, 5, hout, { afronding: 1 });

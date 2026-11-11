@@ -1,6 +1,6 @@
 # 3D-technieken: wat werkt waarvoor (kennisbank)
 
-*Stand 5/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
+*Stand 11/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
 meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat in de notities onderaan.
 
 ## De technieken op een rij
@@ -12,6 +12,7 @@ meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat 
 | **Zachte vormen** | De delen smelten samen tot één vorm, met een afronding in de hoeken en schaduw in de plooien. | Gestoffeerde, ronde vormen: zetels. | Harde, precieze producten met details van millimeters (ramen, deuren, kasten). | 0,2 à 0,7 s per zetel, 20.000 à 110.000 driehoeken; in de achtergrond |
 | **Doorlopende opbouw** | Een rij elementen wordt in 3D één product. Prijs en tekeningen blijven per element. | Modulaire zetels die als één geheel ogen (Doha, Montego). | Hoeksofa's (nog niet uitgewerkt). | Zoals de zachte vormen |
 | **Boog** | De hele vorm buigt in een boog; wat erop staat (kussens) draait mee. | Gebogen sofa's (Montego); later rondboogramen. | – | Meteen |
+| **Genaaid kussen** (sinds 11/11) | Een kussen krijgt de vorm die het door naaien en vullen heeft. Een zitkussen ligt plat op de onderbouw, heeft scherpe hoeken in het grondvlak en rolt alleen bovenaan zacht om. Een los kussen (sierkussen, donzen rugkussen) is dun aan de naad, dik in het midden, met licht holle zijden. | Alle zit-, rug- en sierkussens; ook de vaste zitting (grote rol vooraan bij een zachte vormgeving). | Vormen zonder naden (schalen, houten delen). | Meteen |
 | **Echt 3D-bestand** | Een afgewerkt model uit een 3D-programma of van de fabrikant (GLB), met onze stoffen en afwerking. De configurator kijkt of het bestand bij de gekozen maten past. | Vaste onderdelen (krukken, scharnieren) of topmodellen met een eigen bestand. | Producten op maat: een bestand kun je uitrekken, niet omvormen. | Laden bij het openen |
 | **Weergave** | Licht en reflecties uit een omgevingsbeeld, schaduw in de hoeken, zachte slagschaduwen, echte kamers als decor, een fotomodus die licht natuurgetrouw narekent. | Beide demo's: de bouwdemo gebruikt dezelfde 3D-weergave. | – | Fotomodus ±1 min |
 | **Snelheid** | Zware vormen in de achtergrond rekenen (één per keer, tot dan de eenvoudige vorm) en onthouden; tabellen per cm in het grondvlak voor lange vormen. | Alles wat zwaar rekent. | – | 2 à 3 × sneller |
@@ -56,6 +57,58 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
    Zwaar werk hoort in de achtergrond, met eerst een eenvoudige vorm.
 9. **Een echt 3D-bestand is geen vervanging voor maatwerk.** Het past bij een vast model of een vast onderdeel. Voor
    een zetel of raam op maat moet de configurator de vorm zelf maken.
+
+## Zo maken 3D-tekenaars een zetel, en wat wij ervan overnemen (11/11)
+
+Vraag van Jonas (11/11): "Kunnen we de technieken niet overnemen die Sketchfab gebruikt om zetels te maken in 3D, of onze
+manier hiermee verbeteren? De zetels van Corneille blijven wel het doel." Met links naar de zetels op Sketchfab, Free3D
+en CGTrader.
+
+> **Eerlijk vooraf.** De drie pagina's zelf konden we niet openen: die sites staan niet in de toegelaten adressen van de
+> cloudomgeving. Wat hier staat is algemene vakkennis over hoe zulke modellen gemaakt worden, niet afgelezen van die
+> pagina's. De licentie van één bepaald model is dus niet nagekeken.
+
+**Wat die sites zijn.** Marktplaatsen waar 3D-tekenaars afgewerkte modellen aanbieden. Zo'n model is handwerk: één
+zetel, in één maat en één opstelling. Het is geen techniek die je inschakelt, maar het resultaat van een werkwijze. Die
+werkwijze kunnen we wel overnemen.
+
+| Stap van de 3D-tekenaar | Wat het oplevert | Bij ons |
+|---|---|---|
+| **1. Grote vlakken, daarna verfijnen** (subdivision) | Zachte vormen zonder knikken | Hadden we al: afgeronde blokken, eigen doorsnedes, zachte vormen |
+| **2. Kussens "naaien en vullen"** (stofsimulatie: lappen aan elkaar zetten en opblazen) | De echte kussenvorm: plat waar het kussen rust, bol in het midden, dun aan de naad, puntige hoeken | **Overgenomen op 11/11** als rekenregel (zie hieronder). Wij simuleren niet, we rekenen de vorm uit de maten: zo blijft elke maat mogelijk |
+| **3. Plooien en kreuken boetseren** | Leven: geen enkel kussen is perfect glad | Deels: de vulling is licht onregelmatig (alleen in de schaduwwerking). Echte plooien nog niet |
+| **4. Naden, biezen en stiksels** | Het verschil tussen "blok" en "gestoffeerd" | Hadden we al; ze volgen nu de nieuwe kussenvorm. Een vaste zitting en (met bies of stiksel) een vaste rug krijgen nu ook een naad |
+| **5. Details "bakken" in kaarten** (reliëf, schaduw in de kieren) | Een licht model dat er toch gedetailleerd uitziet | Hadden we al: weefselkaarten per stof; schaduw in kieren rekenen we live |
+| **6. Materialen** (kleur, ruwheid, reliëf, glans van de vezels) | Stof die als stof oogt | Hadden we al |
+| **7. Kleine onregelmatigheid** (sierkussens nooit kaarsrecht) | Minder "computerbeeld" | **Overgenomen op 11/11**: elk sierkussen staat een paar graden gedraaid |
+| **8. Belichting en achtergrond** (studiolicht, achterdoek) | Leesbare vormen, ook bij een witte zetel | Licht geijkt op 11/11; nieuw decor *Fotodoek (grijs)* zoals op de productfoto's |
+| **9. Een echte zetel inscannen** | Een exacte kopie van één exemplaar | Niet: vast model, zwaar bestand. Wel bruikbaar als "echt 3D-bestand" voor een topmodel (zie `docs/echte-3d-modellen.md`) |
+
+**Waarom we hun modellen zelf niet inladen.**
+1. Het zijn geen zetels van Corneille & Silence. Het doel blijft hun collectie.
+2. Een afgewerkt model is vast. Je kunt het uitrekken, niet omvormen: een arm van 15 cm wordt bij uitrekken een arm van 20 cm
+   met uitgerekte naden. Onze zetels moeten per cm en per element kunnen.
+3. Elk model heeft zijn eigen licentie (vaak alleen voor eigen gebruik, of met naamsvermelding). Dat moet per model
+   nagekeken worden voor het in een product komt.
+4. Zulke modellen zijn zwaar (honderdduizenden driehoeken, grote texturen) voor een tablet in de toonzaal.
+
+**Wat op 11/11 in de motor kwam** (`packages/demo-web/src/drie-d.ts`, `kussenGeometrie`; opbouw in `packages/core/src/ruimtelijk.ts`):
+- **Zitkussen:** kleine afronding onderaan en in de hoeken van het grondvlak, grote afronding bovenaan (veld
+  `afrondingOnder` op het blok). Tot dan overal dezelfde grote afronding: een zeepvorm die bij elke zetel hetzelfde oogde.
+- **Los kussen met mesrand** (veld `mesrand`): sierkussens en donzen rugkussens. Een sierkussen heeft een dunne rand, een
+  groot rugkussen een dikke, ronde rand. Gewone losse rugkussens houden een band (rechte zijkant).
+- **Onderbouw in de stof zelf**, met het weefsel. Tot dan 18 % donkerder en vlak: elke zetel had een grijze band onder
+  de kussens.
+- **Vaste zitting:** bovenaan afgerond volgens de zachtheid; vanaf zachtheid 6 rolt de voorkant in een grote boog naar
+  beneden (Amusette).
+- **Naden** lopen over het kussen zelf en zijn subtieler; een bies in dezelfde stof is iets donkerder dan de stof (ze werd
+  anders een witte lijn).
+
+**Volgende stappen in dezelfde lijn** (nog niet gebouwd):
+- plooien en kreuken als kaart over het weefsel (vraagt een eigen materiaal in TSL; eerst testen op de M5);
+- de hoes tot op de grond met plooien op de hoeken (Husk, Wallace, Esmee);
+- voor topmodellen een echt 3D-bestand van de fabrikant. De sfeerbeelden op de website lijken computerbeelden: dan
+  bestaan die bestanden waarschijnlijk al. Vraag aan Corneille & Silence wie ze maakte.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
@@ -155,6 +208,11 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 één echte kruk of trekbeugel.
 
 ## Technische valkuilen (voor wie verder bouwt)
+
+- **Omgevingslicht en WebGPU (gevonden 11/11).** Met de WebGPU-renderer telt `envMapIntensity` van een materiaal niet meer
+  voor het omgevingsbeeld van de scène; three.js leest `scene.environmentIntensity`. De sterkte per lichtsfeer (`omgeving`
+  in `LICHTEN`) had daardoor sinds 4/11 geen effect: het omgevingslicht stond altijd op volle sterkte en bovenkanten
+  werden te fel. Meet het licht na met een blok in een gekende stof (zie `ZETEL_LICHT` in `drie-d.ts`) voor je iets bijstelt.
 
 - **Een omtrek mag niet plooien.** Schuift een kant naar binnen, maak de hoeken dan kleiner. De test op snijdende
   zijden staat in `doorlopend.test.ts`.

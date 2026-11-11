@@ -230,6 +230,9 @@ function leesTypeFormulier(nieuw: boolean): ElementType {
     uren: numVerplicht(i.uren!), urenPerM: numVerplicht(i.urenPerM!),
   };
   if (OPZET_VORMEN.includes(vorm)) t.opzet = true;
+  // Velden die niet in het formulier staan, blijven zoals ze waren (bv. tot welke breedte de basisprijs geldt).
+  const oud = nieuw ? undefined : getCatalogus().typen.find((x) => x.code === bewerkType);
+  if (oud?.prijsVanaf !== undefined) t.prijsVanaf = oud.prijsVanaf;
   const h = num(i.hoogte!);
   if (h !== undefined) t.hoogte = h;
   return t;

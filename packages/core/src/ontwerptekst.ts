@@ -35,6 +35,8 @@ function vormgevingTekst(v: Partial<Vormgeving>): string[] {
   if (v.karkashoogte !== undefined) delen.push(`karkas ${getal(v.karkashoogte)} cm hoog`);
   if (v.opbouw === 'doorlopend') delen.push('doorlopende vorm (één zetel)');
   if (v.bocht) delen.push(`in een boog (uiteinden ${getal(v.bocht)} cm naar voren)`);
+  if (v.kussenoversteek !== undefined && Math.abs(v.kussenoversteek) >= 1)
+    delen.push(v.kussenoversteek > 0 ? `zitkussen steekt ${getal(v.kussenoversteek)} cm over de onderbouw` : `onderbouw steekt ${getal(-v.kussenoversteek)} cm onder het zitkussen uit (plateau)`);
   return delen;
 }
 

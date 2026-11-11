@@ -27,7 +27,9 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'slede', label: 'Metalen slede (U-frame)', prijs: 95, teken: { vorm: 'slede', metaal: true }, kost: 45 },
       { code: 'haarspeld', label: 'Haarspeldpoot (metaal)', prijs: 35, teken: { vorm: 'haarspeld', metaal: true }, kost: 18 },
       { code: 'messing', label: 'Messing cilinderpoot', prijs: 60, teken: { vorm: 'cilinder', metaal: true, kleur: '#b8963e' }, kost: 32 },
-      { code: 'metaal_staaf', label: 'Slanke metalen poot', prijs: 25, teken: { vorm: 'cilinder', metaal: true }, kost: 14 },
+      { code: 'metaal_staaf', label: 'Slanke metalen poot', prijs: 25, teken: { vorm: 'cilinder', metaal: true, dik: 2.4 }, kost: 14 },
+      // Kruisvoet (11/11): zoals Ross, Sullivan en Fraser op de foto's van de website.
+      { code: 'kruis', label: 'Houten kruisvoet', uitleg: 'Vier houten poten met een kruisverbinding ertussen', prijs: 120, teken: { vorm: 'kruis' }, kost: 55 },
       { code: 'draaivoet', label: 'Draaivoet (zwenkvoet)', uitleg: 'Centrale voet, de zetel kan draaien', prijs: 85, teken: { vorm: 'draaivoet' }, kost: 40 },
       { code: 'housse', label: 'Hoes tot op de grond (housse)', uitleg: 'Afneembare hoes die de poten bedekt', prijsPerM: 60, stofPct: 18, teken: { vorm: 'housse' }, kost: 10 },
       {
@@ -200,13 +202,24 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
+    // Formaat van een sierkussen (11/11): vierkant, of een liggende rechthoek zoals de lendenkussens van Nestor op de foto's.
+    code: 'kussenformaat', label: 'Formaat', niveau: 'element', voorTypen: ['sierkussen'], standaard: 'vierkant',
+    keuzes: [
+      { code: 'vierkant', label: 'Vierkant', teken: { verhouding: 0.9 } },
+      { code: 'lenden', label: 'Rechthoekig (lendenkussen)', uitleg: 'Breder dan hoog', teken: { verhouding: 0.58 } },
+    ],
+  },
+  {
     code: 'kuipvorm', label: 'Vorm fauteuil', niveau: 'element', voorTypen: ['fauteuil'], standaard: 'afgerond',
     keuzes: [
       // Vormen van de kuip (zie core/src/kuip.ts): grondvlak, wanddikte, hoe ver de wand rond loopt (graden),
       // hoogte vooraan boven de zitting, vanaf waar de armen vlak lopen. Benaderingen op basis van productfoto's.
       { code: 'rond', label: 'Rond (kuip)', uitleg: 'Ronde kuip: rug loopt geleidelijk over in de armen', teken: { vorm: 'rond', plan: 'rond', dikte: 15, boog: 138, voorBoven: 12, armVanaf: 1 } },
-      { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug die naar armhoogte zakt en vlak doorloopt', teken: { vorm: 'afgerond', plan: 'afgerond', dikte: 13, boog: 130, voorBoven: 17, armVanaf: 0.6 } },
-      { code: 'omhullend', label: 'Omhullend', uitleg: 'Wand loopt ver rond, armen laag vooraan', teken: { vorm: 'omhullend', plan: 'rond', dikte: 17, boog: 140, voorBoven: 9, armVanaf: 1 } },
+      // Sinds 11/11 (foto's van Mabel, Ross en Sullivan): een dunnere wand met een brede, vlakke bovenkant (schouder) in
+      // plaats van een hoge punt in het midden.
+      { code: 'afgerond', label: 'Afgerond met armen', uitleg: 'Afgeronde rug met een brede bovenkant, die naar armhoogte zakt en vlak doorloopt', teken: { vorm: 'afgerond', plan: 'afgerond', dikte: 11, boog: 130, voorBoven: 15, armVanaf: 0.7, schouder: 0.3 } },
+      // Sinds 11/11 (foto's van Manon): een dunnere wand die iets minder ver rond loopt en vooraan hoger blijft.
+      { code: 'omhullend', label: 'Omhullend', uitleg: 'Wand loopt ver rond, armen laag vooraan', teken: { vorm: 'omhullend', plan: 'rond', dikte: 11, boog: 125, voorBoven: 15, armVanaf: 1 } },
       // Koepel (Tumble, 10/11): een ronde zitting als een trommel, met een dikke rug die alleen de achterste helft omsluit
       // en aan beide kanten rond naar de zitting zakt.
       { code: 'koepel', label: 'Koepelrug op ronde zitting', uitleg: 'Ronde zitting, dikke rug rond de achterste helft die naar de zitting zakt', teken: { vorm: 'koepel', plan: 'rond', dikte: 20, boog: 100, voorBoven: 1, armVanaf: 1, plat: 0.55 } },
@@ -214,6 +227,10 @@ export const zetelOpties: OptieGroep[] = [
       // (tot 10/11 een dikke wand die bijna helemaal rond liep).
       { code: 'trommel', label: 'Trommel', uitleg: 'Ronde zitting met een dunne wand rond de achterste helft, even hoog, met losse rugkussens', teken: { vorm: 'trommel', plan: 'rond', dikte: 8, boog: 100, voorBoven: 22, armVanaf: 1, vlak: true } },
       { code: 'organisch', label: 'Organisch', uitleg: 'Zachte kiezel als zitting; de schaal is aan één kant hoog en loopt aan de andere kant schuin in de zitting weg', teken: { vorm: 'organisch', plan: 'afgerond', exponent: 2.6, dikte: 24, boog: 150, voorBoven: 1, armVanaf: 1, organisch: true, scheef: true } },
+      // Méridienne (Mabel Meridienne, 11/11): de rug loopt op volle hoogte rond het linkeruiteinde, blijft achteraan op die
+      // hoogte tot ±60 % van de breedte en zakt dan kort en steil naar de zitting (±75 %); rechts is de zitting vrij. De rug
+      // staat op het zitkussen, dat eronder doorloopt, op een dun houten frame. Benadering uit de productfoto.
+      { code: 'meridienne', label: 'Méridienne (rug rond één uiteinde)', uitleg: 'De rug loopt rond het linkeruiteinde en zakt achteraan schuin naar de zitting', teken: { vorm: 'meridienne', plan: 'afgerond', dikte: 12, boog: 112, voorBoven: 20, armVanaf: 1, scheef: true, scheefRechts: -69, scheefTop: -85, scheefLinks: 27, opZitting: true } },
       { code: 'schelp', label: 'Schelp op frame', uitleg: 'Dunne, gebogen rugschaal boven de zitting, op het frame', teken: { vorm: 'schelp', plan: 'afgerond', dikte: 9, boog: 66, voorBoven: 20, armVanaf: 1, zwevend: true } },
       { code: 'hoekig', label: 'Hoekig', uitleg: 'Rechte rug en armen', teken: { vorm: 'hoekig' } },
     ],
@@ -224,6 +241,9 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'rond', label: 'Rond', teken: { vorm: 'rond' } },
       { code: 'vierkant', label: 'Vierkant', teken: { vorm: 'vierkant' } },
       { code: 'kiezel', label: 'Kiezel (zacht afgerond)', teken: { vorm: 'kiezel' } },
+      // Sinds 11/11, naar de foto's van de Tumble pouf en de Stockholm pouf:
+      { code: 'bol', label: 'Bol (ton)', uitleg: 'Rond met sterk afgeronde boven- en onderrand', teken: { vorm: 'bol' } },
+      { code: 'taps', label: 'Taps (onderaan breder)', uitleg: 'Rond, bovenaan smaller dan onderaan', teken: { vorm: 'taps' } },
     ],
   },
   {
@@ -239,6 +259,8 @@ export const zetelOpties: OptieGroep[] = [
     keuzes: [
       { code: 'open', label: 'Met open vak', teken: { vorm: 'open' } },
       { code: 'bank', label: 'Lage houten bank (zitbank/legplank)', prijs: -60, teken: { vorm: 'bank' } },
+      // Sinds 11/11, naar de foto's van Kotor, Belize en Fréjus: het blad ligt op de onderbouw van de zetel, die eronder doorloopt.
+      { code: 'op_basis', label: 'Houten blad op de onderbouw', uitleg: 'De gestoffeerde onderbouw van de zetel loopt door; het blad ligt erop in plaats van een zitkussen', prijs: 40, teken: { vorm: 'op_basis' } },
       { code: 'blad', label: 'Alleen blad (tafeltje)', prijs: -30, teken: { vorm: 'blad' } },
       { code: 'lade', label: 'Met lade', prijs: 120, kost: 40, teken: { vorm: 'lade' } },
       { code: 'klep', label: 'Opbergvak met klep', prijs: 90, kost: 30, teken: { vorm: 'klep' } },
@@ -272,7 +294,8 @@ export const zetelCatalogus: OntwerpCatalogus = {
     {
       // Prijs, stof en kost met de rugleuning achteraan (standaard); "zonder rugleuning" geeft een minprijs.
       code: 'chaise', label: 'Chaise longue', tekenstijl: 'chaise',
-      breedte: { min: 70, max: 110, standaard: 85 }, diepte: { min: 140, max: 200, standaard: 165 },
+      // Tot 160 cm breed (11/11): het loungedeel van Belize is op de foto's ±150 cm breed, met twee rugkussens.
+      breedte: { min: 70, max: 160, standaard: 85 }, diepte: { min: 140, max: 200, standaard: 165 },
       prijs: g(970, 1060, 1180, 900), per10cm: g(30, 34, 40, 26),
       stofVast: 1.65, stofPerM: 2.83, kostVast: 210, kostPerM: 170, uren: 4, urenPerM: 2,
     },
@@ -284,7 +307,9 @@ export const zetelCatalogus: OntwerpCatalogus = {
     },
     {
       code: 'arm', label: 'Armleuning', tekenstijl: 'arm',
-      breedte: { min: 12, max: 40, standaard: 20 }, diepte: { min: 60, max: 200, standaard: 95 },
+      // Vanaf 8 cm (11/11): de zetelbedden hebben volgens hun technische tekening armen van 8 en 10 cm. De basisprijs
+      // geldt tot 12 cm, zoals voorheen: de prijs van bestaande armen verandert niet.
+      breedte: { min: 8, max: 40, standaard: 20 }, prijsVanaf: 12, diepte: { min: 60, max: 200, standaard: 95 },
       prijs: g(190, 220, 260, 170), per10cm: g(20, 24, 28, 16),
       stofVast: 0.7, stofPerM: 1.5, kostVast: 45, kostPerM: 60, uren: 1.5, urenPerM: 1,
     },
@@ -296,7 +321,8 @@ export const zetelCatalogus: OntwerpCatalogus = {
     },
     {
       code: 'fauteuil', label: 'Fauteuil', tekenstijl: 'kuip',
-      breedte: { min: 60, max: 110, standaard: 80 }, diepte: { min: 60, max: 100, standaard: 80 },
+      // Tot 150 cm breed (11/11): de Mabel 2-zit en de Mabel Meridienne zijn op de foto's één schelp van ±145 en ±130 cm.
+      breedte: { min: 60, max: 150, standaard: 80 }, diepte: { min: 60, max: 100, standaard: 80 },
       prijs: g(690, 760, 870, 620), per10cm: g(30, 34, 40, 26),
       stofVast: 1.6, stofPerM: 2.6, kostVast: 140, kostPerM: 150, uren: 5, urenPerM: 2,
     },

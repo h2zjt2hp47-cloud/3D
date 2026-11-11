@@ -75,8 +75,13 @@ export interface ElementType {
   hoogte?: number;
   /** Verkoopprijs bij minimale breedte en standaarddiepte, per prijsgroep. */
   prijs: Record<string, number>;
-  /** Meerprijs per begonnen 10 cm boven de minimale breedte, per prijsgroep. */
+  /** Meerprijs per begonnen 10 cm boven de minimale breedte (of boven `prijsVanaf`), per prijsgroep. */
   per10cm: Record<string, number>;
+  /**
+   * Breedte (cm) tot waar de basisprijs geldt, als die niet de minimale breedte is. Zo kan een element smaller gemaakt
+   * worden zonder dat de prijs van de bestaande maten verandert (armleuning: vanaf 8 cm, basisprijs tot 12 cm).
+   */
+  prijsVanaf?: number;
   /** Stofverbruik (m bij 140 cm rolbreedte): vast + per meter breedte. */
   stofVast: number;
   stofPerM: number;
@@ -123,6 +128,12 @@ export interface Vormgeving {
   /** Bij een doorlopende opbouw: hoeveel cm de uiteinden naar voren komen (een boog, zoals Montego); 0 = recht. */
   bocht: number;
   /**
+   * Hoeveel cm het zitkussen vooraan en aan een vrije zijkant over de onderbouw steekt (positief, zoals Kotor), of
+   * hoeveel de onderbouw als een plateau onder het kussen uitsteekt (negatief, zoals Fréjus). Leeg = gelijk (½ cm).
+   * Alleen de 3D; prijs en tekeningen lezen dit niet.
+   */
+  kussenoversteek?: number;
+  /**
    * Vrije hoogtes in cm (bv. getekend in het vooraanzicht). Leeg = volgens de gekozen opties.
    * Rughoogte en armhoogte gelden per element; zithoogte en poothoogte voor de hele zetel.
    */
@@ -166,6 +177,7 @@ export const VORMGEVING_BEREIK = {
   zachtheid: { min: 0, max: 10 },
   rugkussendikte: { min: 10, max: 30 },
   bocht: { min: 0, max: 60 },
+  kussenoversteek: { min: -8, max: 6 },
 } as const;
 
 /** Meerprijzen voor de vormgeving (per element). */
@@ -425,6 +437,94 @@ function donkerder(hex: string, factor = 0.86): string {
 }
 
 /** Zet een rechthoek in lokale coördinaten (breedte × diepte, rug boven) om naar het bovenaanzicht. */
+/** Wat er met de poten aan één zijkant van een element gebeurt als er een ander element tegenaan staat. */
+export type PootZijde = 'gewoon' | 'grens' | 'geen';
+
+/**
+ * Poten per zetel in plaats van per element (11/11). Tot dan kreeg elk element vier eigen poten, zodat er aan elke hoek
+ * van een sofa een trosje van twee of drie poten stond (arm, zitting, zitting). Nu:
+ * - een armleuning tegen een zitting houdt alleen de poten aan haar buitenkant;
+ * - een zitting krijgt geen poten aan de kant van een armleuning;
+ * - waar twee zittingen elkaar raken, staat één paar poten op de grens (bij het element dat eerst in het ontwerp staat).
+ * Geldt voor de linker- en rechterkant van het element zelf (lokaal). 'gewoon' = poten op hun gewone plaats.
+ */
+/** Is dit een houten tussenstuk dat als blad op de doorlopende onderbouw van de zetel ligt (zoals bij Kotor en Belize)? */
+export function bladOpOnderbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): boolean {
+  return gekozenOpties(ontwerp, catalogus, e).get('console_uitvoering')?.teken?.vorm === 'op_basis';
+}
+
+/**
+ * Hoogte van een los kussen (sierkussen, rugkussen) in cm: de vaste hoogte van het type, of anders volgens het formaat
+ * (vierkant: 0,9 × de breedte; lendenkussen: lager). Gedeeld door de 3D en het vooraanzicht.
+ */
+export function kussenHoogteVan(t: ElementType, e: OntwerpElement, opt: Map<string, OptieKeuze>): number {
+  const verhouding = Number(opt.get('kussenformaat')?.teken?.verhouding ?? 0.9);
+  return t.hoogte ?? Math.round(e.breedte * (Number.isFinite(verhouding) && verhouding > 0 ? verhouding : 0.9));
+}
+
+export function pootZijden(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): { links: PootZijde; rechts: PootZijde } {
+  const typen = new Map(catalogus.typen.map((t) => [t.code, t]));
+  const stijl = (x: OntwerpElement) => typen.get(x.type)?.tekenstijl;
+  // Een houten blad op de doorlopende onderbouw (console "op_basis") hoort bij het frame van de zetel en telt mee als zitting.
+  const vast = ontwerp.elementen.filter((x) => !typen.get(x.type)?.opzet && (stijl(x) !== 'console' || bladOpOnderbouw(ontwerp, catalogus, x)));
+  if (!vast.includes(e)) return { links: 'gewoon', rechts: 'gewoon' };
+  /** Het element dat tegen deze zijkant staat (over minstens een derde van de diepte). */
+  const buur = (kant: 'links' | 'rechts'): OntwerpElement | undefined => {
+    const proef = lokaalNaarWereld(e, kant === 'links' ? -3 : e.breedte + 0.5, 0, 2.5, e.diepte);
+    return vast.find((x) => {
+      if (x === e) return false;
+      const p = voetafdruk(x);
+      const ox = Math.min(p.x + p.b, proef.x + proef.b) - Math.max(p.x, proef.x), oy = Math.min(p.y + p.h, proef.y + proef.h) - Math.max(p.y, proef.y);
+      return ox > 0.2 && oy > 0.2 && Math.max(ox, oy) >= Math.min(e.diepte, x.breedte, x.diepte) / 3;
+    });
+  };
+  const L = buur('links'), R = buur('rechts');
+  const index = (x: OntwerpElement) => ontwerp.elementen.indexOf(x);
+  if (stijl(e) === 'arm') {
+    // Alleen de buitenkant; een arm tussen twee elementen staat op de poten van die elementen.
+    return { links: R && !L ? 'gewoon' : L ? 'geen' : 'gewoon', rechts: L && !R ? 'gewoon' : R ? 'geen' : 'gewoon' };
+  }
+  const zijde = (b: OntwerpElement | undefined): PootZijde => (!b ? 'gewoon' : stijl(b) === 'arm' ? 'geen' : index(b) < index(e) ? 'geen' : 'grens');
+  return { links: zijde(L), rechts: zijde(R) };
+}
+
+/**
+ * Poten per hoek van een element: links- en rechtsachter (la, ra), links- en rechtsvoor (lv, rv). Zelfde regel als
+ * `pootZijden`, maar per hoek bekeken, want een buur is niet altijd even diep (melding van Jonas, 11/11: "de longchairs
+ * hebben geen poten onder het lange deel"):
+ * - komt de buur niet tot aan deze hoek (een chaise longue die voorbij de zitting ernaast uitsteekt), dan staat hier een
+ *   eigen poot;
+ * - steekt de buur zelf voorbij deze hoek uit (een zitting naast een diepere chaise), dan staat hier een poot op de grens:
+ *   de poten van de buur staan verderop;
+ * - ligt de buur gelijk, dan geldt de gewone regel: geen poot naast een arm, één paar op de grens tussen twee zittingen.
+ */
+export function pootHoeken(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): Record<'la' | 'lv' | 'ra' | 'rv', PootZijde> {
+  const typen = new Map(catalogus.typen.map((t) => [t.code, t]));
+  const stijl = (x: OntwerpElement) => typen.get(x.type)?.tekenstijl;
+  const vast = ontwerp.elementen.filter((x) => !typen.get(x.type)?.opzet && (stijl(x) !== 'console' || bladOpOnderbouw(ontwerp, catalogus, x)));
+  if (!vast.includes(e)) return { la: 'gewoon', lv: 'gewoon', ra: 'gewoon', rv: 'gewoon' };
+  const D = e.diepte, zone = Math.min(12, D / 2);
+  const raakt = (x: OntwerpElement, k: { x: number; y: number; b: number; h: number }) => {
+    const p = voetafdruk(x);
+    const ox = Math.min(p.x + p.b, k.x + k.b) - Math.max(p.x, k.x), oy = Math.min(p.y + p.h, k.y + k.h) - Math.max(p.y, k.y);
+    // Naast elkaar (niet alleen met een punt): minstens de helft van de zone langs de diepte.
+    return ox > 0.2 && oy > 0.2 && Math.max(ox, oy) >= zone / 2;
+  };
+  const index = (x: OntwerpElement) => ontwerp.elementen.indexOf(x);
+  const hoek = (kant: 'l' | 'r', eind: 'a' | 'v'): PootZijde => {
+    const lx = kant === 'l' ? -3 : e.breedte + 0.5;
+    const hier = lokaalNaarWereld(e, lx, eind === 'a' ? 0 : D - zone, 2.5, zone);
+    const b = vast.find((x) => x !== e && raakt(x, hier));
+    if (!b) return 'gewoon';
+    // Een arm draagt zichzelf alleen aan de buitenkant; naast een arm staat geen poot.
+    if (stijl(e) === 'arm' || stijl(b) === 'arm') return 'geen';
+    const verder = lokaalNaarWereld(e, lx, eind === 'a' ? -3 - zone : D + 3, 2.5, zone);
+    if (raakt(b, verder)) return 'grens';
+    return index(b) < index(e) ? 'geen' : 'grens';
+  };
+  return { la: hoek('l', 'a'), lv: hoek('l', 'v'), ra: hoek('r', 'a'), rv: hoek('r', 'v') };
+}
+
 export function lokaalNaarWereld(e: OntwerpElement, lx: number, ly: number, lb: number, lh: number) {
   const B = e.breedte, D = e.diepte;
   switch (e.rotatie) {
@@ -582,7 +682,7 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
     }
     case 'poef': {
       const vorm = String(t('poefvorm', 'vorm') ?? 'kiezel');
-      if (vorm === 'rond') return [ellips(e, 'poef', kleur)];
+      if (vorm === 'rond' || vorm === 'bol' || vorm === 'taps') return [ellips(e, 'poef', kleur)];
       delen.push(['poef', 0, 0, B, D, kleur, vorm === 'vierkant' ? 4 : Math.min(B, D) / 2.5]);
       break;
     }
@@ -742,7 +842,7 @@ export function berekenOntwerp(
     if (basis === undefined || per10 === undefined) {
       meldingen.push({ code: 'element.prijs', ernst: 'fout', elementId: e.id, melding: `${naam}: geen prijs voor prijsgroep ${groep}.` });
     } else {
-      const extra10 = Math.max(0, Math.ceil((e.breedte - t.breedte.min) / 10 - 1e-9));
+      const extra10 = Math.max(0, Math.ceil((e.breedte - (t.prijsVanaf ?? t.breedte.min)) / 10 - 1e-9));
       const diepte10 = Math.max(0, Math.ceil((e.diepte - t.diepte.standaard) / 10 - 1e-9));
       prijs = (basis + extra10 * per10) * (1 + (diepte10 * catalogus.diepteToeslagPctPer10cm) / 100) * (1 + (m?.toeslagPct ?? 0) / 100);
       prijs = rond(prijs);
@@ -790,7 +890,8 @@ export function berekenOntwerp(
     // Vormgeving (ontwerpmodus): meerprijs en controle van de grenzen.
     const vp = catalogus.vormgevingPrijzen;
     for (const [veld, b] of Object.entries(VORMGEVING_BEREIK) as [keyof typeof VORMGEVING_BEREIK, { min: number; max: number }][]) {
-      const w = v[veld];
+      // De oversteek van het zitkussen is een vrije keuze: leeg mag (dan gelijk met de onderbouw).
+      const w = v[veld] ?? (veld === 'kussenoversteek' ? 0 : NaN);
       if (!Number.isFinite(w) || w < b.min || w > b.max)
         meldingen.push({ code: `vorm.${veld}`, ernst: 'fout', elementId: e.id, melding: `${naam}: ${veld} moet tussen ${b.min} en ${b.max} liggen.` });
     }

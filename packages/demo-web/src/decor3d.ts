@@ -103,7 +103,8 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
     }
     // Verf of beton: lichte pleisterstructuur op grote schaal.
     const t = h.pleister(m.kleur);
-    t.repeat.set(1 / (m.soort === 'beton' ? 120 : 200), 1 / (m.soort === 'beton' ? 120 : 200));
+    // Verf: een fijne korrel (tegel van 70 cm). Tot 11/11 was dat 200 cm: de korrels werden vlekjes van ±2,5 cm, als terrazzo.
+    t.repeat.set(1 / (m.soort === 'beton' ? 120 : 70), 1 / (m.soort === 'beton' ? 120 : 70));
     return new T.MeshStandardMaterial({ color: 0xffffff, roughness: m.soort === 'beton' ? 0.8 : 0.95, map: t, envMapIntensity: h.omgeving * 0.8 });
   })();
   const plintMat = mat(dc.afwerking?.kleur ?? '#f3f0ea', 0.6);
@@ -219,6 +220,16 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
       }
       delen.push(zijde);
       wanden.push({ obj: zijde, punt: [xR, H / 2, zc], normaal: [-1, 0, 0] });
+      // Linkerwand (11/11): een gesloten kamer, ook als je de zetel van rechts bekijkt (tot dan zag je daar de lege
+      // achtergrond). Zoals de andere wanden valt ze weg als de camera erachter staat.
+      const links = new T.Group();
+      const lv = wandVlak(diep, null);
+      lv.rotation.y = Math.PI / 2;
+      lv.position.set(xL, 0, zc);
+      voeg(lv, true, links);
+      blok(1.6, 9, diep, xL + 0.8, 0, zc, plintMat, false, links);
+      delen.push(links);
+      wanden.push({ obj: links, punt: [xL, H / 2, zc], normaal: [1, 0, 0] });
     }
   }
 

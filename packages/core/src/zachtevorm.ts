@@ -403,8 +403,18 @@ function omtrekBlok(b: Blok, minR = 0): Primitief {
   };
 }
 
+/**
+ * Afronding van een balk in het veld. Een blok met een eigen afronding onderaan (vaste zitting: grote rol bovenaan,
+ * klein onderaan en in de hoeken van het grondvlak) heeft hier één straal: een gematigde, zodat de onderrand en de
+ * hoeken niet mee wegrollen. De grote rol vooraan zie je alleen bij *Blokken*.
+ */
+function afrondingVoorVeld(b: Blok): number {
+  const r = b.afronding ?? 1;
+  return b.afrondingOnder === undefined ? r : Math.min(r, Math.max(b.afrondingOnder, 5));
+}
+
 function primitiefVan(b: Blok, minR = 0, element?: number): Primitief {
-  const p = b.vorm === 'kuipwand' ? wand(b) : b.vorm === 'profiel' ? profielVorm(b) : b.vorm === 'cilinder' ? rol(b) : b.omtrek ? omtrekBlok(b, minR) : balk(b, Math.max(minR, b.afronding ?? 1));
+  const p = b.vorm === 'kuipwand' ? wand(b) : b.vorm === 'profiel' ? profielVorm(b) : b.vorm === 'cilinder' ? rol(b) : b.omtrek ? omtrekBlok(b, minR) : balk(b, Math.max(minR, afrondingVoorVeld(b)));
   p.element = element;
   return p;
 }

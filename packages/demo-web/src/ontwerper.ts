@@ -613,6 +613,7 @@ const VORM_LABELS: Record<keyof Vormgeving, string> = {
   poothoogte: 'Poothoogte (cm)',
   opbouw: 'Opbouw in 3D',
   bocht: 'Boog bij doorlopend: uiteinden naar voren (cm)',
+  kussenoversteek: 'Zitkussen steekt uit (+) of plateau eronder (−), in cm',
 };
 const KEUZE_LABELS: Record<string, string> = {
   recht: 'Recht', hellend: 'Achterover hellend', rond: 'Afgerond',
@@ -629,7 +630,7 @@ function vormgevingVelden(idVoorvoegsel: string, huidig: Vormgeving, eigen: Part
   // Voor één element: alleen wat bij dat element zichtbaar is (en aangerekend wordt), zie vormEffect in de motor.
   // Opbouw en boog gelden voor de hele zetel: niet per element.
   const toon = (veld: keyof Vormgeving) =>
-    !effect || (veld !== 'opbouw' && veld !== 'bocht' && ((veld !== 'rugdikte' && veld !== 'rugvorm') || effect.rugvorm) && (veld !== 'zitkussens' || effect.kussens) && (veld !== 'houtframe' || effect.houtframe) && (veld !== 'rugkussendikte' || effect.rug));
+    !effect || (veld !== 'opbouw' && veld !== 'bocht' && ((veld !== 'rugdikte' && veld !== 'rugvorm') || effect.rugvorm) && (veld !== 'zitkussens' || effect.kussens) && (veld !== 'houtframe' || effect.houtframe) && (veld !== 'rugkussendikte' || effect.rug) && (veld !== 'kussenoversteek' || effect.kussens));
   for (const veld of Object.keys(VORMGEVING_BEREIK) as (keyof typeof VORMGEVING_BEREIK)[]) {
     if (!toon(veld)) continue;
     const b = VORMGEVING_BEREIK[veld];

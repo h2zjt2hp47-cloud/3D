@@ -8,14 +8,14 @@ const bereken = (o: Ontwerp) => berekenOntwerp(o, zetelCatalogus, standaardMater
 const codes = (r: { meldingen: { code: string }[] }) => r.meldingen.map((m) => m.code);
 
 describe('chaise longue in de modellen (afgeleid uit de productfoto)', () => {
-  it('Kotor, Belize, Pula en Fréjus: rug loopt door achter de chaise; Azar: open uiteinde', () => {
+  it('Kotor, Belize, Pula, Fréjus en Azar: rug loopt door achter de chaise', () => {
     const rugVan = (code: string) => {
       const m = zetelModellen.find((x) => x.code === code)!;
       const s = bouw3D(m.ontwerp, zetelCatalogus, standaardMaterialen);
       return m.ontwerp.elementen.filter((e) => e.type === 'chaise').map((e) => blokkenVan(s, { id: e.id }).some((b) => b.code === `${e.id}.rug`));
     };
-    for (const code of ['kotor', 'belize', 'pula', 'frejus']) expect(rugVan(code), code).not.toContain(false);
-    expect(rugVan('azar')).toEqual([false]);
+    // Azar: op de productfoto (11/11 opnieuw bekeken) staan drie rugblokken, dus ook één achter de chaise.
+    for (const code of ['kotor', 'belize', 'pula', 'frejus', 'azar']) expect(rugVan(code), code).not.toContain(false);
   });
 });
 
@@ -25,7 +25,8 @@ describe('modellen', () => {
       const r = bereken(m.ontwerp);
       expect(r.meldingen.filter((x) => x.ernst === 'fout'), m.naam).toEqual([]);
       expect(r.prijs.brutoprijsExcl, m.naam).toBeGreaterThan(200);
-      expect(bouw3D(m.ontwerp, zetelCatalogus, standaardMaterialen).blokken.length, m.naam).toBeGreaterThan(1);
+      // Een poef die tot op de vloer loopt, is één blok (zonder voet).
+      expect(bouw3D(m.ontwerp, zetelCatalogus, standaardMaterialen).blokken.length, m.naam).toBeGreaterThan(0);
       expect(tekenVooraanzicht(m.ontwerp, zetelCatalogus, standaardMaterialen).vormen.length, m.naam).toBeGreaterThan(1);
     }
   });
@@ -106,11 +107,64 @@ describe('ontwerpmodus (vormgeving)', () => {
     expect(Math.min(...basis.omtrek!.map((q) => q[0]))).toBeCloseTo(0, 1);
   });
 
-  it('lage houten bank (Kotor)', () => {
+  it('lage houten bank: bovenkant = zithoogte − 14', () => {
+    const o: Ontwerp = { hoofdmateriaal: 'linnen_ficelle', vormgeving: { zithoogte: 44 }, elementen: [{ id: 'e1', type: 'console', x: 0, y: 0, breedte: 60, diepte: 80, rotatie: 0, opties: { console_uitvoering: 'bank' } }] };
+    const s = bouw3D(o, zetelCatalogus, standaardMaterialen);
+    expect(s.blokken.find((b) => b.code === 'e1.bankblad')).toMatchObject({ soort: 'hout', y: 25, h: 5 });
+  });
+  it('houten blad op de onderbouw (Kotor): de onderbouw loopt door, het blad ligt erop, poten alleen aan de buitenkant', () => {
     const kotor = zetelModellen.find((m) => m.code === 'kotor')!.ontwerp;
     const s = bouw3D(kotor, zetelCatalogus, standaardMaterialen);
-    // Bovenkant van de bank = zithoogte − 14 (Kotor: zithoogte 44 volgens de productpagina).
-    expect(s.blokken.find((b) => b.code === 'e1.bankblad')).toMatchObject({ soort: 'hout', y: 25, h: 5 });
+    const blad = s.blokken.find((b) => b.code === 'e1.blad')!, basis = s.blokken.find((b) => b.code === 'e1.basis')!, buur = s.blokken.find((b) => b.code === 'e2.basis')!;
+    // Zelfde onderbouw als de zitting ernaast (poten 11 cm, zitkussen 23 cm, zithoogte 44: onderbouw van 11 tot 21 cm).
+    expect(basis).toMatchObject({ soort: 'stof', y: buur.y, h: buur.h, kleur: buur.kleur });
+    expect(basis).toMatchObject({ y: 11, h: 10 });
+    expect(blad).toMatchObject({ soort: 'hout', y: 21 });
+    // Het blad staat op poten zoals een zitting: een paar aan de vrije kant en één paar op de grens met de zitting ernaast
+    // (geen dubbel paar: de zitting zelf heeft links geen poten).
+    const poten = s.blokken.filter((b) => /^e[12]\.poot/.test(b.code)).map((b) => b.code).sort();
+    expect(poten).toEqual(['e1.poot-la', 'e1.poot-lv', 'e1.poot-ra', 'e1.poot-rv', 'e2.poot-ra', 'e2.poot-rv']);
+    // Het vooraanzicht tekent hetzelfde.
+    const va = tekenVooraanzicht(kotor, zetelCatalogus, standaardMaterialen).vormen.map((v) => v.code);
+    expect(va).toContain('e1.blad');
+    expect(va).toContain('e1.basis');
+  });
+  it('chaise longue: poten onder het deel dat voorbij de zitting uitsteekt (Kotor, Belize, Fréjus)', () => {
+    const poten = (code: string, id: string) => bouw3D(zetelModellen.find((m) => m.code === code)!.ontwerp, zetelCatalogus, standaardMaterialen).blokken
+      .filter((b) => b.code.startsWith(`${id}.poot-`)).map((b) => b.code.split('-')[1]).sort();
+    // Kotor: de chaise (e4, 170 diep) staat tussen een zitting (105 diep) en een arm (105 diep): achteraan deelt ze de
+    // poten met de buren, vooraan heeft ze er zelf twee. De zitting ernaast zet haar voorste poot op de grens.
+    expect(poten('kotor', 'e4')).toEqual(['lv', 'rv']);
+    expect(poten('kotor', 'e3')).toEqual(['ra', 'rv']);
+    const kotor = bouw3D(zetelModellen.find((m) => m.code === 'kotor')!.ontwerp, zetelCatalogus, standaardMaterialen).blokken;
+    const voor = kotor.find((b) => b.code === 'e4.poot-lv')!;
+    expect(voor.z).toBeGreaterThan(150); // onder het voorste deel van de chaise (170 cm diep)
+    // Belize: het brede loungedeel (e1) staat links vrij en rechts naast een zitting die minder diep is.
+    expect(poten('belize', 'e1')).toEqual(['la', 'lv', 'ra', 'rv']);
+    expect(poten('belize', 'e5')).toEqual(['lv', 'rv']);
+    // Fréjus: de chaise (e2) staat links naast een arm die niet verder komt dan de zitting.
+    expect(poten('frejus', 'e2')).toEqual(['lv', 'ra', 'rv']);
+    // Het vooraanzicht toont de voorste poten van de chaise.
+    const va = tekenVooraanzicht(zetelModellen.find((m) => m.code === 'kotor')!.ontwerp, zetelCatalogus, standaardMaterialen).vormen.map((v) => v.code);
+    expect(va).toContain('e4.poot-l');
+    expect(va).toContain('e4.poot-r');
+  });
+  it('sierkussen: mesrand; een lendenkussen is breder dan hoog (Nestor)', () => {
+    const nestor = zetelModellen.find((m) => m.code === 'nestor')!.ontwerp;
+    const s = bouw3D(nestor, zetelCatalogus, standaardMaterialen);
+    const lenden = s.blokken.find((b) => b.code === 'e7.kussen')!, vierkant = s.blokken.find((b) => b.code === 'e10.kussen')!;
+    expect(lenden.mesrand && vierkant.mesrand).toBe(true);
+    expect(lenden.h).toBe(Math.round(60 * 0.58));
+    expect(vierkant.h).toBe(45);
+  });
+  it('brede chaise met twee rugkussens (Belize) en een zitting met alleen sierkussens tegen een vaste rug (Pula)', () => {
+    const blokken = (code: string) => bouw3D(zetelModellen.find((m) => m.code === code)!.ontwerp, zetelCatalogus, standaardMaterialen).blokken;
+    expect(blokken('belize').filter((b) => b.code.startsWith('e1.rugkussen')).map((b) => b.code)).toEqual(['e1.rugkussen1', 'e1.rugkussen2']);
+    const pula = blokken('pula');
+    expect(pula.some((b) => b.code.includes('rugkussen'))).toBe(false);
+    expect(pula.filter((b) => b.code.startsWith('e2.zitkussen'))).toHaveLength(1);
+    const rug = pula.find((b) => b.code === 'e2.rug')!, arm = pula.find((b) => b.code === 'e1.arm')!;
+    expect(rug.y + rug.h).toBe(arm.y + arm.h); // rug en armen even hoog: een bak
   });
 });
 
@@ -162,23 +216,38 @@ describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meube
     }
     return in_;
   };
-  it('ronde poef: ronde voet, 10 cm naar binnen', () => {
-    for (const code of ['stockholm', 'fez', 'tumble-pouf']) {
-      const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, poef = b.find((x) => x.code === 'e1.poef')!;
-      expect(voet.vorm, code).toBe('cilinder');
-      expect(voet.b, code).toBeCloseTo(poef.b - 20, 1);
-      expect(voet.x + voet.b / 2, code).toBeCloseTo(poef.x + poef.b / 2, 1);
+  /** Een losse poef op een verdekte voet van 4 cm. */
+  const poef = (vorm: string, breedte = 60): Ontwerp => ({
+    hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt', poothoogte: 'laag' },
+    elementen: [{ id: 'e1', type: 'poef', x: 0, y: 0, breedte, diepte: breedte, rotatie: 0, opties: { poefvorm: vorm } }],
+  });
+  const bouw = (o: Ontwerp) => bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
+  it('ronde poef: ronde voet, 10 cm naar binnen; onder een bolle poef verder naar binnen (binnen de ronding)', () => {
+    for (const vorm of ['rond', 'taps']) {
+      const b = bouw(poef(vorm)), voet = b.find((x) => x.code === 'e1.verdekt')!, lijf = b.find((x) => x.code === 'e1.poef')!;
+      expect(voet.vorm, vorm).toBe('cilinder');
+      expect(voet.b, vorm).toBeCloseTo(lijf.b - 20, 1);
+      expect(voet.x + voet.b / 2, vorm).toBeCloseTo(lijf.x + lijf.b / 2, 1);
     }
+    const b = bouw(poef('bol')), voet = b.find((x) => x.code === 'e1.verdekt')!, lijf = b.find((x) => x.code === 'e1.poef')!;
+    expect(voet.vorm).toBe('cilinder');
+    expect(voet.b).toBeLessThanOrEqual(lijf.b - 2 * lijf.afronding!); // niet breder dan het platte deel van de onderkant
+  });
+  it('poef tot op de vloer (Tumble, Stockholm, Kanto, Fez, Pebble pouf): geen voet, dus geen donkere plaat eronder', () => {
+    for (const code of ['tumble-pouf', 'stockholm', 'kanto', 'fez', 'pebble-pouf']) expect(blokken(code).some((x) => x.code === 'e1.verdekt'), code).toBe(false);
   });
   it('kuipfauteuil: voet met de omtrek van de onderbouw, helemaal binnen die omtrek', () => {
-    for (const code of ['pebble', 'tumble', 'manon', 'satie']) {
+    // (Manon loopt sinds 11/11 tot op de vloer en heeft geen voet meer.)
+    for (const code of ['pebble', 'tumble', 'satie']) {
       const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, basis = b.find((x) => x.code === 'e1.basis')!;
       expect(voet.omtrek, code).toBeDefined();
       for (const p of voet.omtrek!) expect(binnen(p, basis.omtrek!), `${code} ${p}`).toBe(true);
     }
   });
-  it('vierkante poef en gewone zetel: voet blijft een balk', () => {
-    expect(blokken('kanto').find((x) => x.code === 'e1.verdekt')!.vorm).toBe('blok');
+  it('vierkante poef en gewone zetel: voet blijft een balk; onder een kiezel blijft hij binnen de ronding', () => {
+    expect(bouw(poef('vierkant', 45)).find((x) => x.code === 'e1.verdekt')!.vorm).toBe('blok');
+    const kiezel = bouw(poef('kiezel', 80)), voet = kiezel.find((x) => x.code === 'e1.verdekt')!, lijf = kiezel.find((x) => x.code === 'e1.poef')!;
+    expect(voet.x - lijf.x).toBeGreaterThanOrEqual(lijf.afronding!);
     const zora = blokken('zora').find((x) => x.code === 'e2.verdekt')!;
     expect(zora.vorm).toBe('blok');
     expect(zora.omtrek).toBeUndefined();
@@ -212,6 +281,43 @@ describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse 
     expect(h.filter((x) => x === 75).length).toBeGreaterThan(h.length * 0.5);
     expect(h[0]!).toBeLessThan(48);
     expect(h[h.length - 1]!).toBeLessThan(48);
+  });
+
+  it('Mabel 2-zit: één gebogen schelp van 145 cm; Mabel Meridienne: de rug hoog rond het linkeruiteinde, schuin naar de zitting', () => {
+    const tweezit = blokken('mabel-2'), wand = tweezit.find((x) => x.code === 'e1.rug')!;
+    expect(wand.vorm).toBe('kuipwand');
+    expect(tweezit.filter((x) => x.code.endsWith('.arm'))).toHaveLength(0); // geen losse armen meer
+    expect(Math.max(...wand.hoogtes!)).toBe(76);
+    const m = blokken('mabel-meridienne'), rug = m.find((x) => x.code === 'e1.rug')!, zit = m.find((x) => x.code === 'e1.zitkussen')!;
+    const h = rug.hoogtes!, pad = rug.pad!;
+    // Het pad loopt van rechtsachter naar linksvoor: rechts komt de schaal onder de zitting uit, links staat ze hoog.
+    expect(pad[0]![0]).toBeGreaterThan(pad[pad.length - 1]![0]);
+    expect(h[0]!).toBeLessThan(45);
+    expect(h[h.length - 1]!).toBeGreaterThan(45 + 20);
+    expect(Math.max(...h)).toBe(74);
+    // Rechts staat geen wand: de schaal stopt ruim voor het rechteruiteinde.
+    expect(Math.max(...pad.map((q) => q[0]))).toBeLessThan(130 * 0.8);
+    // De rug staat op het zitkussen, dat over het hele grondvlak loopt (ook onder de rug door), op een dun houten frame.
+    expect(Math.max(...zit.omtrek!.map((q) => q[0]))).toBeGreaterThan(127);
+    expect(Math.min(...zit.omtrek!.map((q) => q[0]))).toBeLessThan(3);
+    expect(rug.y).toBe(42);
+    expect(m.find((x) => x.code === 'e1.basis')).toMatchObject({ soort: 'hout', y: 20, h: 5 });
+  });
+
+  it('Fraser en Manon: geen los zitkussen, de zitting is één gestoffeerd stuk in de stof zelf (melding van Jonas, 11/11)', () => {
+    for (const code of ['fraser', 'manon']) {
+      const b = blokken(code), basis = b.find((x) => x.code === 'e1.basis')!, rug = b.find((x) => x.code === 'e1.rug')!;
+      expect(b.some((x) => x.code.includes('zitkussen')), code).toBe(false);
+      expect(basis.soort, code).toBe('stof');
+      expect(basis.kleur, code).toBe(rug.kleur); // zelfde stof als de rug, niet donkerder
+      expect(basis.weefsel, code).toBe(rug.weefsel);
+    }
+    // Fraser: de trommel ligt op het frame met de poten (26 cm) en loopt tot de zithoogte (44 cm).
+    expect(blokken('fraser').find((x) => x.code === 'e1.basis')).toMatchObject({ y: 26, h: 18 });
+    // Manon: tot op de vloer, zonder voet.
+    const manon = blokken('manon');
+    expect(manon.find((x) => x.code === 'e1.basis')!.y).toBeLessThanOrEqual(1);
+    expect(manon.some((x) => x.code === 'e1.verdekt')).toBe(false);
   });
 
   it('andere kuipfauteuils blijven zoals ze waren (onderbouw met een los zitkussen, wand op de onderbouw)', () => {

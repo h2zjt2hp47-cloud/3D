@@ -22,8 +22,18 @@ export interface KuipParameters {
   armVanaf: number;
   /** Deel van de boog (0–1) vanaf het midden achteraan dat op volle rughoogte blijft voor de wand begint te zakken (koepelrug). */
   plat: number;
+  /**
+   * Deel van de boog (0–1) dat op volle rughoogte blijft, zoals `plat`, maar zonder de opbouw van de koepelrug: de wand
+   * blijft op de onderbouw staan rond een los zitkussen. Voor een rug met een brede, vlakke bovenkant (Mabel, Ross).
+   */
+  schouder: number;
   /** Schelp: de rug staat op de zitting in plaats van op de vloer (losse schaal op een frame). */
   zwevend: boolean;
+  /**
+   * De rug staat op het zitkussen, dat over het hele grondvlak loopt en onder de rug doorloopt (Mabel Meridienne: de bies
+   * van het kussen loopt onder de rug door). De onderbouw is dan een dun houten frame.
+   */
+  opZitting: boolean;
   /** Organisch: dikke, zachte vormen, de zitting zit diep in de kuip. */
   organisch: boolean;
   /** Trommel: de wand is rondom (bijna) even hoog; de rug komt van de losse kussens. */
@@ -34,6 +44,15 @@ export interface KuipParameters {
    * linkerkant; rechts stopt de wand 50° na het midden achteraan.
    */
   scheef: boolean;
+  /**
+   * Bij een scheve schaal: waar ze rechts op de zitting uitkomt en waar ze het hoogst is (graden, −90 = midden achteraan;
+   * standaard −38 en −128, Pebble), en hoe hoog ze aan het linkeruiteinde boven de zitting staat (cm; standaard 1: ze zakt
+   * daar tot op de zitting). Met een hoog linkeruiteinde krijg je een méridienne: de rug loopt op volle hoogte rond het
+   * linkeruiteinde en zakt achteraan schuin naar de zitting.
+   */
+  scheefRechts?: number;
+  scheefTop?: number;
+  scheefLinks?: number;
   /** Eigen exponent van het grondvlak (2 = ellips, hoger = hoekiger); leeg = volgens `plan`. */
   exponent?: number;
 }
@@ -49,11 +68,16 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
     voorBoven: getal('voorBoven', 14),
     armVanaf: Math.max(0.2, Math.min(1, getal('armVanaf', 1))),
     plat: Math.max(0, Math.min(0.9, getal('plat', 0))),
+    schouder: Math.max(0, Math.min(0.8, getal('schouder', 0))),
     zwevend: teken.zwevend === true,
+    opZitting: teken.opZitting === true,
     organisch: teken.organisch === true,
     vlak: teken.vlak === true,
     scheef: teken.scheef === true,
     ...(typeof teken.exponent === 'number' ? { exponent: teken.exponent } : {}),
+    ...(typeof teken.scheefRechts === 'number' ? { scheefRechts: teken.scheefRechts } : {}),
+    ...(typeof teken.scheefTop === 'number' ? { scheefTop: teken.scheefTop } : {}),
+    ...(typeof teken.scheefLinks === 'number' ? { scheefLinks: teken.scheefLinks } : {}),
   };
 }
 
@@ -97,14 +121,17 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   const stappen = Math.max(16, Math.round(k.boog / 5));
   const zitBoven = h.zithoogte;
   const voor = zitBoven + k.voorBoven;
-  const rug = k.vlak ? voor + 5 : Math.max(h.rugH, voor + 4);
+  // Trommel: met losse rugkussens blijft de wand laag (de rug komt van de kussens); zonder kussens is de wand zelf de rug
+  // en loopt ze achteraan tot de rughoogte (Milton, Fraser).
+  const rug = k.vlak ? (losseRug ? voor + 5 : Math.max(h.rugH, voor + 5)) : Math.max(h.rugH, voor + 4);
   const rond1 = (x: number) => Math.round(x * 10) / 10;
   let pad: Punt[], hoogtes: number[];
   if (k.scheef) {
     // Volgens de productfoto's (pebble-01-6, -13, -18): van rechtsachter (−38°, de schaal komt daar op de zitting uit,
     // ±vier vijfde van de breedte) over de rug naar links, het hoogst op de rug links van het midden (−128°, ±een kwart van de breedte), en langs de linkerzijde naar
     // voren (−90° − boog) waar ze rond tot op de vloer zakt, net achter de voorkant van de zitting.
-    const tRechts = -38, tLinks = -90 - k.boog, tTop = -128;
+    // Een méridienne (Mabel) gebruikt dezelfde opbouw met eigen hoeken en een hoog linkeruiteinde.
+    const tRechts = k.scheefRechts ?? -38, tLinks = -90 - k.boog, tTop = Math.min(tRechts - 5, Math.max(tLinks + 5, k.scheefTop ?? -128));
     // Eerst fijn bemonsterd, dan op gelijke afstanden langs de wand: bij een afgerond grondvlak liggen punten op gelijke
     // hoeken ongelijk verdeeld, en dan golfde de bovenkant (de hoogte volgt de afstand langs de wand, niet de hoek).
     const F = 600, fijn = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, tRechts, tLinks, F);
@@ -121,7 +148,7 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
     const uTop = afstand[Math.round(((tRechts - tTop) / (tRechts - tLinks)) * F)]! / totaal;
     // Vooraan links ongeveer op zithoogte (daaronder loopt de ronde kop tot op de vloer). Rechts verdwijnt de schaal in de
     // zitting: haar bovenkant eindigt 3 cm onder de zitting, niet erop (twee vlakken op dezelfde hoogte flikkeren).
-    const links = zitBoven + 1, rechts = zitBoven - 3;
+    const links = Math.min(rug, zitBoven + (k.scheefLinks ?? 1)), rechts = zitBoven - 3;
     // Bol verloop, zoals de rand van een blad: bij de top vlak, naar de uiteinden toe steeds steiler.
     hoogtes = pad.map((_, i) => {
       const u = i / (pad.length - 1);
@@ -135,19 +162,32 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
       const u = Math.abs(i - stappen) / stappen; // 0 = midden achteraan, 1 = einde van de wand
       // Met `plat` blijft het midden op volle hoogte en zakt de wand pas daarna (koepelrug: van voren een brede rug met
       // ronde schouders, geen punt).
-      const t = Math.min(1, Math.max(0, u - k.plat) / Math.max(0.05, k.armVanaf - k.plat));
+      const top = Math.max(k.plat, k.schouder);
+      const t = Math.min(1, Math.max(0, u - top) / Math.max(0.05, k.armVanaf - top));
       return rond1(voor + (rug - voor) * (0.5 + 0.5 * Math.cos(Math.PI * t)));
     });
   }
   const basisBoven = h.zithoogte - h.kussenDik;
   // Schelp: zweeft een eind boven de zitting (gedragen door het frame), anders staat de wand op de onderbouw.
-  const onder = k.zwevend ? h.zithoogte + 6 : h.P;
+  // Op de zitting: de wand begint net onder de bovenkant van het zitkussen (met een vaste zitting op de vloer of het frame).
+  const onder = k.zwevend ? h.zithoogte + 6 : k.opZitting && h.kussenDik ? h.zithoogte - 3 : h.P;
   // Zitkussen: binnen de wand en tot vooraan (bij een schelp over het hele grondvlak).
   // Organisch: de zitting loopt breed tot vooraan door (de wand zakt er in weg).
-  const achter = k.zwevend ? 3 : w * (k.organisch ? 0.9 : 0.85);
-  const zij = k.zwevend ? 1.5 : w * (k.organisch ? 0.45 : 0.8);
+  const vol = k.zwevend || k.opZitting;
+  const achter = vol ? (k.zwevend ? 3 : 1.5) : w * (k.organisch ? 0.9 : 0.85);
+  const zij = vol ? 1.5 : w * (k.organisch ? 0.45 : 0.8);
   const zcy = (achter + D - 1.5) / 2, zb = (D - 1.5 - achter) / 2;
-  const zit = superellips(cx, zcy, B / 2 - zij, zb, k.plan === 'rond' ? 2.4 : n, 0, 360, 64).slice(0, -1);
+  // Achteraan volgt het kussen de ronding van de wand; vooraan is het breder en rechter, zoals op de foto's (Ross, Mabel,
+  // Sullivan): de voorkant van de zitting loopt bijna over de volle breedte tussen de armen. Tot 11/11 was het één ellips
+  // en leek het een klein rond kussentje in de schelp. Niet bij een trommel, schelp of kiezel (daar is de zitting rond).
+  const nAchter = k.plan === 'rond' ? 2.4 : n;
+  const breedVoor = !vol && !k.organisch && !k.vlak && k.plat === 0;
+  // Scheve schaal op een gewone zitting (méridienne): rechts staat geen wand, daar loopt het kussen tot aan de rand.
+  const zijRechts = k.scheef && !k.organisch ? 1.5 : zij;
+  const zcx = (zij + B - zijRechts) / 2, za = (B - zijRechts - zij) / 2;
+  const zit = breedVoor
+    ? [...superellips(zcx, zcy, za, zb, k.plan === 'rond' ? 3.2 : 4.6, 0, 180, 32).slice(0, -1), ...superellips(zcx, zcy, za, zb, nAchter, 180, 360, 32).slice(0, -1)]
+    : superellips(zcx, zcy, za, zb, nAchter, 0, 360, 64).slice(0, -1);
   // Losse rugkussens tegen de wand achteraan.
   const rugkussens: KuipOpbouw['rugkussens'] = [];
   if (losseRug) {

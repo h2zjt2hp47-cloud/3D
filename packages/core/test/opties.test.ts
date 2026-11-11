@@ -89,7 +89,8 @@ describe('vooraanzicht', () => {
     const t = va(recht);
     const codes = t.vormen.map((v) => v.code);
     expect(codes).toContain('e2.zitkussen');
-    expect(codes.filter((c) => c.includes('.poot-'))).toHaveLength(8); // 4 elementen × 2 zichtbare poten
+    // Poten per zetel: links en rechts onder de armen en één op de grens tussen de twee zittingen.
+    expect(codes.filter((c) => c.includes('.poot-')).sort()).toEqual(['e1.poot-l', 'e2.poot-r', 'e4.poot-r']);
     expect(t.vormen.find((v) => v.code === 'e2.zitkussen')).toMatchObject({ y: -45, hoogte: 14 });
     expect(t.maatlijnen.map((m) => m.tekst)).toEqual(['230', '80', 'zit 45']);
   });

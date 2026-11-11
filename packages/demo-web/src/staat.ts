@@ -95,6 +95,11 @@ function metDieperEindelement(c: OntwerpCatalogus): OntwerpCatalogus {
   return { ...c, typen: c.typen.map((t) => (t.code === 'rond_einde' && t.diepte.max === 120 ? { ...t, diepte: { ...t.diepte, max: 160 } } : t)) };
 }
 
+/** Een bewaarde catalogus met de oude ondergrens voor de armleuning (12 cm) bijwerken naar 8 cm (zetelbedden, 11/11). */
+function metSmalleArm(c: OntwerpCatalogus): OntwerpCatalogus {
+  return { ...c, typen: c.typen.map((t) => (t.code === 'arm' && t.breedte.min === 12 ? { ...t, breedte: { ...t.breedte, min: 8 }, prijsVanaf: 12 } : t)) };
+}
+
 /**
  * Een bewaarde catalogus bijwerken met de fauteuilvormen van 10/11: de nieuwe vorm "koepel" toevoegen (Tumble gebruikt
  * ze) en de schelp en de trommel vervangen als ze nog de oude standaard hebben. Een zelf aangepaste vorm blijft.
@@ -102,7 +107,8 @@ function metDieperEindelement(c: OntwerpCatalogus): OntwerpCatalogus {
 function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
   const nieuw = zetelCatalogus.opties?.find((x) => x.code === 'kuipvorm');
   if (!nieuw || !c.opties?.some((x) => x.code === 'kuipvorm')) return c;
-  const oud: Record<string, { dikte: number; boog: number }> = { schelp: { dikte: 6, boog: 98 }, trommel: { dikte: 14, boog: 138 } };
+  // Afgerond (11/11): dunnere wand met een brede bovenkant, naar de foto's van Mabel, Ross en Sullivan.
+  const oud: Record<string, { dikte: number; boog: number }> = { schelp: { dikte: 6, boog: 98 }, trommel: { dikte: 14, boog: 138 }, afgerond: { dikte: 13, boog: 130 }, omhullend: { dikte: 17, boog: 140 } };
   return {
     ...c,
     opties: c.opties.map((g) => {
@@ -111,8 +117,47 @@ function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
         const o = oud[k.code], n = nieuw.keuzes.find((x) => x.code === k.code);
         return o && n && k.teken?.dikte === o.dikte && k.teken?.boog === o.boog ? structuredClone(n) : k;
       });
+      // (de kruisvoet staat in een andere groep: zie metNieuwVan1111)
       const koepel = nieuw.keuzes.find((x) => x.code === 'koepel');
       if (koepel && !keuzes.some((k) => k.code === 'koepel')) keuzes.splice(Math.max(0, keuzes.findIndex((k) => k.code === 'trommel')), 0, structuredClone(koepel));
+      return { ...g, keuzes };
+    }),
+  };
+}
+
+/**
+ * Een bewaarde catalogus krijgt erbij wat de modellen sinds 11/11 gebruiken: de houten kruisvoet (Ross, Sullivan, Fraser),
+ * de poefvormen bol en taps (Tumble pouf, Stockholm), het houten blad op de onderbouw (Kotor, Belize, Fréjus), de
+ * fauteuilvorm méridienne (Mabel), het formaat van een sierkussen (Nestor), een bredere chaise (Belize) en een bredere
+ * fauteuil (Mabel 2-zit). Zonder dat zou de bewaarde catalogus niet meer bij de collectie passen en door de standaard
+ * vervangen worden. Wat de gebruiker zelf aanpaste, blijft.
+ */
+const NIEUWE_KEUZES: [groep: string, keuze: string][] = [['poten', 'kruis'], ['poefvorm', 'bol'], ['poefvorm', 'taps'], ['console_uitvoering', 'op_basis'], ['kuipvorm', 'meridienne']];
+/** Hele optiegroepen die er sinds 11/11 bij zijn: het formaat van een sierkussen (lendenkussen bij Nestor). */
+const NIEUWE_GROEPEN = ['kussenformaat'];
+function metNieuwVan1111(c: OntwerpCatalogus): OntwerpCatalogus {
+  if (!c.opties) return c;
+  const groepenErbij = NIEUWE_GROEPEN.filter((code) => !c.opties!.some((g) => g.code === code))
+    .map((code) => zetelCatalogus.opties?.find((g) => g.code === code))
+    .filter((g): g is NonNullable<typeof g> => Boolean(g))
+    .map((g) => structuredClone(g));
+  return {
+    ...c,
+    // Bredere chaise (tot 160 cm): het loungedeel van Belize. Alleen als de grens nog de oude standaard is.
+    // Bredere fauteuil (tot 150 cm): de Mabel 2-zit en de Mabel Meridienne zijn één schelp.
+    typen: c.typen.map((t) => (t.code === 'chaise' && t.breedte.max === 110 ? { ...t, breedte: { ...t.breedte, max: 160 } }
+      : t.code === 'fauteuil' && t.breedte.max === 110 ? { ...t, breedte: { ...t.breedte, max: 150 } } : t)),
+    opties: [...c.opties, ...groepenErbij].map((g) => {
+      const erbij = NIEUWE_KEUZES.filter(([groep, keuze]) => groep === g.code && !g.keuzes.some((k) => k.code === keuze))
+        .map(([groep, keuze]) => zetelCatalogus.opties?.find((x) => x.code === groep)?.keuzes.find((k) => k.code === keuze))
+        .filter((k): k is NonNullable<typeof k> => Boolean(k));
+      if (!erbij.length) return g;
+      const keuzes = [...g.keuzes];
+      for (const k of erbij) {
+        // De kruisvoet vóór de draaivoet, de rest achteraan.
+        const voor = k.code === 'kruis' ? keuzes.findIndex((x) => x.code === 'draaivoet') : -1;
+        keuzes.splice(voor < 0 ? keuzes.length : voor, 0, structuredClone(k));
+      }
       return { ...g, keuzes };
     }),
   };
@@ -122,7 +167,7 @@ function startCatalogus(): { catalogus: OntwerpCatalogus; modellen: ModelDefinit
   try {
     const c = JSON.parse(lees(SLEUTEL_CATALOGUS) ?? 'null') as OntwerpCatalogus | null;
     const m = JSON.parse(lees(SLEUTEL_MODELLEN) ?? '[]') as ModelDefinitie[];
-    const catalogus = c && Array.isArray(c.typen) ? metNieuweKuipvormen(metDieperEindelement(metNieuweChaise(c))) : structuredClone(zetelCatalogus);
+    const catalogus = c && Array.isArray(c.typen) ? metSmalleArm(metNieuwVan1111(metNieuweKuipvormen(metDieperEindelement(metNieuweChaise(c))))) : structuredClone(zetelCatalogus);
     const modellen = Array.isArray(m) ? m : [];
     if (controleerCatalogus(catalogus, [...zetelModellen, ...modellen]).length === 0) return { catalogus, modellen };
   } catch {

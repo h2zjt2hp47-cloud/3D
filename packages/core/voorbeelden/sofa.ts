@@ -28,6 +28,10 @@ export const standaardMaterialen: Materiaal[] = [
   { code: 'jacquard_ruit', naam: 'Jacquard ruit (patroon 32 cm)', collectie: 'Jacquard', weefsel: 'jacquard', soort: 'stof', groep: 'C', kleur: '#b9a58a', rapport: 32, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
   { code: 'velours_petrol', naam: 'Velours Petrol', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#1f6b75', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
   { code: 'velours_bosgroen', naam: 'Velours Bosgroen', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#2f4a3a', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
+  // Kleur gemeten op de productfoto van de Mabel 1-zit (11/11): diep smaragdgroen. Demowaarde, geen stof van de klant.
+  { code: 'velours_smaragd', naam: 'Velours Smaragd', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#0f5f56', rapport: 0, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
+  // Kleur gemeten op de productfoto van Satie (11/11): steenrood met roze. Demowaarde, geen stof van de klant.
+  { code: 'velours_framboos', naam: 'Velours Framboos', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#a2464a', rapport: 0, rolbreedte: 140, kostprijsPerM: 62, toeslagPct: 0 },
   { code: 'velours_oudroze', naam: 'Velours Oudroze', collectie: 'Velours Soft', weefsel: 'velours', soort: 'stof', groep: 'C', kleur: '#c98272', rapport: 0, rolbreedte: 140, kostprijsPerM: 52, toeslagPct: 0 },
   // Echte stof (gegevens van de stofkaart van de leverancier); kleur = gemiddelde van de staalfoto, kostprijs en groep verzonnen.
   {
@@ -61,15 +65,21 @@ export const standaardMaterialen: Materiaal[] = [
   { code: 'katoen_kalk', naam: 'Katoen Kalkwit', collectie: 'Katoen Basic', weefsel: 'effen', soort: 'stof', groep: 'A', kleur: '#f1eee6', rapport: 0, rolbreedte: 140, kostprijsPerM: 26, toeslagPct: 0 },
   { code: 'katoen_kaki', naam: 'Katoen Kaki', collectie: 'Katoen Basic', weefsel: 'effen', soort: 'stof', groep: 'A', kleur: '#a39a78', rapport: 0, rolbreedte: 140, kostprijsPerM: 26, toeslagPct: 0 },
   { code: 'katoen_rookblauw', naam: 'Katoen Rookblauw', collectie: 'Katoen Basic', weefsel: 'effen', soort: 'stof', groep: 'A', kleur: '#7d8ea0', rapport: 0, rolbreedte: 140, kostprijsPerM: 26, toeslagPct: 0 },
+  // Kleur gemeten op de productfoto van Zora (11/11): donker petrolgrijs. Demowaarde, geen stof van de klant.
+  { code: 'katoen_petrolgrijs', naam: 'Katoen Petrolgrijs', collectie: 'Katoen Basic', weefsel: 'effen', soort: 'stof', groep: 'A', kleur: '#4f5e62', rapport: 0, rolbreedte: 140, kostprijsPerM: 26, toeslagPct: 0 },
   { code: 'chenille_roest', naam: 'Chenille Roest', collectie: 'Chenille Mila', weefsel: 'chenille', soort: 'stof', groep: 'B', kleur: '#9c4f2d', rapport: 0, rolbreedte: 140, kostprijsPerM: 42, toeslagPct: 0 },
   { code: 'chenille_pistache', naam: 'Chenille Pistache', collectie: 'Chenille Mila', weefsel: 'chenille', soort: 'stof', groep: 'B', kleur: '#a7ad7d', rapport: 0, rolbreedte: 140, kostprijsPerM: 42, toeslagPct: 0 },
   { code: 'chenille_parel', naam: 'Chenille Parel', collectie: 'Chenille Mila', weefsel: 'chenille', soort: 'stof', groep: 'B', kleur: '#ddd6ca', rapport: 0, rolbreedte: 140, kostprijsPerM: 42, toeslagPct: 0 },
+  // Kleur gemeten op de productfoto van Kotor (11/11): warm kiezelgrijs. Demowaarde, geen stof van de klant.
+  { code: 'chenille_kiezel', naam: 'Chenille Kiezel', collectie: 'Chenille Mila', weefsel: 'chenille', soort: 'stof', groep: 'B', kleur: '#b0ad9f', rapport: 0, rolbreedte: 140, kostprijsPerM: 42, toeslagPct: 0 },
   { code: 'rib_mosterd', naam: 'Rib Mosterd', collectie: 'Rib Cord', weefsel: 'rib', soort: 'stof', groep: 'B', kleur: '#b9892c', rapport: 0, rolbreedte: 140, kostprijsPerM: 46, toeslagPct: 0 },
   { code: 'rib_poederroze', naam: 'Rib Poederroze', collectie: 'Rib Cord', weefsel: 'rib', soort: 'stof', groep: 'B', kleur: '#c99a95', rapport: 0, rolbreedte: 140, kostprijsPerM: 46, toeslagPct: 0 },
   { code: 'rib_chocolade', naam: 'Rib Chocolade', collectie: 'Rib Cord', weefsel: 'rib', soort: 'stof', groep: 'B', kleur: '#5b4031', rapport: 0, rolbreedte: 140, kostprijsPerM: 46, toeslagPct: 0 },
   { code: 'teddy_ivoor', naam: 'Teddy Ivoor', collectie: 'Bouclé Teddy', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#efe9dc', rapport: 0, rolbreedte: 140, kostprijsPerM: 58, toeslagPct: 0 },
   { code: 'teddy_karamel', naam: 'Teddy Karamel', collectie: 'Bouclé Teddy', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#b98552', rapport: 0, rolbreedte: 140, kostprijsPerM: 58, toeslagPct: 0 },
   { code: 'teddy_antraciet', naam: 'Teddy Antraciet', collectie: 'Bouclé Teddy', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#4a4a4a', rapport: 0, rolbreedte: 140, kostprijsPerM: 58, toeslagPct: 0 },
+  // Kleur gemeten op de productfoto's van Pebble en Karl (11/11): taupe. Demowaarde, geen stof van de klant.
+  { code: 'teddy_taupe', naam: 'Teddy Taupe', collectie: 'Bouclé Teddy', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#96806c', rapport: 0, rolbreedte: 140, kostprijsPerM: 58, toeslagPct: 0 },
   { code: 'teddy_blush', naam: 'Teddy Blush', collectie: 'Bouclé Teddy', weefsel: 'boucle', soort: 'stof', groep: 'C', kleur: '#d9b3a8', rapport: 0, rolbreedte: 140, kostprijsPerM: 58, toeslagPct: 0 },
   { code: 'vmat_salie', naam: 'Velours Mat Salie', collectie: 'Velours Mat', weefsel: 'velours', soort: 'stof', groep: 'B', kleur: '#8f9c86', rapport: 0, rolbreedte: 140, kostprijsPerM: 45, toeslagPct: 0 },
   { code: 'vmat_lavendel', naam: 'Velours Mat Lavendel', collectie: 'Velours Mat', weefsel: 'velours', soort: 'stof', groep: 'B', kleur: '#8e86a3', rapport: 0, rolbreedte: 140, kostprijsPerM: 45, toeslagPct: 0 },
@@ -80,6 +90,8 @@ export const standaardMaterialen: Materiaal[] = [
   { code: 'sunny_taupe', naam: 'Sunny Taupe', collectie: 'Sunny', weefsel: 'effen', soort: 'stof', groep: 'B', kleur: '#8c8072', rapport: 0, rolbreedte: 140, kostprijsPerM: 40, toeslagPct: 0 },
   { code: 'sunny_grafiet', naam: 'Sunny Grafiet', collectie: 'Sunny', weefsel: 'effen', soort: 'stof', groep: 'B', kleur: '#4b4e52', rapport: 0, rolbreedte: 140, kostprijsPerM: 40, toeslagPct: 0 },
   { code: 'melange_natuur', naam: 'Melange Natuur', collectie: 'Wol Melange', weefsel: 'wol', soort: 'stof', groep: 'C', kleur: '#d9cfbd', rapport: 0, rolbreedte: 140, kostprijsPerM: 54, toeslagPct: 0 },
+  // Kleur gemeten op de productfoto van Belize (11/11): licht, warm grijs, gemêleerd. Demowaarde, geen stof van de klant.
+  { code: 'melange_kiezel', naam: 'Melange Kiezel', collectie: 'Wol Melange', weefsel: 'wol', soort: 'stof', groep: 'C', kleur: '#c6c2b7', rapport: 0, rolbreedte: 140, kostprijsPerM: 54, toeslagPct: 0 },
   { code: 'melange_mos', naam: 'Melange Mos', collectie: 'Wol Melange', weefsel: 'wol', soort: 'stof', groep: 'C', kleur: '#6c6f4c', rapport: 0, rolbreedte: 140, kostprijsPerM: 54, toeslagPct: 0 },
   { code: 'melange_middernacht', naam: 'Melange Middernacht', collectie: 'Wol Melange', weefsel: 'wol', soort: 'stof', groep: 'C', kleur: '#262f45', rapport: 0, rolbreedte: 140, kostprijsPerM: 54, toeslagPct: 0 },
   { code: 'leder_cognac', naam: 'Leder Cognac', collectie: 'Leder', weefsel: 'leder', soort: 'leder', groep: 'C', kleur: '#8f4f2c', rapport: 0, rolbreedte: 140, kostprijsPerM: 95, toeslagPct: 15 },

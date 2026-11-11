@@ -87,7 +87,7 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   const naadTeken = opt.get('naad')?.teken;
   const naad: Blok['naad'] = naadTeken?.bies
     ? { soort: 'bies', kleur: naadTeken.contrast ? '#2b2622' : stof }
-    : naadTeken?.stiksel ? { soort: 'stiksel', kleur: donkerder(stof, 0.6) } : { soort: 'naad', kleur: donkerder(stof, 0.7) };
+    : naadTeken?.stiksel ? { soort: 'stiksel', kleur: donkerder(stof, 0.6) } : { soort: 'naad', kleur: donkerder(stof, 0.8) };
 
   // ---------- vorm in het grondvlak (rechte coördinaten: x zoals het bovenaanzicht, y van de rug naar voor) ----------
   const rondeKant = (e: OntwerpElement, kant: 'links' | 'rechts') =>
@@ -317,6 +317,8 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         code: `${elementBij(cx).id}.rugkussen${i + 1}`, soort: 'kussen', vorm: 'blok', x: r2(q[0] - b / 2), z: r2(q[1] - RKD / 2), b: r2(b), d: r2(RKD),
         y: r2(hg.zithoogte), h: r2(Math.max(10, hg.rughoogte - hg.zithoogte)), kleur: stof, kantel,
         afronding: rond1(Math.min(RKD / 2.2, 1 + v.zachtheid * 0.9)), bol: rond1(RKD * (0.03 + v.zachtheid * 0.022) * (dons ? 1.25 : 1)),
+        // Donzen rugkussens: losse kussens met een mesrand, zoals in ruimtelijk.ts.
+        ...(dons ? { mesrand: true } : {}),
         ...(Number.isFinite(R) ? { draai: rond1(draaiBij(cx)) } : {}), naad, ...stofExtra,
       });
     }
