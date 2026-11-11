@@ -96,7 +96,8 @@ export const zetelModellen: ModelDefinitie[] = [
     // Benadering uit de foto's: breedte ±300 (uit de verhouding met de hoogte van 84 cm), loungedeel 145 diep.
     // De bovenste band (de zitting) is op de foto duidelijk hoger dan de onderste en heeft een rechte zijkant met een
     // zachte rand: zitting 25 op een onderbouw van ±13, zachtheid 6 (kleinere afronding, minder bolle rugkussens).
-    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 25, zachtheid: 6, rugvorm: 'rond', opbouw: 'doorlopend' },
+    // Opmerking van Jonas (controleblad 11/11): meer boog in de zetel en de bovenste band nog wat groter: zitting 28 op 10, boog 24.
+    vormgeving: { zithoogte: 42, rughoogte: 84, karkashoogte: 65, rugdikte: 20, rugkussendikte: 26, kussendikte: 28, zachtheid: 6, rugvorm: 'rond', opbouw: 'doorlopend', bocht: 24 },
     elementen: [
       ...rij([['rond_einde', 115, 145, { ronde_kant: 'links', rug_rond: 'rond' }], ['zit', 95, 110], ['rond_einde', 90, 110, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
       // Zoals op de foto: een cognackleurig sierkussen tussen het eerste en tweede rugkussen en een kleiner lichtgrijs ervoor.
@@ -111,9 +112,10 @@ export const zetelModellen: ModelDefinitie[] = [
     // De boog (uiteinden 30 cm naar voren) en die rugverdeling zijn een benadering uit de foto's; in de tekening blijven
     // het twee afgeronde elementen. Op de foto van boven (10/11) zit de rug niet in het midden: aan één kant loopt hij
     // bijna tot het uiteinde, aan de andere kant blijft een groot rond stuk zitting vrij. Daarom een smal en een breed deel.
-    vormgeving: { zithoogte: 39, rughoogte: 77, zachtheid: 10, rugvorm: 'rond', rugdikte: 30, kussendikte: 18, opbouw: 'doorlopend', bocht: 30 },
+    // Opmerking van Jonas (controleblad 11/11): de zetel is groter en de boog sterker: 285 breed (was 260) en de uiteinden 60 cm naar voren.
+    vormgeving: { zithoogte: 39, rughoogte: 77, zachtheid: 10, rugvorm: 'rond', rugdikte: 30, kussendikte: 18, opbouw: 'doorlopend', bocht: 60 },
     elementen: [
-      ...rij([['rond_einde', 95, 99, { ronde_kant: 'links', rug_rond: 'recht' }], ['rond_einde', 165, 99, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
+      ...rij([['rond_einde', 105, 99, { ronde_kant: 'links', rug_rond: 'recht' }], ['rond_einde', 180, 99, { ronde_kant: 'rechts', rug_rond: 'recht' }]]),
       sierkussen('e3', 60, 28, 'chenille_camel'), sierkussen('e4', 108, 28, 'katoen_kalk'),
     ],
   }, 'Montego', MATEN_WEBSITE),
@@ -246,7 +248,8 @@ export const zetelModellen: ModelDefinitie[] = [
     opties: { poten: 'housse', rug: 'los_dons', comfort: 'dons', naad: 'bies' },
     // Technische tekening: arm 21 breed en 63 hoog, zithoogte 47, diepte 100, zitdiepte 55, rug 86 en met kussen 90.
     // Karkas 86 cm (zijaanzicht op de tekening); de arm loopt naar achteren op tot die hoogte.
-    vormgeving: { zithoogte: 47, rughoogte: 90, armhoogte: 63, karkashoogte: 86, rugdikte: 16, rugkussendikte: 26, rugkussens: 2, kussendikte: 16, zachtheid: 8 },
+    // Opmerking van Jonas (controleblad 11/11): meer vorm in de kussens: dikkere, bollere rugkussens en een zachter zitkussen.
+    vormgeving: { zithoogte: 47, rughoogte: 90, armhoogte: 63, karkashoogte: 86, rugdikte: 16, rugkussendikte: 30, rugkussens: 2, kussendikte: 18, zachtheid: 10 },
     elementen: rij([['arm', 21, 100, { armstijl: 'uitlopend' }], ['zit', 160, 100], ['arm', 21, 100, { armstijl: 'uitlopend' }]]),
   }, 'Wallace', MATEN_WEBSITE),
   model('esmee', 'Esmee', SOFA, 'Lange sofa in een witte hoes tot op de grond: lage, uitlopende armen, een vaste rug en een vaste zitting, met losse sierkussens aan de twee uiteinden.', {
@@ -291,7 +294,7 @@ export const zetelModellen: ModelDefinitie[] = [
     // warme bruine tint (tot dan vier losse cilinderpoten).
     // Foto (11/11, benadering): warm crème (gemeten), hoge poten (±23 cm) en een dun frame onder een dik zitkussen; tot
     // dan een onderbouw die even dik was als het kussen.
-    hoofdmateriaal: 'melange_natuur', opties: { poten: 'kruis', hout: 'notelaar' },
+    hoofdmateriaal: 'melange_natuur', opties: { poten: 'kruis', hout: 'notelaar', zitting: 'vaste_zitting' },
     vormgeving: { zachtheid: 5, rugdikte: 12, poothoogte: 23, zithoogte: 43, rughoogte: 78, kussendikte: 15 }, elementen: rij([['fauteuil', 66, 64, { kuipvorm: 'afgerond' }]]),
   }, 'F-Ross', MATEN_WEBSITE),
   model('amusette-fauteuil', 'Amusette fauteuil', FAUTEUIL, 'Compacte clubfauteuil met strakke armen, een vaste zitting met ronde voorkant en een vaste, licht hellende rug (zelfde lijn als de Amusette sofa).', {
@@ -305,7 +308,9 @@ export const zetelModellen: ModelDefinitie[] = [
     // Foto (11/11): de zitting is één ronde trommel, zonder los zitkussen (tot dan een kussen op een even dikke onderbouw).
     hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons', zitting: 'vaste_zitting' },
     // Productpagina (10/11): breedte 91, diepte 91, hoogte 78, zithoogte 45, 4 kussens inbegrepen.
-    vormgeving: { zachtheid: 8, zithoogte: 45, rughoogte: 78 }, elementen: rij([['fauteuil', 91, 91, { kuipvorm: 'trommel' }]]),
+    // Foto's van de productpagina (11/11, opmerking "de voet is groter"): de trommel loopt tot vlak boven de vloer, op een
+    // brede, platte draaivoet die er nauwelijks onderuit komt (tot dan een smalle kolom met de trommel 12 cm hoger).
+    vormgeving: { zachtheid: 8, zithoogte: 45, rughoogte: 78, poothoogte: 4 }, elementen: rij([['fauteuil', 91, 91, { kuipvorm: 'trommel' }]]),
   }, 'F-Quin', MATEN_WEBSITE),
   model('satie', 'Satie', FAUTEUIL, 'Ronde kuipfauteuil met los rugkussen in velours, op een verdekte voet.', {
     // Foto (11/11): steenrood velours met roze (gemeten; tot dan oudroze) en een zitting uit één ronde trommel, zonder los zitkussen.
@@ -318,13 +323,15 @@ export const zetelModellen: ModelDefinitie[] = [
     // frame en hoge, schuine poten (±22 cm, benadering).
     hoofdmateriaal: 'velours_smaragd', opties: { poten: 'conisch', hout: 'eik_zwart', naad: 'bies' },
     // Productpagina (10/11): breedte 68, diepte 65, hoogte 76, zithoogte 45.
-    vormgeving: { zachtheid: 6, poothoogte: 22, zithoogte: 45, rughoogte: 76, kussendikte: 17 }, elementen: rij([['fauteuil', 68, 65, { kuipvorm: 'ton' }]]),
+    // Foto's van de productpagina (11/11, opmerking "de leuning is kleiner"): de zitting is één dik blok (±20 cm) op een dun
+    // frame, de rug staat erop en is laag en dun.
+    vormgeving: { zachtheid: 6, poothoogte: 20, zithoogte: 45, rughoogte: 76, kussendikte: 20 }, elementen: rij([['fauteuil', 68, 65, { kuipvorm: 'ton' }]]),
   }, 'F-Mabel1', MATEN_WEBSITE),
   model('sullivan', 'Sullivan', FAUTEUIL, 'Fauteuil met hoge, afgeronde rug op een donkere houten kruisvoet; bijpassende hocker.', {
     // Productpagina (11/11): breedte 72, diepte 80, hoogte 93, zithoogte 42. Op de foto's een donkere houten kruisvoet
     // (tot dan een metalen draaivoet).
     // Foto (11/11, benadering): poten ±20 cm en een dun frame onder een dik zitkussen.
-    hoofdmateriaal: 'wol_grijs', opties: { poten: 'kruis', hout: 'eik_zwart' },
+    hoofdmateriaal: 'wol_grijs', opties: { poten: 'kruis', hout: 'eik_zwart', zitting: 'vaste_zitting' },
     vormgeving: { zachtheid: 6, poothoogte: 20, zithoogte: 42, rughoogte: 93, kussendikte: 17 }, elementen: rij([['fauteuil', 72, 80, { kuipvorm: 'hoog' }]]),
   }, 'F-Sullivan', MATEN_WEBSITE),
   model('fraser', 'Fraser', FAUTEUIL, 'Kleine ronde kuipfauteuil in velours op hoge donkere poten met een kruisverbinding.', {
@@ -356,7 +363,7 @@ export const zetelModellen: ModelDefinitie[] = [
     // dun donker frame met schuine poten; blauw velours. Tot dan een rechte sofa met rolarmen. Geen maten op de
     // productpagina: uit de foto afgeleid met de zithoogte van de Mabel 1-zit (45 cm): ±145 breed, ±76 hoog (benadering).
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'conisch', hout: 'eik_zwart', rug: 'vast', naad: 'bies' },
-    vormgeving: { zachtheid: 6, poothoogte: 22, zithoogte: 45, rughoogte: 76, kussendikte: 17 },
+    vormgeving: { zachtheid: 6, poothoogte: 20, zithoogte: 45, rughoogte: 76, kussendikte: 20 },
     elementen: rij([['fauteuil', 145, 75, { kuipvorm: 'ton' }]]),
   }, 'F-Mabel2'),
   model('mabel-meridienne', 'Mabel Meridienne', FAUTEUIL, 'Méridienne in bouclé: de rug loopt hoog rond het linkeruiteinde en zakt achteraan schuin naar de zitting, op een dik zitkussen met bies en slanke donkere poten.', {

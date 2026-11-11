@@ -19,7 +19,8 @@ describe('doorlopende opbouw', () => {
     expect(zit[0]!.omtrek!.length).toBeGreaterThan(40);
     // Over de hele lengte (±300 cm, benadering uit de foto's), links dieper (loungedeel 145 cm, rechts 110 cm).
     const xs = zit[0]!.omtrek!.map((p) => p[0]);
-    expect(Math.min(...xs)).toBeLessThan(3);
+    // Ook in de boog (sinds 11/11 buigen de uiteinden 24 cm naar voren) blijft de breedte de buitenmaat.
+    expect(Math.min(...xs)).toBeLessThan(4);
     expect(Math.max(...xs)).toBeGreaterThan(297);
     const dieptebij = (x: number) => Math.max(...zit[0]!.omtrek!.filter((p) => Math.abs(p[0] - x) < 8).map((p) => p[1]));
     expect(dieptebij(60)).toBeGreaterThan(dieptebij(200) + 25);
@@ -37,12 +38,13 @@ describe('doorlopende opbouw', () => {
     const top = hoogtes.indexOf(65), laatsteTop = hoogtes.lastIndexOf(65);
     for (let i = 1; i <= top; i++) expect(hoogtes[i]!).toBeGreaterThanOrEqual(hoogtes[i - 1]!);
     for (let i = laatsteTop + 1; i < hoogtes.length; i++) expect(hoogtes[i]!).toBeLessThanOrEqual(hoogtes[i - 1]!);
-    // Links draait de rug om het uiteinde tot ±42 % van de diepte van het loungedeel (145): een armleuning.
-    expect(rug.pad![0]![1]).toBeGreaterThan(52);
-    expect(rug.pad![0]![1]).toBeLessThan(66);
+    // Links draait de rug om het uiteinde tot ±42 % van de diepte van het loungedeel (145): een armleuning. Door de
+    // boog (uiteinden 24 cm naar voren) ligt dat punt verder naar voren dan in een rechte zetel.
+    expect(rug.pad![0]![1]).toBeGreaterThan(70);
+    expect(rug.pad![0]![1]).toBeLessThan(95);
     // Rechts stopt hij vóór het ronde uiteinde (hooguit een klein stuk de achterhoek in): de zitting loopt verder.
     const einde = rug.pad![rug.pad!.length - 1]!;
-    expect(einde[1]).toBeLessThan(25);
+    expect(einde[1]).toBeLessThan(45);
     expect(einde[0]).toBeLessThan(290);
     expect(einde[0]).toBeGreaterThan(255);
     expect(rug.y).toBe(zit[0]!.y); // de rug staat op de onderbouw, achter het zitkussen
@@ -75,12 +77,17 @@ describe('doorlopende opbouw', () => {
     const zs = rug.pad!.map((p) => p[1]);
     const midden = Math.min(...zs);
     // De rug stopt aan beide kanten op de rechte achterkant (minstens 40 % van het eindelement ver), met een ronde kop.
-    // Hij zit niet in het midden (foto van boven): links blijft ±45 cm zitting vrij, rechts een groot rond stuk.
+    // Hij zit niet in het midden (foto van boven): links blijft ±30 cm zitting vrij, rechts een groot rond stuk.
+    // Sinds 11/11 is de zetel 285 cm breed (was 260) met een sterkere boog; die breedte is de buitenmaat, ook in de boog.
     const begin = rug.pad![0]![0], einde = rug.pad![rug.pad!.length - 1]![0];
-    expect(begin).toBeGreaterThan(35);
+    expect(begin).toBeGreaterThan(20);
     expect(begin).toBeLessThan(55);
-    expect(einde).toBeLessThan(210);
-    expect(260 - einde).toBeGreaterThan(begin + 15);
+    expect(einde).toBeLessThan(235);
+    expect(285 - einde).toBeGreaterThan(begin + 15);
+    const basis = b.find((x) => x.code.endsWith('.basis'))!;
+    const bx = basis.omtrek!.map((q) => q[0]);
+    expect(Math.max(...bx) - Math.min(...bx)).toBeGreaterThan(282);
+    expect(Math.max(...bx) - Math.min(...bx)).toBeLessThan(288);
     expect(zs[0]! - midden).toBeGreaterThan(5); // ook daar al naar voren door de boog
     expect(zs[zs.length - 1]! - midden).toBeGreaterThan(5);
     expect(new Set(rug.hoogtes)).toEqual(new Set([77])); // overal even hoog: de ronde kop komt van de wand zelf
@@ -89,7 +96,7 @@ describe('doorlopende opbouw', () => {
     expect(b.filter((x) => x.code.includes('.rugkussen'))).toHaveLength(0); // vaste rug
     const kussen = b.filter((x) => x.code.startsWith('e3.') || x.code.startsWith('e4.'));
     expect(kussen.length).toBeGreaterThan(0);
-    for (const k of kussen) expect(Math.sign(k.draai ?? 0)).toBe(Math.sign(k.x + k.b / 2 - 130) || 0);
+    for (const k of kussen) expect(Math.sign(k.draai ?? 0)).toBe(Math.sign(k.x + k.b / 2 - 142.5) || 0);
   });
 
   it('geen plooi in de omtrekken en de rug overal binnen de onderbouw (ook in de boog); de voet is een gewone vorm', () => {

@@ -172,7 +172,7 @@ export const STANDAARD_VORMGEVING: Vormgeving = { rugdikte: 18, kussendikte: 14,
 
 export const VORMGEVING_BEREIK = {
   rugdikte: { min: 10, max: 30 },
-  kussendikte: { min: 8, max: 26 },
+  kussendikte: { min: 8, max: 30 },
   zitkussens: { min: 1, max: 3 },
   zachtheid: { min: 0, max: 10 },
   rugkussendikte: { min: 10, max: 30 },

@@ -832,13 +832,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    * Zo bouwen 3D-tekenaars een kussen op (naden eerst, dan vullen); wij rekenen dezelfde vorm uit de maten.
    * Geeft ook `vervorm`: de plaats en de normaal op het kussen van een punt op de oorspronkelijke balk (voor de naden).
    */
-  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1, buren: Doos[] = [], oorsprong = [0, 0, 0], bolMaat?: number, vorm: { onder?: number; mesrand?: boolean } = {}) {
+  function kussenGeometrie(B: number, H: number, D: number, r: number, vulling = 1, buren: Doos[] = [], oorsprong = [0, 0, 0], bolMaat?: number, vorm: { onder?: number; mesrand?: boolean; los?: number } = {}) {
     const vol = [B, H, D];
     const plat = vol.indexOf(Math.min(B, H, D)); // as van de dunste maat: daar bolt het kussen
     // Mesrand: aan de naad is het kussen maar een paar cm dik; de rest van de dikte is de bolling in het midden.
     const mes = vorm.mesrand === true && vulling === 1;
     // Een sierkussen (±14 cm dik) heeft een dunne rand; een groot donzen rugkussen (±26 cm) een dikke, ronde rand.
-    const randDik = mes ? Math.max(2.4, Math.min(13, vol[plat]! * 0.3 + Math.max(0, vol[plat]! - 16) * 0.6)) : vol[plat]!;
+    // Los gevuld (0–1): dunnere naad en dus een bollere buik, diepere holle zijden (oortjes op de hoeken), een bovenrand
+    // die doorzakt en een onrustiger oppervlak.
+    const los = mes ? Math.max(0, Math.min(1, vorm.los ?? 0)) : 0;
+    const randDik = mes ? Math.max(2.4, Math.min(13, vol[plat]! * 0.3 + Math.max(0, vol[plat]! - 16) * 0.6)) * (1 - 0.45 * los) : vol[plat]!;
     const maat = vol.map((m, a) => (a === plat ? Math.min(m, randDik) : m));
     // Bolling: opgegeven door de opbouw (gevulde rug- en sierkussens), anders bescheiden; nooit meer dan het kussen toelaat.
     const bol = mes ? (vol[plat]! - maat[plat]!) / 2 : Math.min(bolMaat ?? Math.min(2.2, maat[plat]! * 0.13), maat[plat]! * 0.4) * vulling;
@@ -846,10 +849,10 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const macht = mes ? 0.75 : 1;
     const a1 = (plat + 1) % 3, a2 = (plat + 2) % 3;
     // Holle zijden van een los kussen: de naad trekt tussen de hoeken naar binnen, de hoeken blijven als puntjes staan.
-    const knijp = mes ? Math.min(2.4, Math.min(maat[a1]!, maat[a2]!) * 0.04) : 0;
+    const knijp = mes ? Math.min(2.4 + 3 * los, Math.min(maat[a1]!, maat[a2]!) * (0.04 + 0.05 * los)) : 0;
     const zak = vulling === 1 && plat === 1 && B > 30 && D > 30 ? Math.min(0.9, bol * 0.45) : 0;
     // Sterkte van de onregelmatige vulling (helling van de normaal): alleen bij echte kussens, volgens de bolling.
-    const kreuk = vulling === 1 ? Math.min(0.085, 0.012 + 0.011 * Math.min(bol, 6)) : 0;
+    const kreuk = vulling === 1 ? Math.min(0.085, 0.012 + 0.011 * Math.min(bol, 6)) * (1 + 0.7 * los) : 0;
     const seg = (l: number) => Math.max(4, Math.min(28, Math.round(l / 3)));
     const geo = new THREE.BoxGeometry(maat[0]!, maat[1]!, maat[2]!, seg(maat[0]!), seg(maat[1]!), seg(maat[2]!));
     const half = maat.map((m) => m / 2);
@@ -904,7 +907,10 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         } else if (mes) {
           // Holle zijde: de rand komt tussen de hoeken naar binnen (o1 of o2 is de dunne as; de andere loopt langs de rand).
           const langs = o1 === plat ? o2 : o1;
-          p[a] = p[a]! - knijp * Math.max(0, 1 - u[langs]! * u[langs]!) * u[a]!;
+          // Los gevuld: de bovenrand van een staand kussen zakt in het midden extra door (de vulling zakt naar onder).
+          // De onderrand rust op de zitting: die blijft (bijna) recht.
+          const boven = los > 0 && a === 1 ? (u[a]! > 0 ? 1 + 0.9 * los : 1 - 0.8 * los) : 1;
+          p[a] = p[a]! - knijp * boven * Math.max(0, 1 - u[langs]! * u[langs]!) * u[a]!;
         } else {
           p[a] = p[a]! + bol * 0.3 * w1 * w2 * u[a]!;
         }
@@ -1154,7 +1160,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    *  - de bovenrand is een volle ronding en de uiteinden zijn rond en **gesloten**.
    */
   function kuipwandGeometrie(pad0: [number, number][], hoogtes0: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0,
-    vorm: { helling?: number; hellingArm?: number; bol?: number; eind?: number } = {}) {
+    vorm: { helling?: number; hellingArm?: number; bol?: number; eind?: number; ovaal?: number } = {}) {
     const w = dikte / 2;
     // Vloeiend bijmonsteren (Catmull-Rom door de punten van de motor), op gelijke afstanden langs de wand.
     const n0 = pad0.length;
@@ -1194,28 +1200,45 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const mz0 = zij[Math.floor(n / 2)]!;
     if (mz0.nx * (midden[0] - mx) + mz0.nz * (midden[1] - mz) < 0) for (const r of zij) { r.nx = -r.nx; r.nz = -r.nz; }
     const hMin = Math.min(...hoogtes), hMax = Math.max(...hoogtes);
+    // Ovaal kussen (rug op een frame): ook de onderkant is rond, en ze komt naar de uiteinden toe omhoog.
+    const ovaal = vorm.ovaal ?? 0;
     const helling = vorm.helling ?? 0, hellingArm = vorm.hellingArm ?? helling * 0.35, bol = vorm.bol ?? 0, eindDik = vorm.eind ?? 1;
     /** Hoe hoog een punt staat tussen het laagste (0) en het hoogste (1) deel van de wand, vloeiend. */
     const deel = (hoog: number) => { const f = hMax - hMin > 0.5 ? (hoog - hMin) / (hMax - hMin) : 1; return f * f * (3 - 2 * f); };
     /** Helling van de bovenrand op een punt: de hoge rug helt het meest, de lage uiteinden het minst. */
-    const hellingOp = (hoog: number) => hellingArm + (helling - hellingArm) * deel(hoog);
+    const hellingOp = (hoog: number) => (ovaal ? helling : hellingArm + (helling - hellingArm) * deel(hoog));
     /** Halve dikte op een punt: de lage uiteinden kunnen slanker zijn dan de rug. */
     const halfOp = (hoog: number) => w * (eindDik + (1 - eindDik) * deel(hoog));
     // Profiel (dwarsdoorsnede, u = dwars op de wand met + naar buiten, y = hoogte): binnenkant op, volle ronding over de
     // top, buitenkant neer. `breed` = halve dikte aan de voet; `top` = hoeveel de bovenrand naar buiten staat.
-    const ZIJ = 7, BOOG = 14;
-    const profiel = (hoog: number, breed: number, top: number): [number, number][] => {
+    const ZIJ = ovaal ? 12 : 7, BOOG = 14;
+    const profiel = (hoog: number, breed: number, top: number, voet = 0): [number, number][] => {
       const r = Math.min(breed, Math.max(0.5, hoog - 0.5)), recht = Math.max(0, hoog - r);
-      const uit = (y: number) => top * Math.pow(Math.max(0, Math.min(1, y / Math.max(1, hoog))), 1.4);
-      const dik = (y: number) => breed * (1 + bol * Math.sin(Math.PI * Math.max(0, Math.min(1, y / Math.max(1, recht)))));
+      const rOnder = ovaal ? Math.min(breed, recht * 0.6) : 0;
+      // Ovaal kussen: het hele kussen helt als één plaat (de helling volgt de hoogte boven de onderkant van het kussen,
+      // niet die van elke ring apart; anders waaieren de lage uiteinden uit als vleugels).
+      const uit = (y: number) => top * Math.pow(Math.max(0, Math.min(1, ovaal ? (y + voet) / Math.max(1, hMax - onder) : y / Math.max(1, hoog))), 1.4);
+      const dik = (y: number) => breed * (1 + bol * Math.sin(Math.PI * Math.max(0, Math.min(1, y / Math.max(1, recht)))))
+        * (rOnder > 0.01 && y < rOnder ? Math.sqrt(Math.max(0, 1 - ((rOnder - y) / rOnder) ** 2)) : 1);
+      // Met een ronde onderkant liggen de punten onderaan dichter bij elkaar (daar buigt het profiel het sterkst).
+      const yOp = (k: number) => recht * (ovaal ? (k / ZIJ) ** 1.7 : k / ZIJ);
       const pts: [number, number][] = [];
-      for (let k = 0; k <= ZIJ; k++) { const y = (recht * k) / ZIJ; pts.push([uit(y) - dik(y), y]); }
+      for (let k = 0; k <= ZIJ; k++) { const y = yOp(k); pts.push([uit(y) - dik(y), y]); }
       for (let k = 1; k < BOOG; k++) { const a = Math.PI - (k / BOOG) * Math.PI; pts.push([uit(recht) + Math.cos(a) * breed, recht + Math.sin(a) * r]); }
-      for (let k = ZIJ; k >= 0; k--) { const y = (recht * k) / ZIJ; pts.push([uit(y) + dik(y), y]); }
+      for (let k = ZIJ; k >= 0; k--) { const y = yOp(k); pts.push([uit(y) + dik(y), y]); }
       return pts;
     };
     // Ringen langs de middenlijn. De uiteinden zijn in het grondvlak half rond en lopen dicht: de breedte gaat tot nul.
-    type Ring = { x: number; z: number; nx: number; nz: number; hoog: number; breed: number; top: number };
+    type Ring = { x: number; z: number; nx: number; nz: number; hoog: number; breed: number; top: number; voet: number };
+    // Ovaal kussen: van opzij gezien een afgeronde rechthoek. De hoeken onderaan hebben een grote straal (`ovaal` × de
+    // hoogte van het kussen), die bovenaan de rest: zo is de onderkant een buik en de bovenkant bijna recht (Karl).
+    const hoogKussen = hMax - onder, straalOnder = ovaal * hoogKussen, straalBoven = Math.max(0, (0.94 - ovaal) * hoogKussen);
+    const hoek = (straal: number, vanEinde: number) => (vanEinde >= straal ? 0 : straal - Math.sqrt(Math.max(0, straal * straal - (straal - vanEinde) ** 2)));
+    /** Ring van een ovaal kussen op `vanEinde` cm van de punt van het kussen (langs de wand gemeten). */
+    const ovaleMaat = (hoogte: number, vanEinde: number) => {
+      const voet = hoek(straalOnder, vanEinde);
+      return { voet, hoog: Math.max(0.6, hoogte - onder - voet - hoek(straalBoven, vanEinde)) };
+    };
     const ringen: Ring[] = [];
     const EIND = 9;
     const eind = (i: number, richting: number) => {
@@ -1226,12 +1249,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const zak = Math.min(hoog * 0.3, half * 1.6);
       for (let k = EIND; k >= 1; k--) {
         const a = ((k / EIND) * Math.PI) / 2;
-        reeks.push({ x: q[0] + richting * r.tx * half * Math.sin(a), z: q[1] + richting * r.tz * half * Math.sin(a), nx: r.nx, nz: r.nz, hoog: hoog - zak * (1 - Math.cos(a)), breed: k === EIND ? 0 : half * Math.cos(a), top });
+        const maat = ovaal ? ovaleMaat(hoogtes[i]!, half * (1 - Math.sin(a))) : { voet: 0, hoog: hoog - zak * (1 - Math.cos(a)) };
+        reeks.push({ x: q[0] + richting * r.tx * half * Math.sin(a), z: q[1] + richting * r.tz * half * Math.sin(a), nx: r.nx, nz: r.nz, hoog: maat.hoog, breed: k === EIND ? 0 : half * Math.cos(a), top, voet: maat.voet });
       }
       return reeks;
     };
     ringen.push(...eind(0, -1));
-    for (let i = 0; i < n; i++) ringen.push({ x: pad[i]![0], z: pad[i]![1], nx: zij[i]!.nx, nz: zij[i]!.nz, hoog: Math.max(0.6, hoogtes[i]! - onder), breed: halfOp(hoogtes[i]!), top: hellingOp(hoogtes[i]!) });
+    for (let i = 0; i < n; i++) {
+      const langsWand = (totaal * i) / (n - 1), half = halfOp(hoogtes[i]!);
+      const maat = ovaal ? ovaleMaat(hoogtes[i]!, half + Math.min(langsWand, totaal - langsWand)) : { voet: 0, hoog: Math.max(0.6, hoogtes[i]! - onder) };
+      ringen.push({ x: pad[i]![0], z: pad[i]![1], nx: zij[i]!.nx, nz: zij[i]!.nz, hoog: maat.hoog, breed: half, top: hellingOp(hoogtes[i]!), voet: maat.voet });
+    }
     ringen.push(...eind(n - 1, 1).reverse());
     // Profiel gesloten met een dubbel eerste punt achteraan (voor een doorlopende textuur rond het profiel).
     const Q = profiel(10, w, 0).length + 1;
@@ -1239,7 +1267,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     let langs = 0;
     ringen.forEach((r, i) => {
       if (i > 0) langs += Math.hypot(r.x - ringen[i - 1]!.x, r.z - ringen[i - 1]!.z);
-      const pr = profiel(r.hoog, r.breed, r.top);
+      const pr = profiel(r.hoog, r.breed, r.top, r.voet);
       pr.push(pr[0]!);
       // Textuur rond het profiel op ware grootte, gemeten op het profiel zelf en uitgelijnd op de kruin: zo loopt de
       // tekening over de bovenrand door tot in de ronde uiteinden, zonder daar samen te drukken tot een ruwe vlek.
@@ -1248,7 +1276,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const kruin = omtrek[Math.floor((pr.length - 1) / 2)]!;
       pr.forEach(([u, y], j) => {
         const rond = omtrek[j]! - kruin;
-        pos.push(r.x + r.nx * u - ox, y, r.z + r.nz * u - oz);
+        pos.push(r.x + r.nx * u - ox, y + r.voet, r.z + r.nz * u - oz);
         // Textuur langs de wand (cm) en rond het profiel (cm), op ware grootte: geen sprongen in de bocht.
         uvs.push(tegel ? langs / tegel : 0, tegel ? rond / tegel : 0);
       });
@@ -1433,7 +1461,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (b.vorm === 'kuipwand' && b.pad && b.hoogtes) {
       const cxo = b.x + b.b / 2, czo = b.z + b.d / 2;
       const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
-      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, { helling: b.helling, hellingArm: b.hellingArm, bol: b.wandBol, eind: b.wandEind });
+      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, { helling: b.helling, hellingArm: b.hellingArm, bol: b.wandBol, eind: b.wandEind, ovaal: b.wandOvaal });
       const base = materiaal(b);
       const sleutel = `vc:${base.uuid}`;
       let mat = materialen.get(sleutel);
@@ -1510,7 +1538,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       default:
         // Kussens gevuld en bol; bij de zetel ook de gestoffeerde armen en rug, iets minder bol.
         if (b.afronding && (b.soort === 'kussen' || (opties.zetel && b.soort === 'stof'))) {
-          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz], b.bol, { onder: b.afrondingOnder, mesrand: b.mesrand });
+          kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz], b.bol, { onder: b.afrondingOnder, mesrand: b.mesrand, los: b.losGevuld });
           geo = kussen.geo;
           break;
         }

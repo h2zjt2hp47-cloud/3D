@@ -109,6 +109,14 @@ const VOOR_HELLING: Record<string, { dikte: number; boog: number }> = {
   rond: { dikte: 15, boog: 138 }, afgerond: { dikte: 11, boog: 130 }, omhullend: { dikte: 11, boog: 125 }, koepel: { dikte: 20, boog: 100 },
   trommel: { dikte: 8, boog: 100 }, meridienne: { dikte: 12, boog: 112 }, schelp: { dikte: 9, boog: 66 },
 };
+/**
+ * De standaard van de vier vormen die na de opmerkingen op het controleblad (11/11) opnieuw naar de foto's zijn gemaakt
+ * (Mabel, Manon, Pebble, Karl): dikte, boog en helling van vlak daarvoor, als herkenning.
+ */
+const VOOR_CONTROLEBLAD: Record<string, { dikte: number; boog: number; helling: number }> = {
+  ton: { dikte: 9, boog: 112, helling: 6 }, omhullend: { dikte: 10, boog: 142, helling: 6 },
+  organisch: { dikte: 26, boog: 150, helling: -9 }, schelp: { dikte: 10, boog: 54, helling: 7 },
+};
 function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
   const nieuw = zetelCatalogus.opties?.find((x) => x.code === 'kuipvorm');
   if (!nieuw || !c.opties?.some((x) => x.code === 'kuipvorm')) return c;
@@ -124,7 +132,10 @@ function metNieuweKuipvormen(c: OntwerpCatalogus): OntwerpCatalogus {
         // Tweede ronde van 11/11: elke wand helt en is gepolsterd. Een vorm die nog de standaard van voordien heeft (geen
         // helling, zelfde dikte en boog), krijgt de nieuwe; een zelf aangepaste vorm blijft.
         const v = VOOR_HELLING[k.code];
-        return v && n && k.teken?.helling === undefined && k.teken?.dikte === v.dikte && k.teken?.boog === v.boog ? structuredClone(n) : k;
+        if (v && n && k.teken?.helling === undefined && k.teken?.dikte === v.dikte && k.teken?.boog === v.boog) return structuredClone(n);
+        // Na het controleblad van 11/11: wie nog de standaard van vlak daarvoor heeft, krijgt de nieuwe vorm.
+        const w = VOOR_CONTROLEBLAD[k.code];
+        return w && n && k.teken?.dikte === w.dikte && k.teken?.boog === w.boog && k.teken?.helling === w.helling ? structuredClone(n) : k;
       });
       // (de kruisvoet staat in een andere groep: zie metNieuwVan1111)
       const koepel = nieuw.keuzes.find((x) => x.code === 'koepel');

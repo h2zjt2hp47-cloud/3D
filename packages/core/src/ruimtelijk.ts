@@ -52,6 +52,11 @@ export interface Blok {
    * zijkant), zoals een zitkussen.
    */
   mesrand?: boolean;
+  /**
+   * Bij een kussen met een mesrand: hoe los het gevuld is (0–1). Een los gevuld donskussen (Wallace) heeft een dunnere
+   * naad, een bollere buik, duidelijk holle zijden met oortjes op de hoeken en een bovenrand die in het midden doorzakt.
+   */
+  losGevuld?: number;
   /** Voor liggende cilinders (rolarm): de as. */
   as?: 'x' | 'y' | 'z';
   /** Kegel: verhouding onderste/bovenste straal. */
@@ -87,6 +92,12 @@ export interface Blok {
   wandBol?: number;
   /** Kuipwand: dikte aan de lage uiteinden als deel van de dikte van het hoogste deel (1 = overal even dik). */
   wandEind?: number;
+  /**
+   * Kuipwand als ovaal kussen (rug op een frame, Karl): van opzij een afgeronde rechthoek met een ronde onderkant. Het
+   * getal is de straal van de hoeken onderaan als deel van de hoogte van het kussen (0,6 = een buik onderaan, een bijna
+   * rechte bovenkant); 0 of leeg = vlakke onderkant, de wand staat ergens op.
+   */
+  wandOvaal?: number;
   /**
    * Profiel (vorm 'profiel'): de doorsnede als punten [s, y, boven]. s = cm opzij van de middenlijn (`pad`), positief naar
    * `uit` (de buitenkant); y = hoogte in cm, absoluut (boven = 0) of onder de bovenkant ter plaatse (boven = 1, dus mee
@@ -210,8 +221,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       // Een armleuning tegen een zitting krijgt geen eigen draaivoet: ze hangt aan de zitting.
     } else if (metOnderbouw && potVorm === 'draaivoet') {
       const p = voetafdruk(e);
-      cilinderMidden('draaivoet', 'metaal', 1.5, P - 1.5, Math.min(p.b, p.h) * 0.22, Math.min(p.b, p.h) * 0.22, '#2e2c2a');
-      cilinderMidden('voetplaat', 'metaal', 0, 1.5, Math.min(p.b, p.h) * 0.55, Math.min(p.b, p.h) * 0.55, '#2e2c2a');
+      // Brede, lage schijf (foto's van Quin, opmerking van 11/11: "de voet is groter"): bijna zo breed als de zitting.
+      cilinderMidden('draaivoet', 'metaal', 3, P - 3, Math.min(p.b, p.h) * 0.3, Math.min(p.b, p.h) * 0.3, '#2e2c2a');
+      cilinderMidden('voetplaat', 'metaal', 0, 3, Math.min(p.b, p.h) * 0.8, Math.min(p.b, p.h) * 0.8, '#2e2c2a');
     } else if (t.tekenstijl === 'arm' && potVorm === 'housse' && ['uitlopend', 'strak'].includes(String(te('armstijl', 'vorm', 'strak')))) {
       // Uitlopende of strakke arm met hoes: de arm zelf loopt tot op de vloer (zie de arm), geen aparte rok eronder.
     } else if (metOnderbouw && potVorm === 'housse') {
@@ -336,6 +348,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       // Donzen rugkussens zijn losse kussens met een mesrand (twee lappen rondom aan elkaar genaaid), zoals bij Kotor en
       // Fréjus op de foto's; gewone losse rugkussens hebben een band (rechte zijkant), zoals bij Nestor en Belize.
       ...(dons ? { mesrand: true } : {}),
+      // De zachtste stand (10) met dons: los gevulde kussens met oortjes en een doorgezakte bovenrand (Wallace, opmerking
+      // van 11/11: "kan er meer vorm komen in de kussens?").
+      ...(dons && v.zachtheid > 9 ? { losGevuld: rond1(Math.min(1, v.zachtheid - 9)) } : {}),
     };
     const metNekrol = losseRug && opt.get('nekrol')?.teken?.nekrol === true;
     /** Nekrol: ronde rol op het karkas (lokaal van lx over lb breed), achter de rugkussens. */
@@ -556,12 +571,15 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // Ook de koepelrug (Tumble, 10/11): een ronde zitting in de stof met een zachte rug erop, zoals op de foto.
           const kiezel = (kp.organisch || kp.plat > 0) && !kp.zwevend;
           const basisBoven = kiezel ? zithoogte : opb.basis.boven;
+          const zitPlan = kp.organisch ? opb.zit : basisPlan;
           // Trommel (Quin, Satie): vooraan is de ronde onderbouw vrij, dus in de stof zelf en niet donker zoals binnen in een kuip.
           // Méridienne (scheve schaal op een gewone zitting): rechts staat geen wand, de onderbouw is daar vrij: in de stof.
           // Schelp op frame (Karl) of rug op het zitkussen (Mabel Meridienne): de onderbouw is het houten frame zelf, in
           // de houtkleur van de poten. Een vaste zitting (Fraser, Manon) is zelf de zitting: in de stof, met het weefsel.
           if ((kp.zwevend || kp.opZitting) && kussenDik) omtrekBlok('basis', 'hout', opb.basis.onder, basisBoven - opb.basis.onder, hout, basisPlan, { afronding: 1.5 });
-          else omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel || kp.vlak || kp.scheef || !kussenDik ? stof : donker, basisPlan, { afronding: kp.organisch ? 12 : kp.plat > 0 ? 9 : 4, ...(kiezel ? { glad: true } : {}) });
+// Kiezel (Pebble): de zitting ligt naast de schaal, niet eronder door. De naad tussen rug en zitting is op de foto's
+          // een rechte, verticale lijn (opmerking van 11/11: "bij onze 3D lopen ze door elkaar").
+                    else omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel || kp.vlak || kp.scheef || !kussenDik ? stof : donker, zitPlan, { afronding: kp.organisch ? 12 : kp.plat > 0 ? 9 : 4, ...(kiezel ? { glad: true } : {}) });
           // Het zitkussen ligt plat op de onderbouw (kleine afronding onderaan), zoals bij de sofa's.
           if (kussenDik && !kiezel) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht, afrondingOnder: rond1(Math.min(zacht, 1.5 + v.zachtheid * 0.3)) });
           const pad = opb.wand.pad.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
@@ -576,6 +594,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),
             y: r2(wandOnder), h: r2(Math.max(...opb.wand.hoogtes) - wandOnder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
             helling: opb.wand.helling, hellingArm: opb.wand.hellingArm, wandBol: opb.wand.bol, wandEind: opb.wand.eindDikte,
+            ...(kp.zwevend ? { wandOvaal: 0.6 } : {}),
             // Sinds de tweede ronde van 11/11 is elke kuipwand een gepolsterde schaal (drie-d.ts, kuipwandGeometrie), ook de
             // koepelrug (Tumble) en de kiezel (Pebble). Als samengesmolten zachte vorm was de rug een bobbel met een nis
             // (Tumble) of een boog met een gat eronder (Pebble), met een gerafelde aansluiting op de zitting.

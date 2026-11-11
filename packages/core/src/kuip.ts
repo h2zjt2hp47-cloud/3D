@@ -39,6 +39,11 @@ export interface KuipParameters {
   /** Trommel: de wand is rondom (bijna) even hoog; de rug komt van de losse kussens. */
   vlak: boolean;
   /**
+   * Bol verloop: de bovenrand zakt van de rug naar de uiteinden in een bolle lijn die steeds steiler wordt (Manon, Mabel),
+   * in plaats van in een S-lijn die vooraan vlak uitloopt in een arm.
+   */
+  bolVerloop: boolean;
+  /**
    * Scheef (Pebble): de schaal loopt niet symmetrisch rond, maar van rechtsachter (op zithoogte, schuin in de zitting)
    * over de rug naar linksvoor (van voren gezien), het hoogst linksachter, en links tot vooraan. `boog` geldt dan voor de
    * linkerkant; rechts stopt de wand 50° na het midden achteraan.
@@ -58,6 +63,11 @@ export interface KuipParameters {
    * in de zitting (Pebble, méridienne). Positief = een lage arm (Manon).
    */
   scheefRechtsBoven?: number;
+  /**
+   * Bij een scheve schaal: hoe recht de bovenrand van de top naar het rechteruiteinde zakt (0 = bol, zoals de rand van
+   * een blad; 1 = in een rechte lijn). Pebble: bijna recht.
+   */
+  scheefLijn?: number;
   /** Eigen exponent van het grondvlak (2 = ellips, hoger = hoekiger); leeg = volgens `plan`. */
   exponent?: number;
   /**
@@ -81,7 +91,7 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
   return {
     plan: teken.plan === 'afgerond' ? 'afgerond' : 'rond',
     dikte: getal('dikte', 14),
-    boog: Math.max(60, Math.min(178, getal('boog', 150))),
+    boog: Math.max(30, Math.min(178, getal('boog', 150))),
     voorBoven: getal('voorBoven', 14),
     armVanaf: Math.max(0.2, Math.min(1, getal('armVanaf', 1))),
     plat: Math.max(0, Math.min(0.9, getal('plat', 0))),
@@ -90,6 +100,7 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
     opZitting: teken.opZitting === true,
     organisch: teken.organisch === true,
     vlak: teken.vlak === true,
+    bolVerloop: teken.bolVerloop === true,
     scheef: teken.scheef === true,
     helling: Math.max(-8, Math.min(24, getal('helling', 0))),
     hellingArm: Math.max(-8, Math.min(24, getal('hellingArm', getal('helling', 0) * 0.35))),
@@ -100,6 +111,7 @@ export function kuipParameters(teken: Record<string, unknown> | undefined): Kuip
     ...(typeof teken.scheefTop === 'number' ? { scheefTop: teken.scheefTop } : {}),
     ...(typeof teken.scheefLinks === 'number' ? { scheefLinks: teken.scheefLinks } : {}),
     ...(typeof teken.scheefRechtsBoven === 'number' ? { scheefRechtsBoven: teken.scheefRechtsBoven } : {}),
+    ...(typeof teken.scheefLijn === 'number' ? { scheefLijn: Math.max(0, Math.min(1, teken.scheefLijn)) } : {}),
   };
 }
 
@@ -161,6 +173,21 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   };
 }
 
+/** Een fijn bemonsterde lijn herverdelen in `aantal` punten op gelijke afstanden langs de lijn. */
+function gelijkVerdeeld(fijn: Punt[], aantal: number): { pad: Punt[]; afstand: number[]; totaal: number } {
+  const F = fijn.length - 1, afstand = [0];
+  for (let i = 1; i <= F; i++) afstand.push(afstand[i - 1]! + Math.hypot(fijn[i]![0] - fijn[i - 1]![0], fijn[i]![1] - fijn[i - 1]![1]));
+  const totaal = afstand[F]!;
+  let j = 0;
+  const pad = Array.from({ length: aantal }, (_, i) => {
+    const doel = (totaal * i) / (aantal - 1);
+    while (j < F - 1 && afstand[j + 1]! < doel) j++;
+    const f = Math.max(0, Math.min(1, (doel - afstand[j]!) / (afstand[j + 1]! - afstand[j]! || 1)));
+    return [rond1(fijn[j]![0] + f * (fijn[j + 1]![0] - fijn[j]![0])), rond1(fijn[j]![1] + f * (fijn[j + 1]![1] - fijn[j]![1]))] as Punt;
+  });
+  return { pad, afstand, totaal };
+}
+
 /** De opbouw aan de voet (zonder helling): alles binnen B × D. */
 function kuipVoet(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
   // Een brede kuip (tweezit: ruim anderhalf keer zo breed als diep) heeft een rechte rug met ronde hoeken, geen ovaal.
@@ -185,47 +212,46 @@ function kuipVoet(B: number, D: number, h: { P: number; zithoogte: number; rugH:
     // Eerst fijn bemonsterd, dan op gelijke afstanden langs de wand: bij een afgerond grondvlak liggen punten op gelijke
     // hoeken ongelijk verdeeld, en dan golfde de bovenkant (de hoogte volgt de afstand langs de wand, niet de hoek).
     const F = 600, fijn = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, tRechts, tLinks, F);
-    const afstand = [0];
-    for (let i = 1; i <= F; i++) afstand.push(afstand[i - 1]! + Math.hypot(fijn[i]![0] - fijn[i - 1]![0], fijn[i]![1] - fijn[i - 1]![1]));
-    const totaal = afstand[F]!, N = stappen * 2 + 1;
-    let j = 0;
-    pad = Array.from({ length: N }, (_, i) => {
-      const doel = (totaal * i) / (N - 1);
-      while (j < F - 1 && afstand[j + 1]! < doel) j++;
-      const f = Math.max(0, Math.min(1, (doel - afstand[j]!) / (afstand[j + 1]! - afstand[j]! || 1)));
-      return [rond1(fijn[j]![0] + f * (fijn[j + 1]![0] - fijn[j]![0])), rond1(fijn[j]![1] + f * (fijn[j + 1]![1] - fijn[j]![1]))] as Punt;
-    });
-    const uTop = afstand[Math.round(((tRechts - tTop) / (tRechts - tLinks)) * F)]! / totaal;
+    const verdeeld = gelijkVerdeeld(fijn, stappen * 2 + 1);
+    pad = verdeeld.pad;
+    const uTop = verdeeld.afstand[Math.round(((tRechts - tTop) / (tRechts - tLinks)) * F)]! / verdeeld.totaal;
     // Vooraan links ongeveer op zithoogte (daaronder loopt de ronde kop tot op de vloer). Rechts verdwijnt de schaal in de
     // zitting: haar bovenkant eindigt 3 cm onder de zitting, niet erop (twee vlakken op dezelfde hoogte flikkeren).
     const links = Math.min(rug, zitBoven + (k.scheefLinks ?? 1)), rechts = Math.min(rug, zitBoven + (k.scheefRechtsBoven ?? -3));
-    // Bol verloop, zoals de rand van een blad: bij de top vlak, naar de uiteinden toe steeds steiler.
+    // Bol verloop, zoals de rand van een blad: bij de top vlak, naar de uiteinden toe steeds steiler. Met `scheefLijn`
+    // zakt de rand naar rechts (bijna) in een rechte lijn.
+    const lijn = k.scheefLijn ?? 0;
     hoogtes = pad.map((_, i) => {
       const u = i / (pad.length - 1);
       return u <= uTop
-        ? rond1(rechts + (rug - rechts) * Math.sin((Math.PI / 2) * (u / uTop)))
+        ? rond1(rechts + (rug - rechts) * ((1 - lijn) * Math.sin((Math.PI / 2) * (u / uTop)) + lijn * (u / uTop)))
         : rond1(links + (rug - links) * Math.cos((Math.PI / 2) * ((u - uTop) / (1 - uTop))));
     });
   } else {
-    pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, -90 - k.boog, -90 + k.boog, stappen * 2);
+    // Ook hier op gelijke afstanden langs de wand (sinds 11/11): bij een hoekig grondvlak (schelp, brede tweezit) lagen de
+    // punten op gelijke hoeken opeengepakt aan de uiteinden, en dan zakte de rug pas in de laatste centimeters, met een
+    // knik (de rug van Karl kreeg zo "oortjes").
+    pad = gelijkVerdeeld(superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, -90 - k.boog, -90 + k.boog, 600), stappen * 2 + 1).pad;
     hoogtes = pad.map((_, i) => {
       const u = Math.abs(i - stappen) / stappen; // 0 = midden achteraan, 1 = einde van de wand
       // Met `plat` blijft het midden op volle hoogte en zakt de wand pas daarna (koepelrug: van voren een brede rug met
       // ronde schouders, geen punt).
       const top = Math.max(k.plat, k.schouder);
       const t = Math.min(1, Math.max(0, u - top) / Math.max(0.05, k.armVanaf - top));
-      return rond1(voor + (rug - voor) * (0.5 + 0.5 * Math.cos(Math.PI * t)));
+      return rond1(voor + (rug - voor) * (k.bolVerloop ? Math.cos((Math.PI / 2) * t) : 0.5 + 0.5 * Math.cos(Math.PI * t)));
     });
   }
   const basisBoven = h.zithoogte - h.kussenDik;
   // Schelp: zweeft een eind boven de zitting (gedragen door het frame), anders staat de wand op de onderbouw.
   // Op de zitting: de wand begint net onder de bovenkant van het zitkussen (met een vaste zitting op de vloer of het frame).
-  const onder = k.zwevend ? h.zithoogte + 6 : k.opZitting && h.kussenDik ? h.zithoogte - 3 : h.P;
+  const onder = k.zwevend ? h.zithoogte + 4 : k.opZitting && h.kussenDik ? h.zithoogte - 3 : h.P;
   // Zitkussen: binnen de wand en tot vooraan (bij een schelp over het hele grondvlak).
   // Organisch: de zitting loopt breed tot vooraan door (de wand zakt er in weg).
   const vol = k.zwevend || k.opZitting;
-  const achter = vol ? (k.zwevend ? 3 : 1.5) : w * (k.organisch ? 0.9 : 0.85);
-  const zij = vol ? 1.5 : w * (k.organisch ? 0.45 : 0.8);
+  // Organisch (kiezel, Pebble): de zitting is de volle kiezel, bijna tot aan de rand; de schaal staat er achteraan en
+  // rond één hoek tegenaan (ze overlapt de zitting). Waar de schaal ophoudt, is de naad een rechte, verticale lijn.
+  const achter = vol ? (k.zwevend ? 3 : 1.5) : k.organisch ? 3 : w * 0.85;
+  const zij = vol ? 1.5 : k.organisch ? 3 : w * 0.8;
   const zcy = (achter + D - 1.5) / 2, zb = (D - 1.5 - achter) / 2;
   // Achteraan volgt het kussen de ronding van de wand; vooraan is het breder en rechter, zoals op de foto's (Ross, Mabel,
   // Sullivan): de voorkant van de zitting loopt bijna over de volle breedte tussen de armen. Tot 11/11 was het één ellips
@@ -233,7 +259,7 @@ function kuipVoet(B: number, D: number, h: { P: number; zithoogte: number; rugH:
   const nAchter = k.plan === 'rond' ? 2.4 : n;
   const breedVoor = !vol && !k.organisch && !k.vlak && k.plat === 0;
   // Scheve schaal op een gewone zitting (méridienne): rechts staat geen wand, daar loopt het kussen tot aan de rand.
-  const zijRechts = k.scheef && !k.organisch ? 1.5 : zij;
+  const zijRechts = k.scheef && (k.organisch || h.kussenDik > 0) ? 1.5 : zij;
   const zcx = (zij + B - zijRechts) / 2, za = (B - zijRechts - zij) / 2;
   const zit = breedVoor
     ? [...superellips(zcx, zcy, za, zb, k.plan === 'rond' ? 3.2 : 4.6, 0, 180, 32).slice(0, -1), ...superellips(zcx, zcy, za, zb, nAchter, 180, 360, 32).slice(0, -1)]
@@ -247,7 +273,13 @@ function kuipVoet(B: number, D: number, h: { P: number; zithoogte: number; rugH:
     for (let i = 0; i < aantal; i++) {
       // Bij een trommel steken de kussens boven de wand uit tot de rughoogte.
       const top = k.vlak ? Math.max(h.rugH, rug + 12) : rug;
-      rugkussens.push({ lx: w + 3 + i * breed, ly: w - 3, lb: breed - 1, ld: k.vlak ? 20 : 16, y: zitBoven, h: Math.max(20, (top - zitBoven) * (k.vlak ? 0.95 : 0.85)) });
+      rugkussens.push({ lx: w + 3 + i * breed - (k.vlak && aantal > 1 ? 1.5 : 0), ly: w - 3, lb: breed - 1 + (k.vlak && aantal > 1 ? 3 : 0), ld: k.vlak ? 22 : 16, y: zitBoven, h: Math.max(20, (top - zitBoven) * (k.vlak ? 1 : 0.85)) });
+    }
+    // Een brede trommel (Quin, 91 cm: "4 kussens inbegrepen") heeft vooraan nog twee kussens van bijna dezelfde maat, die
+    // de achterste overlappen: samen vullen ze de hele rug (opmerking van 11/11: "de kussens vullen de zetel meer").
+    if (k.vlak && B >= 85) {
+      const lb = breed * 1.02, hoog = Math.max(18, (Math.max(h.rugH, rug + 12) - zitBoven) * 0.86);
+      for (const lx of [w + 2, B - w - 2 - lb]) rugkussens.push({ lx, ly: w + 15, lb, ld: 17, y: zitBoven, h: hoog });
     }
   }
   return { plan, wand: { pad, hoogtes, dikte: w, onder, helling: k.helling, hellingArm: k.hellingArm, bol: k.bol, eindDikte: k.eindDikte }, zit, basis: { onder: h.P, boven: basisBoven }, rugkussens };

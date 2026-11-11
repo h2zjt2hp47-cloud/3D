@@ -177,12 +177,24 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   const s = Math.max(0, Math.min(W / 3, v.bocht ?? 0));
   const R = s > 0.5 ? (W * W) / (8 * s) + s / 2 : Infinity;
   /** Punt (x, y) in de boog; ook de draaiing (graden) van de richting langs de zetel daar. */
+  // De opgegeven breedte blijft de buitenmaat, ook in een boog (sinds 11/11): zonder `rek` werd de zetel in de boog
+  // smaller dan zijn maat (Doha 300 cm werd 263, Montego 285 werd 228: "de zetel ziet er groter uit"). De zetel wordt
+  // langs de boog zoveel langer dat hij van uiteinde tot uiteinde weer zijn breedte heeft.
+  let rek = 1;
   const buig = ([x, y]: P2): P2 => {
     if (!Number.isFinite(R)) return [x, y];
-    const th = (x - xc) / R, r = R - (y - Y0);
+    const th = ((x - xc) * rek) / R, r = R - (y - Y0);
     return [xc + r * Math.sin(th), Y0 + R - r * Math.cos(th)];
   };
-  const draaiBij = (x: number) => (Number.isFinite(R) ? ((x - xc) / R) * (180 / Math.PI) : 0);
+  if (Number.isFinite(R)) {
+    const vlak = omtrek(0);
+    for (let i = 0; i < 5; i++) {
+      const xs = vlak.map((p) => buig(p)[0]), breedteNu = Math.max(...xs) - Math.min(...xs);
+      if (breedteNu < 1) break;
+      rek = Math.min(1.6, (rek * W) / breedteNu);
+    }
+  }
+  const draaiBij = (x: number) => (Number.isFinite(R) ? (((x - xc) * rek) / R) * (180 / Math.PI) : 0);
   const gebogen = (pts: P2[]) => pts.map((p) => { const q = buig(p); return [r2(q[0]), r2(q[1])] as P2; });
   const kaderVan = (pts: P2[]) => {
     const xs = pts.map((p) => p[0]), zs = pts.map((p) => p[1]);
@@ -312,7 +324,7 @@ export function doorlopendeOpbouw(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
     const kantel = { graden: rond1(v.rugvorm === 'hellend' ? 14 : 2 + v.zachtheid * 0.8), richting: 'z-' as const };
     for (let i = 0; i < n; i++) {
       const cx = x0 + breed * (i + 0.5), cy = Y0 + wi + w - 2 + RKD / 2;
-      const q = buig([cx, cy]), b = breed - 2;
+      const q = buig([cx, cy]), b = breed * rek - 2; // in een boog mee langer, zodat de kussens blijven aansluiten
       nieuw.push({
         code: `${elementBij(cx).id}.rugkussen${i + 1}`, soort: 'kussen', vorm: 'blok', x: r2(q[0] - b / 2), z: r2(q[1] - RKD / 2), b: r2(b), d: r2(RKD),
         y: r2(hg.zithoogte), h: r2(Math.max(10, hg.rughoogte - hg.zithoogte)), kleur: stof, kantel,
