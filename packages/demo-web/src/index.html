@@ -167,6 +167,23 @@ button:disabled { opacity: .45; cursor: default; }
 .knoppenlijst button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
 #o-3d-instellingen button[aria-pressed="true"] { background: var(--accent-zacht); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .drie-d-vak { position: relative; }
+/* Productfoto naast de 3D (vergelijken en bijstellen): klein in de hoek, groot bij aanwijzen of aanraken. */
+.drie-d-foto { position: absolute; left: 10px; top: 10px; z-index: 3; width: min(32%, 280px); margin: 0; background: var(--papier, #fff); border: 1px solid var(--lijn, #d9d5cc); border-radius: 8px; box-shadow: 0 4px 14px rgba(0, 0, 0, .14); overflow: hidden; transition: width .18s ease; }
+.drie-d-foto:hover, .drie-d-foto:focus-within { width: min(56%, 520px); }
+.drie-d-foto img { display: block; width: 100%; height: auto; }
+.drie-d-foto figcaption { padding: 3px 8px; font-size: 11px; color: var(--zacht, #5d5a52); }
+#o-3d-fotoknop[aria-pressed="true"] { background: var(--accent-zacht); border-color: var(--accent); }
+/* Bouwstijl: het karakter van de zetel in één keuze. */
+.bouwstijl { margin: 0 0 12px; border: 1px solid var(--lijn, #d9d5cc); border-radius: 8px; padding: 8px 12px; }
+.bouwstijl > summary { cursor: pointer; font-weight: 600; }
+.bouwstijl > summary span { font-weight: 400; color: var(--zacht, #5d5a52); }
+.bouwstijl .uitleg { margin: 8px 0; font-size: 13px; color: var(--zacht, #5d5a52); }
+.stijlkaarten { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 8px; }
+.stijlkaart { display: block; text-align: left; padding: 9px 11px; border: 1px solid var(--lijn, #d9d5cc); border-radius: 8px; background: var(--papier, #fff); color: inherit; font: inherit; cursor: pointer; min-height: 44px; }
+.stijlkaart:hover { border-color: var(--accent); }
+.stijlkaart[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-zacht); box-shadow: inset 0 0 0 1px var(--accent); }
+.stijlkaart strong { display: block; font-size: 14px; }
+.stijlkaart small { display: block; margin-top: 3px; font-size: 12px; line-height: 1.35; color: var(--zacht, #5d5a52); }
 .drie-d-voortgang { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: color-mix(in srgb, var(--vlak) 92%, transparent); border: 1px solid var(--lijn); border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 18px rgba(0,0,0,.12); font-size: 14px; max-width: calc(100% - 24px); flex-wrap: wrap; justify-content: center; }
 .drie-d-voortgang progress { width: 160px; height: 8px; accent-color: var(--accent); }
 /* Echt 3D-model (proef): keuze met de benadering en uitleg linksboven, naamsvermelding (licentie) onderaan. */
@@ -595,6 +612,7 @@ main.catalogus { display: block; }
     <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="o-voor" class="voorvlak" tabindex="0" role="application" aria-label="Vooraanzicht: klik, sleep grepen of teken een element" xmlns="http://www.w3.org/2000/svg" hidden></svg>
     <div class="drie-d-vak" id="o-3d-vak" hidden><div id="o-3d" class="drie-d" hidden></div>
+      <figure id="o-3d-modelfoto" class="drie-d-foto" hidden><img alt="" /><figcaption></figcaption></figure>
       <div id="o-3d-echt" class="drie-d-echt" hidden>
         <div class="tabs intern" id="o-3d-echt-keuze" role="group" aria-label="Weergave van het model in 3D">
           <button type="button" data-echt="aan" aria-pressed="true">Echt 3D-model</button>
@@ -613,6 +631,7 @@ main.catalogus { display: block; }
       <button type="button" class="tweede" data-standpunt="boven">Boven</button>
       <button type="button" class="tweede" data-standpunt="achter">Achter</button>
       <button type="button" class="tweede" data-standpunt="ooghoogte" title="Zoals een staande klant de zetel ziet (155 cm)">Ooghoogte</button>
+      <button type="button" class="tweede" id="o-3d-fotoknop" aria-pressed="false" hidden title="Toon de productfoto naast de 3D, om het model te vergelijken en bij te stellen">Foto ernaast</button>
       <span class="klein">Sleep om te draaien, klik op een deel om het te kiezen, dubbelklik om erop in te zoomen. Verschuiven: rechtermuisknop, Shift + slepen of twee vingers. Zoomen: Ctrl (⌘) + scrollen of knijpen. Toetsenbord: pijltjes en + −.</span>
     </div>
     <div id="o-3d-stalen" class="drie-d-stalen" hidden></div>
@@ -648,6 +667,7 @@ main.catalogus { display: block; }
   </section>
   <section class="kaart" id="o-aanpassingen-kaart">
     <div class="kaartkop"><h2>Aanpassingen voor de hele zetel</h2><span class="klein">voor één element: klik erop</span></div>
+    <details id="o-bouwstijl" class="bouwstijl"></details>
     <div id="o-aanpassingen" class="aanpassingen"></div>
     <details class="ontwerpmodus modelvorm"><summary>Ontwerpmodus: vormgeving van het hele model (rugdikte, kussens, zachtheid, rugvorm, houten frame)</summary>
       <div id="o-vormgeving"></div>

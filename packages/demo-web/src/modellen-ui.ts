@@ -2,7 +2,8 @@
  * Collectie: modellen per familie met productfoto (indien beschikbaar), vooraanzicht en richtprijs.
  * "Kies en pas aan" laadt het model in de vrije ontwerper.
  */
-import { berekenOntwerp, tekenSvg, tekenVooraanzicht } from '../../core/src/index.js';
+import { berekenOntwerp, bouw3D, hoogtesVan, tekenSvg, tekenVooraanzicht } from '../../core/src/index.js';
+import { bouwstijlVan } from '../../core/voorbeelden/bouwstijlen.js';
 import { modelFamilies } from '../../core/voorbeelden/modellen.js';
 import { bewaarBestand } from './bewaren.js';
 import { bewaarDossier, dossierAlsBestand, dossierUitBestand, getDossiers, opDossiers, verwijderDossier, type Dossier, type OfferteGegevens } from './dossiers.js';
@@ -10,6 +11,27 @@ import { $, bevestigKnop, el, eur, getal, getCatalogus, getKorting, getMateriale
 import type { Ontwerp } from '../../core/src/index.js';
 
 const fotos = (window as unknown as { __FOTOS?: Record<string, string> }).__FOTOS ?? {};
+
+/**
+ * Voor het gereedschap in scripts/3d (controleblad, modelbeelden, lichtmeting): de collectie met de feiten per model,
+ * zoals de demo ze nu kent (bewaarde catalogus en eigen modellen inbegrepen). Leest alleen, wijzigt niets.
+ */
+(window as unknown as { __modellen?: () => unknown }).__modellen = () =>
+  getModellen().map((m) => {
+    const kader = bouw3D(m.ontwerp, getCatalogus(), getMaterialen()).kader;
+    const stof = getMaterialen().find((x) => x.code === m.ontwerp.hoofdmateriaal);
+    return {
+      code: m.code, naam: m.naam, familie: m.familie, omschrijving: m.omschrijving, bron: m.bron ?? '',
+      foto: m.foto ? fotos[m.foto] ?? null : null,
+      breedte: Math.round(kader.b), diepte: Math.round(kader.d), hoogte: Math.round(kader.h),
+      zithoogte: hoogtesVan(m.ontwerp, getCatalogus()).zithoogte,
+      bouwstijl: bouwstijlVan(m.ontwerp)?.label ?? null,
+      stof: stof?.naam ?? m.ontwerp.hoofdmateriaal, kleur: stof?.kleur ?? null,
+      prijs: berekenOntwerp(m.ontwerp, getCatalogus(), getMaterialen(), { kortingProcent: getKorting() }).prijs.brutoprijsExcl,
+    };
+  });
+/** Voor de lichtmeting (scripts/3d/lichtmeting.mjs): de stoffen met hun kleur, om het beeld met de staal te vergelijken. */
+(window as unknown as { __stoffen?: () => unknown }).__stoffen = () => getMaterialen().map((m) => ({ code: m.code, naam: m.naam, kleur: m.kleur }));
 let familie = modelFamilies[0]!;
 /** Geen familie van modellen maar de eigen bewaarde ontwerpen (in deze browser). */
 const MIJN = 'Mijn ontwerpen';

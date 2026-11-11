@@ -30,6 +30,7 @@ NOTITIES = {
     '.claude/skills/zetel-3d/SKILL.md': ('Skill - 3D-logica zetels', ['configurator', 'zetels', 'skill', '3d'], ZETELS),
     'docs/3d-technieken.md': ('3D-technieken - kennisbank', ['configurator', '3d', 'kennis', 'zetels', 'bouw'], 'alle'),
     'docs/vergelijking-website-1011.md': ('Zetels naast de productfoto\'s (10-11)', ['configurator', 'zetels', '3d', 'klant'], ZETELS),
+    'docs/werkwijze-3d.md': ('3D-werkwijze - heranalyse en nieuwe aanpak', ['configurator', '3d', 'werkwijze'], ZETELS),
     'docs/zachte-vormen.md': ('Zachte vormen - zetels in 3D', ['configurator', 'zetels', '3d'], ZETELS),
     'docs/echte-3d-modellen.md': ('Echte 3D-modellen - proef', ['configurator', 'zetels', '3d', 'onderzoek'], ZETELS),
     'docs/proeven/3d-motor-proeven-0411.md': ('Proeven 3D-motor (WebGPU, glas, weefsel)', ['configurator', '3d', 'proef', 'webgpu'], 'alle'),

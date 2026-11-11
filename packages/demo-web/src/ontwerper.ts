@@ -34,6 +34,7 @@ import {
   type Scene3D,
 } from '../../core/src/index.js';
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
+import { bouwstijlen, bouwstijlVan, pasBouwstijlToe } from '../../core/voorbeelden/bouwstijlen.js';
 import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type EchtToestand, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { kleurStaal, maakStalenkaart, materiaalOptiesPerCollectie, perCollectie } from './stalen.js';
@@ -131,6 +132,54 @@ function gewijzigd() {
   bewaar(SLEUTEL, JSON.stringify(ontwerp));
   herbereken();
   toonBewaarStatus();
+  toonBouwstijl();
+  toonFotoErnaast();
+}
+
+// ---------- Bouwstijl: het karakter van de zetel in één keuze ----------
+/**
+ * Keuzekaarten voor de bouwstijlen (core/voorbeelden/bouwstijlen.ts). Eén klik zet poten, onderbouw, kussens en rug
+ * samen goed; elementen, stof en hout blijven. De samenvatting toont de stijl die nu geldt, of "eigen samenstelling"
+ * zodra er iets van afwijkt. Ongedaan maken werkt zoals bij elke andere wijziging.
+ */
+function toonBouwstijl() {
+  const vak = document.querySelector<HTMLDetailsElement>('#o-bouwstijl');
+  if (!vak) return;
+  const actief = bouwstijlVan(ontwerp);
+  const kop = el('summary', {});
+  kop.append('Bouwstijl: ', el('span', {}, actief ? actief.label : 'eigen samenstelling (kies een karakter in één klik)'));
+  const kaarten = el('div', { class: 'stijlkaarten' });
+  for (const s of bouwstijlen) {
+    const kaart = el('button', { type: 'button', class: 'stijlkaart', 'aria-pressed': String(actief?.code === s.code), title: s.kenmerken.join(' · ') });
+    kaart.append(el('strong', {}, s.label), el('small', {}, s.uitleg));
+    kaart.addEventListener('click', () => {
+      onthoud();
+      herstel(JSON.stringify(pasBouwstijlToe(ontwerp, s)));
+    });
+    kaarten.append(kaart);
+  }
+  vak.replaceChildren(kop, el('p', { class: 'uitleg' }, 'Een bouwstijl zet poten, onderbouw, zitkussens en rug in één keer goed. Elementen, maten, stof en hout blijven zoals ze zijn. Daarna kunt u elke keuze hieronder nog bijstellen.'), kaarten);
+}
+
+// ---------- Productfoto naast de 3D ----------
+const modelfotos = (window as unknown as { __FOTOS?: Record<string, string> }).__FOTOS ?? {};
+const SLEUTEL_FOTO = 'configurator-demo.3d-foto.v1';
+let fotoErnaast = laad(SLEUTEL_FOTO) === '1';
+/** Toont de productfoto van het model in de hoek van de 3D (knop "Foto ernaast"), om te vergelijken en bij te stellen. */
+function toonFotoErnaast() {
+  const knop = document.querySelector<HTMLButtonElement>('#o-3d-fotoknop'), fig = document.querySelector<HTMLElement>('#o-3d-modelfoto');
+  if (!knop || !fig) return;
+  const model = getModellen().find((x) => x.code === ontwerp.model);
+  const foto = model?.foto ? modelfotos[model.foto] : undefined;
+  knop.hidden = !foto;
+  knop.setAttribute('aria-pressed', String(fotoErnaast));
+  fig.hidden = !foto || !fotoErnaast;
+  if (foto && model) {
+    const img = fig.querySelector('img')!;
+    if (img.getAttribute('src') !== foto) img.src = foto;
+    img.alt = `Productfoto ${model.naam}`;
+    fig.querySelector('figcaption')!.textContent = `${model.naam}: ${model.fotoBijschrift ?? 'foto website'}`;
+  }
 }
 
 // ---------- Mijn ontwerpen: bewaren onder een naam ----------
@@ -1920,6 +1969,11 @@ export function startOntwerper() {
     kiesWeergave();
   });
   breedScherm.addEventListener('change', () => kiesWeergave());
+  document.querySelector<HTMLButtonElement>('#o-3d-fotoknop')?.addEventListener('click', () => {
+    fotoErnaast = !fotoErnaast;
+    bewaar(SLEUTEL_FOTO, fotoErnaast ? '1' : '0');
+    toonFotoErnaast();
+  });
   document.querySelectorAll<HTMLButtonElement>('[data-standpunt]').forEach((b) =>
     b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as Standpunt)),
   );
@@ -1992,4 +2046,6 @@ export function startOntwerper() {
   toonOngedaan();
   herbereken();
   toonEigenschappen();
+  toonBouwstijl();
+  toonFotoErnaast();
 }

@@ -1,6 +1,7 @@
 # 3D-technieken: wat werkt waarvoor (kennisbank)
 
-*Stand 11/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
+*Stand 11/11/2026.* **De werkwijze zelf (zes vaste stappen, bouwstijlen, gereedschap) staat in `docs/werkwijze-3d.md`.**
+Dit document is de naslag erbij: wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
 meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat in de notities onderaan.
 
 ## De technieken op een rij

@@ -133,6 +133,14 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - **Kuipvormen:** `koepel` (Tumble: ronde zitting, dikke rug rond de achterste helft), `trommel` (dunne wand, halve omtrek, brede kussens), `schelp` (ovaal rugkussen, boog 66). Een bewaarde catalogus wordt bijgewerkt in `staat.ts` (`metNieuweKuipvormen`).
 - **Decor Salon** (`DECORS.salon`): de standaard sinds 10/11; `instellingen3D()` zet een bewaarde standaard *Studio* één keer om (vlag `kamer`).
 
+## Werkwijze en gereedschap (heranalyse 11/11)
+Volg `docs/werkwijze-3d.md`: bron verzamelen → opbouw benoemen en bouwstijl kiezen → maten → afwijkingen → controleblad → vastleggen.
+- **Bouwstijlen** (`core/voorbeelden/bouwstijlen.ts`): `bouwstijlen`, `pasBouwstijlToe(ontwerp, stijl)` (vervangt de keuzes van `STIJLGROEPEN` en de vormgeving van de zetel; elementen, stof en hout blijven), `bouwstijlVan(ontwerp)` (welke stijl geldt nu). In de demo: `toonBouwstijl()` in ontwerper.ts (`#o-bouwstijl`), toepassen via `onthoud()` en `herstel()`.
+- **Foto ernaast:** `toonFotoErnaast()` (`#o-3d-foto`, knop `#o-3d-fotoknop`), alleen bij een model met een foto in `window.__FOTOS`.
+- **Gereedschap** (`scripts/3d`, uitvoer in `werkbank/`): `werkbank.mjs` is de enige plaats die de bediening van de demo kent (`openDemo`, `openModel`, `zetInstellingen`, `neemBeeld`, `leesModellen`, `leesKeuzes`, `leesLijst`, `STANDPUNTEN`). Verandert een knop of lijst in de demo, pas het daar aan. `controleblad.mjs`, `modelbeelden.mjs` en `lichtmeting.mjs` bouwen daarop; `modelfotos.py` haalt foto's en maten op.
+- **Haken in de demo voor het gereedschap:** `window.__zetel3d` (weergave), `window.__modellen()` (collectie met maten, bron, foto, bouwstijl, stof) en `window.__stoffen()` (kleur per stof), beide in modellen-ui.ts.
+- **Regel:** maak geen wegwerpscript om beelden te vergelijken; voeg een optie toe aan `scripts/3d`.
+
 ## Kussens zoals ze genaaid zijn, onderbouw, poten en licht (kritische ronde 11/11)
 Verslag: `docs/vergelijking-website-1011.md` (ronde 2) en `docs/3d-technieken.md` (wat we overnemen van 3D-tekenaars).
 - **Zitkussen = plat onderaan, scherp in het grondvlak, zacht bovenaan.** `Blok.afrondingOnder` (ruimtelijk.ts, `zitKussenVorm`: 1,5 + 0,3 × zachtheid) naast `afronding` (1,5 + 0,9 × zachtheid). In `kussenGeometrie` (drie-d.ts) krijgt de onderste helft de kleine straal; de bovenste helft wordt met de grote straal afgerond en daarna in het grondvlak hoekiger getrokken met een superellips (`pHoek`), zodat boven en onder op elkaar passen. De normaal gaat mee met de omgekeerd getransponeerde van die vervorming. **Gebruik nooit één grote afronding voor een zitkussen**: dat gaf de zeepvorm waardoor alle zetels op elkaar leken.

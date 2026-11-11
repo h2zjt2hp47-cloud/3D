@@ -80,6 +80,9 @@ Ross, Sullivan, Fraser, Amusette fauteuil, Mabel 2-zit en Meridienne, de zetelbe
 
 ## 7. Werkwijze (om te herhalen)
 
+> Sinds de heranalyse van 11/11 staat de werkwijze, met vast gereedschap, in `docs/werkwijze-3d.md`. De stappen hieronder
+> zijn de eerste versie.
+
 1. Haal de grote foto's van de productpagina (`…_orig.jpg`) in een eigen map buiten de repo.
 2. Meet op de foto de verhouding breedte : hoogte en leg ze naast de maten van de pagina. Staat de breedte er niet, leid ze af uit een hoogte die er wel staat, en markeer ze als benadering.
 3. Render het model vanuit hetzelfde standpunt: `window.__zetel3d.kijk({ hoekH, hoekV, afstand })` zet de camera exact.
