@@ -1,0 +1,12 @@
+{
+  "name": "@configurator/werkbank-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "De 3D-werkbank: één pagina die elke bron (zetels, inrichting, ramen, woning …) in 3D toont, voor het gereedschap in scripts/3d en om zelf door de collecties te bladeren.",
+  "scripts": {
+    "build": "node bouw.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "echo geen tests"
+  }
+}

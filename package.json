@@ -11,7 +11,9 @@
     "beelden": "node scripts/beeldvergelijking.mjs",
     "modelbeelden": "node scripts/3d/modelbeelden.mjs",
     "controleblad": "node scripts/3d/controleblad.mjs",
-    "lichtmeting": "node scripts/3d/lichtmeting.mjs"
+    "lichtmeting": "node scripts/3d/lichtmeting.mjs",
+    "toestelcontrole": "node scripts/3d/toestelcontrole.mjs",
+    "werkbank": "npm run build -w @configurator/werkbank-web"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",

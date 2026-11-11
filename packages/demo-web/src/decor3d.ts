@@ -41,7 +41,6 @@ export interface DecorHulp {
   houtNerf: (hex: string) => any;
   weefselCanvas: (w: any, hex: string) => HTMLCanvasElement;
   bladVorm: () => any;
-  omgeving: number;
   /** Avond: binnen gedimd, buiten donker, lampen aan. */
   avond: boolean;
 }
@@ -64,7 +63,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
   const delen: any[] = [];
   const wanden: DecorResultaat['wanden'] = [];
   const mat = (kleurHex: string, ruw = 0.85, extra: Record<string, unknown> = {}) =>
-    new T.MeshStandardMaterial({ color: h.kleur(kleurHex), roughness: ruw, envMapIntensity: h.omgeving, ...extra });
+    new T.MeshStandardMaterial({ color: h.kleur(kleurHex), roughness: ruw, ...extra });
   const voeg = (m: any, schaduw = true, groep?: any) => {
     m.castShadow = schaduw;
     m.receiveShadow = true;
@@ -99,13 +98,13 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
     if (m.soort === 'steen') {
       const t = h.baksteen(m.kleur, '#c7bfb2');
       t.repeat.set(1 / 88, 1 / 60); // UV in cm, steen-tegel 88 × 60 cm
-      return new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: t, envMapIntensity: h.omgeving * 0.8 });
+      return new T.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: t });
     }
     // Verf of beton: lichte pleisterstructuur op grote schaal.
     const t = h.pleister(m.kleur);
     // Verf: een fijne korrel (tegel van 70 cm). Tot 11/11 was dat 200 cm: de korrels werden vlekjes van ±2,5 cm, als terrazzo.
     t.repeat.set(1 / (m.soort === 'beton' ? 120 : 70), 1 / (m.soort === 'beton' ? 120 : 70));
-    return new T.MeshStandardMaterial({ color: 0xffffff, roughness: m.soort === 'beton' ? 0.8 : 0.95, map: t, envMapIntensity: h.omgeving * 0.8 });
+    return new T.MeshStandardMaterial({ color: 0xffffff, roughness: m.soort === 'beton' ? 0.8 : 0.95, map: t });
   })();
   const plintMat = mat(dc.afwerking?.kleur ?? '#f3f0ea', 0.6);
   /** Wand als vlak (eventueel met een raamopening), in lokale coördinaten u (breedte) en v (hoogte). */
@@ -154,7 +153,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
       blok(breed, 8, 4, (xL + xR) / 2, H - 8, muurZ + 2, am, false, achter); // kroonlijst
     } else if (dc.afwerking?.soort === 'latten') {
       // Houten latten achter de zetel (Japandi).
-      const lm = new T.MeshStandardMaterial({ color: 0xffffff, map: h.houtNerf(dc.afwerking.kleur), roughness: 0.6, envMapIntensity: h.omgeving });
+      const lm = new T.MeshStandardMaterial({ color: 0xffffff, map: h.houtNerf(dc.afwerking.kleur), roughness: 0.6 });
       const lb = Math.min(breed - 60, k.b + 120), x0 = midX - lb / 2;
       blok(lb, 236, 1.2, midX, 0, muurZ + 0.6, mat(h.tint(dc.afwerking.kleur, 0.55), 0.9), false, achter);
       for (let x = x0 + 2; x < x0 + lb - 2; x += 7) blok(4, 236, 3, x + 2, 0, muurZ + 2.7, lm, true, achter);
@@ -189,13 +188,13 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
         if (dc.raam.kader === '#1f1f1f') for (const f of [0.33, 0.66]) blok(8, 2.5, rb, xR + 2, borst + rh * f, raamZ, km, true, zijde);
         blok(16, 3, rb + 24, xR - 4, borst - 3, raamZ, mat(dc.afwerking?.kleur ?? '#f1ede6', 0.5), true, zijde);
         // Glas: licht en bijna onzichtbaar.
-        const glas = new T.Mesh(new T.PlaneGeometry(rb, rh), new T.MeshPhysicalMaterial({ color: 0xf2f7f9, roughness: 0.03, metalness: 0, transmission: 1, ior: 1.5, thickness: 0.6, envMapIntensity: 1 }));
+        const glas = new T.Mesh(new T.PlaneGeometry(rb, rh), new T.MeshPhysicalMaterial({ color: 0xf2f7f9, roughness: 0.03, metalness: 0, transmission: 1, ior: 1.5, thickness: 0.6 }));
         glas.rotation.y = -Math.PI / 2;
         glas.position.set(xR + 3, borst + rh / 2, raamZ);
         zijde.add(glas);
         // Gordijnen: geplooide stof aan weerszijden van het raam.
         if (dc.raam.gordijn) {
-          const gm = new T.MeshStandardMaterial({ color: h.kleur(dc.raam.gordijn), roughness: 0.95, side: T.DoubleSide, envMapIntensity: h.omgeving, transparent: true, opacity: 0.94 });
+          const gm = new T.MeshStandardMaterial({ color: h.kleur(dc.raam.gordijn), roughness: 0.95, side: T.DoubleSide, transparent: true, opacity: 0.94 });
           for (const kant of [-1, 1]) {
             const gb = 55, gh = H - 12;
             const geo = new T.PlaneGeometry(gb, gh, 28, 1);
@@ -239,12 +238,12 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
     haagTex.wrapS = haagTex.wrapT = T.RepeatWrapping;
     haagTex.colorSpace = T.SRGBColorSpace;
     haagTex.repeat.set(breed / 30, 4);
-    const haag = new T.Mesh(new T.BoxGeometry(breed, 150, 60), new T.MeshStandardMaterial({ color: 0xffffff, map: haagTex, roughness: 1, envMapIntensity: h.omgeving }));
+    const haag = new T.Mesh(new T.BoxGeometry(breed, 150, 60), new T.MeshStandardMaterial({ color: 0xffffff, map: haagTex, roughness: 1 }));
     haag.position.set(midX, 75, muurZ - 30);
     voeg(haag);
     const bak = mat('#7d756b', 0.85);
     // Bloembakken met een bolle struik.
-    const struik = new T.MeshStandardMaterial({ color: 0xffffff, map: haagTex, roughness: 1, envMapIntensity: h.omgeving });
+    const struik = new T.MeshStandardMaterial({ color: 0xffffff, map: haagTex, roughness: 1 });
     for (const x of [xL + 60, xR - 60]) {
       blok(70, 45, 70, x, 0, muurZ + 50, bak);
       const bol = voeg(new T.Mesh(new T.SphereGeometry(36, 24, 16), struik));
@@ -272,7 +271,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
     const relief = new T.CanvasTexture(h.weefselCanvas('wol', '#8c8c8c'));
     relief.wrapS = relief.wrapT = T.RepeatWrapping;
     relief.repeat.set(tb / 8, td / 8);
-    const tm = new T.MeshStandardMaterial({ color: 0xffffff, map: tex, bumpMap: relief, bumpScale: 0.6, roughness: 1, envMapIntensity: h.omgeving * 0.6 });
+    const tm = new T.MeshStandardMaterial({ color: 0xffffff, map: tex, bumpMap: relief, bumpScale: 0.6, roughness: 1 });
     const geo = rond ? new T.CylinderGeometry(tb / 2, tb / 2, 1.2, 72) : new T.BoxGeometry(tb, 1.2, td);
     if (rond) {
       // Bovenvlak van de cilinder: UV van het grondvlak.
@@ -288,12 +287,12 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
 
   // ---------- salontafel (met boeken of een vaas) ----------
   const tz = k.z + k.d + 55, tx = midX;
-  const houtMat = (hex: string) => new T.MeshStandardMaterial({ color: 0xffffff, map: h.houtNerf(hex), roughness: 0.5, envMapIntensity: h.omgeving });
+  const houtMat = (hex: string) => new T.MeshStandardMaterial({ color: 0xffffff, map: h.houtNerf(hex), roughness: 0.5 });
   let tafelTop = 0;
   switch (dc.tafel) {
     case 'travertin': {
       const st = steenTex(h, '#d9ccb4', 'travertin');
-      cil(45, 45, 36, tx, 0, tz, new T.MeshStandardMaterial({ color: 0xffffff, map: st, roughness: 0.7, envMapIntensity: h.omgeving }), 64);
+      cil(45, 45, 36, tx, 0, tz, new T.MeshStandardMaterial({ color: 0xffffff, map: st, roughness: 0.7 }), 64);
       tafelTop = 36;
       break;
     }
@@ -314,7 +313,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
     }
     case 'marmer': {
       const st = steenTex(h, '#ece9e4', 'marmer');
-      blok(110, 2.5, 60, tx, 40, tz, new T.MeshStandardMaterial({ color: 0xffffff, map: st, roughness: 0.25, envMapIntensity: h.omgeving * 1.2 }));
+      blok(110, 2.5, 60, tx, 40, tz, new T.MeshStandardMaterial({ color: 0xffffff, map: st, roughness: 0.25 }));
       const messing = mat('#b8954f', 0.3, { metalness: 0.85 });
       blok(104, 1.2, 1.2, tx, 39, tz - 27, messing); blok(104, 1.2, 1.2, tx, 39, tz + 27, messing);
       for (const [dx, dz] of [[-52, -27], [52, -27], [-52, 27], [52, 27]] as const) blok(1.4, 39, 1.4, tx + dx, 0, tz + dz, messing);
@@ -324,7 +323,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
     case 'metaal': {
       const zw = mat('#1e1e1e', 0.45, { metalness: 0.6 });
       const st = steenTex(h, '#6f6c68', 'beton');
-      blok(100, 3, 100, tx, 34, tz + 10, new T.MeshStandardMaterial({ color: 0xffffff, map: st, roughness: 0.6, envMapIntensity: h.omgeving }));
+      blok(100, 3, 100, tx, 34, tz + 10, new T.MeshStandardMaterial({ color: 0xffffff, map: st, roughness: 0.6 }));
       for (const [dx, dz] of [[-46, -36], [46, -36], [-46, 56], [46, 56]] as const) blok(2.5, 34, 2.5, tx + dx, 0, tz + dz, zw);
       tafelTop = 37;
       break;
@@ -366,7 +365,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
   // ---------- lamp ----------
   const lx = k.x + k.b + 45, lz = k.z + 15;
   const metaal = mat('#2b2b2b', 0.35, { metalness: 0.7 });
-  const kapMat = (kl: string) => new T.MeshStandardMaterial({ color: h.kleur(kl), roughness: 0.9, side: T.DoubleSide, emissive: h.kleur('#ffd9a8'), emissiveIntensity: h.avond ? 0.7 : 0, envMapIntensity: h.omgeving });
+  const kapMat = (kl: string) => new T.MeshStandardMaterial({ color: h.kleur(kl), roughness: 0.9, side: T.DoubleSide, emissive: h.kleur('#ffd9a8'), emissiveIntensity: h.avond ? 0.7 : 0 });
   switch (dc.lamp) {
     case 'staand':
       cil(14, 15, 2, lx, 0, lz, metaal, 28);
@@ -395,7 +394,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
       voeg(new T.Mesh(new T.TubeGeometry(curve, 60, 1.1, 8, false), metaal), false);
       blok(30, 6, 30, lx + 10, 0, lz + 30, mat('#e8e4dc', 0.3), true);
       const eind = pts[pts.length - 1];
-      const kap = voeg(new T.Mesh(new T.SphereGeometry(20, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshStandardMaterial({ color: h.kleur('#1f1f1f'), metalness: 0.6, roughness: 0.35, side: T.DoubleSide, envMapIntensity: h.omgeving })), false);
+      const kap = voeg(new T.Mesh(new T.SphereGeometry(20, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), new T.MeshStandardMaterial({ color: h.kleur('#1f1f1f'), metalness: 0.6, roughness: 0.35, side: T.DoubleSide })), false);
       kap.position.set(eind.x, eind.y - 4, eind.z);
       lamp = [eind.x, eind.y - 12, eind.z];
       break;
@@ -408,7 +407,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
       const p = geo.attributes.position;
       for (let i = 0; i < p.count; i++) { const y = p.getY(i) / 23; const f = 0.55 + 0.45 * Math.sqrt(Math.max(0, 1 - y * y)); p.setX(i, p.getX(i) * f); p.setZ(i, p.getZ(i) * f); }
       geo.computeVertexNormals();
-      const lant = voeg(new T.Mesh(geo, new T.MeshStandardMaterial({ color: h.kleur('#f6f1e6'), roughness: 0.9, emissive: h.kleur('#ffe2b8'), emissiveIntensity: h.avond ? 0.8 : 0.08, envMapIntensity: h.omgeving })), false);
+      const lant = voeg(new T.Mesh(geo, new T.MeshStandardMaterial({ color: h.kleur('#f6f1e6'), roughness: 0.9, emissive: h.kleur('#ffe2b8'), emissiveIntensity: h.avond ? 0.8 : 0.08 })), false);
       lant.position.set(lx, 128, lz);
       lamp = [lx, 128, lz];
       break;
@@ -454,7 +453,7 @@ export function bouwDecor(h: DecorHulp, dc: DecorSpec, k: Kader, spullen: boolea
     const lijstDik = dc.kunst.stijl === 'klassiek' ? 6 : 2.5;
     const groep = wanden[0]?.obj;
     blok(kb + 2 * lijstDik, kh + 2 * lijstDik, 3.5, midX, ky - lijstDik, muurZ + 1.75, mat(dc.kunst.lijst, dc.kunst.stijl === 'klassiek' ? 0.35 : 0.6, dc.kunst.stijl === 'klassiek' ? { metalness: 0.7 } : {}), true, groep);
-    const vlak = new T.Mesh(new T.PlaneGeometry(kb, kh), new T.MeshStandardMaterial({ color: 0xffffff, map: doek, roughness: 0.85, envMapIntensity: h.omgeving }));
+    const vlak = new T.Mesh(new T.PlaneGeometry(kb, kh), new T.MeshStandardMaterial({ color: 0xffffff, map: doek, roughness: 0.85 }));
     vlak.position.set(midX, ky + kh / 2, muurZ + 3.6);
     voeg(vlak, false, groep);
   }

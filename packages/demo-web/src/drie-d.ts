@@ -54,6 +54,27 @@ export interface Viewer3D {
   /** Element in de 3D aanduiden met een kader (null = niets). */
   markeer?(id: string | null): void;
   formaat(): void;
+  /**
+   * Wacht tot het beeld af is: de weergave gestart, alles geladen (stoffoto's, 3D-bestanden), de zachte vormen berekend,
+   * het decor opgebouwd, de camera op zijn eindpunt en de schaduw bijgewerkt. Daarna staat het definitieve beeld op het
+   * canvas. Voor gereedschap en tests (scripts/3d): geen vaste wachttijden meer, en geen half afgewerkt beeld.
+   */
+  stil?(): Promise<void>;
+  /** Cijfers van de weergave, om te meten in plaats van te gokken (zie Info3D). */
+  info?(): Info3D;
+}
+
+/** Wat de weergave over zichzelf weet: de weg (WebGPU of WebGL2) en de belasting van het laatste beeld. */
+export interface Info3D {
+  weg: 'webgpu' | 'webgl2';
+  /** Aantal tekenopdrachten en driehoeken van het laatste beeld. */
+  tekenbeurten: number;
+  driehoeken: number;
+  /** Wat in het geheugen van de grafische kaart staat: loopt dit op bij elke wijziging, dan is er een lek. */
+  geometrieen: number;
+  texturen: number;
+  /** Onderdelen in de scène van het product (zonder decor). */
+  onderdelen: number;
 }
 
 export type Standpunt = 'schuin' | 'voor' | 'boven' | 'zij' | 'achter' | 'ooghoogte';
@@ -154,27 +175,31 @@ export const DECORS = {
 } satisfies Record<string, DecorSpec>;
 export type DecorNaam = keyof typeof DECORS;
 
-/** Lichtsferen: zon (kleur, sterkte, hoogte), hemellicht, omgevingslicht en een warme lamp. */
+/**
+ * Lichtsferen: zon (kleur, sterkte, hoogte), hemellicht, omgevingslicht en een warme lamp.
+ * `omgeving` is de echte sterkte van het omgevingsbeeld (three.js: `scene.environmentIntensity`, 1 = vol). `omgevingFoto`
+ * is de sterkte in de fotomodus (path tracing), die het omgevingsbeeld zwaarder laat doorwegen.
+ */
 export const LICHTEN = {
   studio: {
-    label: 'Studio', zon: '#ffffff', zonSterkte: 0.8, hoogte: 1.6, hemel: 0.34, hemelKleur: '#ffffff', omgeving: 0.5, lamp: 0,
+    label: 'Studio', zon: '#ffffff', zonSterkte: 0.8, hoogte: 1.6, hemel: 0.34, hemelKleur: '#ffffff', omgeving: 1, omgevingFoto: 0.5, lamp: 0,
     // Omgevingsbeeld (lineaire HDR-waarden): wanden, vloer en lichtbronnen (richting, hoekstraal in graden, sterkte, kleur).
     hdr: { boven: [0.11, 0.1, 0.095], onder: [0.04, 0.037, 0.034], bronnen: [[[0, 1, 0.1], 28, 2.6, [1, 1, 0.97]], [[-0.95, 0.32, 0.3], 19, 1.6, [1, 1, 0.97]], [[0.95, 0.24, -0.3], 16, 0.8, [1, 1, 0.97]], [[0.1, 0.2, 0.97], 22, 0.9, [1, 1, 0.97]]] },
   },
   daglicht: {
-    label: 'Daglicht', zon: '#fff3e2', zonSterkte: 1.05, hoogte: 0.9, hemel: 0.3, hemelKleur: '#dde8ff', omgeving: 0.45, lamp: 0,
+    label: 'Daglicht', zon: '#fff3e2', zonSterkte: 1.05, hoogte: 0.9, hemel: 0.3, hemelKleur: '#dde8ff', omgeving: 1, omgevingFoto: 0.45, lamp: 0,
     hdr: { boven: [0.35, 0.45, 0.62], onder: [0.06, 0.05, 0.04], bronnen: [[[-0.8, 0.25, 0.55], 30, 3.2, [1, 0.98, 0.95]], [[0, 1, 0], 45, 0.9, [0.75, 0.85, 1]], [[0.9, 0.2, 0.4], 14, 0.6, [1, 1, 1]]] },
   },
   ochtend: {
-    label: 'Ochtend (zacht)', zon: '#ffe2c0', zonSterkte: 0.7, hoogte: 0.55, hemel: 0.36, hemelKleur: '#e6ecff', omgeving: 0.6, lamp: 0,
+    label: 'Ochtend (zacht)', zon: '#ffe2c0', zonSterkte: 0.7, hoogte: 0.55, hemel: 0.36, hemelKleur: '#e6ecff', omgeving: 1, omgevingFoto: 0.6, lamp: 0,
     hdr: { boven: [0.3, 0.33, 0.42], onder: [0.06, 0.055, 0.05], bronnen: [[[-0.9, 0.12, 0.4], 34, 2.2, [1, 0.9, 0.78]], [[0, 1, 0], 50, 0.7, [0.85, 0.9, 1]]] },
   },
   bewolkt: {
-    label: 'Bewolkt (diffuus)', zon: '#f2f4f7', zonSterkte: 0.25, hoogte: 1.8, hemel: 0.5, hemelKleur: '#eef2f8', omgeving: 0.75, lamp: 0,
+    label: 'Bewolkt (diffuus)', zon: '#f2f4f7', zonSterkte: 0.25, hoogte: 1.8, hemel: 0.5, hemelKleur: '#eef2f8', omgeving: 1, omgevingFoto: 0.75, lamp: 0,
     hdr: { boven: [0.55, 0.57, 0.6], onder: [0.08, 0.08, 0.08], bronnen: [[[0, 1, 0], 70, 1.2, [1, 1, 1]]] },
   },
   avond: {
-    label: 'Avond', zon: '#ffc994', zonSterkte: 0.4, hoogte: 0.5, hemel: 0.18, hemelKleur: '#bcb1a6', omgeving: 0.32, lamp: 1,
+    label: 'Avond', zon: '#ffc994', zonSterkte: 0.4, hoogte: 0.5, hemel: 0.18, hemelKleur: '#bcb1a6', omgeving: 1, omgevingFoto: 0.32, lamp: 1,
     // Zonder wanden (studio, terras): een donkere, warme achtergrond waarin de vloer wegloopt (gedimde fotostudio).
     achtergrond: '#2f2925',
     hdr: { boven: [0.06, 0.05, 0.043], onder: [0.022, 0.018, 0.015], bronnen: [[[0.85, 0.5, -0.2], 18, 3, [1, 0.8, 0.6]], [[-0.9, 0.2, 0.3], 22, 0.3, [0.7, 0.74, 0.9]]] },
@@ -182,12 +207,12 @@ export const LICHTEN = {
   fotostudio: {
     // Echte omgeving (HDRI, CC0, zie demo-web/omgeving/BRON.md): scherpere, echte spiegelingen. Zonder het bestand
     // (bv. in de bouwdemo) het zelfgemaakte studiobeeld hieronder.
-    label: 'Fotostudio (echte omgeving)', zon: '#ffffff', zonSterkte: 0.7, hoogte: 1.6, hemel: 0.3, hemelKleur: '#ffffff', omgeving: 0.5, lamp: 0,
+    label: 'Fotostudio (echte omgeving)', zon: '#ffffff', zonSterkte: 0.7, hoogte: 1.6, hemel: 0.3, hemelKleur: '#ffffff', omgeving: 1, omgevingFoto: 0.5, lamp: 0,
     hdri: 'studio_small_09',
     hdr: { boven: [0.11, 0.1, 0.095], onder: [0.04, 0.037, 0.034], bronnen: [[[0, 1, 0.1], 28, 2.6, [1, 1, 0.97]], [[-0.95, 0.32, 0.3], 19, 1.6, [1, 1, 0.97]], [[0.95, 0.24, -0.3], 16, 0.8, [1, 1, 0.97]], [[0.1, 0.2, 0.97], 22, 0.9, [1, 1, 0.97]]] },
   },
   spots: {
-    label: 'Toonzaal (spots)', zon: '#fff6ea', zonSterkte: 0.95, hoogte: 2.2, hemel: 0.18, hemelKleur: '#fff8f0', omgeving: 0.4, lamp: 0,
+    label: 'Toonzaal (spots)', zon: '#fff6ea', zonSterkte: 0.95, hoogte: 2.2, hemel: 0.18, hemelKleur: '#fff8f0', omgeving: 1, omgevingFoto: 0.4, lamp: 0,
     hdr: { boven: [0.05, 0.048, 0.045], onder: [0.03, 0.028, 0.026], bronnen: [[[-0.3, 0.95, 0.2], 9, 9, [1, 0.95, 0.88]], [[0.35, 0.94, 0.1], 9, 9, [1, 0.95, 0.88]], [[0, 0.3, 1], 30, 0.5, [1, 1, 1]]] },
   },
 } as const;
@@ -202,22 +227,30 @@ export type LichtNaam = keyof typeof LICHTEN;
  * Gemeten na de ijking (middengrijs, lineair t.o.v. de staal, bovenkant / voorkant): studio 1,46 / 0,89 · daglicht
  * 1,28 / 0,95 · ochtend 1,17 / 0,90 · fotostudio 1,26 / 0,89 · toonzaal 1,5 / 0,64 (bewust contrastrijk).
  *
- * Let op (gevonden op 11/11 bij het nameten van Bewolkt): sinds de overstap naar WebGPU (4/11) telt `omgeving` niet meer
- * mee voor het licht. three.js leest de sterkte van het omgevingsbeeld van de scène uit `scene.environmentIntensity`;
- * `envMapIntensity` van een materiaal geldt alleen nog voor een eigen omgevingsbeeld van dat materiaal. Het omgevingslicht
- * staat dus in elke sfeer op volle sterkte (daarom waren bovenkanten zo fel). De ijking hierboven is met die volle sterkte
- * gemeten en blijft dus kloppen. `omgevingslicht` zet de echte sterkte (1 = vol); alleen Bewolkt gebruikt het, omdat zijn
- * omgevingsbeeld het helderst is. Gemeten voor Bewolkt (lineair t.o.v. de staal): bovenkant = belichting × (1,82 ×
- * omgevingslicht + hemel + 0,6 × zon), voorkant = belichting × (0,65 × omgevingslicht + 0,75 × hemel + 0,3 × zon).
- * Een volgende stap is `omgeving` overal weer te laten werken en alle sferen opnieuw te ijken (ook de bouwdemo).
+ * Omgevingslicht (opgeruimd op 11/11): three.js leest de sterkte van het omgevingsbeeld uit `scene.environmentIntensity`;
+ * `envMapIntensity` van een materiaal telt niet meer mee (sinds WebGPURenderer, 4/11). Vroeger stond die waarde op elk
+ * materiaal en in elke sfeer, zonder effect: het omgevingslicht stond overal op volle sterkte. Nu is er nog één
+ * instelling, `omgeving` (1 = vol), die doet wat ze zegt. De ijking is met volle sterkte gemeten en blijft kloppen; alleen
+ * Bewolkt dempt (0,25), omdat zijn omgevingsbeeld het helderst is. Gemeten voor Bewolkt (lineair t.o.v. de staal):
+ * bovenkant = belichting × (1,82 × omgeving + hemel + 0,6 × zon), voorkant = belichting × (0,65 × omgeving + 0,75 × hemel
+ * + 0,3 × zon). Nameten: `npm run lichtmeting` (ook voor de bouwdemo: `-- --bron ijk-bouw`).
  */
-const ZETEL_LICHT: Partial<Record<LichtNaam, { zonSterkte?: number; hemel?: number; omgeving?: number; hoogte?: number; belichting?: number; omgevingslicht?: number }>> = {
-  studio: { zonSterkte: 0.78, hemel: 0.04, omgeving: 0.36, hoogte: 0.8 },
-  daglicht: { zonSterkte: 0.85, hemel: 0.12, omgeving: 0.3, belichting: 0.72 },
+const ZETEL_LICHT: Partial<Record<LichtNaam, { zonSterkte?: number; hemel?: number; omgeving?: number; omgevingFoto?: number; hoogte?: number; belichting?: number }>> = {
+  studio: { zonSterkte: 0.78, hemel: 0.04, omgevingFoto: 0.36, hoogte: 0.8 },
+  daglicht: { zonSterkte: 0.85, hemel: 0.12, omgevingFoto: 0.3, belichting: 0.72 },
   ochtend: { belichting: 0.8 },
-  bewolkt: { zonSterkte: 0.1, hemel: 0.8, omgevingslicht: 0.25, belichting: 1.15 },
+  bewolkt: { zonSterkte: 0.1, hemel: 0.8, omgeving: 0.25, belichting: 1.15 },
   fotostudio: { belichting: 0.8 },
   spots: { hemel: 0.26, belichting: 0.9 },
+};
+/**
+ * IJking van het licht voor de bouwweergave (woning, raam, inrichting), 11/11. Gemeten met `npm run lichtmeting -- --bron
+ * ijk-bouw`: met de waarden van LICHTEN was een bovenvlak 1,84 keer zo helder als zijn staal (dak, vloer, tafelblad,
+ * bovenkant van een muur), zodat witte kasten, bedden en badkamers uitbrandden tot één witte vlek. Zelfde doel als bij de
+ * zetel: bovenkant ±1,4 × de staal, voorkant ±0,9 ×. De bouwdemo gebruikt alleen de sfeer Studio.
+ */
+const BOUW_LICHT: Partial<Record<LichtNaam, { zonSterkte?: number; hemel?: number; omgeving?: number; hoogte?: number; belichting?: number }>> = {
+  studio: { hemel: 0.16, omgeving: 0.6, zonSterkte: 1, hoogte: 1.3, belichting: 1 },
 };
 export type Kwaliteit = 'snel' | 'mooi';
 type Hdr = { boven: readonly number[]; onder: readonly number[]; bronnen: readonly (readonly [readonly number[], number, number, readonly number[]])[] };
@@ -320,6 +353,11 @@ export interface Opties3D {
    * (gevraagd), fout (bestand kon niet geladen worden) of geen (het model heeft geen 3D-bestand of het past niet).
    */
   opEcht?: (getoond: Echt3DPlaatsing | null, toestand: EchtToestand) => void;
+  /**
+   * Bouwweergave: onderdelen met hetzelfde materiaal samenvoegen tot één vorm (zie voegSamen). Standaard aan; `false`
+   * tekent elk onderdeel apart, om beide te kunnen vergelijken.
+   */
+  samenvoegen?: boolean;
 }
 
 /**
@@ -360,6 +398,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
   /** Pas na init() kan de renderer tekenen; tot dan wordt elk beeld uitgesteld. */
   let klaar = false;
+  // De tellers (tekenbeurten, driehoeken) zelf per beeld op nul zetten, zodat ze het hele beeld beschrijven en niet
+  // alleen de laatste beurt van de nabewerking.
+  if (renderer.info) renderer.info.autoReset = false;
+  /** Wat het beeld nog kan veranderen (zie stil()): stoffoto's die laden, zachte vormen in berekening, een uitgesteld decor. */
+  let ladend = 0, zachtBezig = false, decorBezig = false;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   // Zo scherp als de kaart toelaat onder een schuine hoek: weefsel op een zitting of rug wordt zo niet wazig. 16 is het
   // maximum van WebGPU; de WebGL2-weg begrenst zelf op wat de kaart kan.
@@ -389,7 +432,6 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // Studiolicht: een omgevingsbeeld (softboxen in een grijze ruimte) geeft zachte reflecties en glans;
   // daardoor kunnen de hemel- en vullicht zwakker.
   scene.environment = omgevingVoor('studio');
-  let OMGEVING = 0.5;
   const hemel = new THREE.HemisphereLight(0xffffff, 0xb8b2a7, 0.34 * PI);
   scene.add(hemel);
   // Warme lamp (bij de staanlamp in het decor), alleen aan bij de lichtsfeer "Avond".
@@ -408,7 +450,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   scene.add(zon, zon.target);
   const vul = new THREE.DirectionalLight(0xffffff, 0.16 * PI);
   scene.add(vul);
-  const studioVloer = new THREE.MeshStandardMaterial({ color: 0xdcd8d0, roughness: 1, envMapIntensity: 0.4 });
+  const studioVloer = new THREE.MeshStandardMaterial({ color: 0xdcd8d0, roughness: 1 });
   const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), studioVloer);
   vloer.rotation.x = -Math.PI / 2;
   vloer.receiveShadow = true;
@@ -679,7 +721,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       // Stoffoto: één keer laden, herhalen in wereldmaat (zie wereldUV), opnieuw tekenen zodra ze binnen is.
       let t = fotoTexturen.get(b.textuur);
       if (!t) {
-        t = new THREE.TextureLoader().load(b.textuur, () => render());
+        ladend++;
+        t = new THREE.TextureLoader().load(b.textuur, () => { ladend--; render(); }, undefined, () => { ladend--; });
         // Gespiegeld herhalen: een staalfoto is niet naadloos, zo zie je geen ruitjes op de grenzen.
         t.wrapS = t.wrapT = THREE.MirroredRepeatWrapping;
         t.colorSpace = THREE.SRGBColorSpace;
@@ -687,7 +730,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         fotoTexturen.set(b.textuur, t);
       }
       // De foto zelf dient ook als reliëf (lichte delen komen naar voor).
-      m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: t, bumpMap: t, bumpScale: 0.5, envMapIntensity: OMGEVING });
+      m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: t, bumpMap: t, bumpScale: 0.5 });
       materialen.set(sleutel, m);
     }
     if (!m) {
@@ -714,7 +757,6 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       else if (b.soort === 'gevel') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.97 });
       else if (b.soort === 'donker') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.9 });
       else m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.95, map: weefsel });
-      if ('envMapIntensity' in m) m.envMapIntensity = OMGEVING;
       materialen.set(sleutel, m);
     }
     return m;
@@ -756,8 +798,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     // Met kaarten: reliëf als normal map (ook in de fotomodus) en glans per draad; anders de bumpMap zoals voorheen.
     const k = kaartenVan(w);
     const basis = k
-      ? { color: 0xffffff, map, normalMap: k.normaal, roughnessMap: k.ruwheid, envMapIntensity: OMGEVING }
-      : { color: 0xffffff, map, bumpMap: relief, bumpScale: RELIEF[w], envMapIntensity: OMGEVING };
+      ? { color: 0xffffff, map, normalMap: k.normaal, roughnessMap: k.ruwheid }
+      : { color: 0xffffff, map, bumpMap: relief, bumpScale: RELIEF[w] };
     if (w === 'velours') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.8, sheen: 0.7, sheenColor: kleur(tint(hex, 1.15)), sheenRoughness: 0.5 });
     if (w === 'leder') return new THREE.MeshPhysicalMaterial({ ...basis, roughness: 0.42, clearcoat: 0.25, clearcoatRoughness: 0.5 });
     // Geweven stof: matte basis met een lichte, ruwe glans (sheen) zoals vezels die licht opvangen langs de randen.
@@ -1201,8 +1243,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (!b.naad) return [];
     const straal = b.naad.soort === 'bies' ? 0.55 : b.naad.soort === 'stiksel' ? 0.09 : 0.14;
     const mat = b.naad.soort === 'bies'
-      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
-      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85 })
+      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1 });
     return ringen.map((punten) => {
       const curve = new THREE.CatmullRomCurve3(punten, true, 'centripetal');
       const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(400, punten.length * 3), straal, 6, true), mat);
@@ -1226,8 +1268,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         : b.naad.soort === 'stiksel' ? [{ hoek: 22, straal: 0.09 }, { hoek: 68, straal: 0.09 }]
           : [{ hoek: 45, straal: 0.11 }];
     const mat = b.naad.soort === 'bies'
-      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
-      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85 })
+      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1 });
     // Een bies in dezelfde stof: iets donkerder dan de stof (ze vangt als ribbel veel licht en werd anders een witte lijn).
     if (b.naad.soort === 'bies' && b.naad.kleur === b.kleur) mat.color = kleur(tint(b.kleur, 0.84));
     const uit: any[] = [];
@@ -1597,20 +1639,20 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       else if (v.soort === 'parket') {
         const t = parket(v.kleur);
         t.repeat.set(4000 / PARKET.b, 4000 / PARKET.h);
-        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, map: t, envMapIntensity: 0.5 });
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5, map: t });
       } else if (v.soort === 'tegel') {
         const t = tegels(v.kleur);
         t.repeat.set(4000 / TEGEL.b, 4000 / TEGEL.h);
-        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, map: t, envMapIntensity: 0.6 });
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4, map: t });
       } else if (v.soort === 'planken') {
         const t = planken(v.kleur);
         t.repeat.set(4000 / PLANK.b, 4000 / PLANK.h);
-        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, map: t, envMapIntensity: 0.4 });
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, map: t });
       } else {
         // Gepolierde beton: pleistertextuur op grote schaal, iets glanzend.
         const t = pleister(v.kleur);
         t.repeat.set(4000 / 160, 4000 / 160);
-        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, map: t, envMapIntensity: 0.6 });
+        m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, map: t });
       }
       decorMaterialen.set(sleutel, m);
     }
@@ -1620,9 +1662,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (w.soort === 'steen') {
       const t = baksteen(w.kleur, '#c7bfb2');
       t.repeat.set(breed / STEEN.b, hoog / STEEN.h);
-      return new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: t, envMapIntensity: 0.4 });
+      return new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: t });
     }
-    return new THREE.MeshStandardMaterial({ color: kleur(w.kleur), roughness: 0.95, envMapIntensity: 0.4 });
+    return new THREE.MeshStandardMaterial({ color: kleur(w.kleur), roughness: 0.95 });
   }
   /** Wanden van het decor (wegvallen als de camera erachter staat) en hoe ver het schaduwbereik moet reiken. */
   let decorWanden: { obj: any; punt: [number, number, number]; normaal: [number, number, number] }[] = [];
@@ -1670,7 +1712,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const avond = lichtNaam === 'avond';
     const r = bouwDecor({
       THREE, kleur, tint, canvasTextuur, parket, baksteen, pleister, houtNerf, weefselCanvas: (x, hex) => weefselCanvas(x, hex),
-      bladVorm: () => (bladVorm ??= maakBladVorm()), omgeving: OMGEVING, avond,
+      bladVorm: () => (bladVorm ??= maakBladVorm()), avond,
     }, dc, k, w.spullen !== 'uit');
     kamerDelen.push(...r.delen);
     decorWanden = r.wanden;
@@ -1703,11 +1745,11 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       w.obj.visible = d > 0;
     }
   }
-  /** De lichtsfeer zoals ze nu geldt: voor de zetel met de ijking erbij (ZETEL_LICHT). */
+  /** De lichtsfeer zoals ze nu geldt, met de ijking erbij: ZETEL_LICHT voor de zetel, BOUW_LICHT voor de bouwweergave. */
   function lichtNu() {
     const l = LICHTEN[lichtNaam];
-    const ijk = opties.zetel ? ZETEL_LICHT[lichtNaam] ?? {} : {};
-    return { ...l, ...ijk, belichting: ijk.belichting ?? 1, omgevingslicht: ijk.omgevingslicht ?? 1 };
+    const ijk = (opties.zetel ? ZETEL_LICHT[lichtNaam] : BOUW_LICHT[lichtNaam]) ?? {};
+    return { ...l, ...ijk, belichting: ijk.belichting ?? 1 };
   }
   function zetLicht() {
     const l = lichtNu();
@@ -1716,16 +1758,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     zon.intensity = l.zonSterkte * PI;
     hemel.intensity = l.hemel * PI;
     hemel.color.set(l.hemelKleur);
-    OMGEVING = l.omgeving;
     if (opties.zetel) scene.environment = omgevingVoor(lichtNaam);
-    // De echte sterkte van het omgevingslicht (zie ZETEL_LICHT): 1, behalve waar een sfeer het anders vraagt.
-    scene.environmentIntensity = l.omgevingslicht;
-    // Alle materialen volgen het omgevingslicht van de sfeer.
-    scene.traverse((o: any) => {
-      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-      for (const m of ms) if ('envMapIntensity' in m && m !== studioVloer) m.envMapIntensity = l.omgeving;
-    });
-    for (const m of materialen.values()) if (m && 'envMapIntensity' in m) m.envMapIntensity = l.omgeving;
+    // De sterkte van het omgevingslicht: één instelling voor de hele scène (zie LICHTEN en ZETEL_LICHT).
+    scene.environmentIntensity = l.omgeving;
     zetZon();
   }
   function zetZon() {
@@ -2082,12 +2117,21 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
   function tekenNu(direct: boolean) {
     if (bezigMetFoto || !klaar) return;
+    // Tellers per beeld (alle beurten samen: schaduw, scène, nabewerking), zie info().
+    renderer.info.reset();
     const c = metNabewerking() ? composer : null;
-    if (!c) { renderer.render(scene, camera); return; }
-    if (direct) { clearTimeout(mooiGepland); c.render(); return; }
+    if (!c) { renderer.render(scene, camera); onthoudTelling(); return; }
+    if (direct) { clearTimeout(mooiGepland); c.render(); onthoudTelling(); return; }
     renderer.render(scene, camera);
+    onthoudTelling();
     clearTimeout(mooiGepland);
     mooiGepland = window.setTimeout(() => { if (!bezigMetFoto) c.render(); }, 180);
+  }
+  /** Belasting van het laatste beeld waarin de scène zelf getekend is (de nabewerking alleen is één tekenbeurt). */
+  let telling = { tekenbeurten: 0, driehoeken: 0 };
+  function onthoudTelling() {
+    const r = renderer.info?.render;
+    if (r && (r.drawCalls ?? 0) > 2) telling = { tekenbeurten: r.drawCalls, driehoeken: r.triangles ?? 0 };
   }
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
@@ -2316,8 +2360,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const curve = new THREE.CatmullRomCurve3(punten, false, 'centripetal');
     const straal = b.naad.soort === 'bies' ? 0.55 : 0.14;
     const mat = b.naad.soort === 'bies'
-      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
-      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85 })
+      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1 });
     const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(300, punten.length * 10), straal, 6, false), mat);
     m.receiveShadow = true;
     return m;
@@ -2343,8 +2387,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     });
     const straal = b.naad.soort === 'bies' ? 0.55 : 0.14;
     const mat = b.naad.soort === 'bies'
-      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
-      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+      ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85 })
+      : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1 });
     return [b.y + b.h - inw, b.y + inw].map((y) => {
       const curve = new THREE.CatmullRomCurve3(binnen.map(([x, z]) => new THREE.Vector3(x, y, z)), true, 'centripetal');
       const m = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(600, n * 3), straal, 6, true), mat);
@@ -2359,6 +2403,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    */
   function planZacht(s: Scene3D, taken: { delen: Blok[]; buren: Blok[] }[]) {
     clearTimeout(zachtGepland);
+    zachtBezig = true;
     const volgende = () => {
       if (laatsteScene !== s) return;
       const taak = taken.find((t) => !zachteVormen.has(vormSleutel(t.delen, t.buren)));
@@ -2376,6 +2421,60 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     zachtGepland = window.setTimeout(volgende, 140);
   }
 
+  /**
+   * Bouwweergave: onderdelen met hetzelfde materiaal samenvoegen tot één vorm per materiaal.
+   *
+   * Waarom: een woning telt honderden blokken (muren, vloeren, ramen, meubels), elk met tot zes materialen (één per
+   * zijde). Elk materiaal van elk blok is een aparte tekenopdracht: bijna 2 000 per beeld, en nog eens zoveel voor de
+   * schaduw. Het aantal tekenopdrachten weegt zwaarder dan het aantal driehoeken (richtwaarde: onder de paar honderd per
+   * beeld), vooral op een tablet. Samengevoegd blijft er één opdracht per materiaal over: enkele tientallen.
+   *
+   * Niet samengevoegd: glas (doorzichtig, moet per ruit gesorteerd worden), onderdelen met eigen kinderen of
+   * hoekpuntkleuren, en alles wat geen gewone vorm met normalen en textuurcoördinaten is. Het beeld blijft hetzelfde.
+   */
+  function voegSamen(meshes: any[]): any[] {
+    type Bak = { mat: any; schaduw: boolean; pos: number[]; nor: number[]; uv: number[] };
+    const bakken = new Map<string, Bak>(), rest: any[] = [];
+    const p = new THREE.Vector3(), n = new THREE.Vector3(), normaalMatrix = new THREE.Matrix3();
+    for (const m of meshes) {
+      const g = m.geometry, a = g?.attributes;
+      const mats: any[] = Array.isArray(m.material) ? m.material : [m.material];
+      const gewoon = m.isMesh && !m.children.length && a?.position && a.normal && a.uv && !a.color
+        && mats.every((x) => x && !x.transparent && !x.transmission && !x.vertexColors) && (!Array.isArray(m.material) || g.groups.length);
+      if (!gewoon) { rest.push(m); continue; }
+      m.updateMatrix();
+      normaalMatrix.getNormalMatrix(m.matrix);
+      const index = g.index, aantal = index ? index.count : a.position.count;
+      const groepen = Array.isArray(m.material) ? g.groups : [{ start: 0, count: aantal, materialIndex: 0 }];
+      for (const gr of groepen) {
+        const mat = mats[gr.materialIndex ?? 0];
+        const sleutel = `${mat.uuid}:${m.castShadow ? 1 : 0}`;
+        let bak = bakken.get(sleutel);
+        if (!bak) bakken.set(sleutel, (bak = { mat, schaduw: m.castShadow, pos: [], nor: [], uv: [] }));
+        for (let i = gr.start; i < Math.min(aantal, gr.start + gr.count); i++) {
+          const v = index ? index.getX(i) : i;
+          p.fromBufferAttribute(a.position, v).applyMatrix4(m.matrix);
+          n.fromBufferAttribute(a.normal, v).applyMatrix3(normaalMatrix).normalize();
+          bak.pos.push(p.x, p.y, p.z);
+          bak.nor.push(n.x, n.y, n.z);
+          bak.uv.push(a.uv.getX(v), a.uv.getY(v));
+        }
+      }
+      g.dispose();
+    }
+    for (const bak of bakken.values()) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(bak.pos, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(bak.nor, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(bak.uv, 2));
+      const m = new THREE.Mesh(geo, bak.mat);
+      m.castShadow = bak.schaduw;
+      m.receiveShadow = true;
+      rest.push(m);
+    }
+    return rest;
+  }
+
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
   let laatsteBreedte = 0;
@@ -2387,6 +2486,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       }
       laatsteScene = s;
       sceneBlokken = s.blokken;
+      zachtBezig = false;
       // Echt 3D-model (als het bestand geladen is en de benadering niet gevraagd is): in de plaats van de blokken van zijn elementen.
       const model = s.echt && weergave.echtModel !== false ? echtModelVan(s.echt.bestand) : null;
       const echt = model ? echtGroep(s.echt!, model) : null;
@@ -2418,7 +2518,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         }
         if (taken.length) planZacht(s, taken);
       }
-      for (const b of zichtbaar) if (!versmolten.has(b)) groep.add(mesh(b));
+      const los = zichtbaar.filter((b) => !versmolten.has(b)).map(mesh);
+      // Bouwweergave zonder aanklikbare delen: één vorm per materiaal (veel minder tekenopdrachten, zelfde beeld).
+      for (const m of !opties.zetel && !opties.opKlik && opties.samenvoegen !== false ? voegSamen(los) : los) groep.add(m);
       if (echt) groep.add(echt);
       schaduwOpnieuw();
       zetContactschaduw(s, echt);
@@ -2490,7 +2592,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         // Maatlijnen en het selectiekader horen niet op de foto.
         matenGroep.visible = false;
         if (markeerKader) markeerKader.visible = false;
-        scene.environmentIntensity = OMGEVING * 1.15;
+        scene.environmentIntensity = lichtNu().omgevingFoto * 1.15;
         // Geen gebakken schaduw in de hoekpunten: de path tracer rekent de echte; en hij leest ze verkeerd (zwart).
         for (const m of materialen.values()) if (m?.vertexColors) { m.vertexColors = false; m.userData.vcTerug = true; }
         const b = houder.clientWidth || 600;
@@ -2593,7 +2695,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       if (decorAnders) {
         // Kleurkiezers geven veel tussenwaarden: het decor pas na een korte rust herbouwen.
         clearTimeout(decorGepland);
-        decorGepland = window.setTimeout(() => { zetDecor(null); render(); }, 120);
+        decorBezig = true;
+        decorGepland = window.setTimeout(() => { decorBezig = false; zetDecor(null); render(); }, 120);
       }
       plaatsCamera();
     },
@@ -2601,6 +2704,35 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       markeerId = id;
       zetMarkering();
       render(true);
+    },
+    async stil() {
+      const pauze = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      const bezig = () => !klaar || ladend > 0 || zachtBezig || decorBezig || [...echteModellen.values()].includes('laden');
+      // Hoogstens een minuut: een bestand dat nooit binnenkomt mag het gereedschap niet laten hangen.
+      for (const start = performance.now(); bezig() && performance.now() - start < 60000;) await pauze(25);
+      stopBeweging(true);
+      schaduwLater.forEach(clearTimeout);
+      schaduwLater = [];
+      cancelAnimationFrame(beeldGepland);
+      beeldGepland = 0;
+      // Shaders van nieuwe delen worden op de achtergrond gemaakt: eerst allemaal klaar, dan pas het definitieve beeld.
+      try { await renderer.compileAsync?.(scene, camera); } catch { /* dan tekent de eerste beurt hieronder ze mee */ }
+      for (let i = 0; i < 2; i++) {
+        if (zonSchaduw) zonSchaduw.needsUpdate = true;
+        tekenNu(true);
+        await pauze(0);
+      }
+    },
+    info() {
+      const i = renderer.info ?? {};
+      return {
+        weg: webgpu ? 'webgpu' : 'webgl2',
+        tekenbeurten: telling.tekenbeurten,
+        driehoeken: telling.driehoeken,
+        geometrieen: i.memory?.geometries ?? 0,
+        texturen: i.memory?.textures ?? 0,
+        onderdelen: groep.children.length,
+      };
     },
     formaat() {
       const b = houder.clientWidth || 600;

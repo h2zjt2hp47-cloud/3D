@@ -885,7 +885,11 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   $('#pl-3d-knoppen').hidden = w !== '3d';
   $('#pl-hint').hidden = w !== 'plan';
   if (w === '3d') {
-    if (viewer === undefined) viewer = maak3D($('#pl-3d'));
+    if (viewer === undefined) {
+      viewer = maak3D($('#pl-3d'));
+      // Voor geautomatiseerde tests (beeldvergelijking): de weergave bereikbaar, o.a. om te wachten tot het beeld af is.
+      (window as unknown as { __plan3d?: unknown }).__plan3d = viewer;
+    }
     viewer?.formaat();
     plan3D();
   }

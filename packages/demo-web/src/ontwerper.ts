@@ -34,7 +34,7 @@ import {
   type Scene3D,
 } from '../../core/src/index.js';
 import { startOntwerpen } from '../../core/voorbeelden/vrij-ontwerp.js';
-import { bouwstijlen, bouwstijlVan, pasBouwstijlToe } from '../../core/voorbeelden/bouwstijlen.js';
+import { bouwstijlen, bouwstijlTekst, bouwstijlVan, pasBouwstijlToe } from '../../core/voorbeelden/bouwstijlen.js';
 import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, type EchtToestand, type Kwaliteit, type LichtNaam, type Standpunt, type Viewer3D, type Weergave3D } from './drie-d.js';
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { kleurStaal, maakStalenkaart, materiaalOptiesPerCollectie, perCollectie } from './stalen.js';
@@ -147,7 +147,8 @@ function toonBouwstijl() {
   if (!vak) return;
   const actief = bouwstijlVan(ontwerp);
   const kop = el('summary', {});
-  kop.append('Bouwstijl: ', el('span', {}, actief ? actief.label : 'eigen samenstelling (kies een karakter in één klik)'));
+  // Volgt het ontwerp geen stijl precies: de dichtste stijl met wat ervan afwijkt ("bouwstijl plus afwijkingen").
+  kop.append('Bouwstijl: ', el('span', {}, actief ? actief.label : bouwstijlTekst(ontwerp)));
   const kaarten = el('div', { class: 'stijlkaarten' });
   for (const s of bouwstijlen) {
     const kaart = el('button', { type: 'button', class: 'stijlkaart', 'aria-pressed': String(actief?.code === s.code), title: s.kenmerken.join(' · ') });
@@ -165,6 +166,8 @@ function toonBouwstijl() {
 const modelfotos = (window as unknown as { __FOTOS?: Record<string, string> }).__FOTOS ?? {};
 const SLEUTEL_FOTO = 'configurator-demo.3d-foto.v1';
 let fotoErnaast = laad(SLEUTEL_FOTO) === '1';
+/** De foto over de 3D leggen (doorschijnend) in plaats van ernaast: zo vergelijk je de omtrek vanuit hetzelfde standpunt. */
+let fotoErover = false, fotoDekking = 0.5;
 /** Toont de productfoto van het model in de hoek van de 3D (knop "Foto ernaast"), om te vergelijken en bij te stellen. */
 function toonFotoErnaast() {
   const knop = document.querySelector<HTMLButtonElement>('#o-3d-fotoknop'), fig = document.querySelector<HTMLElement>('#o-3d-modelfoto');
@@ -174,6 +177,12 @@ function toonFotoErnaast() {
   knop.hidden = !foto;
   knop.setAttribute('aria-pressed', String(fotoErnaast));
   fig.hidden = !foto || !fotoErnaast;
+  fig.classList.toggle('erover', fotoErover);
+  fig.style.setProperty('--dekking', String(fotoDekking));
+  const wissel = fig.querySelector<HTMLButtonElement>('#o-3d-fotoerover');
+  if (wissel) { wissel.textContent = fotoErover ? 'Terug naar de hoek' : 'Leg over de 3D'; wissel.setAttribute('aria-pressed', String(fotoErover)); }
+  const schuif = fig.querySelector<HTMLInputElement>('#o-3d-fotodekking');
+  if (schuif) { schuif.hidden = !fotoErover; schuif.value = String(Math.round(fotoDekking * 100)); }
   if (foto && model) {
     const img = fig.querySelector('img')!;
     if (img.getAttribute('src') !== foto) img.src = foto;
@@ -1971,8 +1980,14 @@ export function startOntwerper() {
   breedScherm.addEventListener('change', () => kiesWeergave());
   document.querySelector<HTMLButtonElement>('#o-3d-fotoknop')?.addEventListener('click', () => {
     fotoErnaast = !fotoErnaast;
+    if (!fotoErnaast) fotoErover = false;
     bewaar(SLEUTEL_FOTO, fotoErnaast ? '1' : '0');
     toonFotoErnaast();
+  });
+  document.querySelector<HTMLButtonElement>('#o-3d-fotoerover')?.addEventListener('click', () => { fotoErover = !fotoErover; toonFotoErnaast(); });
+  document.querySelector<HTMLInputElement>('#o-3d-fotodekking')?.addEventListener('input', (ev) => {
+    fotoDekking = Number((ev.target as HTMLInputElement).value) / 100;
+    document.querySelector<HTMLElement>('#o-3d-modelfoto')?.style.setProperty('--dekking', String(fotoDekking));
   });
   document.querySelectorAll<HTMLButtonElement>('[data-standpunt]').forEach((b) =>
     b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as Standpunt)),

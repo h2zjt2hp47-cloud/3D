@@ -1,24 +1,33 @@
 /**
- * Gedeelde hulpmiddelen voor het 3D-gereedschap (modelbeelden, controleblad, lichtmeting).
+ * Gedeelde basis van het 3D-gereedschap (modelbeelden, controleblad, lichtmeting, toestelcontrole).
  *
- * Opent de gebouwde zeteldemo in een browser zonder grafische kaart (de WebGL2-weg, zoals in de cloud), opent een model,
- * zet instellingen en keuzes, wacht tot het beeld stil is en neemt een beeld. Eén plaats voor alles wat van de bediening
- * van de demo afhangt: verandert daar een knop of een lijst, dan pas je het alleen hier aan.
+ * Het gereedschap draait op de werkbankpagina (packages/werkbank-web → dist/werkbank.html): één pagina die elke bron
+ * (zetels, inrichting, ramen, woning, ijkblok …) in 3D toont, met dezelfde weergave als de demo's. Het vraagt de pagina
+ * een item te tonen, wacht tot zij meldt dat het beeld af is en neemt het beeld. Geen knoppen aanklikken en geen vaste
+ * wachttijden: een knop die verhuist breekt niets, en een beeld is er zodra het af is.
+ *
+ * Drie wegen om te rekenen (keuze met --weg):
+ *   snel     WebGL2 met de Mesa-softwarerenderer (llvmpipe) op een virtueel scherm: 3 tot 7 keer sneller dan swiftshader.
+ *   webgl2   WebGL2 met swiftshader: de weg van de beeldvergelijking (npm run beelden), overal beschikbaar.
+ *   webgpu   WebGPU (swiftshader als adapter) op een virtueel scherm: de weg van de M5 in de toonzaal, om na te gaan dat
+ *            die hetzelfde beeld geeft als de terugval.
+ * Zonder --weg: snel als het kan, anders webgl2.
+ *
+ * Beelden worden bewaard per vingerafdruk (werkbank/cache): wat sinds de vorige keer niet veranderd is (zelfde scène,
+ * zelfde instellingen, zelfde weergave), wordt niet opnieuw getekend. Met --vers alles opnieuw.
  */
+import { createHash } from 'node:crypto';
+import { execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-export const DEMO = path.join(ROOT, 'packages/demo-web/dist/configurator-demo.html');
+export const PAGINA = path.join(ROOT, 'packages/werkbank-web/dist/werkbank.html');
 /** Map voor alles wat het gereedschap maakt (niet in git). */
 export const WERKBANK = path.join(ROOT, 'werkbank');
-
-/** Vaste standpunten: [hoek rond de zetel, hoek omhoog] in radialen; de afstand kiest de demo zelf (passend). */
-export const STANDPUNTEN = {
-  schuin: [0.45, 0.2], voor: [0, 0.08], links: [-0.5, 0.18], rechts: [0.5, 0.18], hoog: [0.4, 0.55], boven: [0.2, 1.25],
-};
+const CACHE = path.join(WERKBANK, 'cache');
 
 /** Leest "--naam waarde" en "--vlag" uit de opdrachtregel. */
 export function leesOpties(argv = process.argv.slice(2)) {
@@ -32,12 +41,13 @@ export function leesOpties(argv = process.argv.slice(2)) {
   return uit;
 }
 export const lijst = (waarde) => (typeof waarde === 'string' ? waarde.split(',').map((x) => x.trim()).filter(Boolean) : []);
+export const naamVoorBestand = (tekst) => String(tekst).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-/** Bouwt de zeteldemo (tenzij --zonder-bouw). */
-export function bouwDemo(opties = {}) {
-  if (opties['zonder-bouw']) return;
-  process.stdout.write('Demo bouwen … ');
-  execFileSync('npm', ['run', 'build', '-w', '@configurator/demo-web'], { cwd: ROOT, stdio: 'ignore' });
+/** Bouwt de werkbankpagina (tenzij --zonder-bouw). */
+export function bouwWerkbank(opties = {}) {
+  if (opties['zonder-bouw'] && existsSync(PAGINA)) return;
+  process.stdout.write('Werkbank bouwen … ');
+  execFileSync('npm', ['run', 'build', '-w', '@configurator/werkbank-web'], { cwd: ROOT, stdio: 'ignore' });
   console.log('klaar');
 }
 
@@ -48,86 +58,127 @@ function laadPlaywright() {
   }
 }
 
-/** Opent de demo met verse instellingen. Geeft de browser, de pagina en de lijst met fouten van de pagina. */
-export async function openDemo({ breedte = 1500, hoogte = 1100 } = {}) {
-  const { chromium } = laadPlaywright();
-  const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  const pagina = await browser.newPage({ viewport: { width: breedte, height: hoogte } });
-  const fouten = [];
-  pagina.on('pageerror', (e) => fouten.push(String(e)));
-  pagina.on('console', (m) => { if (m.type() === 'error') fouten.push(m.text().slice(0, 200)); });
-  await pagina.goto('file://' + DEMO);
-  await pagina.evaluate(() => {
-    localStorage.clear();
-    localStorage.setItem('configurator-demo.3d.v1', JSON.stringify({ kwaliteit: 'mooi', kamer: 1, decor: 'studio', licht: 'studio' }));
-  });
-  await pagina.reload();
-  return { browser, pagina, fouten };
-}
+// ---------- de wegen: hoe de browser rekent ----------
+const SWIFTSHADER = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+export const WEGEN = {
+  snel: { label: 'WebGL2 (Mesa llvmpipe)', scherm: true, start: { channel: 'chromium', headless: false, args: ['--use-gl=angle', '--use-angle=gl', '--ignore-gpu-blocklist'] } },
+  webgl2: { label: 'WebGL2 (swiftshader)', scherm: false, start: { args: SWIFTSHADER } },
+  webgpu: { label: 'WebGPU (swiftshader)', scherm: true, start: { channel: 'chromium', headless: false, args: ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-webgpu-adapter=swiftshader', '--ignore-gpu-blocklist'] } },
+};
+const heeft = (programma) => { try { execFileSync('which', [programma], { stdio: 'ignore' }); return true; } catch { return false; } };
 
-/** De collectie zoals de demo ze kent: code, naam, familie, maten, bron, foto … (zie modellen-ui.ts). */
-export const leesModellen = (pagina) => pagina.evaluate(() => window.__modellen());
-export const leesStoffen = (pagina) => pagina.evaluate(() => window.__stoffen());
-
-/** Opent een model uit de collectie in de ontwerper (verse toestand van dat model). */
-export async function openModel(pagina, model) {
-  await pagina.click('[data-weergave="modellen"]');
-  await pagina.click(`[data-familie="${model.familie}"]`);
-  const naam = model.naam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  await pagina.locator('.modelkaart', { has: pagina.locator('h2', { hasText: new RegExp(`^${naam}$`) }) }).locator('button').first().click();
-  await pagina.waitForTimeout(600);
-}
-
-/** De keuzes van een lijst in de 3D-balk (decor, licht …): [{ waarde, label }]. */
-export const leesLijst = (pagina, naam) =>
-  pagina.evaluate((n) => [...document.querySelectorAll(`#o-3d-${n} option`)].map((o) => ({ waarde: o.value, label: o.textContent.trim() })), naam);
-/** De keuzes voor de hele zetel (poten, rug, naden …): [{ groep, label, keuzes: [{ code, label }] }]. */
-export const leesKeuzes = (pagina) =>
-  pagina.evaluate(() => [...document.querySelectorAll('#o-aanpassingen fieldset[data-groep]')].map((f) => ({
-    groep: f.dataset.groep, label: f.querySelector('legend')?.textContent.trim() ?? f.dataset.groep,
-    keuzes: [...f.querySelectorAll('input')].map((i) => ({ code: i.value, label: i.closest('label')?.textContent.trim() ?? i.value })),
-  })));
-
-/** Zet de instellingen van de 3D (decor, licht, kwaliteit, vormen, stof) en keuzes voor de hele zetel. */
-export async function zetInstellingen(pagina, { decor = 'studio', licht = 'studio', kwaliteit = 'mooi', vormen = 'blokken', stof, keuzes = {} } = {}) {
-  const zet = async (sel, waarde) => { if ((await pagina.inputValue(sel)) !== String(waarde)) await pagina.selectOption(sel, String(waarde)); };
-  await zet('#o-3d-decor', decor);
-  await zet('#o-3d-licht', licht);
-  await zet('#o-3d-kwaliteit', kwaliteit);
-  await zet('#o-3d-vormen', vormen);
-  if (stof) await zet('#o-3d-stof', stof);
-  for (const [groep, keuze] of Object.entries(keuzes)) {
-    const knop = pagina.locator(`#o-aanpassingen fieldset[data-groep="${groep}"] input[value="${keuze}"]`);
-    if (await knop.count()) await knop.check({ force: true });
-    else throw new Error(`Keuze ${groep} = ${keuze} bestaat niet`);
-  }
+/** Start een virtueel scherm (Xvfb) voor de wegen die een volledige browser nodig hebben. Geeft { display, stop }. */
+async function startScherm() {
+  if (!heeft('Xvfb')) return null;
+  const nr = 80 + (process.pid % 900);
+  const proces = spawn('Xvfb', [`:${nr}`, '-screen', '0', '1700x1300x24', '-nolisten', 'tcp'], { stdio: 'ignore' });
+  for (let i = 0; i < 50 && !existsSync(`/tmp/.X11-unix/X${nr}`); i++) await new Promise((r) => setTimeout(r, 60));
+  if (!existsSync(`/tmp/.X11-unix/X${nr}`)) { proces.kill(); return null; }
+  const stop = () => { try { proces.kill(); } catch { /* al gestopt */ } };
+  process.on('exit', stop);
+  return { display: `:${nr}`, stop };
 }
 
 /**
- * Zet de camera en neemt een beeld zodra het stil is (het mooie beeld en de zachte vormen komen iets later).
- * `kijk` = naam van een standpunt of [hoekH, hoekV, afstand?]. Geeft een buffer (jpeg of png).
+ * Opent de werkbankpagina. `weg` = snel, webgl2 of webgpu (zie boven); zonder keuze snel als het kan.
+ * Geeft { browser, pagina, fouten, weg, label, sluit }. Valt terug op webgl2 als de gevraagde weg hier niet werkt.
  */
-export async function neemBeeld(pagina, { kijk = 'schuin', breedte = 900, type = 'image/jpeg', kwaliteit = 0.86 } = {}) {
-  const [h, v, afstand] = Array.isArray(kijk) ? kijk : STANDPUNTEN[kijk] ?? STANDPUNTEN.schuin;
-  await pagina.evaluate(() => window.__zetel3d.standpunt('voor'));
-  await pagina.waitForTimeout(700);
-  await pagina.evaluate(([hh, vv, a]) => window.__zetel3d.kijk(a ? { hoekH: hh, hoekV: vv, afstand: a } : { hoekH: hh, hoekV: vv }), [h, v, afstand ?? null]);
-  let vorig = '', gelijk = 0;
-  for (let i = 0; i < 28 && gelijk < 2; i++) {
-    await pagina.waitForTimeout(1300);
-    const nu = await pagina.evaluate(() => { const u = document.querySelector('#o-3d canvas').toDataURL('image/jpeg', 0.3); return u.length + ':' + u.slice(-48); });
-    gelijk = nu === vorig ? gelijk + 1 : 0;
-    vorig = nu;
+export async function openWerkbank({ weg, hoogte = 1250, los = false } = {}) {
+  const { chromium } = laadPlaywright();
+  if (!existsSync(PAGINA)) bouwWerkbank();
+  const gevraagd = weg && WEGEN[weg] ? weg : weg ? (console.error(`Onbekende weg "${weg}" (wel: ${Object.keys(WEGEN).join(', ')})`), process.exit(2)) : 'snel';
+  const probeer = async (naam) => {
+    const w = WEGEN[naam];
+    const scherm = w.scherm ? await startScherm() : null;
+    if (w.scherm && !scherm) throw new Error('geen virtueel scherm (Xvfb)');
+    let browser;
+    try {
+      browser = await chromium.launch({ ...w.start, env: { ...process.env, ...(scherm ? { DISPLAY: scherm.display } : {}), LIBGL_ALWAYS_SOFTWARE: '1', GALLIUM_DRIVER: 'llvmpipe' } });
+      const pagina = await browser.newPage({ viewport: { width: 1500, height: hoogte } });
+      const fouten = [];
+      pagina.on('pageerror', (e) => fouten.push(String(e).slice(0, 240)));
+      pagina.on('console', (m) => { if (m.type() === 'error') fouten.push(m.text().slice(0, 240)); });
+      // `los`: de bouwweergave tekent elk onderdeel apart (om het samenvoegen te vergelijken, zie toestelcontrole).
+      await pagina.goto('file://' + PAGINA + '?gereedschap' + (los ? '&los' : ''));
+      await pagina.waitForFunction(() => window.__werkbank, null, { timeout: 30000 });
+      // Proef: klopt de weg? (WebGPU kan ontbreken; llvmpipe kan terugvallen op swiftshader.)
+      const proef = await pagina.evaluate(async () => {
+        const eerste = window.__werkbank.items('ijk')[0].code;
+        const uit = await window.__werkbank.toon('ijk', eerste, { kwaliteit: 'snel', breedte: 200 });
+        const c = document.createElement('canvas').getContext('webgl2'), e = c?.getExtension('WEBGL_debug_renderer_info');
+        return { weg: uit.info?.weg, renderer: c && e ? c.getParameter(e.UNMASKED_RENDERER_WEBGL) : '' };
+      });
+      if (naam === 'webgpu' && proef.weg !== 'webgpu') throw new Error('de browser geeft hier geen WebGPU');
+      if (naam === 'snel' && !/llvmpipe/i.test(proef.renderer)) throw new Error('de Mesa-renderer is hier niet beschikbaar');
+      return { browser, pagina, fouten, weg: naam, label: w.label, sluit: async () => { await browser.close(); scherm?.stop(); } };
+    } catch (fout) {
+      await browser?.close().catch(() => {});
+      scherm?.stop();
+      throw fout;
+    }
+  };
+  try { return await probeer(gevraagd); } catch (fout) {
+    if (gevraagd === 'webgl2' || weg === 'webgpu') throw new Error(`De weg ${gevraagd} werkt hier niet: ${fout.message}`);
+    if (weg) console.log(`Let op: de weg ${gevraagd} werkt hier niet (${String(fout.message).split('\n')[0]}); verder met webgl2.`);
+    return probeer('webgl2');
   }
-  const url = await pagina.evaluate(([b, t, q]) => window.__zetel3d.foto({ breedte: b, type: t, kwaliteit: q }), [breedte, type, kwaliteit]);
-  return Buffer.from(url.split(',')[1], 'base64');
 }
 
-/** Kiest modellen op code, naam of familie; zonder keuze de hele collectie. */
-export function kiesModellen(alle, { modellen, familie } = {}) {
-  const gevraagd = lijst(modellen).map((x) => x.toLowerCase());
+// ---------- de pagina bevragen ----------
+export const leesBronnen = (pagina) => pagina.evaluate(() => window.__werkbank.bronnen());
+export const leesItems = (pagina, bron) => pagina.evaluate((b) => window.__werkbank.items(b), bron);
+export const leesReeksen = (pagina, bron, code) => pagina.evaluate(([b, c]) => window.__werkbank.reeksen(b, c), [bron, code]);
+export const leesInstellingen = (pagina) => pagina.evaluate(() => window.__werkbank.instellingen());
+
+/** De bron uit --bron (standaard zetels), met een duidelijke fout als ze niet bestaat. */
+export async function kiesBron(pagina, code = 'zetels') {
+  const bronnen = await leesBronnen(pagina);
+  const bron = bronnen.find((b) => b.code === code);
+  if (!bron) { console.error(`Bron "${code}" bestaat niet. Wel: ${bronnen.map((b) => `${b.code} (${b.titel}, ${b.aantal})`).join(', ')}`); process.exit(2); }
+  return bron;
+}
+/** Kiest items op code, naam of groep (--items a,b en --groep …; --modellen en --familie werken ook); zonder keuze alle. */
+export function kiesItems(alle, opties = {}) {
+  const gevraagd = lijst(opties.items ?? opties.modellen).map((x) => x.toLowerCase());
+  const groep = opties.groep ?? opties.familie;
   let uit = alle;
-  if (familie) uit = uit.filter((m) => m.familie.toLowerCase().startsWith(String(familie).toLowerCase()));
-  if (gevraagd.length) uit = uit.filter((m) => gevraagd.includes(m.code.toLowerCase()) || gevraagd.includes(m.naam.toLowerCase()));
+  if (typeof groep === 'string') uit = uit.filter((i) => i.groep.toLowerCase().startsWith(groep.toLowerCase()));
+  if (gevraagd.length) {
+    uit = uit.filter((i) => gevraagd.includes(i.code.toLowerCase()) || gevraagd.includes(i.naam.toLowerCase()));
+    const mist = gevraagd.filter((g) => !alle.some((i) => i.code.toLowerCase() === g || i.naam.toLowerCase() === g));
+    if (mist.length) { console.error(`Niet gevonden: ${mist.join(', ')}`); process.exit(2); }
+  }
   return uit;
 }
+
+let bundel = '';
+/** Vingerafdruk van de werkbankpagina zonder de foto's: verandert de weergave of een model, dan verandert ze mee. */
+function bundelAfdruk() {
+  if (!bundel) bundel = createHash('sha1').update(readFileSync(PAGINA, 'utf8').replace(/^window\.__FOTOS = .*$/m, '')).digest('hex').slice(0, 12);
+  return bundel;
+}
+
+/**
+ * Toont een item en neemt het beeld zodra het af is. `opties` zoals in de pagina: keuzes, decor, licht, kwaliteit, vormen,
+ * kijk (naam van een standpunt of [hoek rond, hoek omhoog, afstand]), breedte, zon; plus type en jpeg (kwaliteit).
+ * Geeft { beeld (Buffer), uitCache, ms, info, afdruk }. Met `vers` altijd opnieuw tekenen.
+ */
+export async function neemBeeld(werkbank, bron, code, opties = {}, { vers = false } = {}) {
+  const { type = 'image/jpeg', jpeg = 0.86, ...toon } = opties;
+  const afdruk = await werkbank.pagina.evaluate(([b, c, o]) => window.__werkbank.afdruk(b, c, o), [bron, code, toon]);
+  const sleutel = createHash('sha1').update([afdruk, bundelAfdruk(), werkbank.weg, type, jpeg].join('|')).digest('hex').slice(0, 20);
+  const bestand = path.join(CACHE, `${sleutel}.${type === 'image/png' ? 'png' : 'jpg'}`);
+  if (!vers && existsSync(bestand)) return { beeld: readFileSync(bestand), uitCache: true, ms: 0, info: null, afdruk };
+  const start = Date.now();
+  const uit = await werkbank.pagina.evaluate(async ([b, c, o, t, q]) => {
+    const r = await window.__werkbank.toon(b, c, o);
+    return { info: r.info, url: window.__werkbank.beeld(t, q) };
+  }, [bron, code, toon, type, jpeg]);
+  const beeld = Buffer.from(uit.url.split(',')[1], 'base64');
+  mkdirSync(CACHE, { recursive: true });
+  writeFileSync(bestand, beeld);
+  return { beeld, uitCache: false, ms: Date.now() - start, info: uit.info, afdruk };
+}
+
+/** Eén regel voortgang: naam, en of het beeld nieuw getekend is of ongewijzigd uit de vorige ronde komt. */
+export const voortgang = (naam, r) => console.log(`  ${naam.padEnd(34)} ${r.uitCache ? 'ongewijzigd' : `${(r.ms / 1000).toFixed(1)} s`}`);

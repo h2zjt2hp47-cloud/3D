@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>3D-werkbank</title>
+<style>
+:root {
+  --grond: #f4f2ee; --vlak: #fffefb; --rand: #dcd7cd; --tekst: #24272a; --zacht: #63676b; --accent: #2f5d62; --accent-zacht: #e2ecec;
+  --fout: #a23b2a; --straal: 10px;
+  font-family: "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif; font-size: 15px; line-height: 1.5; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --grond: #17191b; --vlak: #1f2225; --rand: #363a3e; --tekst: #e9e7e2; --zacht: #a2a6aa; --accent: #7fb6ba; --accent-zacht: #253a3c; --fout: #e08a78; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --grond: #17191b; --vlak: #1f2225; --rand: #363a3e; --tekst: #e9e7e2; --zacht: #a2a6aa; --accent: #7fb6ba; --accent-zacht: #253a3c; --fout: #e08a78; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--grond); color: var(--tekst); padding-block: 20px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.blad { max-width: 1280px; margin: 0 auto; display: grid; gap: 18px; }
+header h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.01em; }
+header p { margin: 4px 0 0; color: var(--zacht); max-width: 70ch; }
+.vak { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .vak { grid-template-columns: minmax(0, 1fr); } }
+.paneel { background: var(--vlak); border: 1px solid var(--rand); border-radius: var(--straal); padding: 14px; min-width: 0; }
+label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--zacht); text-transform: uppercase; letter-spacing: 0.05em; }
+select, input[type="search"] { font: inherit; font-size: 0.95rem; text-transform: none; letter-spacing: 0; color: var(--tekst); background: var(--grond); border: 1px solid var(--rand); border-radius: 8px; padding: 7px 9px; width: 100%; min-width: 0; }
+button { font: inherit; color: var(--tekst); background: var(--grond); border: 1px solid var(--rand); border-radius: 8px; padding: 6px 11px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button[aria-pressed="true"], button[aria-current="true"] { background: var(--accent-zacht); border-color: var(--accent); }
+button:disabled { opacity: 0.55; cursor: default; }
+.lijst { display: grid; gap: 10px; }
+.lijst .uitleg { margin: 0; font-size: 0.86rem; color: var(--zacht); }
+#w-items { display: grid; gap: 4px; max-height: 62vh; overflow-y: auto; padding-right: 2px; }
+#w-items h3 { margin: 10px 0 2px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--zacht); font-weight: 600; }
+#w-items h3:first-child { margin-top: 0; }
+#w-items button { text-align: left; border-color: transparent; background: none; padding: 5px 8px; }
+#w-items button:hover { background: var(--grond); }
+#w-items button[aria-current="true"] { background: var(--accent-zacht); border-color: var(--accent); }
+.beeld { display: grid; gap: 12px; }
+.balk { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+.balk label { min-width: 130px; flex: 1 1 130px; max-width: 220px; }
+.standpunten { display: flex; flex-wrap: wrap; gap: 5px; flex: 1 1 100%; }
+.drie-d { border-radius: 8px; overflow: hidden; background: #f2f1ed; max-width: 100%; }
+.drie-d canvas { display: block; max-width: 100%; height: auto; }
+#w-status { margin: 0; font-size: 0.8rem; color: var(--zacht); font-variant-numeric: tabular-nums; }
+.onder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 260px); gap: 16px; align-items: start; }
+@media (max-width: 620px) { .onder { grid-template-columns: minmax(0, 1fr); } }
+.onder h2 { margin: 0; font-size: 1.15rem; }
+.onder .klein { margin: 2px 0 10px; color: var(--zacht); font-size: 0.86rem; }
+dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 14px; margin: 0; font-size: 0.92rem; }
+dt { color: var(--zacht); }
+dd { margin: 0; overflow-wrap: anywhere; }
+figure { margin: 0; }
+figure img { display: block; width: 100%; border-radius: 8px; border: 1px solid var(--rand); }
+figcaption { font-size: 0.78rem; color: var(--zacht); margin-top: 4px; }
+.toestel h2 { margin: 0 0 4px; font-size: 1.05rem; }
+.toestel p { margin: 0 0 10px; color: var(--zacht); max-width: 75ch; font-size: 0.92rem; }
+.toestel .knoppen { display: flex; flex-wrap: wrap; gap: 8px; }
+pre { margin: 12px 0 0; padding: 12px; background: var(--grond); border: 1px solid var(--rand); border-radius: 8px; font: 0.82rem/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<div class="blad">
+  <header>
+    <h1>3D-werkbank</h1>
+    <p>Elke collectie die in 3D getoond kan worden, in dezelfde weergave als de demo's. Kies een bron en een item; het gereedschap (controleblad, modelbeelden, lichtmeting) draait op deze pagina.</p>
+  </header>
+  <div class="vak">
+    <aside class="paneel lijst">
+      <label>Bron <select id="w-bron"></select></label>
+      <p class="uitleg" id="w-uitleg"></p>
+      <label>Zoeken <input type="search" id="w-zoek" placeholder="Naam of groep" autocomplete="off"></label>
+      <div id="w-items"></div>
+    </aside>
+    <section class="paneel beeld">
+      <div class="balk">
+        <div class="standpunten" id="w-standpunten" role="group" aria-label="Standpunt"></div>
+        <label id="w-decorvak">Decor <select id="w-decor"></select></label>
+        <label>Licht <select id="w-licht"></select></label>
+        <label>Kwaliteit <select id="w-kwaliteit"></select></label>
+        <label id="w-reeksvak" hidden>Variant <select id="w-reeks"></select></label>
+        <label>&nbsp;<select id="w-reekskeuze" hidden aria-label="Keuze binnen de variant"></select></label>
+      </div>
+      <div id="w-3d-zetel" class="drie-d"></div>
+      <div id="w-3d-bouw" class="drie-d" hidden></div>
+      <p id="w-status" aria-live="polite"></p>
+      <div class="onder">
+        <div>
+          <h2 id="w-naam"></h2>
+          <p class="klein" id="w-omschrijving"></p>
+          <dl id="w-feiten"></dl>
+        </div>
+        <figure id="w-foto" hidden><img alt=""><figcaption></figcaption></figure>
+      </div>
+    </section>
+  </div>
+  <section class="paneel toestel">
+    <h2>Toestelcontrole</h2>
+    <p>Meet op dit toestel wat de cloud niet kan zien: of de 3D op WebGPU draait, hoe lang een beeld duurt, of het geheugen stabiel blijft en of het licht klopt. Duurt ongeveer een halve minuut. Open deze pagina op het toestel van de toonzaal, start de controle en kopieer het rapport.</p>
+    <div class="knoppen">
+      <button type="button" id="w-toestel">Start de controle</button>
+      <button type="button" id="w-kopieer" hidden>Kopieer rapport</button>
+    </div>
+    <pre id="w-rapport" hidden></pre>
+  </section>
+</div>
+<script>/*BUNDEL*/</script>
+</body>
+</html>

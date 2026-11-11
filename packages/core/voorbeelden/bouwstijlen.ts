@@ -107,3 +107,44 @@ export function bouwstijlVan(ontwerp: Ontwerp): Bouwstijl | undefined {
     return zelfde(sorteer(toegepast.opties), sorteer(ontwerp.opties)) && zelfde(sorteer(toegepast.vormgeving), sorteer(ontwerp.vormgeving));
   });
 }
+
+export interface StijlAfwijking {
+  /** Optiegroep of veld van de vormgeving. */
+  veld: string;
+  /** Wat de bouwstijl zet (undefined = de standaard van de catalogus). */
+  stijl: unknown;
+  /** Wat het ontwerp heeft. */
+  ontwerp: unknown;
+}
+
+/**
+ * De bouwstijl die het dichtst bij een ontwerp ligt, met wat ervan afwijkt. Zo lees je elk model als "bouwstijl plus
+ * afwijkingen", ook de bestaande modellen die al hun getallen zelf dragen: weinig afwijkingen = het model volgt de stijl,
+ * veel afwijkingen = een eigen karakter (of een stijl die nog ontbreekt).
+ */
+export function dichtsteBouwstijl(ontwerp: Ontwerp): { stijl: Bouwstijl; afwijkingen: StijlAfwijking[] } {
+  const zelfde = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  let beste: { stijl: Bouwstijl; afwijkingen: StijlAfwijking[] } | undefined;
+  for (const stijl of bouwstijlen) {
+    const toegepast = pasBouwstijlToe(ontwerp, stijl);
+    const afwijkingen: StijlAfwijking[] = [];
+    for (const groep of STIJLGROEPEN) {
+      if (!zelfde(toegepast.opties?.[groep], ontwerp.opties?.[groep])) afwijkingen.push({ veld: groep, stijl: toegepast.opties?.[groep], ontwerp: ontwerp.opties?.[groep] });
+    }
+    const velden = new Set([...Object.keys(toegepast.vormgeving ?? {}), ...Object.keys(ontwerp.vormgeving ?? {})]) as Set<keyof Vormgeving>;
+    for (const veld of velden) {
+      if (BLIJFT.includes(veld)) continue;
+      if (!zelfde(toegepast.vormgeving?.[veld], ontwerp.vormgeving?.[veld])) afwijkingen.push({ veld, stijl: toegepast.vormgeving?.[veld], ontwerp: ontwerp.vormgeving?.[veld] });
+    }
+    if (!beste || afwijkingen.length < beste.afwijkingen.length) beste = { stijl, afwijkingen };
+  }
+  return beste!;
+}
+
+/** Korte tekst voor een fiche of het controleblad: "Plateau met dikke donskussens + 3 afwijkingen (poothoogte, rug, kussendikte)". */
+export function bouwstijlTekst(ontwerp: Ontwerp): string {
+  const { stijl, afwijkingen } = dichtsteBouwstijl(ontwerp);
+  if (!afwijkingen.length) return stijl.label;
+  const velden = afwijkingen.map((a) => a.veld);
+  return `${stijl.label} + ${afwijkingen.length} ${afwijkingen.length === 1 ? 'afwijking' : 'afwijkingen'} (${velden.slice(0, 4).join(', ')}${velden.length > 4 ? ', …' : ''})`;
+}

@@ -401,7 +401,10 @@ function toonWeergave(w: 'voor' | '3d') {
   $('#p-3d').hidden = w !== '3d';
   $('#p-3d-knoppen').hidden = w !== '3d';
   if (w === '3d') {
-    if (viewer === undefined) viewer = maak3D($('#p-3d'));
+    if (viewer === undefined) {
+      viewer = maak3D($('#p-3d'));
+      (window as unknown as { __positie3d?: unknown }).__positie3d = viewer;
+    }
     const p = huidig();
     if (viewer && p) {
       viewer.formaat();

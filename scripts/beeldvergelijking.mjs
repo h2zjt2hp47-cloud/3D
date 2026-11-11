@@ -88,6 +88,19 @@ async function wachtTotStil(p, selector, maxMs = 40000) {
   return vorig;
 }
 
+/**
+ * Neemt het beeld zodra de weergave meldt dat het af is (`stil()`, zie drie-d.ts): geen vaste wachttijden. `haak` is de
+ * naam waaronder de pagina haar weergave bereikbaar maakt. Een oudere pagina zonder die melding: wachten tot het beeld
+ * twee keer hetzelfde is.
+ */
+async function neemBeeld(p, selector, haak) {
+  // De pagina zet het beeld klaar in de volgende beeldronde (knop → opbouw): even de tijd geven.
+  await p.waitForTimeout(400);
+  if (!(await p.evaluate((h) => typeof window[h]?.stil === 'function', haak))) return wachtTotStil(p, selector);
+  await p.evaluate((h) => window[h].stil(), haak);
+  return p.evaluate((s) => document.querySelector(s)?.toDataURL('image/png') ?? '', selector);
+}
+
 async function zetSelect(p, selector, waarde) {
   if ((await p.locator(selector).inputValue()) !== waarde) await p.selectOption(selector, waarde);
 }
@@ -131,7 +144,7 @@ async function maakBeelden() {
         s.dispatchEvent(new Event('change', { bubbles: true }));
       }, b.zon ?? null);
       await p.click(`[data-standpunt="${b.standpunt}"]`);
-      beelden.set(b.naam, await wachtTotStil(p, '#o-3d canvas'));
+      beelden.set(b.naam, await neemBeeld(p, '#o-3d canvas', '__zetel3d'));
       console.log('klaar');
     }
     await p.close();
@@ -146,14 +159,14 @@ async function maakBeelden() {
       process.stdout.write('  bouw-woning … ');
       await p.click('.nav [data-weergave="plan"]');
       await p.click('[data-pl-weergave="3d"]');
-      beelden.set('bouw-woning', await wachtTotStil(p, '#pl-3d canvas'));
+      beelden.set('bouw-woning', await neemBeeld(p, '#pl-3d canvas', '__plan3d'));
       console.log('klaar');
     }
     if (bouw.some((b) => b.naam === 'bouw-raam')) {
       process.stdout.write('  bouw-raam … ');
       await p.click('.nav [data-weergave="positie"]');
       await p.click('[data-p-weergave="3d"]');
-      beelden.set('bouw-raam', await wachtTotStil(p, '#p-3d canvas'));
+      beelden.set('bouw-raam', await neemBeeld(p, '#p-3d canvas', '__positie3d'));
       console.log('klaar');
     }
     await p.close();
