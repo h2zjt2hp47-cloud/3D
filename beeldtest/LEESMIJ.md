@@ -58,8 +58,9 @@ Allemaal bij kwaliteit *Mooi*, venster 1400 × 950.
 ## Waarom het betrouwbaar is
 
 Dezelfde versie geeft exact hetzelfde beeld (0,00 % verschil). Daarvoor tekenen de texturen van vloer, wand en hout met
-een vaste toevalsreeks (`vasteReeks` in `drie-d.ts`), en wacht het script tot het canvas stilstaat (twee keer na elkaar
-hetzelfde beeld). Proef op 5/11: de vierkante voet onder Pebble en de Stockholm-poef tijdelijk teruggezet, en beide
+een vaste toevalsreeks (`vasteReeks` in `drie-d.ts`), en wacht het script tot de weergave zelf meldt dat het beeld af is
+(`stil()`, sinds 11/11; daarvoor: tot het canvas twee keer na elkaar hetzelfde beeld gaf. De overstap gaf exact dezelfde
+pixels). Proef op 5/11: de vierkante voet onder Pebble en de Stockholm-poef tijdelijk teruggezet, en beide
 beelden werden gemeld (0,94 % en 0,21 %), met de voet in het rood.
 
 Hulpmiddelen: Playwright (Apache 2.0), pixelmatch (ISC), pngjs (MIT).

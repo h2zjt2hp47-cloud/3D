@@ -5,6 +5,13 @@ description: Bouw, wijzig of debug de woningconfigurator voor de bouwsector (pac
 
 # Woningconfigurator (bouw) — hoe het werkt
 
+**3D nakijken, beelden, controleblad, licht en snelheid:** zie de skill `3d-werkbank`. De bouwdemo levert daar drie
+bronnen (`inrichting`, `ramen`, `woning`): `npm run controleblad -- --bron inrichting,ramen,woning`,
+`npm run lichtmeting -- --bron ijk-bouw`. In de bouwweergave geldt de ijking `BOUW_LICHT` (drie-d.ts) en worden
+onderdelen met hetzelfde materiaal samengevoegd (`voegSamen`): een nieuw materiaal of een nieuw soort blok hoeft daar
+niets voor te doen, maar een doorzichtig materiaal moet `transparent` of `transmission` hebben om apart te blijven.
+Haken voor tests: `window.__plan3d` (woning) en `window.__positie3d` (raam), beide met `stil()`.
+
 Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/bouw-web`). Vier stappen: **Plattegrond → Configurator → Offerte → Werf**. Dezelfde motor als de zetels (`packages/core`). Alle prijzen en technische waarden zijn voorbeelden.
 
 ## Bestanden

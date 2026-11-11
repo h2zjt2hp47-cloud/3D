@@ -30,7 +30,8 @@ Waar in de code: blokken in `packages/core/src/ruimtelijk.ts` (zetels) en `packa
 De 3D draait op de WebGPU-renderer van three.js: op WebGPU waar de browser het heeft (Safari 26 of nieuwer op de Mac in
 de toonzaal, Chrome), anders automatisch op WebGL2, met hetzelfde beeld. De fotomodus rekent met WebGPU op de
 WebGPU-path tracer met ontruiser, anders zoals vroeger. Nieuwe effecten maken we in TSL (de taal van three.js voor
-WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU: daar is alleen de WebGL2-weg te testen.
+WebGPU), niet meer met eigen WebGL-shaders. Sinds 11/11 zijn in de cloud beide wegen te testen (zie *Testen in de cloud*
+hieronder): WebGL2 én WebGPU, zonder grafische kaart.
 
 ## Wat we leerden
 
@@ -210,11 +211,12 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 
 ## Technische valkuilen (voor wie verder bouwt)
 
-- **Omgevingslicht en WebGPU (gevonden 11/11).** Met de WebGPU-renderer telt `envMapIntensity` van een materiaal niet meer
-  voor het omgevingsbeeld van de scène; three.js leest `scene.environmentIntensity`. De sterkte per lichtsfeer (`omgeving`
-  in `LICHTEN`) had daardoor sinds 4/11 geen effect: het omgevingslicht stond altijd op volle sterkte en bovenkanten
-  werden te fel. Meet het licht na met een blok in een gekende stof (zie `ZETEL_LICHT` in `drie-d.ts`) voor je iets bijstelt.
-
+- **Omgevingslicht: één instelling (opgeruimd 11/11).** Met `WebGPURenderer` telt `material.envMapIntensity` niet
+  voor het omgevingsbeeld van de scène; three.js leest `scene.environmentIntensity`. De sterkte per lichtsfeer had
+  daardoor sinds 4/11 geen effect: het omgevingslicht stond altijd op volle sterkte en bovenkanten waren te fel. Nu is
+  `LICHTEN[..].omgeving` die echte sterkte (1 = vol) en is `envMapIntensity` overal weg (geen pixel verschil in de
+  beeldvergelijking: het had dus echt geen effect). De ijking staat per weergave in `ZETEL_LICHT` en `BOUW_LICHT`.
+  Les: een instelling die je niet meet, kan stuk zijn zonder dat iemand het merkt. `npm run lichtmeting`.
 - **Een omtrek mag niet plooien.** Schuift een kant naar binnen, maak de hoeken dan kleiner. De test op snijdende
   zijden staat in `doorlopend.test.ts`.
 - **Een wand die oploopt of zakt:** de helling moet meetellen in de richting van het oppervlak, anders kloppen de
@@ -253,3 +255,50 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 - [Onderzoek raamsoftware](onderzoek-raamsoftware.md): hoe LogiKal, ReynaPro en Chacal met profielen en tekeningen
   werken.
 - [Onderzoek bouw](onderzoek-bouw-ramen-deuren.md): de pijnpunten bij ramen en deuren.
+
+## Testen in de cloud: drie rekenwegen (11/11)
+
+De cloud heeft geen grafische kaart. Toch zijn er drie manieren om de 3D te laten rekenen; `scripts/3d/werkbank.mjs`
+kiest ze met `--weg`.
+
+| Weg | Hoe | Gemeten (Kotor, 900 px, kwaliteit Mooi) | Waarvoor |
+|---|---|---|---|
+| `snel` | Volledige Chromium op een virtueel scherm (Xvfb) met `--use-gl=angle --use-angle=gl`: Mesa llvmpipe | 56 ms per beeld | Dagelijks: beelden, controleblad, lichtmeting |
+| `webgl2` | Headless Chromium met swiftshader (`--use-angle=swiftshader --enable-unsafe-swiftshader`) | 189 ms per beeld | `npm run beelden` (de referentiebeelden) |
+| `webgpu` | Volledige Chromium op Xvfb met `--enable-unsafe-webgpu --enable-features=Vulkan --use-webgpu-adapter=swiftshader` | zie `npm run toestelcontrole` | De weg van de M5 nagaan |
+
+- **WebGPU in de cloud werkt alleen met de volledige browser op een virtueel scherm.** In de headless-schil krijgt de
+  pagina wel een adapter, maar het toestel valt weg bij het eerste beeld ("Device Lost: A valid external Instance
+  reference no longer exists").
+- **WebGL2 en WebGPU geven hetzelfde beeld:** 0,02 tot 0,5 % van de pixels verschilt (randen, korrel van de zachte
+  schaduw). Een groter verschil is een fout in één van de twee wegen. `npm run toestelcontrole` gaat dat na.
+- **Wat de cloud niet zegt:** hoe snel de M5 is en hoe het op zijn scherm oogt. Daarvoor de knop *Toestelcontrole* op
+  de werkbankpagina.
+- **Zonder grafische kaart is *Snel* trager dan *Mooi*** (153 tegenover 56 ms): rechtstreeks naar het canvas tekenen
+  kost in software meer dan via de nabewerking. Gebruik in het gereedschap dus *Mooi*.
+
+## Wachten tot een beeld af is (11/11)
+
+Een beeld is niet af op het moment dat `toon()` terugkeert: stoffoto's laden, zachte vormen worden op de achtergrond
+berekend, het decor wordt 120 ms later gebouwd, shaders van nieuwe delen worden op de achtergrond gemaakt en de schaduw
+wordt daarna nog twee keer bijgewerkt. Vroeger wachtte het gereedschap daarom met vaste pauzes en vergeleek het twee
+opeenvolgende beelden: traag (35 s per model onder belasting) en toch niet zeker. Nu houdt de weergave zelf bij wat nog
+loopt en biedt ze `viewer.stil()`: een belofte die vervult zodra het definitieve beeld op het canvas staat. Gevolg: het
+controleblad van 86 items duurt 49 s, en de beeldvergelijking geeft exact dezelfde pixels als met het oude wachten.
+
+## Tekenopdrachten tellen, niet driehoeken (11/11)
+
+`viewer.info()` geeft per beeld het aantal tekenopdrachten en driehoeken. Richtwaarde uit de praktijk van three.js:
+onder de paar honderd tekenopdrachten per beeld; het aantal driehoeken weegt veel minder.
+
+| Scène | Tekenopdrachten | Driehoeken |
+|---|---|---|
+| Hoeksofa (Kotor) | 79 | 171 000 |
+| Doorlopende zetel (Doha) | 27 | 178 000 |
+| Voorbeeldwoning, onderdeel per onderdeel | 3 909 | 110 000 |
+| Voorbeeldwoning, samengevoegd per materiaal | 153 | 110 000 |
+
+De woning was dus het probleem, niet de zetel: 697 blokken met tot zes materialen per blok. `voegSamen` in `drie-d.ts`
+maakt er één vorm per materiaal van (alleen in de bouwweergave, niet voor glas). Het beeld blijft hetzelfde (0,02 %
+verschil), het opbouwen gaat van 351 naar 137 ms. Voor een scène met honderden gelijke onderdelen zou `InstancedMesh`
+of `BatchedMesh` nog verder gaan; bij ons zijn de onderdelen verschillend en volstaat samenvoegen.
