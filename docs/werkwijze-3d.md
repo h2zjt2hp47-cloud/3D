@@ -247,6 +247,11 @@ maten, geen lege scène).
 Wat de weergave herbruikbaar maakt, staat in `docs/3d-technieken.md` (welke techniek waarvoor) en in de skill
 `3d-werkbank`.
 
+**De bouw-3D gebruikt sinds 11/11 dezelfde technieken als de zetel** (zachte schaduw, licht uit een omgevingsbeeld,
+nabewerking, materialen met reliëf, stof met een weefsel), en staat buiten op gras onder een lucht. Een bron kan haar
+eigen lichtsfeer meegeven (`licht` in de afspraak): de woning toont zich in daglicht, een raam of een meubel in de
+studio. Verslag en beeld: `docs/3d-technieken.md`, hoofdstuk *De bouw-3D met de technieken van de zetel*.
+
 ## 9. Pijnpunten gemeten en opgelost (tweede ronde, 11/11)
 
 Elk pijnpunt is eerst gemeten, dan opgelost en daarna opnieuw gemeten.

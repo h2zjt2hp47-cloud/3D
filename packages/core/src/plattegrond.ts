@@ -903,15 +903,18 @@ export function meubelBlokken(vorm: MeubelVorm, B: number, D: number, H: number,
     case 'fauteuil': {
       const arm = Math.min(18, B * 0.15), rug = Math.min(20, D * 0.22);
       poten('hout', eik, 10, 6, 4);
-      blok('onderstel', 'stof', 0, 10, 0, B, 30, D, kleur, { afronding: 3 });
-      blok('rug', 'stof', 0, 10, 0, B, H - 10, rug, kleur, { afronding: 6 });
-      blok('arm_l', 'stof', 0, 10, 0, arm, 52, D, kleur, { afronding: 6 });
-      blok('arm_r', 'stof', B - arm, 10, 0, arm, 52, D, kleur, { afronding: 6 });
+      // Zoals de zetels van de configurator (sinds 11/11): een weefsel (bouclé), bolle zitkussens en losse rugkussens
+      // met een mesrand. De weergave tekent ze met dezelfde kussenvormen als in de zeteldemo.
+      const stof = { weefsel: 'boucle' };
+      blok('onderstel', 'stof', 0, 10, 0, B, 30, D, kleur, { afronding: 3, ...stof });
+      blok('rug', 'stof', 0, 10, 0, B, H - 10, rug, kleur, { afronding: 6, ...stof });
+      blok('arm_l', 'stof', 0, 10, 0, arm, 52, D, kleur, { afronding: 6, ...stof });
+      blok('arm_r', 'stof', B - arm, 10, 0, arm, 52, D, kleur, { afronding: 6, ...stof });
       const n = vorm === 'fauteuil' ? 1 : Math.max(2, Math.round((B - 2 * arm) / 80));
       const kb = (B - 2 * arm) / n;
       for (let i = 0; i < n; i++) {
-        blok(`zit${i}`, 'kussen', arm + i * kb + 0.5, 40, rug, kb - 1, 12, D - rug - 2, kleur, { afronding: 5 });
-        blok(`rugkussen${i}`, 'kussen', arm + i * kb + 0.5, 50, rug - 2, kb - 1, H - 55, 14, kleur, { afronding: 6, kantel: { graden: 8, richting: 'z-' } });
+        blok(`zit${i}`, 'kussen', arm + i * kb + 0.5, 40, rug, kb - 1, 12, D - rug - 2, kleur, { afronding: 5, bol: 2.6, ...stof });
+        blok(`rugkussen${i}`, 'kussen', arm + i * kb + 0.5, 50, rug - 2, kb - 1, H - 55, 14, kleur, { afronding: 6, mesrand: true, kantel: { graden: 8, richting: 'z-' }, ...stof });
       }
       break;
     }
@@ -925,12 +928,13 @@ export function meubelBlokken(vorm: MeubelVorm, B: number, D: number, H: number,
       poten('metaal', zwart, 44, 2, 3);
       break;
     case 'bed': {
-      blok('kader', 'stof', 0, 10, 0, B, 25, D, kleur, { afronding: 2 });
-      blok('hoofdbord', 'stof', 0, 10, 0, B, H - 10, 8, kleur, { afronding: 3 });
-      blok('matras', 'kussen', 3, 35, 9, B - 6, 20, D - 12, wit, { afronding: 4 });
-      blok('dekbed', 'stof', 2, 50, D * 0.38, B - 4, 7, D * 0.62 - 2, '#d9d4c9', { afronding: 3 });
+      // Bed met beddengoed in linnen: een dekbed dat bol ligt en hoofdkussens met een mesrand (zoals een echt kussen).
+      blok('kader', 'stof', 0, 10, 0, B, 25, D, kleur, { afronding: 2, weefsel: 'linnen' });
+      blok('hoofdbord', 'stof', 0, 10, 0, B, H - 10, 8, kleur, { afronding: 3, weefsel: 'linnen' });
+      blok('matras', 'kussen', 3, 35, 9, B - 6, 20, D - 12, wit, { afronding: 4, weefsel: 'effen' });
+      blok('dekbed', 'stof', 2, 50, D * 0.38, B - 4, 7, D * 0.62 - 2, '#d9d4c9', { afronding: 3, bol: 2, weefsel: 'linnen' });
       const n = B > 120 ? 2 : 1;
-      for (let i = 0; i < n; i++) blok(`kussen${i}`, 'kussen', 8 + (i * (B - 16)) / n, 55, 12, (B - 16) / n - 4, 12, 35, wit, { afronding: 5 });
+      for (let i = 0; i < n; i++) blok(`kussen${i}`, 'kussen', 8 + (i * (B - 16)) / n, 55, 12, (B - 16) / n - 4, 12, 35, wit, { afronding: 5, mesrand: true, weefsel: 'linnen' });
       poten('hout', eik, 10, 5, 5);
       break;
     }
@@ -1000,7 +1004,7 @@ export function meubelBlokken(vorm: MeubelVorm, B: number, D: number, H: number,
       blok('blad', 'stof', B / 2 - 30, 40, D / 2 - 30, 60, H - 40, 60, kleur, { vorm: 'bol' });
       break;
     case 'tapijt':
-      blok('tapijt', 'stof', 0, 0, 0, B, 1, D, kleur);
+      blok('tapijt', 'stof', 0, 0, 0, B, 1, D, kleur, { weefsel: 'boucle' });
       break;
     case 'trap': {
       // Rechte trap: loopt op van voor (z = D) naar achter (z = 0), tot de vloer erboven.

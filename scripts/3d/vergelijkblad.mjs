@@ -23,7 +23,7 @@ const bron = await kiesBron(werkbank.pagina, o.bron);
 const items = kiesItems(await leesItems(werkbank.pagina, bron.code), o);
 if (!items.length) { console.error('Geen items gevonden voor deze keuze.'); process.exit(2); }
 const standpunten = lijst(o.standpunten ?? 'schuin,voor');
-const basis = { decor: o.decor ?? 'studio', licht: o.licht ?? 'studio', kwaliteit: o.kwaliteit ?? 'mooi', vormen: o.vormen ?? 'blokken', breedte: Number(o.breedte ?? 700) };
+const basis = { decor: o.decor ?? 'studio', ...(o.licht ? { licht: o.licht } : {}), kwaliteit: o.kwaliteit ?? 'mooi', vormen: o.vormen ?? 'blokken', breedte: Number(o.breedte ?? 700) };
 const per = Number(o.per ?? 4) * (o.bronfotos ? 2 : 1);
 const rijen = [];
 for (const item of items) {

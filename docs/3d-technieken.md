@@ -325,6 +325,45 @@ toont op een grof raster kartels; fijner rekenen kost rekentijd bij het opbouwen
 Doeltoestel sinds 11/11: een toestel met een bescheiden grafische kaart (MacBook). Driehoeken zijn daar geen probleem
 (een zetel telt er 200 000 tot 250 000); tekenopdrachten wel (zie hierboven).
 
+## De bouw-3D met de technieken van de zetel (11/11)
+
+Vraag van Jonas: "Maak je een versie van de bouw-3D met deze technieken?" De woning, de ramen en de inrichting werden
+tot dan getekend met vlakke kleuren, een harde schaduw en een grijs vlak als grond. De weergave is dezelfde code als die
+van de zetels (`drie-d.ts`); de technieken stonden alleen uit voor de bouw. Nu staan ze aan (`bouwRijk` in `maak3D`):
+
+| Techniek | Bij de zetel | In de bouw |
+|---|---|---|
+| Zachte schaduw (VSM, vervaagd) | Onder en achter de zetel | Slagschaduw van de woning op het gras, van muren op vloeren |
+| Licht uit een omgevingsbeeld per lichtsfeer | Studio, daglicht, avond … | Daglicht, ochtend, bewolkt (buiten) en studio (neutraal) |
+| Nabewerking: schaduw in hoeken en naden | Tussen kussens | Waar muur, vloer en plafond samenkomen, rond ramen, onder de dakrand |
+| Geijkt licht (bovenkant ±1,4 × de staal) | `ZETEL_LICHT` | `BOUW_LICHT`, nu ook voor buiten |
+| Materialen met reliëf | Weefsels, houtnerf | Metselwerk met diepe voegen, planken, leien, pleister, tegels, parket, dak met korrel |
+| Stof met een weefsel, echte kussenvormen | Elke zetel | De zetels en bedden van de inrichting (bouclé, linnen, kussens met een mesrand) |
+| Omgeving | Decors (salon, loft …) | Buiten: gras tot aan de horizon onder een lucht, met nevel in de verte |
+
+![De bouw-3D voor en na](afbeeldingen/bouw-3d-voor-na-1111.jpg)
+
+Wat er specifiek voor de bouw bij kwam:
+
+- **Buiten is een lichtsfeer.** In de bouwweergave staat alles behalve *Studio* buiten. De woning opent in *Daglicht*;
+  een raam of een meubel apart blijft in de neutrale studio. In de bouwdemo kies je het licht onder de 3D.
+- **De grond ontvangt alleen dichtbij schaduw.** Op de rand van het bereik van de schaduwkaart tekent de zachte schaduw
+  een stippellijn op de grond. Een ronde schijf rond de woning (binnen dat bereik) ontvangt schaduw; de rest van de
+  grond niet. Zelfde materiaal en dezelfde tekening, dus geen naad.
+- **De grond ligt een halve centimeter onder nul.** Een vloer of terras op hoogte nul flikkerde met de grond (te zien
+  bij een raam in een stuk gevel); dat is meteen opgelost.
+- **Baksteen heeft een eigen hoogtekaart.** Bij de andere materialen is de tekening zelf het reliëf (donker = diep). Bij
+  metselwerk kan de voeg lichter zijn dan de steen; daar ligt de voeg altijd dieper.
+
+**Gemeten** (`npm run toestelcontrole`, `npm run lichtmeting -- --bron ijk-bouw`): de woning kost 200 tekenopdrachten
+(was 153; de zachte schaduw en de nabewerking tellen mee) en blijft samengevoegd per materiaal; WebGL2 en WebGPU geven
+hetzelfde beeld; geen meldingen van de grafische kaart; licht buiten: bovenkant 1,06 tot 1,43 × de staal, voorkant
+0,73 tot 1,08 ×.
+
+**Wat nog niet.** De raamprofielen zijn nog balken (het advies hieronder, een eigen doorsnede per profielsysteem, is
+niet gebouwd). *Avond* heeft in de bouw geen lampen binnen. De vroegere weergave is er nog om te vergelijken: de
+werkbankpagina met `?eenvoudig` achter het adres (alleen lokaal, als bestand).
+
 ## Lessen uit het controleblad (11/11)
 
 - **Hoogte langs een gebogen wand: reken met de afstand, niet met de hoek.** Punten op gelijke hoeken liggen bij een

@@ -247,10 +247,23 @@ const ZETEL_LICHT: Partial<Record<LichtNaam, { zonSterkte?: number; hemel?: numb
  * IJking van het licht voor de bouwweergave (woning, raam, inrichting), 11/11. Gemeten met `npm run lichtmeting -- --bron
  * ijk-bouw`: met de waarden van LICHTEN was een bovenvlak 1,84 keer zo helder als zijn staal (dak, vloer, tafelblad,
  * bovenkant van een muur), zodat witte kasten, bedden en badkamers uitbrandden tot één witte vlek. Zelfde doel als bij de
- * zetel: bovenkant ±1,4 × de staal, voorkant ±0,9 ×. De bouwdemo gebruikt alleen de sfeer Studio.
+ * zetel: bovenkant ±1,4 × de staal, voorkant ±0,9 ×. Studio is de neutrale sfeer (raam, meubel); de woning staat buiten.
  */
 const BOUW_LICHT: Partial<Record<LichtNaam, { zonSterkte?: number; hemel?: number; omgeving?: number; hoogte?: number; belichting?: number }>> = {
   studio: { hemel: 0.16, omgeving: 0.6, zonSterkte: 1, hoogte: 1.3, belichting: 1 },
+  // Buiten (sinds 11/11, met gras en lucht): minder strooilicht en een duidelijke zon, zodat gevels en dak van elkaar
+  // verschillen en de slagschaduw leesbaar is.
+  daglicht: { zonSterkte: 1.3, hemel: 0.14, omgeving: 0.5, hoogte: 1.4, belichting: 0.95 },
+  ochtend: { belichting: 0.9 },
+  bewolkt: { zonSterkte: 0.22, hemel: 0.4, omgeving: 0.5, belichting: 1.0 },
+};
+/** Reliëf per bouwmateriaal (sterkte van de bumpMap): alleen in de bouwweergave met de zeteltechnieken. */
+const BOUW_RELIEF: Partial<Record<Blok['soort'], number>> = {
+  steen: 1.4, planken: 0.6, planken_h: 0.6, leien: 0.7, zink: 0.35, natuursteen: 0.9, pleister: 0.6, tegel: 0.3, parket: 0.25,
+};
+/** Buiten in de bouwweergave: kleur van de lucht (en de nevel) per lichtsfeer. Studio blijft de neutrale studio. */
+const BOUW_LUCHT: Partial<Record<LichtNaam, string>> = {
+  daglicht: '#d5e3ef', ochtend: '#efe2d2', bewolkt: '#dfe3e7', avond: '#3a3944', spots: '#d5e3ef',
 };
 export type Kwaliteit = 'snel' | 'mooi';
 type Hdr = { boven: readonly number[]; onder: readonly number[]; bronnen: readonly (readonly [readonly number[], number, number, readonly number[]])[] };
@@ -358,6 +371,11 @@ export interface Opties3D {
    * tekent elk onderdeel apart, om beide te kunnen vergelijken.
    */
   samenvoegen?: boolean;
+  /**
+   * Bouwweergave zoals ze tot 11/11 was: vlakke kleuren, harde schaduw, geen omgevingslicht en geen nabewerking. Zonder
+   * deze optie gebruikt de bouwweergave de technieken van de zetel (zie `bouwRijk` in maak3D).
+   */
+  eenvoudig?: boolean;
 }
 
 /**
@@ -410,8 +428,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
-  // Zetel: zachte schaduwen (VSM, vervaagd); woning: PCF-schaduwen (PCFSoft bestaat niet in WebGPURenderer).
-  renderer.shadowMap.type = opties.zetel ? THREE.VSMShadowMap : THREE.PCFShadowMap;
+  // De bouwweergave (woning, raam, inrichting) met de technieken van de zetel (sinds 11/11): zachte schaduw, licht uit
+  // een omgevingsbeeld per lichtsfeer, nabewerking die hoeken en naden diepte geeft, materialen met reliëf, stof met een
+  // weefsel, en buiten gras en lucht. `eenvoudig` geeft de vroegere weergave.
+  const bouwRijk = !opties.zetel && !opties.eenvoudig, rijk = Boolean(opties.zetel) || bouwRijk;
+  // Zachte schaduwen (VSM, vervaagd); de eenvoudige bouwweergave: PCF-schaduwen (PCFSoft bestaat niet in WebGPURenderer).
+  renderer.shadowMap.type = rijk ? THREE.VSMShadowMap : THREE.PCFShadowMap;
   // Schaduwen alleen opnieuw berekenen als de scène of het licht verandert, niet bij elke camerabeweging: in
   // WebGPURenderer per licht (shadow.autoUpdate / needsUpdate). De zon is het enige licht met schaduw.
   // Na een wijziging nog twee keer kort daarna: nieuwe delen worden soms pas een beeld later getekend (hun shader wordt
@@ -428,7 +450,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#f2f1ed');
-  const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+  // Bouw: een woning van 15 m met gras tot aan de horizon vraagt een verder zichtveld dan een zetel.
+  const camera = bouwRijk ? new THREE.PerspectiveCamera(35, 1, 5, 24000) : new THREE.PerspectiveCamera(35, 1, 1, 5000);
   // Studiolicht: een omgevingsbeeld (softboxen in een grijze ruimte) geeft zachte reflecties en glans;
   // daardoor kunnen de hemel- en vullicht zwakker.
   scene.environment = omgevingVoor('studio');
@@ -446,7 +469,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   zonSchaduw = zon.shadow;
   zon.shadow.mapSize.set(2048, 2048);
   zon.shadow.bias = -0.0005;
-  if (opties.zetel) { zon.shadow.radius = 7; zon.shadow.blurSamples = 10; zon.shadow.bias = -0.0002; }
+  if (rijk) { zon.shadow.radius = 7; zon.shadow.blurSamples = 10; zon.shadow.bias = -0.0002; }
   scene.add(zon, zon.target);
   const vul = new THREE.DirectionalLight(0xffffff, 0.16 * PI);
   scene.add(vul);
@@ -454,7 +477,43 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), studioVloer);
   vloer.rotation.x = -Math.PI / 2;
   vloer.receiveShadow = true;
+  // Bouw: de grond loopt door tot waar de nevel hem laat verdwijnen (400 m), niet tot een rand op 20 m.
+  // Schaduw ontvangt alleen een ronde schijf rond de woning, binnen het bereik van de schaduwkaart: op de rand van dat
+  // bereik tekent de zachte schaduw (VSM) een stippellijn op de grond. De schijf ligt 2 cm boven de grote grond, met
+  // hetzelfde materiaal en dezelfde tekening (zie zetZon), dus je ziet geen naad.
+  let grondBinnen: any = null;
+  if (bouwRijk) {
+    vloer.scale.setScalar(10);
+    vloer.receiveShadow = false;
+    vloer.position.y = -2.5;
+    grondBinnen = new THREE.Mesh(new THREE.CircleGeometry(1, 72), studioVloer);
+    grondBinnen.rotation.x = -Math.PI / 2;
+    grondBinnen.receiveShadow = true;
+    scene.add(grondBinnen);
+  }
   scene.add(vloer);
+  /** Gras voor buiten (bouw): gedempt groen met een fijne, onregelmatige tekening; herhaalt om de 3 m. */
+  let grasMateriaal: any = null;
+  const gras = () => {
+    if (grasMateriaal) return grasMateriaal;
+    const toeval = vasteReeks('gras'), c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#8b9c72';
+    g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 5200; i++) {
+      const licht = toeval();
+      g.fillStyle = licht > 0.5 ? `rgba(196,206,150,${0.05 + toeval() * 0.1})` : `rgba(58,84,48,${0.05 + toeval() * 0.12})`;
+      g.fillRect(toeval() * 256, toeval() * 256, 1 + toeval() * 2.5, 1 + toeval() * 5);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = maxAnisotropie;
+    t.repeat.set(40000 / 300, 40000 / 300);
+    grasMateriaal = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: t });
+    return grasMateriaal;
+  };
 
   // Fijne weefselstructuur voor stof (kleur komt van het materiaal).
   const weefsel = (() => {
@@ -521,6 +580,53 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.colorSpace = THREE.SRGBColorSpace;
     return t;
+  }
+  /** Hoogtekaart van het metselwerk (zelfde verband als `baksteen`): stenen hoog met een ruw vlak, voegen diep. */
+  let steenHoogte: any = null;
+  function baksteenHoogte() {
+    if (steenHoogte) return steenHoogte;
+    const toeval = vasteReeks('baksteenhoogte');
+    const px = 4, c = document.createElement('canvas');
+    c.width = STEEN.b * px;
+    c.height = STEEN.h * px;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#4a4a4a';
+    g.fillRect(0, 0, c.width, c.height);
+    for (let rij = 0; rij < 10; rij++) {
+      const off = rij % 2 ? 11 : 0;
+      for (let st = -1; st < 5; st++) {
+        const x = (st * 22 + off) * px, y = rij * 6 * px, grijs = Math.round(196 + toeval() * 44);
+        g.fillStyle = `rgb(${grijs},${grijs},${grijs})`;
+        g.fillRect(x, y, 21 * px, 5 * px);
+        // Ruw oppervlak: kleine putjes en bultjes per steen.
+        for (let k = 0; k < 14; k++) {
+          g.fillStyle = toeval() > 0.5 ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.16)';
+          g.fillRect(x + toeval() * 20 * px, y + toeval() * 4 * px, 1 + toeval() * 3, 1 + toeval() * 2);
+        }
+      }
+    }
+    steenHoogte = new THREE.CanvasTexture(c);
+    steenHoogte.wrapS = steenHoogte.wrapT = THREE.RepeatWrapping;
+    return steenHoogte;
+  }
+  /** Fijne korrel (dakbedekking): een hoogtekaart zonder richting. */
+  let korrelKaart: any = null;
+  function korrel() {
+    if (korrelKaart) return korrelKaart;
+    const toeval = vasteReeks('korrel'), c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#808080';
+    g.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 2600; i++) {
+      const v = Math.round(60 + toeval() * 140);
+      g.fillStyle = `rgba(${v},${v},${v},0.5)`;
+      g.fillRect(toeval() * 128, toeval() * 128, 1 + toeval() * 2, 1 + toeval() * 2);
+    }
+    korrelKaart = new THREE.CanvasTexture(c);
+    korrelKaart.wrapS = korrelKaart.wrapT = THREE.RepeatWrapping;
+    korrelKaart.repeat.set(0.05, 0.05);
+    return korrelKaart;
   }
   function planken(hex: string) {
     const toeval = vasteReeks('planken' + hex);
@@ -735,7 +841,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     }
     if (!m) {
       if (b.soort === 'metaal') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), metalness: 0.85, roughness: 0.3 });
-      else if (b.soort === 'hout') m = opties.zetel
+      else if (b.soort === 'hout') m = rijk
         ? new THREE.MeshStandardMaterial({ color: 0xffffff, map: houtNerf(b.kleur), roughness: 0.45 })
         : new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.55 });
       else if (b.soort === 'planken') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: planken(b.kleur) });
@@ -757,6 +863,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       else if (b.soort === 'gevel') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.97 });
       else if (b.soort === 'donker') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.9 });
       else m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.95, map: weefsel });
+      // Bouw: gevel-, vloer- en dakmaterialen krijgen reliëf, zodat voegen, planken en korrel het licht vangen. De
+      // tekening zelf is het reliëf (donker = diep); baksteen heeft een eigen hoogtekaart (de voeg ligt altijd dieper,
+      // ook als ze lichter is dan de steen).
+      const relief = bouwRijk ? BOUW_RELIEF[b.soort] : undefined;
+      if (relief && m.map && !m.bumpMap) { m.bumpMap = b.soort === 'steen' ? baksteenHoogte() : m.map; m.bumpScale = relief; }
+      if (bouwRijk && b.soort === 'dak') { m.bumpMap = korrel(); m.bumpScale = 0.6; m.roughness = 0.95; }
       materialen.set(sleutel, m);
     }
     return m;
@@ -1537,7 +1649,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
         break;
       default:
         // Kussens gevuld en bol; bij de zetel ook de gestoffeerde armen en rug, iets minder bol.
-        if (b.afronding && (b.soort === 'kussen' || (opties.zetel && b.soort === 'stof'))) {
+        if (b.afronding && (b.soort === 'kussen' || (rijk && b.soort === 'stof'))) {
           kussen = kussenGeometrie(b.b, b.h, b.d, b.afronding, b.soort === 'kussen' ? 1 : 0.5, opties.zetel ? burenVan(b) : [], [cx, b.y, cz], b.bol, { onder: b.afrondingOnder, mesrand: b.mesrand, los: b.losGevuld });
           geo = kussen.geo;
           break;
@@ -1555,7 +1667,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     else if (b.weefsel && b.weefsel in WEEFSEL_CM) { const cm = WEEFSEL_CM[b.weefsel as Weefsel]; const tegel = { b: cm, h: cm }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     // Hout van de zetel (blad, poten, kastje): de nerf op ware grootte (tegel van 16 × 32 cm, nerf in de lengte of naar
     // boven). Zonder dit herhaalde de nerf op een afgerond blad om de centimeter: een egaal vlak zonder tekening.
-    else if (opties.zetel && b.soort === 'hout' && !b.zijden && geo.attributes.uv && geo.attributes.normal) { const nerf = { b: 16, h: 32 }; wereldUV(geo, [nerf, nerf, nerf, nerf, nerf, nerf], cx, b.y, cz); }
+    else if (rijk && b.soort === 'hout' && !b.zijden && geo.attributes.uv && geo.attributes.normal) { const nerf = { b: 16, h: 32 }; wereldUV(geo, [nerf, nerf, nerf, nerf, nerf, nerf], cx, b.y, cz); }
     let mat: any = materiaal(b);
     if (b.zijden && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
       // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z.
@@ -1773,13 +1885,15 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (w.muur === 'geen') dc.wanden = undefined;
     // Avond zonder wanden: achtergrond donker en warm (anders een lichte lucht boven een donkere vloer: een bruine brij).
     const lichtBg = (LICHTEN[lichtNaam] as { achtergrond?: string }).achtergrond;
-    const bg = !opties.zetel ? '#f2f1ed' : lichtBg && !dc.wanden ? lichtBg : dc.achtergrond;
+    // Bouw: buiten (elke lichtsfeer behalve Studio) staat de woning op gras onder een lucht; Studio blijft neutraal.
+    const lucht = bouwRijk ? BOUW_LUCHT[lichtNaam] : undefined;
+    const bg = !opties.zetel ? lucht ?? '#f2f1ed' : lichtBg && !dc.wanden ? lichtBg : dc.achtergrond;
     scene.background = new THREE.Color(bg);
-    if (opties.zetel) {
+    if (opties.zetel || lucht) {
       // Mist in de kleur van de achtergrond: de vloer loopt zacht weg, geen harde horizon.
       if (!scene.fog) scene.fog = new THREE.Fog(bg, 600, 1800);
       scene.fog.color.set(bg);
-    }
+    } else scene.fog = null;
     lamp.intensity = 0;
     const k0 = s?.kader ?? kader;
     /** Warme lamp net buiten beeld (rechts voor, boven de zetel) als het decor zelf geen lamp heeft. */
@@ -1789,7 +1903,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       lamp.intensity = LICHTEN[lichtNaam].lamp * 1.7 * PI * 190;
     };
     if (!opties.zetel || !dc.vloer) {
-      vloer.material = studioVloer;
+      vloer.material = lucht ? gras() : studioVloer;
+      if (grondBinnen) grondBinnen.material = vloer.material;
       virtueleLamp();
       zetLicht();
       return;
@@ -1845,7 +1960,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     zon.intensity = l.zonSterkte * PI;
     hemel.intensity = l.hemel * PI;
     hemel.color.set(l.hemelKleur);
-    if (opties.zetel) scene.environment = omgevingVoor(lichtNaam);
+    if (rijk) scene.environment = omgevingVoor(lichtNaam);
     // De sterkte van het omgevingslicht: één instelling voor de hele scène (zie LICHTEN en ZETEL_LICHT).
     scene.environmentIntensity = l.omgeving;
     zetZon();
@@ -1864,6 +1979,18 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const a = (weergave.zonRichting * Math.PI) / 180;
     zon.position.set(doel.x + Math.cos(a) * grootte * 1.25, grootte * h, doel.z + Math.sin(a) * grootte * 1.25);
     zon.target.position.copy(doel);
+    if (grondBinnen) {
+      // Waar de as van het zonlicht de grond raakt, met een straal net binnen het bereik van de schaduwkaart.
+      const t = doel.y / Math.max(1, grootte * h - doel.y);
+      const gx = doel.x - (zon.position.x - doel.x) * t, gz = doel.z - (zon.position.z - doel.z) * t, straal = bereik * 0.93;
+      // Een halve centimeter onder nul: een vloer of terras op hoogte nul (raam in een stuk gevel) flikkert er dan niet mee.
+      grondBinnen.position.set(gx, -0.5, gz);
+      grondBinnen.scale.setScalar(straal);
+      // Zelfde tekening als de grote grond (400 m, textuur over het hele vlak): uv uit de plaats in de wereld.
+      const pos = grondBinnen.geometry.attributes.position, uv = grondBinnen.geometry.attributes.uv;
+      for (let i = 0; i < pos.count; i++) uv.setXY(i, (gx + pos.getX(i) * straal) / 40000 + 0.5, -(gz - pos.getY(i) * straal) / 40000 + 0.5);
+      uv.needsUpdate = true;
+    }
   }
 
   // ---------- camera (eenvoudige orbit) ----------
@@ -2177,6 +2304,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const aoPass = ao(diepte, normaal, camera);
       aoPass.resolutionScale = 0.5;
       aoPass.radius.value = 14; aoPass.distanceExponent.value = 1.2; aoPass.thickness.value = 8;
+      // Bouw: hoeken tussen muur, vloer en plafond, dagkanten van ramen en plinten zijn een maat groter dan een naad.
+      if (bouwRijk) { aoPass.radius.value = 55; aoPass.thickness.value = 22; aoPass.scale.value = 1.5; }
       aoPass.scale.value = 1.1; aoPass.samples.value = 12; aoPass.distanceFallOff.value = 1;
       const aoZacht = denoise(aoPass.getTextureNode(), diepte, normaal, camera);
       aoZacht.lumaPhi.value = 10; aoZacht.depthPhi.value = 2; aoZacht.normalPhi.value = 3; aoZacht.radius.value = 6;
@@ -2184,7 +2313,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       // zetel staat altijd dichter dan 10 m.
       // Afstand tot de camera van de scène (niet cameraNear/cameraFar: in de nabewerking is dat de camera van het schermvlak).
       const afstand = scenePass.getViewZNode().negate();
-      const dichtbij = float(1).sub(smoothstep(1000, 1600, afstand));
+      const dichtbij = bouwRijk ? float(1).sub(smoothstep(6000, 9000, afstand)) : float(1).sub(smoothstep(1000, 1600, afstand));
       pijplijn.outputNode = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(0.9))), kleur.a);
       composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {} };
     } catch (fout) {
@@ -2192,7 +2321,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       composer = null;
     }
   }
-  const metNabewerking = () => opties.zetel && kwaliteitNu === 'mooi' && composer;
+  const metNabewerking = () => rijk && kwaliteitNu === 'mooi' && composer;
   // Tijdens draaien en zoomen: het snelle beeld; 180 ms na de laatste beweging één keer het mooie beeld (met GTAO).
   let mooiGepland = 0;
   // Veel aanvragen kort na elkaar (slepen, schuifregelaar) worden samengevoegd tot één beeld per schermverversing.
@@ -2591,7 +2720,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const model = s.echt && weergave.echtModel !== false ? echtModelVan(s.echt.bestand) : null;
       const echt = model ? echtGroep(s.echt!, model) : null;
       const onder = echt ? new Set(s.echt!.elementen.map((e) => e.id)) : null;
-      const zichtbaar = s.blokken.filter((b) => !onder?.has(b.code.split('.')[0]!));
+      // Bouw: stof en kussens van de meubels krijgen een weefsel (linnen) als de opbouw er geen meegeeft.
+      const zichtbaar = s.blokken.filter((b) => !onder?.has(b.code.split('.')[0]!))
+        .map((b) => (bouwRijk && !b.weefsel && !b.textuur && b.vorm !== 'bol' && (b.soort === 'stof' || b.soort === 'kussen') ? { ...b, weefsel: 'linnen' } : b));
       // Zachte vormen: de gestoffeerde delen van het karkas per groep samengesmolten; kussens, hout en metaal zoals altijd.
       // Gladde blokken (een doorlopende zetel: onderbouw en rug samen, het zitkussen apart) altijd, ook bij Blokken.
       const versmolten = new Set<Blok>();
@@ -2650,17 +2781,18 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       if (!(naam in LICHTEN)) return;
       lichtNaam = naam;
       zetDecor(null);
-      render();
+      // De nevel (bouw: buiten) hangt af van de afstand van de camera: meteen bijwerken, niet pas bij de volgende beweging.
+      plaatsCamera();
     },
     kwaliteit(k) {
       kwaliteitNu = k;
       renderer.setPixelRatio(k === 'mooi' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
       // VSM vervaagt de schaduw zelf: 2048 is scherp genoeg en veel lichter dan 4096.
-      // De zetelweergave (VSM) houdt altijd 2048: van maat wisselen gooit de schaduwkaart en haar twee vervaagstappen weg
+      // De weergave met zachte schaduw (VSM: zetel en bouw) houdt altijd 2048: van maat wisselen gooit de schaduwkaart en haar twee vervaagstappen weg
       // terwijl het lopende beeld ze nog gebruikt. Op WebGPU gaf dat een melding van de grafische kaart ("Destroyed
       // texture used in a submit") en een verloren beeld (gevonden met de toestelcontrole, 11/11). De schaduw wordt
       // alleen bij een wijziging opnieuw getekend, dus de grotere kaart kost in de snelle stand geen tijd per beeld.
-      const maat = k === 'mooi' || opties.zetel ? 2048 : 1024;
+      const maat = k === 'mooi' || rijk ? 2048 : 1024;
       // De schaduwkaart past zich zelf aan de nieuwe maat aan (WebGPURenderer).
       if (zon.shadow.mapSize.x !== maat) zon.shadow.mapSize.set(maat, maat);
       schaduwOpnieuw();
@@ -2857,7 +2989,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       maatNu = { b, h };
       laatsteOuder = houder.parentElement;
       wasVerborgen = false;
-      if (opties.zetel && !composer) maakComposer();
+      if (rijk && !composer) maakComposer();
       if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(b, h); }
       camera.aspect = b / h;
       camera.updateProjectionMatrix();

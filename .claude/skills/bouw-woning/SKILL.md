@@ -12,6 +12,21 @@ onderdelen met hetzelfde materiaal samengevoegd (`voegSamen`): een nieuw materia
 niets voor te doen, maar een doorzichtig materiaal moet `transparent` of `transmission` hebben om apart te blijven.
 Haken voor tests: `window.__plan3d` (woning) en `window.__positie3d` (raam), beide met `stil()`.
 
+**Weergave sinds 11/11 (`bouwRijk` in `demo-web/src/drie-d.ts`):** de bouw-3D gebruikt de technieken van de zetel.
+- Zachte schaduw (VSM), licht uit een omgevingsbeeld, nabewerking (schaduw in hoeken, alleen in de stand *mooi*).
+- **Licht = omgeving:** alles behalve `studio` staat buiten (gras, lucht, nevel: `BOUW_LUCHT`). De woning opent in
+  `daglicht` (keuze `#pl-licht`, bewaard in `bouw-demo.3d.licht`); het raam (`#p-3d`) blijft in de studio. IJking per
+  sfeer in `BOUW_LICHT`; na een wijziging `npm run lichtmeting -- --bron ijk-bouw`.
+- **Materialen:** reliëf per soort in `BOUW_RELIEF` (metselwerk met eigen hoogtekaart `baksteenHoogte`, dak met
+  `korrel`); hout met nerf; `stof` en `kussen` zonder weefsel krijgen linnen. Een nieuw gevelmateriaal: voeg het toe aan
+  `BOUW_RELIEF` als de tekening ook reliëf mag geven.
+- **Meubels** (`meubelBlokken` in `plattegrond.ts`): geef `weefsel`, `bol` en `mesrand` mee zoals bij de zetels (bank,
+  fauteuil en bed doen dat al).
+- **Grond:** de grote grond ligt op −2,5 cm zonder schaduw; een schijf rond de woning (op −0,5 cm, straal net binnen
+  het bereik van de schaduwkaart, zie `zetZon`) ontvangt schaduw. Leg dus niets op hoogte nul dat groter is dan de scène.
+- Op een aanraakscherm start de 3D in de snelle stand (zonder nabewerking). De vroegere weergave: optie `eenvoudig` van
+  `maak3D` (de werkbankpagina met `?eenvoudig`).
+
 Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/bouw-web`). Vier stappen: **Plattegrond → Configurator → Offerte → Werf**. Dezelfde motor als de zetels (`packages/core`). Alle prijzen en technische waarden zijn voorbeelden.
 
 ## Bestanden

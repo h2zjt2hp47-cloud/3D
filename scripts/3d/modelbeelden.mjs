@@ -39,7 +39,7 @@ if (o.lijst) {
 
 const bron = await kiesBron(pagina, o.bron);
 const uit = path.resolve(o.uit ?? path.join(WERKBANK, 'beelden', bron.code));
-const basis = { decor: o.decor ?? 'studio', licht: o.licht ?? 'studio', kwaliteit: o.kwaliteit ?? 'mooi', vormen: o.vormen ?? 'blokken', breedte: Number(o.breedte ?? 900) };
+const basis = { decor: o.decor ?? 'studio', ...(o.licht ? { licht: o.licht } : {}), kwaliteit: o.kwaliteit ?? 'mooi', vormen: o.vormen ?? 'blokken', breedte: Number(o.breedte ?? 900) };
 const standpunten = lijst(o.standpunten ?? 'schuin');
 for (const s of standpunten) if (!inst.standpunten.some((x) => x.waarde === s)) { console.error(`Onbekend standpunt "${s}". Kies uit: ${inst.standpunten.map((x) => x.waarde).join(', ')}.`); process.exit(2); }
 const alle = await leesItems(pagina, bron.code);

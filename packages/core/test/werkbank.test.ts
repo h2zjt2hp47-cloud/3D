@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { controleerBron, vingerafdruk } from '../src/index.js';
 import { dichtsteBouwstijl, bouwstijlen, bouwstijlTekst, pasBouwstijlToe } from '../voorbeelden/bouwstijlen.js';
 import { zetelModellen } from '../voorbeelden/modellen.js';
-import { werkbankBronnen, zetelBron } from '../voorbeelden/werkbank-bronnen.js';
+import { inrichtingBron, werkbankBronnen, zetelBron } from '../voorbeelden/werkbank-bronnen.js';
 
 describe('werkbank: vingerafdruk', () => {
   it('is gelijk voor dezelfde gegevens, in welke volgorde de velden ook staan', () => {
@@ -44,6 +44,24 @@ describe('werkbank: bronnen', () => {
     expect(vingerafdruk(zetelBron.scene('kotor', { poten: 'blok' }))).not.toBe(standaard);
     expect(vingerafdruk(zetelBron.scene('kotor', { bouwstijl: 'blokken' }))).not.toBe(standaard);
     expect(() => zetelBron.scene('kotor', { poten: 'bestaat_niet' })).toThrow();
+  });
+});
+
+describe('bouw-3D met de technieken van de zetel (11/11)', () => {
+  it('de woning wordt standaard buiten getoond (daglicht); meubels en ramen in de neutrale studio', () => {
+    const licht = Object.fromEntries(werkbankBronnen.map((b) => [b.code, b.licht]));
+    expect(licht.woning).toBe('daglicht');
+    expect(licht.inrichting).toBeUndefined();
+    expect(licht.ramen).toBeUndefined();
+  });
+  it('de zetels en bedden van de inrichting hebben een weefsel en echte kussenvormen', () => {
+    const bank = inrichtingBron.scene('bank3').blokken;
+    expect(bank.filter((b) => b.soort === 'stof' || b.soort === 'kussen').every((b) => b.weefsel === 'boucle')).toBe(true);
+    expect(bank.filter((b) => b.code.includes('rugkussen')).every((b) => b.mesrand === true)).toBe(true);
+    expect(bank.filter((b) => /zit\d/.test(b.code)).every((b) => (b.bol ?? 0) > 2)).toBe(true);
+    const bed = inrichtingBron.scene('bed2').blokken;
+    expect(bed.filter((b) => /kussen\d/.test(b.code)).every((b) => b.mesrand === true && b.weefsel === 'linnen')).toBe(true);
+    expect(bed.find((b) => b.code.endsWith('dekbed'))!.bol).toBeGreaterThan(1);
   });
 });
 

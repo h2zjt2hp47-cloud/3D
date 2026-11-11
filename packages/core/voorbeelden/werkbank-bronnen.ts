@@ -149,6 +149,7 @@ export const woningBron: WerkbankBron = {
   titel: 'Woning',
   uitleg: 'De voorbeeldwoning (met en zonder dak, met lage muren, zonder inrichting) en de aanbouw.',
   weergave: 'bouw',
+  licht: 'daglicht',
   items: () => WONING_ITEMS.map((w): WerkbankItem => {
     const k = w.scene().kader;
     return {

@@ -872,6 +872,15 @@ function kiesGereedschap(g: Gereedschap) {
   toonEigenschappen();
 }
 
+/** De lichtsfeer van de 3D van de woning: bewaard in de browser, standaard daglicht (buiten, op gras onder een lucht). */
+const SLEUTEL_LICHT = 'bouw-demo.3d.licht';
+const LICHTKEUZES = ['daglicht', 'ochtend', 'bewolkt', 'studio'] as const;
+function lichtKeuze(): (typeof LICHTKEUZES)[number] {
+  let bewaard: string | null = null;
+  try { bewaard = localStorage.getItem(SLEUTEL_LICHT); } catch { /* opslag niet beschikbaar */ }
+  return LICHTKEUZES.find((l) => l === bewaard) ?? 'daglicht';
+}
+
 function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   weergave = w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.plWeergave === w));
@@ -889,6 +898,9 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
       viewer = maak3D($('#pl-3d'));
       // Voor geautomatiseerde tests (beeldvergelijking): de weergave bereikbaar, o.a. om te wachten tot het beeld af is.
       (window as unknown as { __plan3d?: unknown }).__plan3d = viewer;
+      // Op een aanraakscherm de snelle stand (zonder nabewerking), zoals in de zeteldemo. De woning staat buiten: daglicht.
+      viewer?.kwaliteit?.(window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi');
+      viewer?.licht?.(lichtKeuze());
     }
     viewer?.formaat();
     plan3D();
@@ -968,6 +980,12 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => { laag = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
+  const licht = $<HTMLSelectElement>('#pl-licht');
+  licht.value = lichtKeuze();
+  licht.addEventListener('change', () => {
+    try { localStorage.setItem(SLEUTEL_LICHT, licht.value); } catch { /* opslag niet beschikbaar: de keuze geldt voor nu */ }
+    viewer?.licht?.(lichtKeuze());
+  });
   $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
   $('#pl-ongedaan').addEventListener('click', () => ongedaan());
   $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());

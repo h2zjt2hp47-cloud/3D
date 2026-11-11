@@ -404,6 +404,7 @@ function toonWeergave(w: 'voor' | '3d') {
     if (viewer === undefined) {
       viewer = maak3D($('#p-3d'));
       (window as unknown as { __positie3d?: unknown }).__positie3d = viewer;
+      viewer?.kwaliteit?.(window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi');
     }
     const p = huidig();
     if (viewer && p) {

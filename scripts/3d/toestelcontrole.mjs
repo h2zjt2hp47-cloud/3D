@@ -117,9 +117,20 @@ if (!o.weg || o.weg !== 'webgpu') {
   console.log('\n=== Bouwweergave: samengevoegd tegenover onderdeel per onderdeel ===');
   for (const [sleutel, m] of Object.entries(metingen)) {
     const a = PNG.sync.read(m.samen.beeld), b = PNG.sync.read(m.los.beeld);
-    const anders = pixelmatch(a.data, b.data, null, a.width, a.height, { threshold: 0.1 }) / (a.width * a.height);
+    const verschil = new PNG({ width: a.width, height: a.height });
+    // Drempel 0,2 per pixel (was 0,1): met reliëf op het metselwerk verschilt de schaduw in een voeg hier en daar een
+    // tint (afronding bij het samenvoegen); een onderdeel dat ontbreekt of verschuift geeft een veel groter kleurverschil.
+    const anders = pixelmatch(a.data, b.data, verschil.data, a.width, a.height, { threshold: 0.2 }) / (a.width * a.height);
     const goed = anders <= 0.002;
-    if (!goed) afwijkingen++;
+    if (!goed) {
+      afwijkingen++;
+      // Strook samengevoegd | los | verschil, om te zien waar het zit.
+      const map = path.join(WERKBANK, 'wegen');
+      mkdirSync(map, { recursive: true });
+      const strook = new PNG({ width: a.width * 3, height: a.height });
+      [a, b, verschil].forEach((p, i) => PNG.bitblt(p, strook, 0, 0, a.width, a.height, a.width * i, 0));
+      writeFileSync(path.join(map, `samen-${naamVoorBestand(sleutel)}.png`), PNG.sync.write(strook));
+    }
     console.log(`  ${sleutel.padEnd(22)} tekenopdrachten ${String(m.los.info.tekenbeurten).padStart(5)} → ${String(m.samen.info.tekenbeurten).padStart(4)} · beeld ${(anders * 100).toFixed(2)} % anders ${goed ? '(gelijk)' : '(VERSCHILT)'}`);
   }
 }

@@ -62,7 +62,8 @@ function weergaveVoor(soort: Soort) {
   if (!w) {
     const houder = $(`#w-3d-${soort}`);
     // Met ?los in het adres tekent de bouwweergave elk onderdeel apart (om het samenvoegen te kunnen vergelijken).
-    const viewer = maak3D(houder, soort === 'zetel' ? { zetel: true } : { samenvoegen: !location.search.includes('los') });
+    // ?eenvoudig: de bouwweergave zoals ze tot 11/11 was (vlakke kleuren, harde schaduw), om te vergelijken.
+    const viewer = maak3D(houder, soort === 'zetel' ? { zetel: true } : { samenvoegen: !location.search.includes('los'), eenvoudig: location.search.includes('eenvoudig') });
     if (!viewer) throw new Error('De 3D kan in deze browser niet starten (WebGPU en WebGL2 ontbreken).');
     w = weergaven[soort] = { viewer, houder, staat: {} };
   }
@@ -84,7 +85,7 @@ let getoond: { bron: string; code: string } | null = null;
 async function toon(bronCode: string, code: string, opties: ToonOpties = {}): Promise<{ vingerafdruk: string; info: Info3D | null; kader: Scene3D['kader'] }> {
   const bron = bronVan(bronCode);
   const scene = bron.scene(code, opties.keuzes);
-  const o = vast(scene, opties);
+  const o = vast(scene, { ...opties, licht: opties.licht ?? bron.licht });
   const { viewer, houder, staat } = weergaveVoor(bron.weergave);
   if (staat.breedte !== o.breedte) { houder.style.width = o.breedte ? `${o.breedte}px` : ''; viewer.formaat(); }
   if (staat.kwaliteit !== o.kwaliteit) viewer.kwaliteit?.(o.kwaliteit);
@@ -102,7 +103,7 @@ async function toon(bronCode: string, code: string, opties: ToonOpties = {}): Pr
 function afdruk(bronCode: string, code: string, opties: ToonOpties = {}): string {
   const bron = bronVan(bronCode);
   const scene = bron.scene(code, opties.keuzes);
-  return vingerafdruk({ scene, weergave: bron.weergave, o: vast(scene, opties) });
+  return vingerafdruk({ scene, weergave: bron.weergave, o: vast(scene, { ...opties, licht: opties.licht ?? bron.licht }) });
 }
 /** Het beeld dat nu getoond wordt, als data-URL. */
 function beeld(type = 'image/jpeg', kwaliteit = 0.86): string {

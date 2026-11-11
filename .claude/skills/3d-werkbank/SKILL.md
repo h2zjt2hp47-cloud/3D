@@ -80,6 +80,10 @@ ronde); een ronde afsluiten met `--nieuwe-ronde`.
 - **Safari (WebGPU op een Mac) kan hier niet draaien.** Roep `renderer.setSize()` nooit aan met een ongewijzigde maat (three.js koppelt het canvas dan opnieuw; in Safari bleef het scherm daarna hangen, melding 11/11): `formaat()` in drie-d.ts bewaakt dat. Teken wat de gebruiker moet zien binnen `requestAnimationFrame`. De beeldvergelijking test of het scherm vanzelf volgt na een klik (`schermVolgt`); voeg daar een stap toe als je de bediening van de 3D wijzigt.
 - De beeldvergelijking (`npm run beelden`) blijft op swiftshader: haar referentiebeelden zijn ermee gemaakt. Een andere
   renderer geeft andere pixels.
+- **Lichtsfeer per bron (sinds 11/11):** `licht` in de afspraak (`WerkbankBron`) is de sfeer waarin een bron standaard
+  getoond wordt. De woning heeft `daglicht` (in de bouwweergave staat alles behalve `studio` buiten). Het gereedschap
+  geeft alleen een licht mee als je er zelf een vraagt (`--licht …`). De werkbankpagina met `?eenvoudig` toont de
+  bouwweergave van vóór 11/11, om te vergelijken.
 - Draai geen twee zware opdrachten tegelijk: de tijden in de toestelcontrole kloppen dan niet.
 - **Meldingen van de grafische kaart (sinds 11/11):** `npm run toestelcontrole` doet op elke rekenweg de gewone
   handelingen één voor één (ander model, formaat, decor, licht, kwaliteit) en telt elke melding (`GPUValidationError`,

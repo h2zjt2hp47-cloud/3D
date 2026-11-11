@@ -24,7 +24,7 @@ import { ROOT, WERKBANK, bouwWerkbank, kiesBron, kiesItems, leesItems, leesOptie
 
 const o = leesOpties();
 const uit = path.resolve(o.uit ?? path.join(WERKBANK, 'controleblad.html'));
-const instellingen = { decor: o.decor ?? 'studio', licht: o.licht ?? 'studio', breedte: Number(o.breedte ?? 760), kijk: 'schuin', jpeg: 0.82 };
+const instellingen = { decor: o.decor ?? 'studio', ...(o.licht ? { licht: o.licht } : {}), breedte: Number(o.breedte ?? 760), kijk: 'schuin', jpeg: 0.82 };
 const alsUrl = (buffer) => 'data:image/jpeg;base64,' + buffer.toString('base64');
 
 bouwWerkbank(o);

@@ -42,10 +42,16 @@ export interface WerkbankBron {
   /** Eén zin: wat er in deze bron zit. */
   uitleg: string;
   /**
-   * Hoe de weergave ingesteld wordt: 'zetel' (meubel alleen in beeld: zachte schaduw, contactschaduw, decors, geijkt
-   * licht) of 'bouw' (gebouw of onderdeel ervan: harde schaduw, geen decor).
+   * Hoe de weergave ingesteld wordt: 'zetel' (meubel alleen in beeld: contactschaduw, decors, geijkt licht) of 'bouw'
+   * (gebouw of onderdeel ervan: buiten op gras onder een lucht, of in de neutrale studio). Beide met zachte schaduw,
+   * omgevingslicht en nabewerking.
    */
   weergave: 'zetel' | 'bouw';
+  /**
+   * De lichtsfeer waarin deze bron standaard getoond wordt (leeg = 'studio'). In de bouwweergave staat alles behalve
+   * 'studio' buiten: de woning krijgt daarom 'daglicht'.
+   */
+  licht?: string;
   /** Map met de referentiefoto's, vanaf de hoofdmap van het project (bv. 'packages/demo-web/fotos'). */
   fotomap?: string;
   items(): WerkbankItem[];
