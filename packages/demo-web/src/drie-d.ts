@@ -2656,9 +2656,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       kwaliteitNu = k;
       renderer.setPixelRatio(k === 'mooi' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
       // VSM vervaagt de schaduw zelf: 2048 is scherp genoeg en veel lichter dan 4096.
-      const maat = k === 'mooi' ? 2048 : 1024;
+      // De zetelweergave (VSM) houdt altijd 2048: van maat wisselen gooit de schaduwkaart en haar twee vervaagstappen weg
+      // terwijl het lopende beeld ze nog gebruikt. Op WebGPU gaf dat een melding van de grafische kaart ("Destroyed
+      // texture used in a submit") en een verloren beeld (gevonden met de toestelcontrole, 11/11). De schaduw wordt
+      // alleen bij een wijziging opnieuw getekend, dus de grotere kaart kost in de snelle stand geen tijd per beeld.
+      const maat = k === 'mooi' || opties.zetel ? 2048 : 1024;
       // De schaduwkaart past zich zelf aan de nieuwe maat aan (WebGPURenderer).
-      zon.shadow.mapSize.set(maat, maat);
+      if (zon.shadow.mapSize.x !== maat) zon.shadow.mapSize.set(maat, maat);
       schaduwOpnieuw();
       viewer.formaat();
     },

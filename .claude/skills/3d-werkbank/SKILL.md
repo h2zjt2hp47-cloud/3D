@@ -81,6 +81,12 @@ ronde); een ronde afsluiten met `--nieuwe-ronde`.
 - De beeldvergelijking (`npm run beelden`) blijft op swiftshader: haar referentiebeelden zijn ermee gemaakt. Een andere
   renderer geeft andere pixels.
 - Draai geen twee zware opdrachten tegelijk: de tijden in de toestelcontrole kloppen dan niet.
+- **Meldingen van de grafische kaart (sinds 11/11):** `npm run toestelcontrole` doet op elke rekenweg de gewone
+  handelingen één voor één (ander model, formaat, decor, licht, kwaliteit) en telt elke melding (`GPUValidationError`,
+  `Destroyed texture`, WebGL-fouten) als een afwijking, met de handeling erbij. Een nieuwe handeling in de weergave die
+  iets weggooit of van maat verandert: voeg ze toe als `stap(...)` in `scripts/3d/toestelcontrole.mjs`. Gooi nooit een
+  textuur of rendertarget weg die het lopende beeld nog gebruikt (schaduwkaart van maat wisselen: zie `kwaliteit()` in
+  `drie-d.ts`).
 - Zonder grafische kaart is *Snel* trager dan *Mooi* (rechtstreeks naar het canvas tekenen kost daar meer dan via de
   nabewerking). Zegt niets over een echt toestel: daar meet de knop *Toestelcontrole*.
 - De productfoto's zitten in de werkbankpagina en in het controleblad: alleen privé publiceren. Zonder foto's bouwen:

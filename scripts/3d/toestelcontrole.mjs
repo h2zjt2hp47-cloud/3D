@@ -15,6 +15,8 @@
  *  4. Samenvoegen klopt: de bouwweergave voegt onderdelen met hetzelfde materiaal samen (veel minder tekenopdrachten);
  *     het beeld moet hetzelfde zijn als onderdeel per onderdeel getekend.
  *
+ *  5. Geen meldingen van de grafische kaart bij gewone handelingen (ander model, formaat, decor, licht, kwaliteit).
+ *
  * Uitvoer in werkbank/wegen/: per item een strook webgl2 | webgpu | verschil.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -63,6 +65,36 @@ for (const weg of wegen) {
   const rapport = await w.pagina.evaluate(() => window.__werkbank.toestelcontrole());
   for (const regel of rapport.regels) console.log('  ' + regel);
   if (rapport.regels.some((r) => /lek/.test(r))) afwijkingen++;
+
+  // 5. Geen meldingen van de grafische kaart bij gewone handelingen. Een melding (bv. een textuur die al weg is en toch
+  //    nog gebruikt wordt) kost op zijn minst één beeld; in Safari kan het beeld erdoor blijven hangen. Per handeling
+  //    apart, zodat je ziet welke de melding geeft.
+  const meldingen = [];
+  const stap = async (naam, bron, code, opties) => {
+    const voor = w.fouten.length;
+    await w.pagina.evaluate(async ([b, c, o]) => { await window.__werkbank.toon(b, c, o); window.__werkbank.beeld('image/jpeg', 0.5); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); }, [bron, code, opties]);
+    const nieuw = w.fouten.slice(voor).filter((f) => /GPUValidationError|WebGL|GL_INVALID|Destroyed|device lost/i.test(f));
+    if (nieuw.length) meldingen.push(`${naam}: ${nieuw[0].replace(/^THREE\.\w+: /, '').slice(0, 150)}`);
+  };
+  if (await bestaat(['zetels', 'kotor'])) {
+    await stap('begin', 'zetels', 'kotor', { kwaliteit: 'mooi', breedte: 800 });
+    await stap('ander model', 'zetels', 'pebble', { kwaliteit: 'mooi', breedte: 800 });
+    await stap('terug naar het eerste model', 'zetels', 'kotor', { kwaliteit: 'mooi', breedte: 800 });
+    await stap('ander formaat', 'zetels', 'kotor', { kwaliteit: 'mooi', breedte: 620 });
+    await stap('zelfde formaat opnieuw', 'zetels', 'kotor', { kwaliteit: 'mooi', breedte: 620 });
+    await stap('ander decor', 'zetels', 'kotor', { kwaliteit: 'mooi', breedte: 620, decor: 'salon' });
+    await stap('ander licht', 'zetels', 'kotor', { kwaliteit: 'mooi', breedte: 620, decor: 'salon', licht: 'daglicht' });
+    await stap('kwaliteit snel', 'zetels', 'kotor', { kwaliteit: 'snel', breedte: 620 });
+    await stap('kwaliteit mooi', 'zetels', 'kotor', { kwaliteit: 'mooi', breedte: 620 });
+  }
+  if (await bestaat(['woning', 'woning'])) {
+    await stap('bouw: woning', 'woning', 'woning', { kwaliteit: 'mooi', breedte: 800 });
+    await stap('bouw: ander formaat', 'woning', 'woning', { kwaliteit: 'mooi', breedte: 620 });
+    await stap('bouw: kwaliteit snel', 'woning', 'woning', { kwaliteit: 'snel', breedte: 620 });
+  }
+  console.log(meldingen.length ? `  Meldingen van de grafische kaart bij ${meldingen.length} handeling(en):` : '  Geen meldingen van de grafische kaart bij gewone handelingen (model, formaat, decor, licht, kwaliteit).');
+  for (const m of meldingen) console.log('    ' + m);
+  afwijkingen += meldingen.length;
 
   // Beelden voor de vergelijking van de wegen.
   beelden[weg] = {};

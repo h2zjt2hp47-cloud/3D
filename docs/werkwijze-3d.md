@@ -168,10 +168,11 @@ de bron; per item staat de referentiefoto naast onze 3D, met de vorige ronde ert
 - Verandert een item nadat je het beoordeeld hebt, dan staat er *Aangepast sinds uw oordeel* en telt het weer mee bij
   *Nog te bekijken*. Zo zie je na een ronde meteen wat je opnieuw moet nakijken.
 
-**De toestelcontrole.** Vier dingen, per rekenweg: (1) een rapport van de weergave (tijd per beeld, tekenopdrachten,
+**De toestelcontrole.** Vijf dingen, per rekenweg: (1) een rapport van de weergave (tijd per beeld, tekenopdrachten,
 driehoeken, of het geheugen stabiel blijft, licht tegenover de staal); (2) of een beeld echt af is zodra de weergave
 dat meldt; (3) of WebGL2 en WebGPU hetzelfde beeld geven; (4) of de samengevoegde bouwweergave hetzelfde beeld geeft
-als onderdeel per onderdeel. Hetzelfde rapport start je op een echt toestel met de knop *Toestelcontrole* onderaan de
+als onderdeel per onderdeel; (5) of de grafische kaart geen meldingen geeft bij gewone handelingen (ander model,
+formaat, decor, licht, kwaliteit), per handeling apart. Hetzelfde rapport start je op een echt toestel met de knop *Toestelcontrole* onderaan de
 werkbankpagina: open ze op de M5, start de controle en kopieer het rapport in het gesprek.
 
 **Notities in Obsidian zetten.** De repo is de bron; Obsidian is een kopie om in te lezen. `npm run obsidian` maakt in
@@ -358,9 +359,10 @@ De tien opmerkingen van Jonas op het controleblad zijn verwerkt; het verslag per
    werkbank; opsplitsen is onderhoud, met de beeldvergelijking en de toestelcontrole als vangnet.
 5. **Echte modellen voor de inrichting.** De meubels zijn eenvoudige vormen. Een 3D-bestand (van een leverancier, of
    vrij beschikbaar) kan via dezelfde weg als het proefmodel van de zetel (`docs/echte-3d-modellen.md`).
-6. **Twee opmerkingen uit de toestelcontrole.** Bij het wisselen van kwaliteit meldt WebGPU één keer dat de oude
-   schaduwkaart nog gebruikt werd (gedrag van three.js; het volgende beeld is goed). En zonder grafische kaart is *Snel*
-   trager dan *Mooi*; of dat op een echt toestel ook zo is, toont de toestelcontrole.
+6. **Een opmerking uit de toestelcontrole.** Zonder grafische kaart is *Snel* trager dan *Mooi*; of dat op een echt
+   toestel ook zo is, toont de toestelcontrole. (De melding van WebGPU bij het wisselen van kwaliteit, over een
+   schaduwkaart die nog gebruikt werd, is op 11/11 opgelost: de zetelweergave houdt haar schaduwkaart op één maat, en de
+   toestelcontrole telt zulke meldingen nu als een fout.)
 
 ## 12. Naslag
 

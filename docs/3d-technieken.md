@@ -362,3 +362,15 @@ of het scherm vanzelf volgt na een klik (`schermVolgt` in `scripts/beeldvergelij
 Les: het gereedschap vroeg de weergave telkens zelf om te tekenen (`stil()`, `beeld()`), en zag dus nooit wat een
 gebruiker ziet na een klik. Test ook de gewone weg: klikken, wachten, kijken wat er op het scherm staat.
 
+**Tweede vondst (11/11, later): een melding van de grafische kaart.** De toestelcontrole luistert nu op elke rekenweg
+naar meldingen van de grafische kaart terwijl ze de gewone handelingen één voor één doet (ander model, ander formaat,
+decor, licht, kwaliteit). Op de WebGPU-weg gaf precies één handeling een melding: wisselen tussen *Snel* en *Mooi*
+("Destroyed texture used in a submit"). De schaduwkaart kreeg dan een andere maat; three.js gooit de oude kaart en haar
+twee vervaagstappen meteen weg, terwijl het lopende beeld ze nog gebruikt. In Chrome kost dat één beeld; hoe Safari
+daarop reageert, weten we niet. Opgelost: de zetelweergave houdt haar schaduwkaart altijd op 2048 (de schaduw wordt
+alleen bij een wijziging opnieuw getekend, dus dat kost in de snelle stand geen tijd per beeld). Wie op de MacBook ooit
+*Snel* koos, kreeg die wissel bij elke start van de pagina: dat kan meegespeeld hebben in de melding van Jonas, maar
+ook dit is niet bewezen.
+
+Les: een melding van de grafische kaart is geen ruis. Laat het gereedschap ze tellen als een fout, per handeling.
+
