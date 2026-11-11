@@ -325,3 +325,25 @@ toont op een grof raster kartels; fijner rekenen kost rekentijd bij het opbouwen
 Doeltoestel sinds 11/11: een toestel met een bescheiden grafische kaart (MacBook). Driehoeken zijn daar geen probleem
 (een zetel telt er 200 000 tot 250 000); tekenopdrachten wel (zie hierboven).
 
+## Safari: het beeld bleef hangen tot je het venster van grootte veranderde (11/11)
+
+Melding van Jonas, de eerste test op een echte MacBook in Safari (WebGPU): elk model bleef het eerste beeld tonen tot hij
+het venster groter of kleiner maakte. In Chrome en in de cloud (WebGL2 én WebGPU op swiftshader) was er niets te zien.
+
+Wat een grootte-wijziging anders doet dan gewoon tekenen: `renderer.setSize()` laat three.js het canvas opnieuw aan de
+grafische kaart koppelen (`context.configure`). De demo riep `setSize` bij elke aanpassing en bij elk model dat je
+opende, ook als de maat dezelfde bleef. Aangepast in `drie-d.ts`:
+
+1. `formaat()` stelt de grootte alleen nog in als ze verandert.
+2. Was het canvas verborgen (een ander scherm van de demo) of verhuisd (tabblad 3D ↔ voorbeeld naast de tekening), dan
+   verandert het op de WebGPU-weg één keer echt van grootte en terug: hetzelfde als het venster even groter maken.
+3. Het mooie beeld (met nabewerking) wordt binnen een beeldronde van de browser getekend (`requestAnimationFrame`),
+   niet meer rechtstreeks vanuit een tijdklok.
+
+**Niet bewezen:** Safari kan hier niet draaien, dus dit is de meest waarschijnlijke oorzaak, geen nagemeten. Na te kijken
+op de MacBook. Wat wel vaststaat: de beelden zijn pixel voor pixel gelijk gebleven en de beeldvergelijking test nu ook
+of het scherm vanzelf volgt na een klik (`schermVolgt` in `scripts/beeldvergelijking.mjs`).
+
+Les: het gereedschap vroeg de weergave telkens zelf om te tekenen (`stil()`, `beeld()`), en zag dus nooit wat een
+gebruiker ziet na een klik. Test ook de gewone weg: klikken, wachten, kijken wat er op het scherm staat.
+

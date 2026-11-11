@@ -77,6 +77,7 @@ bijgewerkt }`. **Teruglezen:** `ArtifactData` met `action: "list"`, `collection:
 ronde); een ronde afsluiten met `--nieuwe-ronde`.
 
 ## Valkuilen
+- **Safari (WebGPU op een Mac) kan hier niet draaien.** Roep `renderer.setSize()` nooit aan met een ongewijzigde maat (three.js koppelt het canvas dan opnieuw; in Safari bleef het scherm daarna hangen, melding 11/11): `formaat()` in drie-d.ts bewaakt dat. Teken wat de gebruiker moet zien binnen `requestAnimationFrame`. De beeldvergelijking test of het scherm vanzelf volgt na een klik (`schermVolgt`); voeg daar een stap toe als je de bediening van de 3D wijzigt.
 - De beeldvergelijking (`npm run beelden`) blijft op swiftshader: haar referentiebeelden zijn ermee gemaakt. Een andere
   renderer geeft andere pixels.
 - Draai geen twee zware opdrachten tegelijk: de tijden in de toestelcontrole kloppen dan niet.

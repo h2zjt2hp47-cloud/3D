@@ -101,6 +101,44 @@ async function neemBeeld(p, selector, haak) {
   return p.evaluate((s) => document.querySelector(s)?.toDataURL('image/png') ?? '', selector);
 }
 
+/**
+ * Volgt het scherm vanzelf? De vaste beelden worden genomen nadat de weergave gevraagd is te tekenen (`stil()`); dat zegt
+ * niets over wat een gebruiker ziet na een klik. Hier dus: een keuze aanklikken en een ander model openen zonder iets te
+ * forceren, en nagaan dat het scherm (1) verandert en (2) hetzelfde toont als wat de weergave tekent wanneer we het wel
+ * vragen. Vangt een beeld dat blijft hangen (melding van 11/11: in Safari bleef de 3D het oude beeld tonen).
+ * Draait hier op WebGL2 in Chromium; Safari zelf kan alleen op een Mac nagekeken worden.
+ */
+async function schermVolgt(p) {
+  const uit = [];
+  const scherm = async (ms) => { await p.waitForTimeout(ms); return PNG.sync.read(await p.locator('#o-3d canvas').screenshot()); };
+  const anders = (a, c) => (a.width !== c.width || a.height !== c.height ? 1 : pixelmatch(a.data, c.data, null, a.width, a.height, { threshold: 0.1 }) / (a.width * a.height));
+  const kies = async (familie, model) => {
+    await p.click('[data-weergave="modellen"]');
+    await p.locator('#modellen-filter button', { hasText: familie }).first().click();
+    await p.locator('article').filter({ has: p.locator(`h2:text-is("${model}")`) }).first().locator('button:has-text("Kies en pas aan")').click();
+    await p.waitForTimeout(600);
+    if (await p.locator('#o-3d').isHidden()) await p.click('[data-o-weergave="3d"]');
+  };
+  const stappen = [
+    ['Kotor openen', () => kies("Sofa's", 'Kotor')],
+    ['een keuze aanklikken (vaste rug)', () => p.locator('#o-aanpassingen fieldset[data-groep="rug"] input[value="vast"]').check({ force: true })],
+    ['een ander model openen (Nestor)', () => kies("Sofa's", 'Nestor')],
+    ['terug naar Kotor', () => kies("Sofa's", 'Kotor')],
+  ];
+  let vorig = null;
+  for (const [naam, doe] of stappen) {
+    await doe();
+    const gezien = await scherm(2500);
+    // Andere poten veranderen maar een paar honderd pixels: elke echte wijziging telt, ruis (nul pixels) niet.
+    if (vorig && anders(vorig, gezien) < 0.0003) uit.push(`het scherm volgt niet: na "${naam}" staat er nog het vorige beeld`);
+    await p.evaluate(() => window.__zetel3d.beeld('image/jpeg', 0.3));
+    const juist = await scherm(900);
+    if (anders(gezien, juist) > 0.003) uit.push(`het scherm liep achter na "${naam}": pas na opnieuw tekenen stond het juiste beeld er`);
+    vorig = juist;
+  }
+  return uit;
+}
+
 async function zetSelect(p, selector, waarde) {
   if ((await p.locator(selector).inputValue()) !== waarde) await p.selectOption(selector, waarde);
 }
@@ -146,6 +184,12 @@ async function maakBeelden() {
       await p.click(`[data-standpunt="${b.standpunt}"]`);
       beelden.set(b.naam, await neemBeeld(p, '#o-3d canvas', '__zetel3d'));
       console.log('klaar');
+    }
+    if (!alleen) {
+      process.stdout.write('  volgt het scherm vanzelf … ');
+      const mis = await schermVolgt(p);
+      fouten.push(...mis.map((m) => `zeteldemo: ${m}`));
+      console.log(mis.length ? 'NEE' : 'ja');
     }
     await p.close();
   }

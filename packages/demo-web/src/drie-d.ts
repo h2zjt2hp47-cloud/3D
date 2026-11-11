@@ -2180,11 +2180,21 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     renderer.info.reset();
     const c = metNabewerking() ? composer : null;
     if (!c) { renderer.render(scene, camera); onthoudTelling(); return; }
-    if (direct) { clearTimeout(mooiGepland); c.render(); onthoudTelling(); return; }
+    if (direct) { annuleerMooi(); c.render(); onthoudTelling(); return; }
     renderer.render(scene, camera);
     onthoudTelling();
+    annuleerMooi();
+    // Het mooie beeld 180 ms later, maar binnen een beeldronde van de browser (requestAnimationFrame): een beeld dat
+    // daarbuiten getekend wordt, toont niet elke browser betrouwbaar (Safari met WebGPU).
+    mooiGepland = window.setTimeout(() => {
+      mooiBeeld = requestAnimationFrame(() => { mooiBeeld = 0; if (!bezigMetFoto) { c.render(); onthoudTelling(); } });
+    }, 180);
+  }
+  let mooiBeeld = 0;
+  function annuleerMooi() {
     clearTimeout(mooiGepland);
-    mooiGepland = window.setTimeout(() => { if (!bezigMetFoto) c.render(); }, 180);
+    cancelAnimationFrame(mooiBeeld);
+    mooiBeeld = 0;
   }
   /** Belasting van het laatste beeld waarin de scène zelf getekend is (de nabewerking alleen is één tekenbeurt). */
   let telling = { tekenbeurten: 0, driehoeken: 0 };
@@ -2538,6 +2548,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
   let laatsteBreedte = 0;
+  /** De maat die de renderer nu heeft, waar het canvas staat en of het sinds de vorige keer verborgen was (zie formaat). */
+  let maatNu = { b: 0, h: 0 }, laatsteOuder: Element | null = null, wasVerborgen = false;
   const viewer: Viewer3D = {
     toon(s: Scene3D) {
       for (const c of [...groep.children]) {
@@ -2775,6 +2787,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       schaduwLater = [];
       cancelAnimationFrame(beeldGepland);
       beeldGepland = 0;
+      annuleerMooi();
       // Shaders van nieuwe delen worden op de achtergrond gemaakt: eerst allemaal klaar, dan pas het definitieve beeld.
       try { await renderer.compileAsync?.(scene, camera); } catch { /* dan tekent de eerste beurt hieronder ze mee */ }
       for (let i = 0; i < 2; i++) {
@@ -2800,7 +2813,18 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       // In het groot scherm de beschikbare hoogte benutten (naast de knoppen eronder), anders 62 % van de breedte.
       const groot = document.body.classList.contains('heeft-groot-scherm');
       const h = groot ? Math.max(320, Math.min(Math.round(b * 1.1), window.innerHeight - 200)) : Math.round(b * 0.62);
-      renderer.setSize(b, h);
+      // De grootte alleen opnieuw instellen als ze verandert. Elke setSize, ook met dezelfde maat, laat three.js het
+      // canvas opnieuw aan de grafische kaart koppelen. Dat gebeurde bij elke aanpassing en bij elk model dat je opende;
+      // in Safari (WebGPU) bleef het scherm daarna het oude beeld tonen tot je het venster van grootte veranderde
+      // (melding van Jonas, 11/11). Chrome en de WebGL2-weg hadden er geen last van.
+      const verplaatst = wasVerborgen || houder.parentElement !== laatsteOuder;
+      if (b !== maatNu.b || h !== maatNu.h) renderer.setSize(b, h);
+      // Was het canvas verborgen (een ander scherm van de demo) of verhuisd (tabblad 3D ↔ voorbeeld naast de tekening),
+      // dan één keer echt van grootte veranderen en terug: dat doet hetzelfde als het venster even groter maken.
+      else if (verplaatst && webgpu && klaar) { renderer.setSize(b, h + 1, false); renderer.setSize(b, h); }
+      maatNu = { b, h };
+      laatsteOuder = houder.parentElement;
+      wasVerborgen = false;
       if (opties.zetel && !composer) maakComposer();
       if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(b, h); }
       camera.aspect = b / h;
@@ -2812,6 +2836,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // vak, en meteen herschalen gaf de browserwaarschuwing "ResizeObserver loop …" (als rode melding op het scherm).
   let gepland = 0;
   new ResizeObserver(() => {
+    if (!houder.clientWidth) wasVerborgen = true;
     if (gepland || !houder.clientWidth || houder.clientWidth === laatsteBreedte) return;
     gepland = requestAnimationFrame(() => { gepland = 0; viewer.formaat(); });
   }).observe(houder);
