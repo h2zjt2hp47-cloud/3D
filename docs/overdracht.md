@@ -48,7 +48,7 @@
 | Skill | `.claude/skills/zetel-3d/SKILL.md`: hoe de 3D-logica werkt en hoe je een nieuwe vorm toevoegt |
 | Obsidian | `python3 -I scripts/obsidian_export.py` → `obsidian-export/Configurator.zip` (19 notities met links, tags en beelden; + `zetel-3d-skill.zip` en `bouw-woning-skill.zip`). Kopie om door te sturen: `doorsturen/Obsidian - Configurator.zip`. Nieuwe documenten in `docs/` toevoegen aan `NOTITIES` in het script. |
 
-**Bouwdemo online (privé artifact):** https://claude.ai/artifact/FaTp1zVvy9YePyarithjyh (slug `760c021f-8602-482d-b4c1-d41a3bcaa890`). Opnieuw publiceren: `npm run build -w @configurator/bouw-web`, dan `publish_files` met `packages/bouw-web/dist/bouw-configurator.html` als `index.html`.
+**Bouwdemo online (privé artifact):** https://claude.ai/artifact/FaTp1zVvy9YePyarithjyh (slug `760c021f-8602-482d-b4c1-d41a3bcaa890`). Laatst bijgewerkt op 12/11 (versie `1794475899-8cd3`, met WebGPU en de schaduw die de vorm volgt). Opnieuw publiceren: `npm run build -w @configurator/bouw-web`, dan `publish_files` met `packages/bouw-web/dist/bouw-configurator.html` als `index.html`.
 
 **Demo online (privé artifact):** https://claude.ai/artifact/BtVKYeQKC7szR1ZwW97VB1
 - slug `582bc583-72e1-4309-953b-520181a53044`, laatste versie: zie publicatie van 31/10 (catalogus-editor)
