@@ -251,7 +251,7 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
   // Maten van de productpagina's: breedte × diepte × hoogte en de zithoogte.
   const SITE: Record<string, [number, number, number, number]> = {
     milton: [70, 68, 72, 40], 'mabel-1': [68, 65, 76, 45], 'mabel-2': [150, 65, 76, 45], 'mabel-meridienne': [150, 65, 76, 45],
-    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45], quin: [91, 91, 78, 45],
+    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45], quin: [91, 91, 78, 45], ross: [66, 64, 78, 43],
   };
   it('de maten van de productpagina: het kader van de 3D en de bovenkant van de zitting', () => {
     for (const [code, [b, d, h, zit]] of Object.entries(SITE)) {
@@ -295,6 +295,19 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(rechts.z + rechts.d / 2).toBeCloseTo(links.z + links.d / 2, 0);
     // Een los kussen is een lens: een dunne rand met een bolling tot de volle dikte.
     for (const k of kussens) { expect(k.d).toBe(5); expect(k.bol).toBe(4); expect(k.b).toBe(43); }
+  });
+  it('Ross: brede hoge rug met steile schouders, lage armen die vooraan tot op de zitting zakken, poten met kruis', () => {
+    const b = scene('ross').blokken, rug = b.find((x) => x.code === 'e1.rug')!, h = rug.hoogtes!, n = h.length, midden = (n - 1) / 2;
+    expect(rug.dikte).toBe(6);
+    expect(rug.naad?.soort).toBe('bies');
+    // Bovenaan recht over het middelste derde van de schaal (±drie kwart van de breedte van voren gezien).
+    for (let i = Math.round(midden * 0.7); i <= Math.round(midden * 1.3); i++) expect(h[i], `punt ${i}`).toBe(78);
+    // Armen: halverwege elke kant ±17 cm boven de zitting, en aan het uiteinde net onder de zithoogte (in de zitting).
+    for (const i of [Math.round(midden * 0.45), Math.round(midden * 1.55)]) { expect(h[i]!).toBeGreaterThan(56); expect(h[i]!).toBeLessThan(62); }
+    expect(h[0]).toBe(40);
+    expect(h[n - 1]).toBe(40);
+    expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
+    expect(b.some((x) => x.code === 'e1.zitband')).toBe(false);
   });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;

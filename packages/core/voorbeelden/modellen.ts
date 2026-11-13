@@ -224,10 +224,21 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
     vormgeving: { zachtheid: 9 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'omhullend' }]]),
   }, 'F-Tumble'),
-  model('ross', 'Ross', FAUTEUIL, 'Compacte fauteuil met afgeronde rug op hoge houten poten.', {
-    hoofdmateriaal: 'katoen_naturel', opties: { poten: 'cilinder', poothoogte: 'hoog', hout: 'eik_naturel' },
-    vormgeving: { zachtheid: 5, rugdikte: 12 }, elementen: rij([['fauteuil', 65, 65, { kuipvorm: 'afgerond' }]]),
-  }, 'F-Ross'),
+  model('ross', 'Ross', FAUTEUIL, 'Compacte fauteuil: een dunne schaal met een hoge rug en lage armen rond een dikke, vaste zitting, op vier houten poten met een kruis.', {
+    hoofdmateriaal: 'katoen_naturel', opties: { poten: 'kruisframe', hout: 'eik_naturel', zitting: 'vaste_zitting', naad: 'bies' },
+    // Productpagina: 66 × 64 × 78, zithoogte 43. Uit de twee foto's (benadering, 13/11): een dunne schaal met een bies;
+    // de rug is bovenaan recht, over ±drie kwart van de breedte, en zakt met een steile schouder naar lage armen (±17 cm
+    // boven de zitting), die vooraan in een boog tot op de zitting zakken; één dikke, ronde zitting met een bies onderaan;
+    // vier schuine houten poten met een kruis (poothoogte 26 geschat).
+    vormgeving: {
+      zachtheid: 5, rughoogte: 78, zithoogte: 43, poothoogte: 26,
+      kuip: {
+        exponent: 2.6, dikte: 6, boog: 125, voorBoven: -3, zitTrommel: true, zitRand: 6,
+        profiel: [[0, 1], [0.33, 1], [0.47, 0.5], [0.75, 0.42], [1, 0]],
+      },
+    },
+    elementen: rij([['fauteuil', 66, 64, { kuipvorm: 'afgerond' }]]),
+  }, 'F-Ross', MATEN_WEBSITE),
   model('amusette-fauteuil', 'Amusette fauteuil', FAUTEUIL, 'Fauteuil met brede, strakke armen en vaste rug (zelfde lijn als de Amusette sofa).', {
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast' },
     vormgeving: { kussendikte: 18 }, elementen: rij([['arm', 26, 90, strak], ['zit', 70, 90], ['arm', 26, 90, strak]]),
