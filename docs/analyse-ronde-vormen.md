@@ -5,8 +5,9 @@
 Jonas: bekijk hoe we nu de 3D maken, vooral hoe we met ronde vormen omgaan, en wat beter kan. Ook ongewone ideeën, en
 ideeën waarvan de winst niet zeker is.
 
-Dit is alleen onderzoek. Er is geen code gewijzigd: de proeven draaiden in een kopie van de gebouwde pagina. Prijs,
-offerte en tekeningen zijn niet aangeraakt.
+Het onderzoek zelf wijzigde geen code: de proeven draaiden in een kopie van de gebouwde pagina. Daarna, met het
+akkoord van Jonas, zijn dezelfde dag vier herstellingen gebouwd: zie [Uitgevoerd op 13/11](#uitgevoerd-op-1311)
+onderaan. Prijs, offerte en tekeningen zijn nooit aangeraakt.
 
 ## Kort
 
@@ -85,6 +86,10 @@ bovenrand zo steil; bij Doha komt het niet voor, wat verklaart waarom Doha er we
 **4. De rolarm (Zora):** een kale cilinder met een platte, scherpe kop, op een blok. Het aantal vlakken is niet het
 probleem; de arm heeft geen eigen vorm (geen ronde rand, geen voorpaneel met naad, geen overgang naar de arm eronder).
 
+*Rechtzetting na de productfoto's (zelfde dag):* Zora heeft helemaal geen rol. Het is een slanke arm met een ronde
+bovenkant en een bies rond het voorpaneel. Het vooraanzicht tekende dat al juist; alleen de 3D zette er een cilinder
+op, en hoger dan de tekening. De echte fout was dus dat de 3D afweek van de tekening en van de foto.
+
 ![Zora: de rolarm](afbeeldingen/ronde-vormen-rolarm.jpg)
 
 **5. Wat goed is:**
@@ -162,9 +167,9 @@ Grond: *gezien* = in de beelden hierboven; *gemeten*; *uit de code*; *beredeneer
 |---|---|---|---|---|---|
 | | **Oppervlak** | | | | |
 | 1 | Net van de ringen, gelegd op de zachte vorm | Messcherpe koppen, stof die de vorm niet volgt, ±zes keer zoveel driehoeken (berekend), wachtbeeld. Bobbelige naden alleen samen met 3. | Beide helften gezien; de combinatie beredeneerd | Middel | Samensmelten gaf op 4/11 foutjes aan de randen; wegknippen waar delen in elkaar steken. Alleen 3D. |
-| 2 | Ronde kop aan het wanduiteinde; onderbouw afsnijden binnen de wand | Mes en rafelig hoekje bij de fauteuils met een gebogen wand (10 modellen) | Gezien bij Ross; de andere negen gebruiken dezelfde code | Klein | Laag |
-| 3 | Steile rand van een wand juist rekenen | Bobbelige naad bij Pebble; ook nodig voor 1 | Gezien en gemeten | Klein à middel | Zelfde berekening als de rug van Doha: beeldvergelijking |
-| 4 | Eigen vorm voor de rolarm | Kale cilinder op een blok | Gezien | Middel | Stond al als volgende stap |
+| 2 | Ronde kop aan het wanduiteinde; onderbouw afsnijden binnen de wand | Mes en rafelig hoekje bij de fauteuils met een gebogen wand (10 modellen) | Gezien bij Ross; de andere negen gebruiken dezelfde code. **Gedaan 13/11.** | Klein | Laag |
+| 3 | Steile rand van een wand juist rekenen | Bobbelige naad bij Pebble; ook nodig voor 1 | Gezien en gemeten. **Gedaan 13/11.** | Klein à middel | Zelfde berekening als de rug van Doha: beeldvergelijking |
+| 4 | Eigen vorm voor de rolarm | Kale cilinder op een blok | Gezien. **Gedaan 13/11**, als arm met ronde bovenkant (zie de rechtzetting). | Middel | Stond al als volgende stap |
 | 5 | Recht bouwen, dan buigen | Net en stof volgen de boog (Montego, later rondboogramen) | Uit de code | Middel | Komt mee met 1 |
 | 6 | Bovenvlak met een echt net in plaats van een waaier | Strepen in het bovenvlak (de reden voor de overstap naar het raster) | Uit de code | Klein à middel | Hoort bij 1 |
 | 7 | Rekenen in de achtergrond | Scherm staat even stil | Beredeneerd | Middel | Niet nagekeken of het in het artifact mag. Minder nodig na 1. |
@@ -186,7 +191,7 @@ Grond: *gezien* = in de beelden hierboven; *gemeten*; *uit de code*; *beredeneer
 | 20 | De vorm automatisch laten passen op de productfoto's | Rondes van gissen | Beredeneerd | Groot | Blijft een benadering. Het standpunt van de foto moet mee geschat worden. |
 | 21 | Scan door de klant, als meetlat of als echt bestand | Vaste, organische modellen | Beredeneerd; het hulpmiddel bestaat | Middel, plus werk bij de klant | Raakt "geen scans" |
 | 22 | Tekeningen uit de 3D-vorm halen | 3D en tekening lopen uiteen | Beredeneerd | Middel à groot | Verandert boven- en vooraanzicht |
-| 23 | Close-ups in de beeldvergelijking | Gebreken die niet opvallen | Gezien | Klein | Geen |
+| 23 | Close-ups in de beeldvergelijking | Gebreken die niet opvallen | Gezien. **Gedaan 13/11.** | Klein | Geen |
 
 ## Wat ik niet zou doen
 
@@ -209,6 +214,62 @@ Grond: *gezien* = in de beelden hierboven; *gemeten*; *uit de code*; *beredeneer
 3. Valt een scan die de klant zelf van zijn eigen fauteuil maakt onder "geen scans" (idee 21)?
 4. Mogen de productfoto's gebruikt worden om de vorm automatisch te laten passen, als ze op deze machine blijven
    (idee 20)?
+
+## Uitgevoerd op 13/11
+
+Jonas gaf zijn akkoord voor de herstellingen (A) en de proef (B). De vier herstellingen zijn gebouwd, elk met tests en
+een eigen commit. De proef B is nog niet begonnen. Nog niet gepubliceerd: eerst de beelden laten goedkeuren.
+
+![Voor en na: de naad van Pebble, het wanduiteinde van Ross, de arm van Zora](afbeeldingen/ronde-vormen-herstellingen.jpg)
+
+**1. De steile rand van een wand** (`zachtevorm.ts`, `wand`). Twee oorzaken, allebei gemeten:
+- De hoogte van de bovenrand volgde het dichtste punt van het pad, en dat verspringt op elk hoekpunt: aan de binnenkant
+  van een bocht een sprong, aan de buitenkant een stukje waar het stilstaat. Op een steile rand gaf dat trapjes tot
+  1 cm. De hoogte volgt nu de plaats tussen de twee verstekken van een stuk (de lijnen door zijn eindpunten, haaks op
+  de gemiddelde richting daar) en loopt overal vloeiend door.
+- De afstand werd niet gedeeld door de lengte van de helling.
+- Uitslag: punten met een verkeerde afstand of richting bij Pebble van 61 % naar 0 %, bij Ross van 74 % naar 0 %.
+  Zelfde rekentijd. Recht boven de middenlijn ligt het oppervlak nog altijd op de opgegeven hoogtes (test), dus de
+  tekeningen kloppen nog. Doha en Montego: 0,00 % verschil.
+- Een eerste poging (het pad fijner maken) is verworpen: ze hielp te weinig en verdubbelde de rekentijd.
+
+**2. De kuipfauteuils.**
+
+![Ross en Karl, voor en na](afbeeldingen/ronde-vormen-fauteuils-na.jpg)
+
+- **Ronde kop** (`kuipwandGeometrie` in `drie-d.ts`): het uiteinde loopt bovenaan als een kwart bol naar beneden, in
+  plaats van tot aan de punt even hoog te blijven. Geldt voor elke gebogen wand die in ringen getekend wordt.
+- **Onderbouw binnen de wand** (`ruimtelijk.ts`): het dunne streepje naast het wanduiteinde kwam doordat de buitenkant
+  van de wand bij een afgerond grondvlak in de hoeken tot ±1 cm binnen de omtrek ligt. De onderbouw krimpt nu zoveel
+  extra. Niet bij Pebble: daar is de zitting de vorm zelf, en die is goedgekeurd.
+- **Schelp (Karl):** de schaal zweeft boven de zitting, dus je ziet haar onderrand. Ook die is nu rond, zoals op de
+  productfoto.
+- De aansluiting onderaan bij Ross is nu een strakke lijn. Dat de onderbouw vooraan uit de wand komt, klopt met de foto
+  (de zitting steekt daar voorbij de schaal).
+
+**3. De arm met ronde bovenkant** (armstijl *rond* en *Engels*, `rondProfiel` in `ruimtelijk.ts`).
+
+![Zora, voor en na](afbeeldingen/ronde-vormen-zora-na.jpg)
+
+- Eén doorsnede met dezelfde omtrek als in het vooraanzicht: rond tot 3 cm boven de armhoogte, Engels 8 cm eronder.
+  Afgeronde rand, licht bol voorpaneel, naad of bies eromheen (zoals de strakke arm).
+- *Rond* volgt de foto van Zora. *Engels* heeft geen foto: benadering volgens de tekening.
+- De 3D van Zora, Mabel 2-zit en Mabel méridienne verandert; de tekeningen niet.
+
+**4. De beeldvergelijking** heeft drie close-ups erbij (`pebble-naad`, `ross-kop`, `zora-arm`): stukken uit de foto op
+hoge resolutie. De referenties zijn eerst genomen op de oude versie en na elke herstelling bewust vernieuwd.
+
+**Controle na elke herstelling:** prijs, offertegegevens, boven- en vooraanzicht van alle 42 modellen vergeleken met een
+momentopname van vóór de herstellingen: ongewijzigd. 256 tests (7 nieuwe). In de vaste reeks veranderden alleen de drie
+close-ups en Pebble (0,05 %).
+
+**Opgemerkt, niet aangepast:**
+- **Mabel 2-zit** is op de productfoto een kuip: een gebogen rug die om de zijkanten loopt, op schuine poten. Bij ons is
+  het arm + zit + arm. Dat rechtzetten vraagt andere elementen en raakt dus de prijs: beslissing voor Jonas.
+- **Ross** heeft op de foto een dunne schaal (±5 cm, met bies) waarvan de arm vooraan in een boog naar de zitting zakt,
+  en één dikke ronde zitting zonder los kussen. Bij ons een wand van 13 cm die vooraan recht eindigt, met een los
+  kussen. Dat is werk voor "vorm als gegevens" (idee 10), niet voor een herstelling.
+- **De rok onder een arm met hoes** is een los blokje van 6 cm (bestond al).
 
 ## Zo zijn de proeven gedaan
 

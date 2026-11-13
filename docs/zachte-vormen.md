@@ -148,8 +148,9 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
   en wordt de vorm pas na het slepen berekend.
 - **Snelheid (*Blokken*):** een arm met een eigen vorm rekent bij het eerste beeld ±40 ms en wordt daarna onthouden.
 - **Gewicht:** 45.000 à 110.000 driehoeken per sofa, tegenover enkele duizenden bij *Blokken*.
-- **Alleen de uitlopende en de strakke arm hebben een eigen vorm.** De rolarm, de lage Engelse rolarm, de schuine arm
-  en de arm met houten blad zijn nog balken die zacht samensmelten. Dat geeft minder winst: het samensmelten alleen
+- **De uitlopende, de strakke en (sinds 13/11) de arm met ronde bovenkant hebben een eigen vorm** (*rond* en *Engels*,
+  zie [Analyse ronde vormen](analyse-ronde-vormen.md)). De schuine arm en de arm met houten blad zijn nog balken die
+  zacht samensmelten. Dat geeft minder winst: het samensmelten alleen
   verandert weinig, de winst zit in een eigen vorm per stijl. De rug en de onderbouw zijn ook nog balken.
 - **Geen plooien of hangende stof:** geen kreukels in de hoes, geen kussens die doorzakken.
 - **Benaderingen:** voor modellen zonder technische tekening blijft elke 3D een benadering uit foto's, hoe mooi ze ook
@@ -163,7 +164,7 @@ De motor gebruikt dezelfde werkwijze als 3D-programma's (*afstandsvelden* en *su
 
 ## Volgende stappen (als we verder gaan)
 
-1. **Een eigen doorsnede voor de andere armstijlen:** rolarm (Mabel, Zora), Engels, schuin, met houten blad. Daarna de
+1. **Een eigen doorsnede voor de andere armstijlen:** schuin, met houten blad (rond en Engels: gedaan op 13/11). Daarna de
    rug (recht, hellend, rond), de onderbouw en een hoes met een geplooide voorkant. Telkens één vorm in de motor, die
    voor alle modellen met die stijl geldt.
 2. **Sneller rekenen:** in de achtergrond rekenen, zodat het scherm niet stilstaat.
@@ -188,6 +189,9 @@ Wat de foto's tonen en hoe het nu gebouwd is (alleen kuipvorm *Organisch*):
   cosinus over een kwart periode). De punten liggen op gelijke afstanden langs de schaal.
 - **Op de vloer:** de schaal begint 3 cm onder de vloer (geen rafels aan de platte onderkant).
 - **Lichte vlekjes** op een oplopende, gebogen wand: op de knikpunten telt de gemiddelde helling mee (`zachtevorm.ts`).
+  Vervangen op 13/11: de hoogte van de rand loopt nu vloeiend door tussen de verstekken van elk stuk, en de afstand
+  klopt ook op een steile rand. De naad waar de schaal in de zitting duikt, is daardoor strak (zie
+  [Analyse ronde vormen](analyse-ronde-vormen.md)).
 
 Wat verandert: de 3D en het boven- en vooraanzicht van Pebble (die lezen dezelfde schaal, dus ook de tekening in de
 offerte). Prijs en offertetekst niet; de andere kuipfauteuils niet (tests).

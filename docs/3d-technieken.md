@@ -177,16 +177,26 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 - **Effecten die over meerdere beelden opbouwen** (TRAA, tijdsfilters) passen slecht bij een weergave die alleen
   tekent als er iets verandert: ze vragen 8 à 16 schermbeelden na elke wijziging, en een foto voor de offerte ook. Ze
   rekenen hun geschiedenis maar één keer per schermbeeld bij, dus snel na elkaar tekenen helpt niet.
-- **Een gebogen wand die oploopt:** op de knikpunten van het pad moet de helling meetellen (gemiddelde van de stukken
-  ernaast), anders lichte vlekjes om de 2 cm. Hou de stijging ook niet te steil, en laat een wand niet eindigen op
-  exact de hoogte van een ander vlak (flikkeren): liever een paar cm erin. Verdeel de punten op gelijke afstanden en
+- **Een gebogen wand die oploopt:** de hoogte van de bovenrand mag niet het dichtste punt van het pad volgen. Dat punt
+  verspringt op elk hoekpunt (binnenkant van een bocht: sprong; buitenkant: het staat even stil), wat op een steile rand
+  trapjes tot 1 cm gaf. De hoogte volgt de plaats tussen de twee verstekken van een stuk; de afstand wordt gedeeld door
+  de lengte van de helling (`wand` in `zachtevorm.ts`, sinds 13/11). Laat een wand niet eindigen op exact de hoogte van
+  een ander vlak (flikkeren): liever een paar cm erin. Verdeel de punten op gelijke afstanden en
   laat de hoogte de afstand volgen, niet de hoek: bij een afgeronde rechthoek golfde de bovenkant anders.
 - **Geen Math.random in texturen:** dan ziet het parket er bij elke keer laden anders uit, en kan de beeldvergelijking
   niets vergelijken. Gebruik `vasteReeks(sleutel)` in `drie-d.ts`.
 - **Een fijner raster lost een rafelige naad niet op** (proef 13/11, Pebble): 1 cm in plaats van 2 cm gaf vier keer
-  zoveel driehoeken en rekentijd, en de rand werd eerder rafeliger. Gemeten: waar de bovenrand van een gebogen wand
-  steiler zakt dan ±0,8 cm per cm, klopt de afstand uit de motor bij 60 à 75 % van de punten niet (Pebble, Ross); bij
-  een vlakke rand (Doha) klopt ze overal. Nog niet hersteld. Zie [Analyse ronde vormen](analyse-ronde-vormen.md).
+  zoveel driehoeken en rekentijd, en de rand werd eerder rafeliger. De fout zat in de vorm zelf (zie het punt
+  hierboven). Meet eerst of het veld klopt: de richting uit `zachteVorm` tegenover kleine stapjes in `zachtVeld`, en of
+  het veld 1 cm per cm verandert (test in `zachtevorm.test.ts`). Zie [Analyse ronde vormen](analyse-ronde-vormen.md).
+- **De buitenkant van een gebogen wand is niet de omtrek.** De middenlijn van een kuipwand is een kleiner grondvlak,
+  geen evenwijdige lijn: bij een afgerond grondvlak ligt de buitenkant in de hoeken tot ±1 cm binnen de omtrek. Een
+  onderbouw die "0,8 cm binnen de omtrek" ligt, stak daar door de wand. Meet de speling tegen de wand zelf.
+- **Een uiteinde is rond in twee richtingen.** Een wand die in het grondvlak rond eindigt maar tot aan de punt even hoog
+  blijft, oogt als een mes. De kop moet bovenaan mee naar beneden lopen (een kwart bol).
+- **Vergelijk de 3D eerst met de tekening en de foto.** De "rolarm" van Zora was in 3D een cilinder op een blok, in het
+  vooraanzicht een arm met een ronde bovenkant, en op de foto ook. Een uur aan een mooiere rol was verloren werk
+  geweest.
 - **Meer:** de skills `zetel-3d` (`.claude/skills/zetel-3d/SKILL.md`) en `bouw-woning`
   (`.claude/skills/bouw-woning/SKILL.md`).
 
@@ -194,7 +204,7 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 
 - [Zachte vormen](zachte-vormen.md): zelf zetels opmaken in 3D, de eigen armvormen en de doorlopende zetel.
 - [Analyse ronde vormen](analyse-ronde-vormen.md) (13/11): de twee manieren om rond te tekenen, wat er in beeld misgaat,
-  en 23 ideeën met hun grond, werk en risico. Nog niets gebouwd.
+  en 23 ideeën met hun grond, werk en risico. Vier herstellingen zijn dezelfde dag gebouwd; de rest niet.
 - [Echte 3D-modellen](echte-3d-modellen.md): de proef met een echt 3D-bestand, en wat we van de klant nodig hebben.
 - [Overdracht](overdracht.md): de stand van zaken per ronde.
 - [Onderzoek raamsoftware](onderzoek-raamsoftware.md): hoe LogiKal, ReynaPro en Chacal met profielen en tekeningen
