@@ -12,11 +12,13 @@ offerte en tekeningen zijn niet aangeraakt.
 
 1. **We tekenen ronde vormen op twee manieren, en geen van beide is af.** De ene (ringen) geeft strakke lijnen en stof
    die de vorm volgt, maar onderdelen steken gewoon door elkaar. De andere (raster) smelt onderdelen mooi samen, maar
-   geeft bobbelige naden, stof die de vorm niet volgt en zes keer zoveel driehoeken.
+   geeft bobbelige naden, stof die de vorm niet volgt en ongeveer zes keer zoveel driehoeken (berekend).
 2. **Fijner rekenen lost dat niet op.** Proef op Pebble: een raster van 1 cm in plaats van 2 cm geeft vier keer zoveel
-   driehoeken en rekentijd, en de naad wordt eerder rafeliger.
-3. **Advies:** de twee manieren samenvoegen (het net van de ringen, gelegd op de zachte vorm), ronde vormen als gegevens
-   beschrijven in plaats van als code per model, en vier kleine gebreken herstellen die nu in beeld zitten.
+   driehoeken en rekentijd, en de naad wordt eerder rafeliger. De oorzaak is gemeten: waar de bovenrand van een wand
+   steil zakt, rekent de motor de vorm zelf fout.
+3. **Advies, in deze volgorde:** eerst die rekenfout en drie andere gebreken herstellen die nu in beeld zitten; dan als
+   proef de twee manieren samenvoegen (het net van de ringen, gelegd op de zachte vorm); en ronde vormen als gegevens
+   beschrijven in plaats van als code per model.
 
 ## Hoe we nu ronde vormen maken
 
@@ -58,9 +60,19 @@ Beelden in Chromium zonder grafische kaart (de WebGL2-weg), kwaliteit *Mooi*, al
 | 1,5 cm | 29.532 | 114 ms |
 | 1 cm | 66.252 | 258 ms |
 
-Met 1 cm is de rand niet gladder, eerder rafeliger. De fout zit dus niet in het raster, maar in hoe de motor de schaal
-rekent waar de bovenrand steil zakt. Waarschijnlijke oorzaak (uit de code): de motor zoekt het dichtste punt recht onder
-de bovenrand; bij een steile rand ligt dat punt schuin.
+Met 1 cm is de rand niet gladder, eerder rafeliger. De fout zit dus niet in het raster, maar in hoe de motor de wand
+rekent waar de bovenrand steil zakt. Dat is nagemeten op de bovenste ronding van de wand: klopt de afstand die de motor
+teruggeeft met kleine stapjes in de vorm?
+
+| Wand | Steilste helling van de bovenrand | Punten waar de afstand meer dan 10 % fout is: vlak deel | Steil deel (meer dan 0,8 cm per cm) |
+|---|---|---|---|
+| Doha (rug overal even hoog) | 0 | 0 % | – |
+| Ross | 1,17 | 0,1 % | 74 % |
+| Pebble | 1,57 | 2 % | 61 % |
+
+Op het steile deel wijst de richting van het oppervlak tot ±65° (Ross) en ±100° (Pebble) verkeerd. De motor zoekt het
+dichtste punt recht onder de bovenrand; bij een steile rand ligt dat punt schuin. Bij Pebble is het grootste deel van de
+bovenrand zo steil; bij Doha komt het niet voor, wat verklaart waarom Doha er wel netjes uitziet.
 
 **3. De kuipfauteuils (ringen), hier Ross:**
 
@@ -95,28 +107,36 @@ probleem; de arm heeft geen eigen vorm (geen ronde rand, geen voorpaneel met naa
 
 ### Eerst
 
-**A. Het net van de ringen, gelegd op de zachte vorm** (idee 1 in de lijst).
+**A. Vier herstellingen die nu al kunnen** (idee 2, 3, 4 en 23).
+- **De steile rand van een wand juist rekenen.** Gemeten oorzaak van de bobbelige naad bij Pebble (zie hierboven). Dit
+  komt eerst: ook stap B steunt op deze berekening.
+- **Fauteuils:** een ronde kop aan het wanduiteinde, en de onderbouw afsnijden binnen de wand. Gezien bij Ross; de
+  andere negen modellen met een gebogen wand gebruiken dezelfde code.
+- **De rolarm** een eigen vorm geven.
+- **Drie close-ups** toevoegen aan de beeldvergelijking (naad Pebble, kop Ross, rolarm Zora). Deze plekken zaten niet
+  in de vaste reeks; daardoor vielen ze niet op.
+
+**B. Proef: het net van de ringen, gelegd op de zachte vorm** (idee 1 in de lijst).
 - De weergave tekent het net zoals bij de fauteuils: ringen die de vorm volgen. Daarna legt ze elk punt op de zachte
   vorm, zoals het raster nu al met zijn eigen punten doet. Wat binnen een ander deel valt, knipt ze weg.
 - Dat geeft de strakke lijnen en de stof langs de vorm van de ene manier, en de ronde koppen en het samensmelten van
   de andere.
 - Verwacht voor Pebble: ±5.000 driehoeken in plaats van ±29.000 (berekend uit de code), en geen wachtbeeld meer.
-- Het lastige punt is het wegknippen waar twee delen in elkaar steken. Daarom eerst een proef op Pebble en Ross, met
-  als maatstaf: de naad van dichtbij, ribstof, het aantal driehoeken, de tijd en de beeldvergelijking.
+- **Wat de proef moet bewijzen:** het samensmelten. Bij Pebble en Ross smelt bij de standaardinstelling niets samen;
+  daar komt dit idee neer op "de ringen herstellen" (idee 2 en 6). De proef moet dus ook een echte overgang bevatten:
+  de rug van Doha op zijn onderbouw, en een arm met een eigen doorsnede bij *Zacht*.
+- **Open risico:** op 4/11 gaven gebogen wanden en vrije omtrekken foutjes aan de randen toen ze samensmolten; daarom
+  smelten ze nu niet mee. Deze proef moet tonen dat het met een net dat de vorm volgt wel lukt. Lukt het niet, dan
+  blijft het raster voor wat samensmelt en de herstelde ringen voor de rest.
+- Het andere lastige punt is het wegknippen waar twee delen in elkaar steken.
+- Maatstaf: de naad van dichtbij, ribstof, het aantal driehoeken, de tijd en de beeldvergelijking.
 
-**B. Ronde vormen als gegevens: een ruggengraat met doorsneden** (idee 10 en 11).
+**C. Ronde vormen als gegevens: een ruggengraat met doorsneden** (idee 10 en 11).
 - Een vorm wordt een lijn door een paar punten, met op enkele plaatsen de hoogte, de dikte en de ronding. De motor
   trekt er een vloeiende kromme door.
 - De schaal van Pebble is dan een tiental getallen in het modelbestand, geen code in de motor.
 - Daar past een hulpscherm bij om de punten over de productfoto te slepen. Dat maakt een nieuw model sneller en
   dichter bij de foto.
-
-**C. Vier kleine herstellingen die nu al kunnen** (idee 2, 3, 4 en 23).
-- Fauteuils (10 modellen): een ronde kop aan het wanduiteinde, en de onderbouw afsnijden binnen de wand.
-- Pebble: de steile rand van de schaal juist rekenen.
-- De rolarm een eigen vorm geven.
-- Drie close-ups toevoegen aan de beeldvergelijking (naad Pebble, kop Ross, rolarm Zora). Deze plekken zaten niet in
-  de vaste reeks; daardoor vielen ze niet op.
 
 ### Ongewone ideeën
 
@@ -141,9 +161,9 @@ Grond: *gezien* = in de beelden hierboven; *gemeten*; *uit de code*; *beredeneer
 | # | Idee | Lost op | Grond | Werk | Risico of regel |
 |---|---|---|---|---|---|
 | | **Oppervlak** | | | | |
-| 1 | Net van de ringen, gelegd op de zachte vorm | Bobbelige naden, messcherpe koppen, zes keer zoveel driehoeken, wachtbeeld | Beide helften gezien; de combinatie beredeneerd | Middel | Wegknippen waar delen in elkaar steken. Alleen 3D. |
-| 2 | Ronde kop aan het wanduiteinde; onderbouw afsnijden binnen de wand | Mes en rafelig hoekje bij 10 fauteuils | Gezien | Klein | Laag |
-| 3 | Steile rand van een wand juist rekenen | Bobbelige naad bij Pebble | Gezien; oorzaak uit de code | Klein à middel | Raakt ook de rug van Doha: beeldvergelijking |
+| 1 | Net van de ringen, gelegd op de zachte vorm | Messcherpe koppen, stof die de vorm niet volgt, ±zes keer zoveel driehoeken (berekend), wachtbeeld. Bobbelige naden alleen samen met 3. | Beide helften gezien; de combinatie beredeneerd | Middel | Samensmelten gaf op 4/11 foutjes aan de randen; wegknippen waar delen in elkaar steken. Alleen 3D. |
+| 2 | Ronde kop aan het wanduiteinde; onderbouw afsnijden binnen de wand | Mes en rafelig hoekje bij de fauteuils met een gebogen wand (10 modellen) | Gezien bij Ross; de andere negen gebruiken dezelfde code | Klein | Laag |
+| 3 | Steile rand van een wand juist rekenen | Bobbelige naad bij Pebble; ook nodig voor 1 | Gezien en gemeten | Klein à middel | Zelfde berekening als de rug van Doha: beeldvergelijking |
 | 4 | Eigen vorm voor de rolarm | Kale cilinder op een blok | Gezien | Middel | Stond al als volgende stap |
 | 5 | Recht bouwen, dan buigen | Net en stof volgen de boog (Montego, later rondboogramen) | Uit de code | Middel | Komt mee met 1 |
 | 6 | Bovenvlak met een echt net in plaats van een waaier | Strepen in het bovenvlak (de reden voor de overstap naar het raster) | Uit de code | Klein à middel | Hoort bij 1 |
@@ -184,7 +204,7 @@ Grond: *gezien* = in de beelden hierboven; *gemeten*; *uit de code*; *beredeneer
 
 ## Vragen voor Jonas
 
-1. Mag de proef van idee 1 gebouwd worden op Pebble en Ross? Alleen de 3D verandert.
+1. Mogen de vier herstellingen (A) en de proef van idee 1 (B) gebouwd worden? Alleen de 3D verandert.
 2. Wil je de tekeningen uit de 3D-vorm laten komen (idee 22)? Dat verandert het boven- en vooraanzicht.
 3. Valt een scan die de klant zelf van zijn eigen fauteuil maakt onder "geen scans" (idee 21)?
 4. Mogen de productfoto's gebruikt worden om de vorm automatisch te laten passen, als ze op deze machine blijven
@@ -194,6 +214,8 @@ Grond: *gezien* = in de beelden hierboven; *gemeten*; *uit de code*; *beredeneer
 
 - **Tellen:** `bouw3D` voor alle 42 modellen, per rond blok de weg die de weergave kiest.
 - **Tijd en driehoeken:** `zachteVorm` in een gebundeld script in node, tweede keer gemeten.
+- **Steile rand:** per punt op de bovenste ronding van de wand de richting uit `zachteVorm` tegenover stapjes van
+  0,05 cm in `zachtVeld`, gegroepeerd volgens de helling van de bovenrand ter plaatse.
 - **Rechtstreeks getekend:** in de pagina de laatste scène opnieuw getoond via `window.__zetel3d`, met `glad` uit de
   blokken gehaald. Ribstof: `weefsel: 'rib'` op alle stof.
 - **Raster van 1 cm:** in een kopie van `configurator-demo.html` de rastermaat vervangen.
