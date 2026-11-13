@@ -526,7 +526,11 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
               lokaal(`drager-${k}`, 'hout', q[0] - 1.5, q[1] - 1.5, 3, 3, opb.basis.boven - 2, opb.wand.onder - opb.basis.boven + 6, hout, { afronding: 0.8 });
             }
           }
-          opb.rugkussens.forEach((k, i) => lokaal(`rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, 'kussen', k.lx, k.ly, k.lb, k.ld, k.y, k.h, stof, { afronding: 2 + zacht, kantel: { graden: 10, richting } }));
+          opb.rugkussens.forEach((k, i) => lokaal(`rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, 'kussen', k.lx, k.ly, k.lb, k.ld, k.y, k.h, stof,
+            // Een gewoon vierkant kussen: ronder, boller, naar het midden van de zetel gedraaid en wat meer achterover.
+            k.vierkant
+              ? { afronding: rond1(Math.min(k.ld / 2.2, 3 + zacht * 0.5)), bol: rond1(k.ld * 0.22), kantel: { graden: 14, richting }, ...(k.draai ? { draai: k.draai } : {}) }
+              : { afronding: 2 + zacht, kantel: { graden: 10, richting } }));
           break;
         }
         const kv = String(te('kuipvorm', 'vorm', 'afgerond'));

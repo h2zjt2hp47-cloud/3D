@@ -284,16 +284,25 @@ export const zetelModellen: ModelDefinitie[] = [
     },
     elementen: rij([['fauteuil', 150, 65, { kuipvorm: 'afgerond' }]]),
   }, 'F-Mabel2', MATEN_WEBSITE),
-  model('mabel-meridienne', 'Mabel Meridienne', FAUTEUIL, 'Meridienne met rug en arm aan één kant, bies en slanke donkere poten.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', naad: 'bies', rug: 'vast' },
-    // Eén méridienne zoals op de foto: arm links en een chaise longue met de rug langs de lange zijde (gedraaid).
-    vormgeving: { rugvorm: 'rond' },
+  model('mabel-meridienne', 'Mabel Meridienne', FAUTEUIL, 'Méridienne als kuip: de leuning draait om het linkeruiteinde en loopt langs de rug schuin af tot op de zitting; vaste zitting met bies op een donker frame.', {
+    hoofdmateriaal: 'boucle_belize', opties: { poten: 'ringframe', poothoogte: 'hoog', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
+    // Productpagina: 150 × 65 × 76, zithoogte 45 (zelfde maten als de 2-zit). Eén foto van voor, 580 px (13/11): de leuning
+    // is hoog aan de linkerkant, blijft vlak tot iets voorbij het midden en zakt dan langs de rug tot op de zitting, op
+    // ±85 % van de breedte; de rechterkant ligt open. Wat de foto niet toont en dus geschat is: hoe ver de leuning om het
+    // linkeruiteinde naar voren komt (hier zoals bij de 1-zit: tot het midden van de diepte) en de poothoogte.
+    // Vroeger arm + chaise (184 × 80): een andere zetel.
+    vormgeving: {
+      zachtheid: 6, rughoogte: 76, zithoogte: 45, poothoogte: 22,
+      kuip: {
+        exponent: 4.5, dikte: 7, boog: 96, boogRechts: 30, voorBoven: -3, zitTrommel: true, zitRand: 6, frameDik: 2.5,
+        profiel: [[0, 1], [0.62, 1], [1, 0]], profielRechts: [[0, 1], [0.12, 1], [1, 0]],
+      },
+    },
     elementen: [
-      el('e1', 'arm', 0, 0, 14, 80, 0, { armstijl: 'rond' }),
-      el('e2', 'chaise', 14, 0, 80, 170, 90, { chaise_rug: 'links' }),
-      sierkussen('e3', 20, 16, 'vmat_kastanje'),
+      el('e1', 'fauteuil', 0, 0, 150, 65, 0, { kuipvorm: 'afgerond' }),
+      sierkussen('e3', 12, 16, 'vmat_kastanje', 38),
     ],
-  }, 'F-MabelMeridienne'),
+  }, 'F-MabelMeridienne', MATEN_WEBSITE),
 
   // ---------------- Zetelbedden ----------------
   model('ziggy', 'Ziggy zetelbed', ZETELBED, 'Zetelbed met strakke armen, één doorlopend zitkussen, rolkussens en metalen poten.', {

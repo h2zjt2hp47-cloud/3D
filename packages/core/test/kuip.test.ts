@@ -159,6 +159,46 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     expect(berekenOntwerp(o, cat, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout')).toHaveLength(0);
   });
 
+  it('scheve schaal: links en rechts een eigen omloop en verloop (Mabel méridienne), bij elke draaiing', () => {
+    const basis = kuipParameters({ plan: 'afgerond', exponent: 4.5, dikte: 7, boog: 96, voorBoven: -3, armVanaf: 1 })!;
+    const h = { P: 22, zithoogte: 45, rugH: 76, kussenDik: 12 };
+    const scheef = kuipOpbouw(150, 65, h, { ...basis, boogRechts: 30, profiel: [[0, 1], [0.62, 1], [1, 0]], profielRechts: [[0, 1], [0.12, 1], [1, 0]] }, false);
+    const pad = scheef.wand.pad, hoog = scheef.wand.hoogtes, n = pad.length;
+    // Links (x klein): om het uiteinde tot rond het midden van de diepte, daar net onder de zithoogte.
+    expect(pad[0]![0]).toBeLessThan(10);
+    expect(pad[0]![1]).toBeGreaterThan(30);
+    expect(hoog[0]).toBe(42);
+    // Rechts stopt de leuning op de rug zelf, op ±85 % van de breedte, ook net onder de zithoogte.
+    expect(pad[n - 1]![0]).toBeGreaterThan(115);
+    expect(pad[n - 1]![0]).toBeLessThan(140);
+    expect(pad[n - 1]![1]).toBeLessThan(12);
+    expect(hoog[n - 1]).toBe(42);
+    // Hoog (76) van de linkerhoek tot iets voorbij het midden; rechts daarvan alleen nog dalend.
+    const hoogDeel = pad.filter((_, i) => hoog[i] === 76).map((q) => q[0]);
+    expect(Math.min(...hoogDeel)).toBeLessThan(20);
+    expect(Math.max(...hoogDeel)).toBeGreaterThan(75);
+    expect(Math.max(...hoogDeel)).toBeLessThan(95);
+    const rechts = hoog.filter((_, i) => pad[i]![0] > 95 && pad[i]![1] < 12);
+    for (let i = 1; i < rechts.length; i++) expect(rechts[i]!).toBeLessThanOrEqual(rechts[i - 1]!);
+    // Zonder boogRechts en profielRechts blijft de schaal symmetrisch.
+    const gelijk = kuipOpbouw(150, 65, h, { ...basis, profiel: [[0, 1], [0.62, 1], [1, 0]] }, false).wand.hoogtes;
+    for (let i = 0; i < gelijk.length; i++) expect(gelijk[i]).toBeCloseTo(gelijk[gelijk.length - 1 - i]!, 1);
+    // In de 3D bij elke draaiing: de schaal blijft binnen het kader van het element, en het hoge deel ligt aan dezelfde kant.
+    for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
+      const o = fauteuil({ plan: 'afgerond', exponent: 4.5, dikte: 7, boog: 96, boogRechts: 30, voorBoven: -3, zitTrommel: true, profiel: [[0, 1], [0.62, 1], [1, 0]], profielRechts: [[0, 1], [0.12, 1], [1, 0]] }, 'ringframe', rotatie);
+      o.elementen[0]!.breedte = 150; o.elementen[0]!.diepte = 65;
+      const s = bouw3D(o, cat, standaardMaterialen), rug = s.blokken.find((b) => b.code === 'f.rug')!;
+      for (const [x, z] of rug.pad!) {
+        expect(x, `rotatie ${rotatie}`).toBeGreaterThanOrEqual(s.kader.x - 0.1);
+        expect(x, `rotatie ${rotatie}`).toBeLessThanOrEqual(s.kader.x + s.kader.b + 0.1);
+        expect(z, `rotatie ${rotatie}`).toBeGreaterThanOrEqual(s.kader.z - 0.1);
+        expect(z, `rotatie ${rotatie}`).toBeLessThanOrEqual(s.kader.z + s.kader.d + 0.1);
+      }
+      expect(rug.hoogtes![0]).toBe(37); // zithoogte 40 in dit voorbeeld, 3 cm eronder
+      expect(Math.max(...rug.hoogtes!)).toBe(72);
+    }
+  });
+
   it('schaal op de zitting: haar onderkant ligt net onder de zithoogte en de zitting is het volle grondvlak', () => {
     const blokken = bouw3D(fauteuil({ ...milton, schaalOp: true }), cat, standaardMaterialen).blokken;
     expect(blokken.find((b) => b.code === 'f.rug')!.y).toBe(38);
