@@ -22,8 +22,11 @@ lopen tegen de productfoto's en per model op te lijsten wat afwijkt.
   catalogus; het type fauteuil mag tot 160 cm breed. Hij wilde eerst bijsturen: "bij Mabel komt de leuning niet zo ver
   als onze 3D". Dat is rechtgezet.
 - **Ook omgebouwd:** de Sullivan hocker, de Tumble pouf en de Pebble pouf, op de maten van de site.
-- **Nog te doen:** de sofa's en de zetelbedden nalopen; de Fraser en de Mabel hocker (geen foto of maten gevonden);
-  publiceren na goedkeuring.
+- **Sofa's, zetelbedden en poefs zijn nagelopen** (eerste doorgang, op de kleine foto's): de opbouw van de sofa's
+  klopt; de zetelbedden hebben niet de maten van de technische tekening op de site. Dat staat klaar als voorstel, niet
+  doorgevoerd, omdat het vier modellen 135 tot 208 euro duurder maakt.
+- **Nog te doen:** de beslissingen van Jonas (zetelbedden, zitdiepte van de fauteuils); een tweede doorgang op de grote
+  foto's; publiceren na goedkeuring.
 
 ## Werkwijze
 
@@ -266,6 +269,62 @@ Drie poefs hebben hun maten op de pagina van de fauteuil staan; twee ervan staan
 - **Niet omgebouwd:** de Fraser hocker en de Mabel hocker (geen foto en geen maten gevonden; niet verzinnen),
   Stockholm, Kanto en Fez (de pagina met de poefs gaf geen links naar productpagina's).
 
+## Sofa's, zetelbedden en poefs nagelopen (13/11)
+
+Alle veertien sofa's, de zes zetelbedden en de drie poefs zonder eigen pagina getekend en naast hun foto gelegd. Geen
+model gewijzigd, dus geen prijs.
+
+![Sofa's naast hun foto: Kotor tot Azar](afbeeldingen/nalopen-sofas-1.jpg)
+
+![Amusette tot Esmee, de zetelbedden en de poefs Stockholm, Kanto en Fez](afbeeldingen/nalopen-sofas-2.jpg)
+
+**Let op:** deze eerste doorgang gebruikt de kleine foto's uit de demo (420 px). Op die schaal zie je de opbouw, geen
+details.
+
+| Groep | Bevinding |
+|---|---|
+| **Sofa's** | De opbouw klopt bij alle veertien (ze zijn op 3/11 en 4/11 al naar de site gebracht): chaise, hoek, tussenstuk, armen, losse kussens staan waar ze op de foto staan. Negen hebben de maten van de site (Kotor, Doha, Montego, Nestor, Belize, Pula, Amusette, Attribute, Wallace). Voor Fréjus, Gozo, Azar, Husk en Esmee geeft de site geen maten in tekst; ze blijven een benadering. |
+| **Zetelbedden** | De opbouw (arm + zit + arm) klopt, maar de **maten niet**: de site heeft voor Ziggy, Zora, Daizy Classic en Daizy Slim een technische tekening. Zie het voorstel hieronder. Zora heeft op de foto armen die rond de rug doorlopen; bij ons losse armen met een ronde bovenkant. Ziggy heeft twee rugkussens en rolkussens tegen de armen. |
+| **Poefs** | Stockholm loopt op de foto naar boven smaller toe (bij ons een rechte cilinder) en is donkerblauw. Kanto is een kubus die naar boven smaller wordt. Fez klopt. Geen van de drie heeft een eigen pagina met maten. |
+
+### Voorstel: de zetelbedden op de maten van de tekening (niet doorgevoerd)
+
+![Ziggy, Zora, Daizy Classic en Daizy Slim: foto, 3D nu en het voorstel](afbeeldingen/zetelbedden-voorstel.jpg)
+
+Uit de technische tekeningen op de productpagina's:
+
+| Model | Zithoogte | Hoogte karkas | Arm (hoog × breed) | Diepte | Zitdiepte |
+|---|---|---|---|---|---|
+| Ziggy | 50 | 76 | 76 × 10 | 98 | 55 |
+| Zora | 47 | 74 | 74 × 10 | 98 | 55 |
+| Daizy Classic | 47 | 74 | 60 × 14 | 98 | 55 |
+| Daizy Slim | 47 | 74 | 60 × 8 | 98 | 55 |
+| Phoenix (alleen tekst) | 46 | geen | geen | geen | 55 |
+| Aurora | geen | geen | geen | geen | geen |
+
+Bij ons staan ze allemaal op zithoogte 45, 95 cm diep, met armen van 62 cm hoog en 12 tot 22 cm breed.
+
+**Waarom niet doorgevoerd:** de maten van de tekening maken vier modellen 135 tot 208 euro duurder, vooral door
+toeslagen in de catalogus die voor een gewone zetel bedoeld zijn. Dat is een prijswijziging die Jonas eerst moet zien.
+
+| Model | Prijs nu | Met de maten van de tekening | Verschil | Waar het vandaan komt |
+|---|---|---|---|---|
+| Ziggy | 2.470 | 2.605 | +135 | zithoogte 50 rekent als *hoog* (+60), armhoogte 76 op maat (+30), dikkere rug en hoger karkas (+31), rest uit de maten |
+| Zora | 2.301 | 2.509 | +208 | zithoogte 47 rekent als *hoog* (+60), armhoogte 74 op maat (+30), vaste rug van 30 cm dik (+106) |
+| Daizy Classic | 2.253 | 2.397 | +144 | zithoogte 47 rekent als *hoog* (+60), dikkere rug en rugkussen (+20), rest uit de maten |
+| Daizy Slim | 2.172 | 2.311 | +139 | zithoogte 47 rekent als *hoog* (+60), dikkere rug en rugkussen (+19), rest uit de maten |
+| Phoenix | 2.052 | 2.052 | 0 | zithoogte 46 rekent als *standaard* |
+
+**Te beslissen door Jonas:**
+
+1. Mogen de zetelbedden op de maten van de tekening, met deze prijzen? Of eerst de toeslag voor de zithoogte herzien
+   (47 cm is voor een zetelbed de gewone hoogte, niet *hoog*)?
+2. De armen van Ziggy en Zora zijn 10 cm breed en die van Daizy Slim 8 cm; het type arm begint bij 12 cm. Mag die grens
+   naar 8 cm?
+3. De vaste rug van Zora zou 43 cm dik moeten zijn voor een zitdiepte van 55; de rugdikte stopt bij 30 cm.
+
+De modelgegevens van het voorstel staan klaar (buiten de repo), zodat het na een akkoord één stap is.
+
 ## Eerste proef (voor de bijsturing)
 
 Alleen als beeld; de leuning van Mabel liep hier nog tot bijna vooraan.
@@ -311,8 +370,11 @@ krijgt ze een (verzonnen) prijs en verandert de offertetekst van die modellen.
 
 ## Nog te doen
 
-- De sofa's en de zetelbedden nalopen. De Fraser hocker, de Mabel hocker en de poefs Stockholm, Kanto en Fez: foto's
-  en maten nog te vinden (de pagina met de poefs gaf geen links naar productpagina's).
+- De zetelbedden op de maten van de technische tekening, na het akkoord van Jonas op de prijzen (voorstel hierboven).
+- De sofa's en zetelbedden nog eens op de grote foto's van de site, model per model (deze doorgang was op 420 px):
+  Zora (armen die rond de rug doorlopen), Ziggy (twee rugkussens, rolkussens), en de vijf sofa's zonder maten.
+- De Fraser hocker, de Mabel hocker en de poefs Stockholm, Kanto en Fez: geen eigen pagina, dus geen maten; Stockholm
+  en Kanto lopen op de foto naar boven smaller toe.
 - Een schaal die helt of uitwaaiert (Sullivan, Manon), vierkante poten, dikkere armen dan de schaal (Ross, Sullivan).
 - De maten van de Pebble fauteuil vragen aan de klant (alleen de poef staat op de site).
 - Pas publiceren na goedkeuring.
