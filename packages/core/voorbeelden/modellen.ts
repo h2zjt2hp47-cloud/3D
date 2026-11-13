@@ -331,10 +331,22 @@ export const zetelModellen: ModelDefinitie[] = [
     },
     elementen: rij([['fauteuil', 70, 68, { kuipvorm: 'rond' }]]),
   }, 'F-Milton', MATEN_WEBSITE),
-  model('manon', 'Manon', FAUTEUIL, 'Omhullende, ronde fauteuil op een verdekte voet.', {
-    hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag' },
-    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'omhullend' }]]),
-  }, 'F-Manon'),
+  model('manon', 'Manon', FAUTEUIL, 'Ronde kuipfauteuil tot op de vloer: een dunne schaal met bies die van de hoge rug naar voren afloopt, rond een vaste trommelzitting.', {
+    hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', zitting: 'vaste_zitting', naad: 'bies' },
+    // Productpagina: 75 × 70 × 75, zithoogte 42. Uit de vier foto's (benadering, 13/11): een ronde trommel tot op de vloer;
+    // een dunne schaal met een dikke bies die er een paar cm rond uitsteekt; haar rand loopt van de rug (75 cm) aan beide
+    // kanten schuin af naar voren (±60 cm) en eindigt voorbij het midden met een rechte rand tot op de vloer; de zitting
+    // steekt er vooraan uit. Wat hier niet kan: op de foto staat de schaal bovenaan wat naar buiten.
+    vormgeving: {
+      zachtheid: 8, rughoogte: 75, zithoogte: 42, poothoogte: 2,
+      kuip: {
+        dikte: 6, boog: 104, voorBoven: 0, zitTrommel: true, zitRand: 4, zitIn: 3,
+        // Eén vloeiende, bolle lijn van de rug naar voren (een parabool in zeven punten, recht ertussen).
+        profiel: [[0, 1], [0.17, 0.99], [0.33, 0.95], [0.5, 0.89], [0.67, 0.8], [0.83, 0.69], [1, 0.55]], profielRecht: true,
+      },
+    },
+    elementen: rij([['fauteuil', 75, 70, { kuipvorm: 'omhullend' }]]),
+  }, 'F-Manon', MATEN_WEBSITE),
   model('mabel-2', 'Mabel 2-zit', FAUTEUIL, 'Kleine tweezit als kuip: dezelfde leuning als de Mabel 1-zit, 150 cm breed, op een donker frame met slanke poten.', {
     hoofdmateriaal: 'wol_oceaan', opties: { poten: 'ringframe', poothoogte: 'hoog', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: 150 × 65 × 76, zithoogte 45. Op de foto dezelfde kuip als de 1-zit (vroeger hier arm + zit + arm: een
