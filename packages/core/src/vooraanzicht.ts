@@ -247,11 +247,15 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           const achter = omhullende(false);
           if (achter) pad(`${e.id}.rug`, achter.d, achter.x, top(achter.hMax), achter.b, achter.hMax - opb.wand.onder, donker, lijn);
           const xs = (pts: [number, number][]) => { const w = pts.map(([lx, ly]) => wereld(lx, ly).x); return [Math.min(...w), Math.max(...w)] as const; };
-          for (const [i, k] of opb.rugkussens.entries()) {
-            const a = wereld(k.lx, k.ly), c = wereld(k.lx + k.lb, k.ly + k.ld);
-            const xa = Math.min(a.x, c.x), xb = Math.max(a.x, c.x);
+          // Losse rugkussens: de achterste eerst (bij Quin staat het middelste achter de twee andere); een gedraaid
+          // kussen zo breed als het van voren te zien is.
+          const kussens = opb.rugkussens.map((k, i) => {
+            const mx = k.lx + k.lb / 2, my = k.ly + k.ld / 2, a = ((k.draai ?? 0) * Math.PI) / 180, c = Math.cos(a), sn = Math.sin(a);
+            const hoeken = ([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sy]) => wereld(mx + ((sx * k.lb) / 2) * c - ((sy * k.ld) / 2) * sn, my + ((sx * k.lb) / 2) * sn + ((sy * k.ld) / 2) * c));
+            return { k, i, xa: Math.min(...hoeken.map((q) => q.x)), xb: Math.max(...hoeken.map((q) => q.x)), diep: wereld(mx, my).y };
+          }).sort((p1, p2) => p1.diep - p2.diep);
+          for (const { k, i, xa, xb } of kussens)
             rect(`${e.id}.rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, xa, top(k.y + k.h), xb - xa, k.h, stof, { afronding: 2 + zacht, ...lijn });
-          }
           const [bx0, bx1] = xs(kp.zitTrommel ? opb.zit : opb.plan);
           const voor = kp.zwevend ? null : omhullende(true);
           // Trommel: één zitting van de poten tot de zithoogte, die vóór de uiteinden van de schaal staat (de schaal stopt

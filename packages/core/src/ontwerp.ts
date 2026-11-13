@@ -622,7 +622,16 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
         const buiten = p.map((q, i) => naarW(q[0] + nrm[i]![0] * h, q[1] + nrm[i]![1] * h));
         const binnen = p.map((q, i) => naarW(q[0] - nrm[i]![0] * h, q[1] - nrm[i]![1] * h)).reverse();
         uit.push(vorm('rug', [...buiten, ...kap(p.length - 1, 1), ...binnen, ...kap(0, -1)], donker));
-        opb.rugkussens.forEach((k, i) => delen.push([`rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, k.lx, k.ly, k.lb, k.ld, kleur, 4]));
+        opb.rugkussens.forEach((k, i) => {
+          const code = `rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`;
+          if (!k.draai) { delen.push([code, k.lx, k.ly, k.lb, k.ld, kleur, 4]); return; }
+          // Een gedraaid los kussen (Quin): als vierhoek rond zijn midden, zoals het in de 3D staat.
+          const mx = k.lx + k.lb / 2, my = k.ly + k.ld / 2, a = (k.draai * Math.PI) / 180, c = Math.cos(a), sn = Math.sin(a);
+          uit.push(vorm(code, ([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sy]) => {
+            const dx = (sx * k.lb) / 2, dy = (sy * k.ld) / 2;
+            return naarW(mx + dx * c - dy * sn, my + dx * sn + dy * c);
+          }), kleur));
+        });
         return [...uit, ...naarWereld()];
       }
       const vorm = String(t('kuipvorm', 'vorm') ?? 'afgerond');

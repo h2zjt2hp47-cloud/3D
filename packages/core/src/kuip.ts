@@ -299,10 +299,14 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
     // tot die rand achteruit helt. Anders stak het door de schaal heen (van achter te zien, Satie 13/11).
     const leun = Math.max(0, Math.min(rug - zitBoven, hoog)) * Math.tan((KUSSEN_KANTEL * Math.PI) / 180);
     const a = B / 2 - w - dik / 2 - 1 - leun, b = D / 2 - w - dik / 2 - 1 - leun;
-    const stapGraden = k.kussens > 1 ? Math.min(46, ((maat * 0.82) / ((a + b) / 2)) * (180 / Math.PI)) : 0;
+    // Meer dan één kussen, zoals op de foto's van Quin: het middelste tegen de schaal, de andere schuin ervoor naar de
+    // zijkanten toe. Ze staan op dezelfde lijn binnen de schaal, de buitenste een eind verder rond (dus meer naar voren),
+    // en kijken schuin naar voren in plaats van recht naar het midden: zo blijven het losse kussens die elkaar wat
+    // overlappen, geen doorlopende band langs de schaal.
+    const stapGraden = k.kussens > 1 ? Math.min(62, ((maat * 0.62) / ((a + b) / 2)) * (180 / Math.PI)) : 0;
     for (let i = 0; i < k.kussens; i++) {
       const graden = (i - (k.kussens - 1) / 2) * stapGraden, [px, py] = superellips(cx, cy, a, b, n, -90 + graden, -90 + graden, 1)[0]!;
-      rugkussens.push({ lx: rond1(px - maat / 2), ly: rond1(py - dik / 2), lb: maat, ld: dik, y: zitBoven, h: hoog, draai: rond1(graden), vierkant: true });
+      rugkussens.push({ lx: rond1(px - maat / 2), ly: rond1(py - dik / 2), lb: maat, ld: dik, y: zitBoven, h: hoog, draai: rond1(graden * 0.65), vierkant: true });
     }
   } else if (losseRug) {
     const aantal = Math.max(1, Math.min(3, Math.round((B - 2 * w) / 30)));

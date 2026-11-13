@@ -542,11 +542,16 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
               lokaal(`drager-${k}`, 'hout', q[0] - 1.5, q[1] - 1.5, 3, 3, opb.basis.boven - 2, opb.wand.onder - opb.basis.boven + 6, hout, { afronding: 0.8 });
             }
           }
-          opb.rugkussens.forEach((k, i) => lokaal(`rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, 'kussen', k.lx, k.ly, k.lb, k.ld, k.y, k.h, stof,
-            // Een gewoon vierkant kussen: ronder, boller, naar het midden van de zetel gedraaid en wat meer achterover.
-            k.vierkant
-              ? { afronding: rond1(Math.min(k.ld / 2.2, 3 + zacht * 0.5)), bol: rond1(k.ld * 0.22), kantel: { graden: KUSSEN_KANTEL, richting }, ...(k.draai ? { draai: k.draai } : {}) }
-              : { afronding: 2 + zacht, kantel: { graden: 10, richting } }));
+          opb.rugkussens.forEach((k, i) => {
+            const code = `rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`;
+            // Een gewoon los kussen (Quin, Satie): dun aan de randen en bol in het midden (een lens, geen plak), naar het
+            // midden van de zetel gedraaid en achterover tegen de schaal. De rand is 5 cm dik; de rest van de dikte is bolling.
+            if (k.vierkant) {
+              const rand = Math.min(5, k.ld);
+              lokaal(code, 'kussen', k.lx, k.ly + (k.ld - rand) / 2, k.lb, rand, k.y, k.h, stof,
+                { afronding: rond1(rand / 2 - 0.2), bol: rond1((k.ld - rand) / 2), kantel: { graden: KUSSEN_KANTEL, richting }, ...(k.draai ? { draai: k.draai } : {}) });
+            } else lokaal(code, 'kussen', k.lx, k.ly, k.lb, k.ld, k.y, k.h, stof, { afronding: 2 + zacht, kantel: { graden: 10, richting } });
+          });
           break;
         }
         const kv = String(te('kuipvorm', 'vorm', 'afgerond'));

@@ -208,11 +208,11 @@ describe('kuipfauteuils: onderbouw binnen de wand, ronde onderrand bij een zweve
   };
   it('de onderbouw steekt nergens door de wand (vroeger een dun streepje naast het wanduiteinde van Ross)', () => {
     // Bij een afgerond grondvlak ligt de buitenkant van de wand in de hoeken tot ±1 cm binnen de omtrek.
-    for (const code of ['ross', 'mabel-1', 'mabel-2', 'sullivan', 'tumble', 'quin', 'milton', 'manon'])
+    for (const code of ['ross', 'mabel-1', 'mabel-2', 'sullivan', 'tumble', 'milton', 'manon'])
       expect(speling(code), code).toBeGreaterThan(0.7);
-    // Een trommel die binnen de schaal staat (`zitIn`: Satie, Fraser): haar rand ligt overal binnen de wand, tegen de
+    // Een trommel die binnen de schaal staat (`zitIn`: Satie, Quin, Fraser): haar rand ligt overal binnen de wand, tegen de
     // binnenkant aan (geen kier tussen zitting en schaal, en niets dat erdoor steekt).
-    for (const code of ['satie', 'fraser']) expect(speling(code), code).toBeGreaterThan(0.3);
+    for (const code of ['satie', 'quin', 'fraser']) expect(speling(code), code).toBeGreaterThan(0.3);
   });
   it('alleen de zwevende schaal (Karl) krijgt een ronde onderrand; een wand op de onderbouw niet', () => {
     const karl = blokken('karl').find((x) => x.code === 'e1.rug')!;
@@ -251,7 +251,7 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
   // Maten van de productpagina's: breedte × diepte × hoogte en de zithoogte.
   const SITE: Record<string, [number, number, number, number]> = {
     milton: [70, 68, 72, 40], 'mabel-1': [68, 65, 76, 45], 'mabel-2': [150, 65, 76, 45], 'mabel-meridienne': [150, 65, 76, 45],
-    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45],
+    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45], quin: [91, 91, 78, 45],
   };
   it('de maten van de productpagina: het kader van de 3D en de bovenkant van de zitting', () => {
     for (const [code, [b, d, h, zit]] of Object.entries(SITE)) {
@@ -280,6 +280,21 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(kussens[0]).toMatchObject({ b: 48, h: 38 });
     // Het kussen komt boven de schaal uit, zoals op de foto.
     expect(kussens[0]!.y + kussens[0]!.h).toBeGreaterThan(70);
+  });
+  it('Quin: grote trommel op een lage ronde voet, drie losse kussens: één achteraan, twee schuin ervoor', () => {
+    const b = scene('quin').blokken, kussens = b.filter((x) => x.code.startsWith('e1.rugkussen'));
+    expect(b.find((x) => x.code === 'e1.draaivoet')).toBeDefined();
+    expect(b.find((x) => x.code === 'e1.zitkussen')!.y).toBe(4);
+    expect(kussens).toHaveLength(3);
+    const [links, midden, rechts] = kussens as [typeof kussens[0], typeof kussens[0], typeof kussens[0]];
+    // Het middelste recht tegen de schaal; de andere twee gedraaid (elk naar zijn kant) en verder naar voren.
+    expect(midden.draai ?? 0).toBe(0);
+    expect(links.draai!).toBeLessThan(-25);
+    expect(rechts.draai!).toBeGreaterThan(25);
+    expect(links.z + links.d / 2).toBeGreaterThan(midden.z + midden.d / 2 + 8);
+    expect(rechts.z + rechts.d / 2).toBeCloseTo(links.z + links.d / 2, 0);
+    // Een los kussen is een lens: een dunne rand met een bolling tot de volle dikte.
+    for (const k of kussens) { expect(k.d).toBe(5); expect(k.bol).toBe(4); expect(k.b).toBe(43); }
   });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;

@@ -232,10 +232,17 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast' },
     vormgeving: { kussendikte: 18 }, elementen: rij([['arm', 26, 90, strak], ['zit', 70, 90], ['arm', 26, 90, strak]]),
   }, 'F-Amusette'),
-  model('quin', 'Quin', FAUTEUIL, 'Ronde draaifauteuil met losse rugkussens in velours.', {
-    hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons' },
-    vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 90, 90, { kuipvorm: 'trommel' }]]),
-  }, 'F-Quin'),
+  model('quin', 'Quin', FAUTEUIL, 'Grote ronde draaifauteuil: een trommel op een lage ronde voet, een dunne schaal rond de achterste helft en drie losse rugkussens.', {
+    hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons', zitting: 'vaste_zitting' },
+    // Productpagina: 91 × 91 × 78, zithoogte 45. Uit de foto's (benadering, 13/11): een grote ronde trommel op een lage,
+    // donkere ronde voet (4 cm geschat); een dunne schaal, rondom even hoog, die er een paar cm rond uitsteekt, rond de
+    // achterste helft; drie gewone vierkante kussens (±43 cm) tegen de schaal, die erboven uitkomen.
+    vormgeving: {
+      zachtheid: 8, rughoogte: 78, zithoogte: 45, poothoogte: 4,
+      kuip: { dikte: 6, boog: 93, zitTrommel: true, zitRand: 4, zitIn: 4, profiel: [[0, 1], [1, 1]], kussens: 3, kussenMaat: 43 },
+    },
+    elementen: rij([['fauteuil', 91, 91, { kuipvorm: 'trommel' }]]),
+  }, 'F-Quin', MATEN_WEBSITE),
   model('satie', 'Satie', FAUTEUIL, 'Ronde fauteuil: een trommel tot op de vloer met een dunne schaal met bies rond de achterste helft en één los rugkussen.', {
     hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', rug: 'los', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: diameter 70 (ook 110 en 130), hoogte 70; geen zithoogte (45 geschat). Uit de foto's (benadering,
