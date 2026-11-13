@@ -515,6 +515,7 @@ const VORM_LABELS: Record<keyof Vormgeving, string> = {
   poothoogte: 'Poothoogte (cm)',
   opbouw: 'Opbouw in 3D',
   bocht: 'Boog bij doorlopend: uiteinden naar voren (cm)',
+  kuip: 'Eigen vorm van de kuipfauteuil',
 };
 const KEUZE_LABELS: Record<string, string> = {
   recht: 'Recht', hellend: 'Achterover hellend', rond: 'Afgerond',

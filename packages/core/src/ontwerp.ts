@@ -123,6 +123,12 @@ export interface Vormgeving {
   /** Bij een doorlopende opbouw: hoeveel cm de uiteinden naar voren komen (een boog, zoals Montego); 0 = recht. */
   bocht: number;
   /**
+   * Eigen vorm van de kuipfauteuil van dit model: velden die de gekozen kuipvorm overschrijven (zie KuipParameters in
+   * kuip.ts: dikte, boog, voorBoven, profiel, zitTrommel, zitRand, schaalOp …). Zo is de vorm van een model gegevens in
+   * het modelbestand, geen code in de motor. Benadering uit de productfoto's; de prijs leest dit niet.
+   */
+  kuip?: Record<string, unknown>;
+  /**
    * Vrije hoogtes in cm (bv. getekend in het vooraanzicht). Leeg = volgens de gekozen opties.
    * Rughoogte en armhoogte gelden per element; zithoogte en poothoogte voor de hele zetel.
    */
@@ -588,7 +594,7 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
     }
     case 'kuip': {
       // Kuip met gebogen wand: grondvlak, zitting en de wand als band met ronde uiteinden (zie kuip.ts).
-      const kp = kuipParameters(opties.get('kuipvorm')?.teken);
+      const kp = kuipParameters(opties.get('kuipvorm')?.teken, v.kuip);
       if (kp) {
         const opb = kuipOpbouw(B, D, { P: 10, zithoogte: 45, rugH: 80, kussenDik: 12 }, kp, opties.get('rug')?.teken?.los === true);
         const naarW = (lx: number, ly: number) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return `${rond(w.x)} ${rond(w.y)}`; };

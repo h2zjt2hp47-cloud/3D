@@ -183,7 +183,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
       }
       case 'kuip': {
         // Kuip (rond, omhullend, organisch, schelp …): silhouet van de gebogen wand, hoog achteraan en aflopend naar de armen.
-        const kp = kuipParameters(opt.get('kuipvorm')?.teken);
+        const kp = kuipParameters(opt.get('kuipvorm')?.teken, v.kuip);
         if (kp) {
           const opb = kuipOpbouw(e.breedte, e.diepte, { P, zithoogte, rugH, kussenDik }, kp, losseRug);
           const wereld = (lx: number, ly: number) => lokaalNaarWereld(e, lx, ly, 0, 0);
@@ -232,8 +232,12 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             rect(`${e.id}.rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, xa, top(k.y + k.h), xb - xa, k.h, stof, { afronding: 2 + zacht, ...lijn });
           }
           const [bx0, bx1] = xs(opb.plan);
-          rect(`${e.id}.basis`, bx0, top(opb.basis.boven), bx1 - bx0, opb.basis.boven - opb.basis.onder, donker, { afronding: kp.plan === 'rond' ? Math.min(14, (opb.basis.boven - opb.basis.onder) / 2) : 6, ...lijn });
-          if (kussenDik) { const [zx0, zx1] = xs(opb.zit); rect(`${e.id}.zitkussen`, zx0, top(zithoogte), zx1 - zx0, kussenDik, stof, { afronding: zacht, ...lijn }); }
+          // Trommel: één zitting van de poten tot de zithoogte; anders een onderbouw met het kussen erop.
+          if (kp.zitTrommel) rect(`${e.id}.zitkussen`, bx0, top(zithoogte), bx1 - bx0, opb.zitDik, stof, { afronding: Math.min(kp.zitRand ?? 6, opb.zitDik / 2), ...lijn });
+          else {
+            rect(`${e.id}.basis`, bx0, top(opb.basis.boven), bx1 - bx0, opb.basis.boven - opb.basis.onder, donker, { afronding: kp.plan === 'rond' ? Math.min(14, (opb.basis.boven - opb.basis.onder) / 2) : 6, ...lijn });
+            if (kussenDik) { const [zx0, zx1] = xs(opb.zit); rect(`${e.id}.zitkussen`, zx0, top(zithoogte), zx1 - zx0, kussenDik, stof, { afronding: zacht, ...lijn }); }
+          }
           const voor = kp.zwevend ? null : omhullende(true);
           if (voor) pad(`${e.id}.arm`, voor.d, voor.x, top(voor.hMax), voor.b, voor.hMax - opb.wand.onder, stof, lijn);
           maxHoogte = Math.max(maxHoogte, ...opb.wand.hoogtes, ...opb.rugkussens.map((k) => k.y + k.h));

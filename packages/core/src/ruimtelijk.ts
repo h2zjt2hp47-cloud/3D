@@ -196,7 +196,29 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const w = lokaalNaarWereld(e, (links ? r : B - r) - rr, D / 2 - rr, rr * 2, rr * 2);
         blokken.push({ code: `${e.id}.verdekt-rond`, soort: 'donker', vorm: 'cilinder', x: r2(w.x), y: 0, z: r2(w.y), b: r2(w.b), h: r2(P), d: r2(w.h), kleur: '#2a2a28' });
       } else if (potVorm === 'verdekt') lokaal('verdekt', 'donker', 10, 10, B - 20, D - 20, 0, P, '#2a2a28');
-      else if (potVorm === 'slede') {
+      else if (potVorm === 'ringframe' || potVorm === 'kruisframe') {
+        // Onderstel van de fauteuils van de klant (13/11, benadering uit de productfoto's):
+        // - ringframe (Milton, Sullivan): een houten ring onder de zitting op vier korte poten;
+        // - kruisframe (Fraser, Ross): vier poten met een kruis ertussen, halverwege de hoogte.
+        const m = Math.min(B, D), dik = 5;
+        const ringH = potVorm === 'ringframe' ? Math.min(4, P / 3) : 0, ringD = m * 0.84;
+        if (ringH > 0) {
+          const w = lokaalNaarWereld(e, (B - ringD) / 2, (D - ringD) / 2, ringD, ringD);
+          blokken.push({ code: `${e.id}.ring`, soort: potSoort, vorm: 'cilinder', x: r2(w.x), y: r2(P - ringH), z: r2(w.y), b: r2(w.b), h: r2(ringH), d: r2(w.h), kleur: potKleur });
+        }
+        // Poten op een cirkel, schuin naar de vier hoeken.
+        const straal = m * (potVorm === 'ringframe' ? 0.385 : 0.36), a = straal / Math.SQRT2;
+        for (const [k, sx, sy] of [['la', -1, -1], ['ra', 1, -1], ['lv', -1, 1], ['rv', 1, 1]] as const)
+          lokaal(`poot-${k}`, potSoort, B / 2 + sx * a - dik / 2, D / 2 + sy * a - dik / 2, dik, dik, 0, P - ringH, potKleur, { vorm: 'kegel', taps: 0.8 });
+        if (potVorm === 'kruisframe') {
+          // Twee latten kruiselings tussen de poten: een balk langs de breedte, 45° gedraaid rond het midden.
+          const lang = 2 * straal, y = Math.max(2, P * 0.42);
+          for (const [k, hoek] of [['a', 45], ['b', -45]] as const) {
+            const w = lokaalNaarWereld(e, B / 2 - lang / 2, D / 2 - 1.2, lang, 2.4);
+            blokken.push({ code: `${e.id}.kruis-${k}`, soort: potSoort, vorm: 'blok', x: r2(w.x), y: r2(y), z: r2(w.y), b: r2(w.b), h: 2.4, d: r2(w.h), kleur: potKleur, draai: hoek });
+          }
+        }
+      } else if (potVorm === 'slede') {
         for (const [k, lx] of [['l', 5], ['r', B - 7]] as const) {
           lokaal(`slede-${k}-onder`, 'metaal', lx, 6, 2, D - 12, 0, 1.6, potKleur);
           lokaal(`slede-${k}-voor`, 'metaal', lx, D - 8, 2, 2, 0, P, potKleur);
@@ -209,8 +231,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const rondL = t.tekenstijl === 'rond' && String(te('ronde_kant', 'kant', 'links')) === 'links';
         const rondR = t.tekenstijl === 'rond' && !rondL;
         // Kuipfauteuil met rond of afgerond grondvlak: poten naar binnen, onder de bolling.
-        const kuipRond = t.tekenstijl === 'kuip' && kuipParameters(opt.get('kuipvorm')?.teken) !== null;
-        const kuipIn = kuipRond ? Math.min(B, D) * (kuipParameters(opt.get('kuipvorm')?.teken)!.plan === 'rond' ? 0.17 : 0.1) : 0;
+        const kuipVoet = t.tekenstijl === 'kuip' ? kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip) : null;
+        const kuipRond = kuipVoet !== null;
+        const kuipIn = kuipVoet ? Math.min(B, D) * (kuipVoet.plan === 'rond' ? 0.17 : 0.1) : 0;
         const inL = rondL ? Math.min(D / 2, B) * 0.35 : kuipRond ? kuipIn : ins;
         const inR = rondR ? Math.min(D / 2, B) * 0.35 : kuipRond ? kuipIn : ins;
         const yIn = (rond: boolean) => (rond ? D * 0.2 : kuipRond ? kuipIn : ins);
@@ -428,7 +451,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       }
       case 'kuip': {
         // Kuip (rond, afgerond, omhullend, organisch, schelp): gebogen wand rond de zitting, zie kuip.ts.
-        const kp = kuipParameters(opt.get('kuipvorm')?.teken);
+        const kp = kuipParameters(opt.get('kuipvorm')?.teken, v.kuip);
         if (kp) {
           const opb = kuipOpbouw(B, D, { P, zithoogte, rugH, kussenDik }, kp, losseRug);
           // De onderbouw net binnen de wand (0,8 cm): anders vallen de buitenkant van de wand en de zijkant van de onderbouw
@@ -439,7 +462,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // omtrek op zijn verst buiten de wand ligt, gemeten onder de wand zelf (niet voorbij zijn uiteinden).
           // Niet bij de kiezel (Pebble): daar is de zitting de vorm zelf en de schaal een eigen zachte vorm (goedgekeurd op 5/11).
           let buitenWand = 0;
-          if (!kp.zwevend && !kp.organisch) {
+          if (!kp.zwevend && !kp.organisch && !kp.schaalOp) {
             const wp = opb.wand.pad, half = opb.wand.dikte / 2;
             for (const [x, y] of opb.plan) {
               let beste = Infinity, binnenPad = false;
@@ -452,7 +475,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
               if (binnenPad) buitenWand = Math.max(buitenWand, beste - half);
             }
           }
-          const krimp = kp.zwevend ? 0 : r2(0.8 + buitenWand);
+          const krimp = kp.zwevend || kp.schaalOp ? 0 : r2(0.8 + buitenWand);
           const basisPlan = opb.plan.map(([x, y]) => [B / 2 + (x - B / 2) * (1 - krimp / (B / 2)), D / 2 + (y - D / 2) * (1 - krimp / (D / 2))] as Punt);
           // Organisch (Pebble): de zitting is één zachte kiezel in de stof (geen donkere onderbouw met een los kussen erop) en
           // de schaal een eigen zachte vorm met ronde uiteinden (glad, zoals de doorlopende zetel), in plaats van een wand die
@@ -461,8 +484,14 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // lezen dit niet.
           const kiezel = kp.organisch && !kp.zwevend;
           const basisBoven = kiezel ? zithoogte : opb.basis.boven;
-          omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel ? stof : donker, basisPlan, { afronding: kp.organisch ? 12 : 4, ...(kiezel ? { glad: true } : {}) });
-          if (kussenDik && !kiezel) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
+          if (kp.zitTrommel && !kiezel) {
+            // Trommel (fauteuils van de klant, 13/11): de zitting is één ronde, vaste vorm in de stof, van de poten tot de
+            // zithoogte, met een naad boven- en onderaan; de schaal staat eromheen (of erop, met `schaalOp`).
+            omtrekBlok('zitkussen', 'kussen', opb.basis.onder, opb.zitDik, stof, basisPlan, { afronding: rond1(Math.min(kp.zitRand ?? 6, opb.zitDik / 2 - 0.5)) });
+          } else {
+            omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel ? stof : donker, basisPlan, { afronding: kp.organisch ? 12 : 4, ...(kiezel ? { glad: true } : {}) });
+            if (kussenDik && !kiezel) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
+          }
           const pad = opb.wand.pad.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
           const xs = pad.map((q) => q[0]), zs = pad.map((q) => q[1]), half = opb.wand.dikte / 2;
           // Kiezel op een verdekte voet: de schaal staat op de vloer (zoals op de foto). Ze begint net onder de vloer, zodat
