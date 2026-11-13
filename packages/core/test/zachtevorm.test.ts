@@ -171,4 +171,42 @@ describe('gebogen wand die oploopt (Pebble, 5/11)', () => {
     }
     expect(mis / v.driehoeken).toBeLessThan(0.04);
   });
+
+  it('klopt op een steile rand: de afstand is een echte afstand en de richting volgt het veld (13/11)', () => {
+    // Pebble (schaal van 24 cm, rand tot 1,57 cm per cm) en Ross (wand als zachte vorm). Vóór 13/11 was de afstand op het
+    // steile deel bij 61 % en 74 % van de punten meer dan 10 % fout, en week de richting tot ±100° af: bobbelige naad.
+    for (const code of ['pebble', 'ross']) {
+      const s = bouw3D(structuredClone(zetelModellen.find((m) => m.code === code)!.ontwerp), zetelCatalogus, standaardMaterialen);
+      const rug = { ...s.blokken.find((b) => b.vorm === 'kuipwand')!, glad: true };
+      const pad = rug.pad!, hoog = rug.hoogtes!, w = rug.dikte! / 2;
+      const steilst = Math.max(...pad.slice(1).map((q, i) => Math.abs(hoog[i + 1]! - hoog[i]!) / Math.hypot(q[0] - pad[i]![0], q[1] - pad[i]![1])));
+      expect(steilst).toBeGreaterThan(1);
+      const v = zachteVorm([rug], { minAfronding: 0 }), veld = zachtVeld([rug], 4, 10, 0), h = 0.05;
+      let punten = 0, geenAfstand = 0, scheef = 0;
+      for (let i = 0; i < v.driehoeken * 3; i += 7) {
+        const x = v.posities[i * 3]!, y = v.posities[i * 3 + 1]!, z = v.posities[i * 3 + 2]!;
+        if (y < Math.min(...hoog) - w) continue; // de bovenste ronding en wat eronder ligt
+        const gx = (veld(x + h, y, z) - veld(x - h, y, z)) / (2 * h), gy = (veld(x, y + h, z) - veld(x, y - h, z)) / (2 * h), gz = (veld(x, y, z + h) - veld(x, y, z - h)) / (2 * h);
+        const l = Math.hypot(gx, gy, gz);
+        punten++;
+        if (Math.abs(l - 1) > 0.1) geenAfstand++;
+        if ((gx * v.normalen[i * 3]! + gy * v.normalen[i * 3 + 1]! + gz * v.normalen[i * 3 + 2]!) / (l || 1) < Math.cos((10 * Math.PI) / 180)) scheef++;
+      }
+      expect(punten).toBeGreaterThan(300);
+      expect(geenAfstand / punten).toBeLessThan(0.01);
+      expect(scheef / punten).toBeLessThan(0.01);
+    }
+  });
+
+  it('de bovenrand blijft op de opgegeven hoogtes, ook waar hij steil zakt', () => {
+    const s = bouw3D(structuredClone(zetelModellen.find((m) => m.code === 'pebble')!.ontwerp), zetelCatalogus, standaardMaterialen);
+    const rug = s.blokken.find((b) => b.code === 'e1.rug')!;
+    const veld = zachtVeld([rug], 4, 10, 0);
+    rug.pad!.forEach(([x, z], i) => {
+      // Recht boven de middenlijn ligt het oppervlak op de hoogte van dat punt: dat lezen ook het boven- en vooraanzicht.
+      expect(Math.abs(veld(x, rug.hoogtes![i]!, z))).toBeLessThan(0.02);
+      expect(veld(x, rug.hoogtes![i]! + 1, z)).toBeGreaterThan(0);
+      expect(veld(x, rug.hoogtes![i]! - 1, z)).toBeLessThan(0);
+    });
+  });
 });

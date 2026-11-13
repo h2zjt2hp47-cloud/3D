@@ -137,33 +137,54 @@ function wand(b: Blok): Primitief {
   const pad = b.pad!, hoog = b.hoogtes!, w = (b.dikte ?? 14) / 2, onder = b.y;
   const n = pad.length;
   const xs = pad.map((p) => p[0]), zs = pad.map((p) => p[1]);
+  // Richting van het pad per punt: het gemiddelde van de twee stukken ernaast (de verstekrichting), genormaliseerd.
+  const vx = new Float64Array(n), vz = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    let ax = 0, az = 0;
+    for (const k of [i - 1, i]) {
+      if (k < 0 || k > n - 2) continue;
+      const ux = pad[k + 1]![0] - pad[k]![0], uz = pad[k + 1]![1] - pad[k]![1], l = Math.hypot(ux, uz) || 1;
+      ax += ux / l; az += uz / l;
+    }
+    const l = Math.hypot(ax, az) || 1;
+    vx[i] = ax / l; vz[i] = az / l;
+  }
   /**
    * Dichtste punt op de middenlijn (in het grondvlak), gezocht in de stukken `van` tot en met `tot` van het pad: het
-   * verschil ernaartoe (0, 1), de hoogte daar (2), de helling van de bovenkant langs het pad maal de richting van het pad
-   * (3, 4) en het stuk (5). Aan een hoekpunt of uiteinde staat het dichtste punt stil: geen helling.
+   * verschil ernaartoe (0, 1), de hoogte van de bovenrand ter plaatse (2), de helling van die hoogte in het grondvlak
+   * (3, 4) en het stuk van het dichtste punt (5).
+   *
+   * De hoogte volgt niet het dichtste punt maar de plaats tussen de twee verstekken van een stuk (de lijnen door zijn
+   * eindpunten, haaks op de gemiddelde richting daar). Het dichtste punt verspringt op elk hoekpunt van het pad: aan de
+   * binnenkant van een bocht een sprong, aan de buitenkant een stukje waar het stilstaat. Op een steile rand gaf dat
+   * trapjes tot 1 cm in de hoogte: een bobbelige schaal (Pebble, gemeten op 13/11). Tussen de verstekken loopt de hoogte
+   * overal vloeiend door, ook rond een hoekpunt. Voorbij een uiteinde blijft de hoogte die van het uiteinde (ronde kop).
    */
   const dichtste = (x: number, z: number, o: Float64Array, van = 0, tot = n - 2) => {
-    let beste = Infinity, qx = 0, qz = 0, top = onder, hx = 0, hz = 0, stuk = 0;
+    let beste = Infinity, qx = 0, qz = 0, top = onder, hx = 0, hz = 0, stuk = van;
     for (let i = van; i <= tot; i++) {
       const ax = pad[i]![0], az = pad[i]![1], bx = pad[i + 1]![0], bz = pad[i + 1]![1];
       const ux = bx - ax, uz = bz - az, l2 = ux * ux + uz * uz || 1e-9;
       const t = Math.max(0, Math.min(1, ((x - ax) * ux + (z - az) * uz) / l2));
       const cx = ax + t * ux, cz = az + t * uz, d2 = (x - cx) * (x - cx) + (z - cz) * (z - cz);
-      if (d2 < beste) {
-        beste = d2; qx = cx; qz = cz; top = hoog[i]! + t * (hoog[i + 1]! - hoog[i]!); stuk = i;
-        if (t > 0 && t < 1) { const hel = (hoog[i + 1]! - hoog[i]!) / l2; hx = hel * ux; hz = hel * uz; }
-        else {
-          // Op een hoekpunt van het pad (niet aan een uiteinde): de gemiddelde helling van de twee stukken ernaast. Met
-          // helling nul sprong de richting daar: lichte vlekjes om de 2 cm op een oplopende wand, aan de buitenkant van
-          // een bocht (Pebble, 5/11).
-          const j = t <= 0 ? i : i + 1;
-          if (j > 0 && j < n - 1) {
-            const vx = pad[j + 1]![0] - pad[j - 1]![0], vz = pad[j + 1]![1] - pad[j - 1]![1], v2 = vx * vx + vz * vz || 1e-9;
-            const hel = (hoog[j + 1]! - hoog[j - 1]!) / v2;
-            hx = hel * vx; hz = hel * vz;
-          } else hx = hz = 0;
-        }
-      }
+      if (d2 < beste) { beste = d2; qx = cx; qz = cz; stuk = i; }
+    }
+    // Het stuk waarvan de twee verstekken dit punt insluiten: dat van het dichtste punt, of een buur.
+    let i = stuk, f0 = 0, f1 = 0;
+    for (let stap = 0; stap < 6; stap++) {
+      f0 = (x - pad[i]![0]) * vx[i]! + (z - pad[i]![1]) * vz[i]!;
+      f1 = (pad[i + 1]![0] - x) * vx[i + 1]! + (pad[i + 1]![1] - z) * vz[i + 1]!;
+      if (f0 < 0 && i > 0) i--;
+      else if (f1 < 0 && i < n - 2) i++;
+      else break;
+    }
+    const dh = hoog[i + 1]! - hoog[i]!;
+    if (f0 <= 0) top = hoog[i]!;
+    else if (f1 <= 0) top = hoog[i + 1]!;
+    else {
+      const som = f0 + f1, g = dh / (som * som);
+      top = hoog[i]! + (dh * f0) / som;
+      hx = g * (f1 * vx[i]! + f0 * vx[i + 1]!); hz = g * (f1 * vz[i]! + f0 * vz[i + 1]!);
     }
     o[0] = x - qx; o[1] = z - qz; o[2] = top; o[3] = hx; o[4] = hz; o[5] = stuk;
   };
@@ -202,8 +223,13 @@ function wand(b: Blok): Primitief {
       // richting (anders kloppen de normalen niet waar de wand oploopt of zakt, bv. rond het ronde uiteinde).
       const mee = y > top - w ? ly : 0;
       if (db > dc) schrijf(uit, db, 0, -1, 0);
-      else if (l > 1e-9) schrijf(uit, dc, lx - mee * o[3]!, ly, lz - mee * o[4]!);
-      else schrijf(uit, dc, 0, 1, 0);
+      else if (l > 1e-9) {
+        // Waar de bovenrand oploopt of zakt, verandert `dc` sneller dan 1 cm per cm (de doorsnede schuift mee met de
+        // hoogte): gedeeld door de lengte van de helling wordt het weer een echte afstand. Zonder dit legde de motor de
+        // punten naast het oppervlak waar de rand steil is. Het oppervlak zelf (dc = 0) verschuift hierdoor niet.
+        const gx = lx - mee * o[3]!, gz = lz - mee * o[4]!, gl = Math.sqrt(gx * gx + ly * ly + gz * gz);
+        schrijf(uit, gl > 1e-9 ? (dc * l) / gl : dc, gx, ly, gz);
+      } else schrijf(uit, dc, 0, 1, 0);
     },
   };
 }
