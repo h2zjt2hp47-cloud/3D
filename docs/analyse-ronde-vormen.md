@@ -263,6 +263,20 @@ hoge resolutie. De referenties zijn eerst genomen op de oude versie en na elke h
 momentopname van vóór de herstellingen: ongewijzigd. 256 tests (7 nieuwe). In de vaste reeks veranderden alleen de drie
 close-ups en Pebble (0,05 %).
 
+**Wat er na de herstellingen overblijft van de proef (idee 1).** Niet gebouwd; eerst opnieuw gekeken:
+- De bobbelige naad is weg op de gewone weg (raster). Dat was het zwaarste argument voor de proef, en het zat in de
+  berekening van de wand, niet in de manier van tekenen.
+- Ook de trapjes in ribstof zijn op Pebble grotendeels weg: ze kwamen mee met het bobbelige oppervlak. Wat blijft: de
+  ribbels staan verticaal in plaats van de vorm te volgen.
+- Hoe vaak speelt dat? Van de 59 stoffen hebben er 7 een duidelijke richting (6 ribstoffen, 1 jacquard). Geen van de 42
+  modellen heeft zo'n stof als standaard; Doha en Montego staan in bouclé, Pebble in linnen.
+- Minder driehoeken en geen wachtbeeld tellen alleen op de M5 of een tablet. Dat is hier niet te meten.
+- De ringen-weg heeft op Pebble nog altijd vlekken waar twee vlakken samenvallen.
+- Besluit voor Jonas: de proef schrappen of uitstellen, en als ribstof op ronde vormen stoort, de kleine oplossing
+  nemen (idee 17).
+- Let op bij de cijfers van de eerste herstelling: bij de standaardinstelling zie je ze alleen op Pebble. Ross tekent
+  zijn wand in ringen; de 74 % was gemeten met die wand als zachte vorm.
+
 **Opgemerkt, niet aangepast:**
 - **Mabel 2-zit** is op de productfoto een kuip: een gebogen rug die om de zijkanten loopt, op schuine poten. Bij ons is
   het arm + zit + arm. Dat rechtzetten vraagt andere elementen en raakt dus de prijs: beslissing voor Jonas.
