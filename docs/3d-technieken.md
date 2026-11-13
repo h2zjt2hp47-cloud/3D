@@ -183,12 +183,17 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
   laat de hoogte de afstand volgen, niet de hoek: bij een afgeronde rechthoek golfde de bovenkant anders.
 - **Geen Math.random in texturen:** dan ziet het parket er bij elke keer laden anders uit, en kan de beeldvergelijking
   niets vergelijken. Gebruik `vasteReeks(sleutel)` in `drie-d.ts`.
+- **Een fijner raster lost een rafelige naad niet op** (proef 13/11, Pebble): 1 cm in plaats van 2 cm gaf vier keer
+  zoveel driehoeken en rekentijd, en de rand werd eerder rafeliger. De fout zit in hoe de wand gerekend wordt waar de
+  bovenrand steil zakt. Zie [Analyse ronde vormen](analyse-ronde-vormen.md).
 - **Meer:** de skills `zetel-3d` (`.claude/skills/zetel-3d/SKILL.md`) en `bouw-woning`
   (`.claude/skills/bouw-woning/SKILL.md`).
 
 ## Meer lezen
 
 - [Zachte vormen](zachte-vormen.md): zelf zetels opmaken in 3D, de eigen armvormen en de doorlopende zetel.
+- [Analyse ronde vormen](analyse-ronde-vormen.md) (13/11): de twee manieren om rond te tekenen, wat er in beeld misgaat,
+  en 23 ideeën met hun grond, werk en risico. Nog niets gebouwd.
 - [Echte 3D-modellen](echte-3d-modellen.md): de proef met een echt 3D-bestand, en wat we van de klant nodig hebben.
 - [Overdracht](overdracht.md): de stand van zaken per ronde.
 - [Onderzoek raamsoftware](onderzoek-raamsoftware.md): hoe LogiKal, ReynaPro en Chacal met profielen en tekeningen

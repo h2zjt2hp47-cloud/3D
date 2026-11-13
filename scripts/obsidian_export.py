@@ -31,6 +31,7 @@ NOTITIES = {
     'docs/echte-3d-modellen.md': ('Echte 3D-modellen - proef', ['configurator', 'zetels', '3d', 'onderzoek'], ZETELS),
     'docs/proeven/3d-motor-proeven-0411.md': ('Proeven 3D-motor (WebGPU, glas, weefsel)', ['configurator', '3d', 'proef', 'webgpu'], 'alle'),
     'beeldtest/LEESMIJ.md': ('Beeldvergelijking 3D', ['configurator', '3d', 'kwaliteit', 'test'], 'alle'),
+    'docs/analyse-ronde-vormen.md': ('Analyse ronde vormen in de 3D', ['configurator', '3d', 'analyse', 'zetels'], ZETELS),
     'docs/onderzoek-bouw-ramen-deuren.md': ('Onderzoek bouw - pijnpunten ramen en deuren', ['configurator', 'bouw', 'onderzoek'], BOUW),
     'docs/analyse-bouw-woning-demo.md': ('Analyse bouw - woningconfigurator', ['configurator', 'bouw', 'analyse'], BOUW),
     'docs/begrippen-bouw.md': ('Begrippenlijst bouw', ['configurator', 'bouw', 'begrippen'], BOUW),
