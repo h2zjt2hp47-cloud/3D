@@ -1,7 +1,37 @@
 # 3D-technieken: wat werkt waarvoor (kennisbank)
 
-*Stand 5/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
+*Stand 13/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
 meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat in de notities onderaan.
+
+## De opvatting sinds 13/11: eerst het echte product, dan de techniek
+
+Tot 13/11 vertrokken we van onze bouwstenen: een model kreeg de vorm die er het dichtst bij lag, en we schaafden bij
+tot het "ongeveer" klopte. Bij de fauteuils gaf dat zetels die "er totaal niet op leken" (Jonas). Sindsdien werken we
+omgekeerd. De zeven regels:
+
+1. **Vertrek van het echte product.** Haal eerst álle foto's en de maten van de productpagina op, en leg elk model in
+   3D naast zijn foto's. Kijk naar de hele familie tegelijk: zo zie je de bouwwijze van de maker. Bij de fauteuils: een
+   dikke, vaste, ronde zitting; een dunne schaal erachter; een eigen onderstel.
+2. **Beschrijf de opbouw zoals de maker ze bouwt**, in onderdelen (zitting, schaal, onderstel), en bouw dát in de motor.
+   Lijkt een model er niet op, dan ligt het bijna altijd aan de opbouw of de maten, zelden aan de afwerking.
+3. **De vorm van een model is gegevens, geen code.** De motor kent de opbouw; het modelbestand zegt hoe dik de schaal
+   is, hoe ver ze rondloopt, hoe de bovenrand verloopt, welk onderstel. Een nieuw model in dezelfde familie vraagt dan
+   geen programmeerwerk. De 3D en de tekeningen lezen dezelfde gegevens.
+4. **Eerst meten, dan sleutelen.** Reken na wat de site geeft (dikte van de schaal = diepte − zitdiepte) en meet of de
+   motor juist rekent voor je iets verfijnt. Een fijner raster loste de bobbelige naad van Pebble niet op; de fout zat
+   in de berekening.
+5. **Eén model als proef, vóór de hele familie.** Toon het voorstel als losse scène, zonder het model of de prijs te
+   wijzigen, naast de foto's uit dezelfde standpunten. Pas na het oordeel ombouwen. Bij Mabel kwam zo aan het licht dat
+   de leuning te ver naar voren liep: één model bijsturen in plaats van veertien.
+6. **Bewakers bij elke stap.** Een momentopname van prijs, offertegegevens en tekeningen van alle modellen; de
+   beeldvergelijking met close-ups; één wijziging per commit. Zo is elke verandering bewust, en valt een onbedoelde
+   meteen op (de zitting van Pebble die meekromp).
+7. **Prijs en tekening volgen wat je ziet.** Wat de 3D toont, staat als echte keuze in de catalogus en in de offerte.
+   Wat de prijs raakt, gaat eerst naar Jonas, regel per regel, met oud en nieuw bedrag. Zeg bij elk getal waar het
+   vandaan komt: van de site, of geschat uit de foto.
+
+Uitwerking en beelden: [Modellen nalopen tegen de productfoto's](nalopen-modellen.md) en
+[Analyse ronde vormen](analyse-ronde-vormen.md).
 
 ## De technieken op een rij
 
@@ -10,6 +40,7 @@ meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat 
 | **Blokken** | Elk onderdeel apart: afgeronde balken, cilinders, kegels, een vrije omtrek of een gebogen wand. | Een snelle eerste indruk; alles wat recht en eenvoudig is (poten, houten delen, kasten, de huidige ramen). | Vormen die "uit één stuk" moeten lijken. | Meteen |
 | **Eigen doorsnede** (profiel) | Eén doorsnede in 2D die langs een lijn loopt. Dezelfde doorsnede tekent ook het vooraanzicht. | Een vorm die per stijl terugkomt: de strakke en de uitlopende arm. Later ook raamprofielen. | Vrije, organische vormen. | ±40 ms per arm, daarna onthouden |
 | **Zachte vormen** | De delen smelten samen tot één vorm, met een afronding in de hoeken en schaduw in de plooien. | Gestoffeerde, ronde vormen: zetels. | Harde, precieze producten met details van millimeters (ramen, deuren, kasten). | 0,2 à 0,7 s per zetel, 20.000 à 110.000 driehoeken; in de achtergrond |
+| **Vorm als gegevens** (sinds 13/11) | De opbouw van een model in onderdelen (zitting, schaal, onderstel), met de vorm als getallen in het modelbestand: dikte, omloop, verloop van de bovenrand, soort zitting, onderstel. | Modellen met een eigen vorm binnen één familie: de fauteuils van de klant (Milton, Mabel …). Later ook raamtypes binnen één profielsysteem. | Een vorm die buiten de familie valt: dan eerst een nieuwe bouwsteen in de motor. | Meteen |
 | **Doorlopende opbouw** | Een rij elementen wordt in 3D één product. Prijs en tekeningen blijven per element. | Modulaire zetels die als één geheel ogen (Doha, Montego). | Hoeksofa's (nog niet uitgewerkt). | Zoals de zachte vormen |
 | **Boog** | De hele vorm buigt in een boog; wat erop staat (kussens) draait mee. | Gebogen sofa's (Montego); later rondboogramen. | – | Meteen |
 | **Echt 3D-bestand** | Een afgewerkt model uit een 3D-programma of van de fabrikant (GLB), met onze stoffen en afwerking. De configurator kijkt of het bestand bij de gekozen maten past. | Vaste onderdelen (krukken, scharnieren) of topmodellen met een eigen bestand. | Producten op maat: een bestand kun je uitrekken, niet omvormen. | Laden bij het openen |
@@ -56,6 +87,16 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
    Zwaar werk hoort in de achtergrond, met eerst een eenvoudige vorm.
 9. **Een echt 3D-bestand is geen vervanging voor maatwerk.** Het past bij een vast model of een vast onderdeel. Voor
    een zetel of raam op maat moet de configurator de vorm zelf maken.
+10. **Lijkt het niet, kijk dan naar de opbouw en de maten.** De fauteuils hadden de verkeerde opbouw (dikke wand,
+    boogrug, los kussen) en nooit de maten van de site gekregen (Milton 92 cm hoog in plaats van 72). Geen enkele
+    afwerking had dat goedgemaakt.
+11. **Vergelijk de familie, niet het model.** Veertien fauteuils naast elkaar toonden één bouwwijze. Model per model
+    hadden we veertien keer een uitzondering gebouwd.
+12. **Een proef op één model spaart de rest.** Zie regel 5 van de opvatting.
+13. **Bekijk de tekeningen, vergelijk ze niet alleen.** De bewaker zei "veranderd, zoals bedoeld"; pas in beeld bleek
+    dat de uiteinden van de schaal in het vooraanzicht als twee palen vóór de zitting stonden.
+14. **Een mooiere 3D mag de prijs niet stil verschuiven.** De bies en een geschatte poothoogte gaven +32 tot +43 en
+    +40 euro. Splits de prijs uit en leg voor wat niet gevraagd was.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
@@ -91,19 +132,25 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 
 ## Werkwijze voor een nieuw model of product
 
-1. **Bronnen:** de grote foto's en de maten van de productpagina. Voor de bouw: doorsnedes en gegevens van de
-   systeemleverancier.
-2. **Opbouw in woorden** (zie les 2).
-3. **Per onderdeel een techniek** kiezen uit de tabel hierboven.
-4. **In de motor bouwen**, met tests:
+1. **Bronnen:** alle foto's en de maten van de productpagina, in een eigen map buiten de repo. Voor de bouw:
+   doorsnedes en gegevens van de systeemleverancier.
+2. **Vergelijkingsblad:** het model (of de hele familie) in 3D naast de foto's, met de maten van de site erbij.
+3. **Opbouw in woorden:** welke onderdelen, wat is één stuk, waar stopt wat (zie les 2). Reken na wat de site toelaat
+   (bv. dikte van de schaal = diepte − zitdiepte).
+4. **Kan de motor die opbouw al?** Ja: alleen gegevens in het modelbestand. Nee: eerst de bouwsteen in de motor, als
+   optionele uitbreiding. Bewijs dat de bestaande modellen identiek blijven (momentopname, beeldvergelijking 0,00 %).
+5. **Proef op één model:** het voorstel als losse scène naast de foto's, uit dezelfde standpunten. Geen model en geen
+   prijs gewijzigd.
+6. **Voorleggen:** het proefbeeld, en wat de prijs of de catalogus raakt, regel per regel met oud en nieuw bedrag.
+7. **Ombouwen**, met tests:
    - de vorm is dicht en de schaduw klopt;
    - de maten van de opbouw kloppen;
-   - prijs en tekening veranderen niet ongewild.
-5. **3D-beelden** nemen in hetzelfde standpunt als de foto, en het vergelijkingsbeeld maken. Daarna
-   `npm run beelden`: de vaste reeks beelden tegenover de vorige versie (zie [Beeldvergelijking](../beeldtest/LEESMIJ.md)).
-   Wat verandert moet bewust zijn; dan `npm run beelden -- --vernieuw`.
-6. **Benaderingen markeren**; prijs en offertetekst nakijken.
-7. **Documenteren** (overdracht, uitleg, skill), publiceren en het doorstuurpakket vernieuwen.
+   - alleen de bedoelde modellen veranderen (momentopname vergelijken).
+8. **Nakijken in beeld:** de 3D uit de standpunten van de foto, én het boven- en vooraanzicht. Daarna
+   `npm run beelden` (zie [Beeldvergelijking](../beeldtest/LEESMIJ.md)); wat verandert moet bewust zijn, dan
+   `npm run beelden -- --vernieuw`. Zet het model in de vaste reeks als het een nieuwe opbouw is.
+9. **Benaderingen markeren:** wat van de site komt en wat uit de foto geschat is; open afwijkingen noteren.
+10. **Documenteren** (overdracht, uitleg, skill). Publiceren en het doorstuurpakket vernieuwen pas na goedkeuring.
 
 ## Toepassen op ramen en deuren (advies van 4/11, nog niet gebouwd)
 
@@ -202,6 +249,8 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 
 ## Meer lezen
 
+- [Modellen nalopen tegen de productfoto's](nalopen-modellen.md) (13/11): de fauteuils naast hun foto's, de nieuwe
+  opbouw (zitting, schaal, onderstel als gegevens), Milton en Mabel voor en na, de prijs regel per regel.
 - [Zachte vormen](zachte-vormen.md): zelf zetels opmaken in 3D, de eigen armvormen en de doorlopende zetel.
 - [Analyse ronde vormen](analyse-ronde-vormen.md) (13/11): de twee manieren om rond te tekenen, wat er in beeld misgaat,
   en 23 ideeën met hun grond, werk en risico. Vier herstellingen zijn dezelfde dag gebouwd; de rest niet.
