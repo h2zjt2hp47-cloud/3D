@@ -44,9 +44,13 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `pebble-schuin` | kuipfauteuil met verdekte voet |
 | `stockholm-schuin` | ronde poef |
 | `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
-| `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame (13/11) |
+| `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame op schuine poten (13/11) |
+| `fraser-schuin` | vier schuine poten met een kruis, zitting in twee lagen, schaal die rond de zitting uitsteekt |
+| `satie-schuin`, `quin-schuin` | trommel tot op de vloer of op een lage voet, met één of drie losse kussens tegen de schaal |
+| `karl-schuin` | zwevende rugschijf boven een vaste zitting, op een houten frame |
+| `tumble-schuin` | dikke rug die op een bolle zitting staat |
 | `pebble-naad` (close-up) | de naad waar de schaal in de zitting duikt |
-| `ross-kop` (close-up) | het wanduiteinde van een kuipfauteuil en de aansluiting met de onderbouw |
+| `ross-kop` (close-up) | de arm van Ross die vooraan in de zitting duikt, met de bies langs de rand |
 | `zora-arm` (close-up) | de arm met ronde bovenkant |
 
 Allemaal bij kwaliteit *Mooi*, venster 1400 × 950. Een close-up is een stuk uit de foto op hoge resolutie (2400 px

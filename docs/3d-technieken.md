@@ -97,6 +97,17 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
     dat de uiteinden van de schaal in het vooraanzicht als twee palen vóór de zitting stonden.
 14. **Een mooiere 3D mag de prijs niet stil verschuiven.** De bies en een geschatte poothoogte gaven +32 tot +43 en
     +40 euro. Splits de prijs uit en leg voor wat niet gevraagd was.
+15. **Lees de foto groot voor je een vorm een naam geeft.** Manon stond in de lijst als "scheve kuip" en Fraser als
+    "schaal op de zitting". Op de grote foto's bleek Manon symmetrisch en liep de schaal van Fraser tot onderaan. Een
+    verkeerd woord in de lijst wordt anders een verkeerde bouwsteen in de motor.
+16. **Bekijk elk model ook van achter en van opzij.** Het losse rugkussen van Satie stak door de schaal heen; dat was
+    alleen van achter te zien. De rug van Tumble hing als een rol boven de zitting; dat zag je pas van voor.
+17. **De maten van de site als tabel in een test.** Voor elk omgebouwd model: het kader van de 3D, de bovenkant van de
+    zitting en geen fout in de prijsberekening. Die tabel groeit mee met elke stap en vangt wat een beeld niet toont
+    (een los sierkussen dat de hoogte opdreef, een maat die stil begrensd werd).
+18. **Tests over een keuze hangen niet aan een model van de klant.** De tests over *Vorm fauteuil* gebruikten Tumble,
+    Manon en Satie; toen die hun eigen opbouw kregen, braken ze om de verkeerde reden. Ze gebruiken nu een gewone
+    fauteuil uit de catalogus.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
@@ -244,6 +255,15 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 - **Vergelijk de 3D eerst met de tekening en de foto.** De "rolarm" van Zora was in 3D een cilinder op een blok, in het
   vooraanzicht een arm met een ronde bovenkant, en op de foto ook. Een uur aan een mooiere rol was verloren werk
   geweest.
+- **Een kussen dat helt, draait rond zijn onderkant.** Zet je het onderaan tegen de schaal, dan steekt zijn bovenkant
+  erdoor. Zet het onderaan zoveel naar voren als het tot de rand van de schaal achteruit helt (hoogte × tangens van de
+  hoek).
+- **Losse kussens zijn een lens, geen plak.** Een dunne rand met een bolling tot de volle dikte. Drie plakken naast
+  elkaar langs een schaal versmelten tot één gevulde rug; zet ze schuin en laat ze elkaar overlappen.
+- **Een schaal op een bolle zitting** begint waar de bolle rand begint, niet op zithoogte. Anders hangt haar buitenrand
+  boven de afgeronde schouder van de zitting, met een diepe gleuf eronder.
+- **Schuine poten zonder scheve boven- en onderkant:** een afschuiving van de kegel (de voet verschoven, de vlakken
+  blijven horizontaal), geen kanteling. De schaduw op de vloer ligt bij de voet.
 - **Meer:** de skills `zetel-3d` (`.claude/skills/zetel-3d/SKILL.md`) en `bouw-woning`
   (`.claude/skills/bouw-woning/SKILL.md`).
 
