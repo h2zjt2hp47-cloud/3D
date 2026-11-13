@@ -1268,6 +1268,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
           const r = Math.min(b.b, b.d) / 2;
           geo = new THREE.CylinderGeometry(r, r * (b.taps ?? 1), b.h, 20);
           y = b.y + b.h / 2;
+          // Schuine poot: de voet verschoven tegenover de bovenkant. Een afschuiving houdt de boven- en onderkant
+          // horizontaal (de poot staat plat op de vloer en vlak tegen het frame); de normalen gaan mee.
+          if (b.schuin && b.h > 0) {
+            const sx = b.schuin[0] / b.h, sz = b.schuin[1] / b.h;
+            geo.applyMatrix4(new THREE.Matrix4().set(1, -sx, 0, b.schuin[0] / 2, 0, 1, 0, 0, 0, -sz, 1, b.schuin[1] / 2, 0, 0, 0, 1));
+          }
         }
         break;
       }
@@ -1372,7 +1378,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     // Balk, cilinder of kegel: rond het midden, gedraaid zoals in 3D (draai van x naar z = met de klok mee op het canvas).
     const hb = (b.b / 2) * schaal, hd = (b.d / 2) * schaal;
     g.save();
-    g.translate(X(b.x + b.b / 2), Z(b.z + b.d / 2));
+    // Een schuine poot raakt de vloer waar haar voet staat.
+    g.translate(X(b.x + b.b / 2 + (b.schuin?.[0] ?? 0)), Z(b.z + b.d / 2 + (b.schuin?.[1] ?? 0)));
     if (b.draai) g.rotate((b.draai * Math.PI) / 180);
     if ((b.vorm === 'cilinder' || b.vorm === 'kegel') && (!b.as || b.as === 'y')) g.ellipse(0, 0, hb, hd, 0, 0, Math.PI * 2);
     else if (b.afronding) g.roundRect(-hb, -hd, 2 * hb, 2 * hd, Math.min(b.afronding * schaal, hb, hd));
@@ -2005,7 +2012,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     mee.forEach((b, i) => { const w = wortel(i); groepen.set(w, [...(groepen.get(w) ?? []), b]); });
     return [...groepen.values()];
   }
-  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
+  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.schuin, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
   /** De zachte vorm als mesh (onze stof, schaduw in de hoeken als hoekpuntkleur), of null als ze nog berekend moet worden. */
   function zachteMesh(delen: Blok[], buren: Blok[]) {
     const v = zachteVormen.get(vormSleutel(delen, buren));

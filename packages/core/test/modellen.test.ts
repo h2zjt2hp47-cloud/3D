@@ -241,13 +241,34 @@ describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse 
   });
 });
 
-describe('fauteuils naar de productfoto\'s (13/11): Milton, Mabel 1-zit en Mabel 2-zit', () => {
+describe('fauteuils naar de productfoto\'s (13/11)', () => {
   const model = (code: string) => zetelModellen.find((m) => m.code === code)!;
   const scene = (code: string) => bouw3D(structuredClone(model(code).ontwerp), zetelCatalogus, standaardMaterialen);
-  it('de maten van de productpagina', () => {
-    expect(scene('milton').kader).toMatchObject({ b: 70, d: 68, h: 72 });
-    expect(scene('mabel-1').kader).toMatchObject({ b: 68, d: 65, h: 76 });
-    expect(scene('mabel-2').kader).toMatchObject({ b: 150, d: 65, h: 76 });
+  // Maten van de productpagina's: breedte × diepte × hoogte en de zithoogte.
+  const SITE: Record<string, [number, number, number, number]> = {
+    milton: [70, 68, 72, 40], 'mabel-1': [68, 65, 76, 45], 'mabel-2': [150, 65, 76, 45], 'mabel-meridienne': [150, 65, 76, 45],
+    fraser: [61, 61, 70, 44],
+  };
+  it('de maten van de productpagina: het kader van de 3D en de bovenkant van de zitting', () => {
+    for (const [code, [b, d, h, zit]] of Object.entries(SITE)) {
+      const s = scene(code), zitting = s.blokken.find((x) => x.code === 'e1.zitkussen')!;
+      // Het kader van de fauteuil zelf (een los sierkussen, zoals op de méridienne, telt niet mee).
+      const eigen = s.blokken.filter((x) => x.code.startsWith('e1.'));
+      expect(s.kader, code).toMatchObject({ b, d });
+      expect(Math.max(...eigen.map((x) => x.y + x.h)), code).toBe(h);
+      expect(zitting.y + zitting.h, code).toBe(zit);
+      // Eén vaste zitting in de stof, zonder donkere onderbouw; geen fout in de prijsberekening.
+      expect(s.blokken.some((x) => x.code === 'e1.basis'), code).toBe(false);
+      expect(berekenOntwerp(model(code).ontwerp, zetelCatalogus, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout'), code).toHaveLength(0);
+    }
+  });
+  it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
+    const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;
+    expect(new Set(rug.hoogtes)).toEqual(new Set([70]));
+    expect(b.find((x) => x.code === 'e1.zitband')).toBeDefined();
+    expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
+    expect(b.filter((x) => x.code.startsWith('e1.poot-') && x.schuin)).toHaveLength(4);
+    expect(b.some((x) => x.code === 'e1.ring')).toBe(false);
   });
   it('vaste ronde zitting, dunne schaal met bies, houten frame op vier poten', () => {
     for (const code of ['milton', 'mabel-1', 'mabel-2']) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, bouw3D, tekenVooraanzicht, type Ontwerp, type Rotatie } from '../src/index.js';
-import { kuipOpbouw, kuipParameters } from '../src/kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters } from '../src/kuip.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -242,6 +242,55 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     const voor = tekenVooraanzicht(fauteuil(milton, 'ringframe'), cat, standaardMaterialen).vormen;
     expect(voor.find((v) => v.code === 'f.ring')).toMatchObject({ hoogte: 4 });
     expect(voor.filter((v) => v.code.startsWith('f.poot-'))).toHaveLength(2);
+  });
+
+  it('de poten van het onderstel staan schuin naar buiten, de voet blijft binnen het grondvlak', () => {
+    // Op de productfoto's (Fraser, Ross, Sullivan, Mabel) staan de poten schuin; ze stonden hier recht (13/11).
+    const fp = framePoten(61, 61, 26, 2);
+    expect(fp.spreid).toBeGreaterThan(2);
+    expect(fp.spreid).toBeLessThanOrEqual(0.2 * 26);
+    // De voet (met haar halve dikte) blijft binnen de cirkel van het grondvlak.
+    for (const q of fp.poten) expect(Math.hypot(q.lx + q.dx - 30.5, q.ly + q.dy - 30.5) + 2.5).toBeLessThanOrEqual(30.5 + 0.1);
+    for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
+      const s = bouw3D(fauteuil(milton, 'kruisframe', rotatie), cat, standaardMaterialen), k = s.kader;
+      const poten = s.blokken.filter((b) => b.code.startsWith('f.poot-'));
+      for (const p of poten) {
+        expect(p.schuin, `rotatie ${rotatie}`).toBeDefined();
+        // Weg van het midden van de zetel, en de voet binnen het kader van de zetel.
+        const mx = p.x + p.b / 2 - (k.x + k.b / 2), mz = p.z + p.d / 2 - (k.z + k.d / 2);
+        expect(mx * p.schuin![0] + mz * p.schuin![1], `rotatie ${rotatie}`).toBeGreaterThan(0);
+        expect(p.x + p.schuin![0], `rotatie ${rotatie}`).toBeGreaterThanOrEqual(k.x);
+        expect(p.x + p.b + p.schuin![0], `rotatie ${rotatie}`).toBeLessThanOrEqual(k.x + k.b);
+        expect(p.z + p.schuin![1], `rotatie ${rotatie}`).toBeGreaterThanOrEqual(k.z);
+        expect(p.z + p.d + p.schuin![1], `rotatie ${rotatie}`).toBeLessThanOrEqual(k.z + k.d);
+      }
+      // De latten van het kruis reiken tot de schuine poten op hun hoogte: langer dan tussen de bovenkanten.
+      const lat = s.blokken.find((b) => b.code === 'f.kruis-a')!, boven = Math.hypot(poten[0]!.x - poten[3]!.x, poten[0]!.z - poten[3]!.z);
+      expect(lat.b, `rotatie ${rotatie}`).toBeGreaterThan(boven);
+    }
+    // Het vooraanzicht tekent dezelfde schuine poten: de voet staat verder uit het midden dan de bovenkant.
+    const voor = tekenVooraanzicht(fauteuil(milton, 'kruisframe'), cat, standaardMaterialen).vormen;
+    const links = voor.find((v) => v.code === 'f.poot-l')!, rechts = voor.find((v) => v.code === 'f.poot-r')!;
+    expect(links.breedte).toBeGreaterThan(5);
+    expect(rechts.x + rechts.breedte! - links.x).toBeGreaterThan(voor.find((v) => v.code === 'f.kruis')!.breedte!);
+  });
+
+  it('een ring op vier poten kan ook een kruis hebben (Sullivan)', () => {
+    const b = bouw3D(fauteuil({ ...milton, frameKruis: true }, 'ringframe'), cat, standaardMaterialen).blokken;
+    expect(b.find((x) => x.code === 'f.ring')).toBeDefined();
+    expect(b.filter((x) => x.code.startsWith('f.kruis-'))).toHaveLength(2);
+    expect(bouw3D(fauteuil(milton, 'ringframe'), cat, standaardMaterialen).blokken.some((x) => x.code.startsWith('f.kruis-'))).toBe(false);
+    expect(tekenVooraanzicht(fauteuil({ ...milton, frameKruis: true }, 'ringframe'), cat, standaardMaterialen).vormen.some((v) => v.code === 'f.kruis')).toBe(true);
+  });
+
+  it('de trommelzitting in twee lagen: een kussen op een band (Fraser)', () => {
+    const b = bouw3D(fauteuil({ ...milton, zitNaad: 10 }), cat, standaardMaterialen).blokken;
+    const band = b.find((x) => x.code === 'f.zitband')!, kussen = b.find((x) => x.code === 'f.zitkussen')!;
+    expect(band).toMatchObject({ y: 18, h: 12 });
+    expect(kussen).toMatchObject({ y: 30, h: 10 });
+    expect(band.omtrek).toEqual(kussen.omtrek);
+    // Zonder: één geheel, zoals voorheen.
+    expect(bouw3D(fauteuil(milton), cat, standaardMaterialen).blokken.some((x) => x.code === 'f.zitband')).toBe(false);
   });
 
   it('de schaal van een trommelfauteuil krijgt een naad of bies langs haar rand', () => {

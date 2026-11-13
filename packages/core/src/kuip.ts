@@ -54,6 +54,13 @@ export interface KuipParameters {
   schaalOp?: boolean;
   /** Dikte in cm van het houten frame onder de zitting bij poten met een frame (ringframe); standaard 4. */
   frameDik?: number;
+  /** Bij poten met een frame (ringframe) ook een kruis tussen de poten (Sullivan: een ring op vier poten met een kruis). */
+  frameKruis?: boolean;
+  /**
+   * De trommelzitting bestaat uit twee lagen met een naad ertussen: een kussen bovenop een band (Fraser, Ross). Het getal
+   * is de dikte van de bovenste laag in cm; leeg = één geheel.
+   */
+  zitNaad?: number;
   /**
    * Scheve schaal: hoe ver de schaal aan de rechterkant rondloopt (graden vanaf het midden achteraan; rechts = de kant
    * van x = B, voor wie voor de zetel staat de rechterkant). Leeg = zoals links (`boog`). Samen met `profielRechts` voor
@@ -97,6 +104,8 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
     ...(typeof teken.zitRand === 'number' ? { zitRand: teken.zitRand } : {}),
     ...(teken.schaalOp === true ? { schaalOp: true } : {}),
     ...(typeof teken.frameDik === 'number' ? { frameDik: teken.frameDik } : {}),
+    ...(teken.frameKruis === true ? { frameKruis: true } : {}),
+    ...(typeof teken.zitNaad === 'number' && teken.zitNaad > 0 ? { zitNaad: teken.zitNaad } : {}),
     ...(typeof teken.boogRechts === 'number' ? { boogRechts: Math.max(5, Math.min(178, teken.boogRechts)) } : {}),
     ...(profielRechts.length >= 2 ? { profielRechts } : {}),
     ...(typeof teken.kussens === 'number' && teken.kussens >= 1 ? { kussens: Math.min(5, Math.round(teken.kussens)) } : {}),
@@ -128,6 +137,27 @@ export function superellips(cx: number, cy: number, a: number, b: number, n: num
     uit.push([cx + a * Math.sign(c) * Math.abs(c) ** (2 / n), cy + b * Math.sign(s) * Math.abs(s) ** (2 / n)]);
   }
   return uit;
+}
+
+/**
+ * Poten van een onderstel met een frame (ringframe, kruisframe), in lokale maten van het element: waar elke poot
+ * bovenaan staat (het midden) en hoeveel cm haar voet verder naar buiten staat. Op de productfoto's (Fraser, Ross,
+ * Sullivan, Mabel) staan de poten schuin naar buiten; de voet blijft binnen het grondvlak, zodat de maten van de zetel
+ * gelijk blijven. `exp` = de exponent van het grondvlak van een kuipfauteuil (de poten staan onder de vier "hoeken" van
+ * dat grondvlak), null voor een ander element (de poten 8 cm uit de hoeken van de rechthoek). Eén bron voor de 3D en het
+ * vooraanzicht.
+ */
+export function framePoten(B: number, D: number, pootH: number, exp: number | null): { straal: number; spreid: number; poten: { k: 'la' | 'ra' | 'lv' | 'rv'; lx: number; ly: number; dx: number; dy: number }[] } {
+  const binnen = 0.8, dik = 5;
+  const hoek = exp !== null ? 2 ** (-1 / exp) * binnen : Math.max(0.5, 1 - 16 / Math.min(B, D));
+  const rx = (B / 2) * hoek, ry = (D / 2) * hoek, straal = Math.hypot(rx, ry);
+  // Tot waar het grondvlak in die richting reikt: bij een superellips op 2^(−1/n) van de diagonaal, bij een rechthoek de hoek.
+  const rand = Math.hypot(B / 2, D / 2) * (exp !== null ? 2 ** (-1 / exp) : 1);
+  const spreid = Math.round(Math.max(0, Math.min(0.2 * pootH, rand - straal - dik / 2)) * 10) / 10;
+  const poten = ([['la', -1, -1], ['ra', 1, -1], ['lv', -1, 1], ['rv', 1, 1]] as const).map(([k, sx, sy]) => ({
+    k, lx: B / 2 + sx * rx, ly: D / 2 + sy * ry, dx: (sx * spreid * rx) / straal, dy: (sy * spreid * ry) / straal,
+  }));
+  return { straal, spreid, poten };
 }
 
 export interface KuipOpbouw {

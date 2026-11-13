@@ -255,10 +255,18 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'wol_grijs', opties: { poten: 'draaivoet', rughoogte: 'hoog' },
     vormgeving: { zachtheid: 6 }, elementen: rij([['fauteuil', 80, 85, { kuipvorm: 'afgerond' }]]),
   }, 'F-Sullivan'),
-  model('fraser', 'Fraser', FAUTEUIL, 'Ronde kuipfauteuil in velours op houten poten.', {
-    hoofdmateriaal: 'chenille_nachtblauw', opties: { poten: 'cilinder', poothoogte: 'hoog', hout: 'eik_zwart' },
-    vormgeving: { zachtheid: 6 }, elementen: rij([['fauteuil', 70, 70, { kuipvorm: 'rond' }]]),
-  }, 'F-Fraser'),
+  model('fraser', 'Fraser', FAUTEUIL, 'Kleine ronde fauteuil: een dikke, vaste zitting met een lage, rechte schaal rond de achterste helft, op vier zwarte poten met een kruis.', {
+    hoofdmateriaal: 'chenille_nachtblauw', opties: { poten: 'kruisframe', hout: 'eik_zwart', zitting: 'vaste_zitting' },
+    // Productpagina: 61 × 61 × 70, zithoogte 44, zitdiepte 49. Uit de foto's (benadering, 13/11): ronde zitting van ±18 cm
+    // dik; een lage schaal met een vlakke rand rond de achterste helft, tot onderaan de zitting; vier zwarte, vierkante
+    // schuine poten met een kruis ertussen (poothoogte 26 geschat). De zitting in twee lagen: een kussen op een band.
+    // Geen bies te zien.
+    vormgeving: {
+      zachtheid: 6, rughoogte: 70, zithoogte: 44, poothoogte: 26,
+      kuip: { dikte: 9, boog: 96, zitTrommel: true, zitRand: 5, zitNaad: 10, profiel: [[0, 1], [1, 1]] },
+    },
+    elementen: rij([['fauteuil', 61, 61, { kuipvorm: 'rond' }]]),
+  }, 'F-Fraser', MATEN_WEBSITE),
   model('milton', 'Milton', FAUTEUIL, 'Ronde fauteuil: een dikke, vaste zitting met een dunne, rechte schaal rond de achterste helft, op een donker houten frame.', {
     hoofdmateriaal: 'linnen_travertin', opties: { poten: 'ringframe', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: 70 × 68 × 72, zithoogte 40, zitdiepte 60 (schaal 8 cm = diepte − zitdiepte). Uit de foto's (benadering,

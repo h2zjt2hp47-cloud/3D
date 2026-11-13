@@ -8,7 +8,7 @@
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
-import { kuipOpbouw, kuipParameters, superellips, type Punt } from './kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters, superellips, type Punt } from './kuip.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -44,6 +44,8 @@ export interface Blok {
   as?: 'x' | 'y' | 'z';
   /** Kegel: verhouding onderste/bovenste straal. */
   taps?: number;
+  /** Schuine poot (staande kegel of cilinder): hoeveel cm de voet verschoven is tegenover de bovenkant, [x, z] in wereldmaat. */
+  schuin?: [number, number];
   /** Achterover hellen (rug): graden en de richting naar achter in het grondvlak. */
   kantel?: { graden: number; richting: 'x+' | 'x-' | 'z+' | 'z-' };
   /** Ander materiaal per zijvlak (alleen voor rechte balken). */
@@ -213,18 +215,23 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // Een ander element (bv. een zitelement van een sofa): een recht frame onder het hele element, 3 cm naar binnen.
           lokaal('ring', potSoort, 3, 3, B - 6, D - 6, P - ringH, ringH, potKleur, { afronding: 1 });
         }
-        // Poten onder de vier hoeken: op de diagonalen van het grondvlak, een eind naar binnen.
-        const hoek = kuipFrame ? (2 ** (-1 / exp)) * (potVorm === 'ringframe' ? 0.8 : 0.74) : Math.max(0.5, 1 - 16 / m);
-        for (const [k, sx, sy] of [['la', -1, -1], ['ra', 1, -1], ['lv', -1, 1], ['rv', 1, 1]] as const)
-          lokaal(`poot-${k}`, potSoort, B / 2 + sx * (B / 2) * hoek - dik / 2, D / 2 + sy * (D / 2) * hoek - dik / 2, dik, dik, 0, P - ringH, potKleur, { vorm: 'kegel', taps: 0.7 });
-        const straal = Math.hypot((B / 2) * hoek, (D / 2) * hoek);
-        if (potVorm === 'kruisframe') {
+        // Poten onder de vier hoeken: op de diagonalen van het grondvlak, een eind naar binnen, met de voet schuin naar
+        // buiten (zie framePoten). De verschuiving van de voet in wereldmaat, zodat het klopt bij een gedraaid element.
+        const fp = framePoten(B, D, P - ringH, kuipFrame ? exp : null);
+        for (const q of fp.poten) {
+          const boven = lokaalNaarWereld(e, q.lx, q.ly, 0, 0), voet = lokaalNaarWereld(e, q.lx + q.dx, q.ly + q.dy, 0, 0);
+          lokaal(`poot-${q.k}`, potSoort, q.lx - dik / 2, q.ly - dik / 2, dik, dik, 0, P - ringH, potKleur, {
+            vorm: 'kegel', taps: 0.7, ...(fp.spreid ? { schuin: [r2(voet.x - boven.x), r2(voet.y - boven.y)] as [number, number] } : {}),
+          });
+        }
+        if (potVorm === 'kruisframe' || kuipFrame?.frameKruis) {
           // Twee latten kruiselings tussen de poten: een balk langs x rond het midden van het element, gedraaid tot op de
           // diagonaal naar een poot (in wereldmaat, zodat het ook klopt bij een gedraaid element en een niet-vierkant
-          // grondvlak).
-          const lang = 2 * straal, y = Math.max(2, P * 0.42), c = lokaalNaarWereld(e, B / 2, D / 2, 0, 0);
-          for (const [k, sx] of [['a', 1], ['b', -1]] as const) {
-            const poot = lokaalNaarWereld(e, B / 2 + sx * (B / 2) * hoek, D / 2 + (D / 2) * hoek, 0, 0);
+          // grondvlak). Even lang als de afstand tussen de (schuine) poten op die hoogte.
+          const y = Math.max(2, (P - ringH) * 0.42), c = lokaalNaarWereld(e, B / 2, D / 2, 0, 0);
+          const lang = 2 * (fp.straal + fp.spreid * (1 - y / (P - ringH)));
+          for (const [k, i] of [['a', 3], ['b', 2]] as const) {
+            const q = fp.poten[i]!, poot = lokaalNaarWereld(e, q.lx, q.ly, 0, 0);
             const graden = rond1((Math.atan2(poot.y - c.y, poot.x - c.x) * 180) / Math.PI);
             blokken.push({ code: `${e.id}.kruis-${k}`, soort: potSoort, vorm: 'blok', x: r2(c.x - lang / 2), y: r2(y), z: r2(c.y - 1.2), b: r2(lang), h: 2.4, d: 2.4, kleur: potKleur, draai: graden });
           }
@@ -500,7 +507,12 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           if (kp.zitTrommel && !kiezel) {
             // Trommel (fauteuils van de klant, 13/11): de zitting is één ronde, vaste vorm in de stof, van de poten tot de
             // zithoogte, met een naad boven- en onderaan; de schaal staat eromheen (of erop, met `schaalOp`).
-            omtrekBlok('zitkussen', 'kussen', opb.basis.onder, opb.zitDik, stof, basisPlan, { afronding: rond1(Math.min(kp.zitRand ?? 6, opb.zitDik / 2 - 0.5)) });
+            // Met `zitNaad` in twee lagen: een kussen bovenop een band, met een naad ertussen (Fraser, Ross).
+            const rand = kp.zitRand ?? 6, bovenlaag = kp.zitNaad ? Math.min(kp.zitNaad, opb.zitDik - 3) : 0;
+            if (bovenlaag >= 3) {
+              omtrekBlok('zitband', 'kussen', opb.basis.onder, opb.zitDik - bovenlaag, stof, basisPlan, { afronding: rond1(Math.min(rand, (opb.zitDik - bovenlaag) / 2 - 0.3)) });
+              omtrekBlok('zitkussen', 'kussen', zithoogte - bovenlaag, bovenlaag, stof, basisPlan, { afronding: rond1(Math.min(rand, bovenlaag / 2 - 0.3)) });
+            } else omtrekBlok('zitkussen', 'kussen', opb.basis.onder, opb.zitDik, stof, basisPlan, { afronding: rond1(Math.min(rand, opb.zitDik / 2 - 0.5)) });
           } else {
             omtrekBlok('basis', kiezel ? 'kussen' : 'stof', opb.basis.onder, basisBoven - opb.basis.onder, kiezel ? stof : donker, basisPlan, { afronding: kp.organisch ? 12 : 4, ...(kiezel ? { glad: true } : {}) });
             if (kussenDik && !kiezel) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
@@ -763,6 +775,7 @@ export function plaatsBlokken(blokken: Blok[], plaats: { x: number; y?: number; 
     };
     if (wissel && b.as && b.as !== 'y') n.as = b.as === 'x' ? 'z' : 'x';
     if (b.kantel) n.kantel = { ...b.kantel, richting: richting(b.kantel.richting) };
+    if (b.schuin) n.schuin = draaiVector(b.schuin[0], b.schuin[1]);
     if (b.zijden) {
       n.zijden = {};
       for (const [k, w] of Object.entries(b.zijden)) n.zijden[k === 'y+' ? 'y+' : richting(k as 'x+')] = w;

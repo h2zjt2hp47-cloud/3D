@@ -7,7 +7,7 @@
 import type { Materiaal } from './materialen.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
-import { kuipOpbouw, kuipParameters } from './kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters } from './kuip.js';
 import { strakProfiel, uitlopendProfiel } from './ruimtelijk.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
@@ -93,10 +93,18 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           // Onderstel van een fauteuil: een frame onder de zitting op schuine poten, of vier poten met een kruis.
           const frame = vorm === 'ringframe' ? Math.min(kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip)?.frameDik ?? 4, P / 3) : 0;
           if (frame) rect(`${e.id}.ring`, x0 + 3, -P, p.b - 6, frame, potKleur);
-          const links = x0 + p.b * 0.2, rechts = x1 - p.b * 0.2;
-          for (const [k, xm] of [['l', links], ['r', rechts]] as const)
-            pad(`${e.id}.poot-${k}`, `M${rond(xm - 2.5)} ${rond(-(P - frame))} H${rond(xm + 2.5)} L${rond(xm + 1.75)} 0 H${rond(xm - 1.75)} Z`, xm - 2.5, -(P - frame), 5, P - frame, potKleur);
-          if (vorm === 'kruisframe') rect(`${e.id}.kruis`, links, -(P * 0.42 + 2.4), rechts - links, 2.4, potKleur);
+          // Zelfde poten als in de 3D (framePoten): de bovenkant onder het frame, de voet schuin naar buiten.
+          const kuipFrame = t.tekenstijl === 'kuip' ? kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip) : null;
+          const fp = framePoten(p.b, p.h, P - frame, kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : null);
+          const rv = fp.poten[3]!, uit = rv.lx - p.b / 2, voet = uit + rv.dx;
+          for (const [k, s] of [['l', -1], ['r', 1]] as const) {
+            const xb = x0 + p.b / 2 + s * uit, xv = x0 + p.b / 2 + s * voet;
+            pad(`${e.id}.poot-${k}`, `M${rond(xb - 2.5)} ${rond(-(P - frame))} H${rond(xb + 2.5)} L${rond(xv + 1.75)} 0 H${rond(xv - 1.75)} Z`, Math.min(xb, xv) - 2.5, -(P - frame), Math.abs(xv - xb) + 5, P - frame, potKleur);
+          }
+          if (vorm === 'kruisframe' || kuipFrame?.frameKruis) {
+            const y = Math.max(2, (P - frame) * 0.42), half = uit + rv.dx * (1 - y / (P - frame));
+            rect(`${e.id}.kruis`, x0 + p.b / 2 - half, -(y + 2.4), 2 * half, 2.4, potKleur);
+          }
           break;
         }
         case 'haarspeld':
