@@ -103,7 +103,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             const xb = mid + s * uit, xv = mid + s * voet;
             pad(`${e.id}.poot-${k}`, `M${rond(xb - 2.5)} ${rond(-(P - frame))} H${rond(xb + 2.5)} L${rond(xv + 1.75)} 0 H${rond(xv - 1.75)} Z`, Math.min(xb, xv) - 2.5, -(P - frame), Math.abs(xv - xb) + 5, P - frame, potKleur);
           }
-          if (vorm === 'kruisframe' || kuipFrame?.frameKruis) {
+          if ((vorm === 'kruisframe' || kuipFrame?.frameKruis) && P - frame >= 6) {
             const y = Math.max(2, (P - frame) * 0.42), half = uit + rv.dx * (1 - y / (P - frame));
             rect(`${e.id}.kruis`, mid - half, -(y + 2.4), 2 * half, 2.4, potKleur);
           }

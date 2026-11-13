@@ -227,7 +227,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             vorm: 'kegel', taps: 0.7, ...(fp.spreid ? { schuin: [r2(voet.x - boven.x), r2(voet.y - boven.y)] as [number, number] } : {}),
           });
         }
-        if (potVorm === 'kruisframe' || kuipFrame?.frameKruis) {
+        // Geen kruis onder heel korte poten (onder 6 cm is er geen plaats, en bij poothoogte 0 valt er niets te delen).
+        if ((potVorm === 'kruisframe' || kuipFrame?.frameKruis) && P - ringH >= 6) {
           // Twee latten kruiselings tussen de poten: een balk langs x rond het midden van het element, gedraaid tot op de
           // diagonaal naar een poot (in wereldmaat, zodat het ook klopt bij een gedraaid element en een niet-vierkant
           // grondvlak). Even lang als de afstand tussen de (schuine) poten op die hoogte.

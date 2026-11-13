@@ -276,6 +276,23 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     expect(rechts.x + rechts.breedte! - links.x).toBeGreaterThan(voor.find((v) => v.code === 'f.kruis')!.breedte!);
   });
 
+  it('onderstel bij heel korte of geen poten: alle maten blijven gewone getallen, geen kruis onder 6 cm', () => {
+    // Met poothoogte 0 deelde de lengte van het kruis door nul (NaN in de blokken en in het kader van de 3D).
+    for (const poten of ['kruisframe', 'ringframe']) for (const poothoogte of [0, 1, 4, 5.9, 6, 12]) for (const kruis of [false, true]) {
+      const o = fauteuil({ ...milton, ...(kruis ? { frameKruis: true } : {}) }, poten);
+      o.vormgeving = { ...o.vormgeving, poothoogte };
+      const s = bouw3D(o, cat, standaardMaterialen), wat = `${poten} ${poothoogte} ${kruis}`;
+      for (const b of s.blokken) for (const k of ['x', 'y', 'z', 'b', 'h', 'd'] as const) expect(Number.isFinite(b[k]), `${wat} ${b.code}.${k}`).toBe(true);
+      for (const b of s.blokken) if (b.schuin) expect(b.schuin.every(Number.isFinite), `${wat} ${b.code}`).toBe(true);
+      for (const k of ['x', 'z', 'b', 'd', 'h'] as const) expect(Number.isFinite(s.kader[k]), `${wat} kader.${k}`).toBe(true);
+      const heeftKruis = s.blokken.some((b) => b.code.startsWith('f.kruis-')), verwacht = (poten === 'kruisframe' || kruis) && poothoogte - (poten === 'ringframe' ? Math.min(4, poothoogte / 3) : 0) >= 6;
+      expect(heeftKruis, wat).toBe(verwacht);
+      const voor = tekenVooraanzicht(o, cat, standaardMaterialen);
+      for (const v of voor.vormen) for (const k of ['x', 'y', 'breedte', 'hoogte'] as const) expect(Number.isFinite(v[k] as number), `${wat} voor ${v.code}.${k}`).toBe(true);
+      expect(voor.vormen.some((v) => v.code === 'f.kruis'), wat).toBe(verwacht);
+    }
+  });
+
   it('een ring op vier poten kan ook een kruis hebben (Sullivan)', () => {
     const b = bouw3D(fauteuil({ ...milton, frameKruis: true }, 'ringframe'), cat, standaardMaterialen).blokken;
     expect(b.find((x) => x.code === 'f.ring')).toBeDefined();

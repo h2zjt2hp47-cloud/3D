@@ -267,6 +267,8 @@ export const zetelModellen: ModelDefinitie[] = [
     // Productpagina: 91 × 91 × 78, zithoogte 45. Uit de foto's (benadering, 13/11): een grote ronde trommel op een lage,
     // donkere ronde voet (4 cm geschat); een dunne schaal, rondom even hoog, die er een paar cm rond uitsteekt, rond de
     // achterste helft; drie gewone vierkante kussens (±43 cm) tegen de schaal, die erboven uitkomen.
+    // Onzeker: de hoogte van de site (78) is hier de rand van de schaal; de kussens komen erboven (88). Op de foto van opzij
+    // ligt de rand bij een zithoogte van 45 op ±71 cm en de kussens op ±84 cm: 78 past bij geen van beide. Na te vragen.
     vormgeving: {
       zachtheid: 8, rughoogte: 78, zithoogte: 45, poothoogte: 4,
       kuip: { dikte: 6, boog: 93, zitTrommel: true, zitRand: 4, zitIn: 4, profiel: [[0, 1], [1, 1]], kussens: 3, kussenMaat: 43 },
@@ -279,6 +281,9 @@ export const zetelModellen: ModelDefinitie[] = [
     // 13/11): een ronde trommel tot op de vloer; een dunne schaal met een bies die er rondom een paar cm uitsteekt, even
     // hoog rondom, rond de achterste helft; één los, breed rugkussen dat boven de schaal uitkomt (Jonas, 13/11: "Satie
     // heeft maar 1 kussen"; de grotere maten hebben er volgens de site 4 en 5).
+    // Onzeker: de hoogte van de site (70) is hier de rand van de schaal; het kussen komt erboven (83). Op de foto van opzij
+    // is de rand ±1,46 keer de zithoogte: 70 en 45 passen daar net niet bij (dat geeft 66, of een zithoogte van 48). Na te
+    // vragen bij de klant.
     vormgeving: {
       zachtheid: 7, rughoogte: 70, zithoogte: 45, poothoogte: 2,
       kuip: { dikte: 6, boog: 95, zitTrommel: true, zitRand: 3, zitIn: 4, profiel: [[0, 1], [1, 1]], kussens: 1, kussenMaat: 48, kussenHoog: 38 },

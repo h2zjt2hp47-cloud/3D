@@ -174,7 +174,8 @@ foto / vroeger / nu naast elkaar, boven- en vooraanzicht bekeken, prijs regel pe
 
 ![Alle fauteuils na de ombouw](afbeeldingen/fauteuils-overzicht-na.jpg)
 
-**Uit de productpagina:** breedte, diepte, hoogte en zithoogte. **Geschat uit de foto's** (benadering, zo gemarkeerd in
+**Uit de productpagina:** breedte, diepte, hoogte en zithoogte (bij Satie en Quin is niet zeker of de hoogte de schaal
+of de kussens bedoelt, zie verder). **Geschat uit de foto's** (benadering, zo gemarkeerd in
 het model): de poothoogte (Fraser 26, Ross 26, Sullivan 22, Karl 28, Quin 4, Satie, Tumble en Manon 2), de zithoogte
 van Satie (45) en Karl (42), de dikte van de schaal, hoe ver ze rondloopt, het verloop van haar rand, de maat van de
 losse kussens.
@@ -201,8 +202,11 @@ losse kussens.
   keuze; hij staat op eik naturel.
 - **Amusette fauteuil:** de armen zijn 13 cm breed in plaats van 15 (het zitelement begint bij 60 cm); op de foto is de
   zitting één blok tot op de vloer, bij ons een kussen op een onderbouw, zoals bij de Amusette sofa.
-- **Hoogte in het vooraanzicht:** bij Satie en Quin staat de maat tot boven de losse kussens (83 en 88 cm); de site
-  geeft de hoogte van de schaal (70 en 78).
+- **Hoogte van Satie en Quin (onzeker):** wij leggen de hoogte van de site (70 en 78 cm) op de rand van de schaal; de
+  losse kussens komen erboven (83 en 88 cm, de maat in het vooraanzicht). Nagemeten op de foto's van opzij klopt dat
+  niet helemaal: bij Quin ligt de rand bij een zithoogte van 45 op ±71 cm en de kussens op ±84 cm, dus 78 past bij geen
+  van beide; bij Satie (geen zithoogte op de site, 45 geschat) is de rand ±1,46 keer de zithoogte, wat 66 cm geeft.
+  Welke hoogte de site bedoelt, is na te vragen bij de klant.
 - **Stof en kleur** zijn die van het model, niet die van de foto.
 
 **Fouten onderweg gevonden en rechtgezet:**
