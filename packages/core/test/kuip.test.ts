@@ -201,7 +201,8 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
 
   it('schaal op de zitting: haar onderkant ligt net onder de zithoogte en de zitting is het volle grondvlak', () => {
     const blokken = bouw3D(fauteuil({ ...milton, schaalOp: true }), cat, standaardMaterialen).blokken;
-    expect(blokken.find((b) => b.code === 'f.rug')!.y).toBe(38);
+    // Op een trommel begint ze waar de bolle rand van de zitting begint (zithoogte 40 − rand 7), met een lichte afronding.
+    expect(blokken.find((b) => b.code === 'f.rug')).toMatchObject({ y: 33, afronding: 3 });
     expect(blokken.find((b) => b.code === 'f.zitkussen')!.b).toBe(70);
   });
 

@@ -75,6 +75,8 @@ const ZETELBEELDEN = [
   { naam: 'quin-schuin', model: 'Quin', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Zwevende rugschijf boven een vaste zitting, op een houten frame (Karl).
   { naam: 'karl-schuin', model: 'Karl', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  // Dikke rug die op een bolle zitting staat, tot op de vloer (Tumble).
+  { naam: 'tumble-schuin', model: 'Tumble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'pebble-naad', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.42, 0.17, 0.57, 0.45] },
   { naam: 'ross-kop', model: 'Ross', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.3, 0.3, 0.5, 0.82] },
   { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.08, 0.28, 0.36, 0.88] },

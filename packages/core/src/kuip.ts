@@ -56,7 +56,10 @@ export interface KuipParameters {
    * komen, zodat de maten van de zetel gelijk blijven. Leeg = zitting en schaal (bijna) gelijk.
    */
   zitIn?: number;
-  /** De schaal staat op de zitting (onderkant net onder de zithoogte) in plaats van eromheen tot onderaan. */
+  /**
+   * De schaal staat op de zitting in plaats van eromheen tot onderaan: haar onderkant ligt net onder de zithoogte, bij een
+   * trommel waar de bolle rand van de zitting begint.
+   */
   schaalOp?: boolean;
   /** Dikte in cm van het houten frame onder de zitting bij poten met een frame (ringframe); standaard 4. */
   frameDik?: number;
@@ -277,8 +280,11 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   }
   const basisBoven = k.zitTrommel ? h.P : h.zithoogte - h.kussenDik;
   // Schelp: zweeft een eind boven de zitting (gedragen door het frame), anders staat de wand op de onderbouw. Met
-  // `schaalOp` staat de schaal op de zitting: haar onderkant ligt 2 cm in de zitting (geen kier).
-  const onder = k.zwevend ? h.zithoogte + 6 : k.schaalOp ? h.zithoogte - 2 : h.P;
+  // `schaalOp` staat de schaal op de zitting: haar onderkant ligt 2 cm in de zitting (geen kier). Op een trommel met een
+  // bolle rand begint ze waar die rand begint: aan de buitenkant sluit ze dan aan op de zijkant van de zitting, in plaats
+  // van met haar buitenrand boven de afgeronde schouder te hangen (Tumble).
+  const schouder = k.zitTrommel ? Math.max(2, Math.min(k.zitRand ?? 6, (h.zithoogte - h.P) / 2 - 0.5)) : 2;
+  const onder = k.zwevend ? h.zithoogte + 6 : k.schaalOp ? h.zithoogte - schouder : h.P;
   // Zitkussen: binnen de wand en tot vooraan (bij een schelp over het hele grondvlak).
   // Organisch: de zitting loopt breed tot vooraan door (de wand zakt er in weg).
   const achter = k.zwevend ? 3 : w * (k.organisch ? 0.9 : 0.85);

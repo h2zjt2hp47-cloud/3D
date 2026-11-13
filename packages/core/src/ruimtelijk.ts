@@ -531,7 +531,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),
             y: r2(wandOnder), h: r2(Math.max(...opb.wand.hoogtes) - wandOnder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
             // Schelp: de schaal zweeft boven de zitting, dus je ziet haar onderrand: ook die rond (zoals op de foto van Karl).
-            ...(kp.zwevend ? { afronding: r2(opb.wand.dikte / 2) } : {}),
+            // Een schaal die op de zitting staat (`schaalOp`, Tumble): een licht afgeronde onderrand, zodat er een plooi is
+            // waar ze op de zijkant van de zitting aansluit.
+            ...(kp.zwevend ? { afronding: r2(opb.wand.dikte / 2) } : kp.schaalOp ? { afronding: r2(Math.min(opb.wand.dikte / 2, 3)) } : {}),
             ...(kiezel ? { glad: true } : {}),
           });
           if (kp.zwevend) {

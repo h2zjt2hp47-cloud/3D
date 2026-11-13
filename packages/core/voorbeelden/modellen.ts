@@ -228,10 +228,18 @@ export const zetelModellen: ModelDefinitie[] = [
     },
     elementen: rij([['fauteuil', 68, 72, { kuipvorm: 'schelp' }]]),
   }, 'F-Karl', MATEN_WEBSITE),
-  model('tumble', 'Tumble', FAUTEUIL, 'Ronde kuipfauteuil in bouclé, op een verdekte voet.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
-    vormgeving: { zachtheid: 9 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'omhullend' }]]),
-  }, 'F-Tumble'),
+  model('tumble', 'Tumble', FAUTEUIL, 'Zachte, ronde fauteuil in bouclé: één bolle zitting tot op de vloer met een lage, dikke rugrol erop.', {
+    hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', comfort: 'dons', zitting: 'vaste_zitting' },
+    // Productpagina: 78 × 86 × 75, zithoogte 45 (ook als sofa van 134 en 160 cm). Uit de foto's (benadering, 13/11): één
+    // zachte, bolle zitting tot op de vloer, met sterk afgeronde randen; daarop een lage, dikke rug rond de achterste
+    // helft, rondom even hoog, met ronde uiteinden, die aan de buitenkant aansluit op de zijkant van de zitting. Geen
+    // zichtbare poten.
+    vormgeving: {
+      zachtheid: 9, rughoogte: 75, zithoogte: 45, poothoogte: 2,
+      kuip: { dikte: 17, boog: 95, zitTrommel: true, zitRand: 11, schaalOp: true, profiel: [[0, 1], [1, 1]] },
+    },
+    elementen: rij([['fauteuil', 78, 86, { kuipvorm: 'omhullend' }]]),
+  }, 'F-Tumble', MATEN_WEBSITE),
   model('ross', 'Ross', FAUTEUIL, 'Compacte fauteuil: een dunne schaal met een hoge rug en lage armen rond een dikke, vaste zitting, op vier houten poten met een kruis.', {
     hoofdmateriaal: 'katoen_naturel', opties: { poten: 'kruisframe', hout: 'eik_naturel', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: 66 × 64 × 78, zithoogte 43. Uit de twee foto's (benadering, 13/11): een dunne schaal met een bies;
