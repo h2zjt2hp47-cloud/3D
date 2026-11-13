@@ -169,7 +169,7 @@ describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meube
     return in_;
   };
   it('ronde poef: ronde voet, 10 cm naar binnen', () => {
-    for (const code of ['stockholm', 'fez', 'tumble-pouf']) {
+    for (const code of ['stockholm', 'fez']) {
       const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, poef = b.find((x) => x.code === 'e1.poef')!;
       expect(voet.vorm, code).toBe('cilinder');
       expect(voet.b, code).toBeCloseTo(poef.b - 20, 1);
@@ -177,9 +177,9 @@ describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meube
     }
   });
   it('kuipfauteuil: voet met de omtrek van de onderbouw, helemaal binnen die omtrek', () => {
-    for (const code of ['pebble', 'tumble', 'manon', 'satie']) {
-      // De onderbouw, of bij een fauteuil met een vaste trommelzitting (Satie) die zitting zelf.
-      const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, basis = (b.find((x) => x.code === 'e1.basis') ?? b.find((x) => x.code === 'e1.zitkussen'))!;
+    for (const code of ['pebble', 'tumble', 'manon', 'satie', 'tumble-pouf']) {
+      // De onderbouw, bij een fauteuil met een vaste trommelzitting (Satie) die zitting zelf, of een bolle ronde poef.
+      const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, basis = (b.find((x) => x.code === 'e1.basis') ?? b.find((x) => x.code === 'e1.zitkussen') ?? b.find((x) => x.code === 'e1.poef'))!;
       expect(voet.omtrek, code).toBeDefined();
       for (const p of voet.omtrek!) expect(binnen(p, basis.omtrek!), `${code} ${p}`).toBe(true);
     }
@@ -377,6 +377,38 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(vormgevingVan(o, o.elementen[1]!)).toMatchObject({ rughoogte: 71, armhoogte: 60 });
     expect(o.vormgeving?.zithoogte).toBe(40);
     expect(berekenOntwerp(o, zetelCatalogus, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout')).toHaveLength(0);
+  });
+  it('hockers en poefs bij de fauteuils: de maten van de productpagina, zelfde zitting en onderstel als de fauteuil', () => {
+    // Breedte × diepte × hoogte van de pagina van de fauteuil.
+    for (const [code, [b, d, h]] of Object.entries({ 'sullivan-hocker': [62, 62, 42], 'tumble-pouf': [59, 59, 45], 'pebble-pouf': [82, 61, 42] } as Record<string, [number, number, number]>)) {
+      const s = scene(code), poef = s.blokken.find((x) => x.code === 'e1.poef')!;
+      expect(s.kader, code).toMatchObject({ b, d, h });
+      expect(poef.y + poef.h, code).toBe(h);
+      expect(berekenOntwerp(model(code).ontwerp, zetelCatalogus, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout'), code).toHaveLength(0);
+      // Het vooraanzicht tekent dezelfde hoogte.
+      const voor = tekenVooraanzicht(model(code).ontwerp, zetelCatalogus, standaardMaterialen).vormen.find((v) => v.code === 'e1.basis')!;
+      expect(-voor.y, code).toBe(h);
+      // De maat "zit" naast de tekening is de bovenkant van de poef, niet de zithoogte van de catalogus.
+      expect(tekenVooraanzicht(model(code).ontwerp, zetelCatalogus, standaardMaterialen).maatlijnen.find((m) => m.code === 'zithoogte')!.tekst, code).toBe(`zit ${h}`);
+    }
+    // Sullivan hocker: ronde ring en vier schuine poten onder de ronde zitting (niet onder de hoeken van een vierkant), met een kruis.
+    const b = scene('sullivan-hocker').blokken, poef = b.find((x) => x.code === 'e1.poef')!, ring = b.find((x) => x.code === 'e1.ring')!;
+    expect(poef.omtrek).toBeDefined();
+    expect(ring.omtrek).toBeDefined();
+    expect(ring).toMatchObject({ y: 19, h: 3 });
+    const poten = b.filter((x) => x.code.startsWith('e1.poot-'));
+    expect(poten).toHaveLength(4);
+    for (const p of poten) {
+      // Ook de voet van elke poot blijft binnen de cirkel van de zitting.
+      const vx = p.x + p.b / 2 + (p.schuin?.[0] ?? 0) - 31, vz = p.z + p.d / 2 + (p.schuin?.[1] ?? 0) - 31;
+      expect(Math.hypot(vx, vz) + 2.5).toBeLessThanOrEqual(31.1);
+    }
+    expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
+    expect(b.some((x) => x.code === 'e1.draaivoet')).toBe(false);
+    // Een poef zonder eigen hoogte blijft 2 cm onder de zithoogte (Stockholm: 45 − 2).
+    const stockholm = scene('stockholm').blokken.find((x) => x.code === 'e1.poef')!;
+    expect(stockholm.y + stockholm.h).toBe(43);
+    expect(stockholm.vorm).toBe('cilinder');
   });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;

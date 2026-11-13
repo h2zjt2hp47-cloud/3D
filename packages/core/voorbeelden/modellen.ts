@@ -415,12 +415,20 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'Z-DaizySlim'),
 
   // ---------------- Poufs & hockers ----------------
-  model('sullivan-hocker', 'Sullivan Hocker', POEF, 'Ronde hocker op een draaivoet, bij de Sullivan fauteuil.', {
-    hoofdmateriaal: 'wol_grijs', opties: { poten: 'draaivoet' }, elementen: rij([['poef', 65, 65, { poefvorm: 'rond' }]]),
-  }, 'P-Sullivan'),
-  model('tumble-pouf', 'Tumble pouf', POEF, 'Kleine ronde pouf.', {
-    hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt', poothoogte: 'laag' }, elementen: rij([['poef', 50, 50, { poefvorm: 'rond' }]]),
-  }, 'P-Tumble'),
+  model('sullivan-hocker', 'Sullivan Hocker', POEF, 'Ronde hocker bij de Sullivan fauteuil: dezelfde dikke zitting op een zwarte houten ring met vier poten en een kruis.', {
+    hoofdmateriaal: 'wol_grijs', opties: { poten: 'ringframe', hout: 'eik_zwart' },
+    // Pagina van de Sullivan fauteuil: poef 62 × 62 × 42. Uit de foto (benadering, 13/11): dezelfde ronde zitting en
+    // hetzelfde onderstel als de fauteuil (poothoogte 22 geschat). Vroeger 65 × 65 op een draaivoet.
+    vormgeving: { poothoogte: 22, kuip: { hoogte: 42, zitRand: 7, frameDik: 3, frameKruis: true } },
+    elementen: rij([['poef', 62, 62, { poefvorm: 'rond' }]]),
+  }, 'P-Sullivan', MATEN_WEBSITE),
+  model('tumble-pouf', 'Tumble pouf', POEF, 'Ronde, bolle pouf tot op de vloer, bij de Tumble fauteuil.', {
+    hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt' },
+    // Pagina van de Tumble fauteuil: poef diameter 59, zithoogte 45. Uit de foto (benadering, 13/11): rond en bol, met
+    // sterk afgeronde randen, tot op de vloer. Vroeger een rechte cilinder van 50 cm.
+    vormgeving: { poothoogte: 2, kuip: { hoogte: 45, zitRand: 13 } },
+    elementen: rij([['poef', 59, 59, { poefvorm: 'rond' }]]),
+  }, 'P-Tumble', MATEN_WEBSITE),
   model('stockholm', 'Stockholm pouf', POEF, 'Ronde pouf in velours, in twee formaten.', {
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'verdekt', poothoogte: 'laag' }, elementen: rij([['poef', 60, 60, { poefvorm: 'rond' }]]),
   }, 'P-Stockholm'),
@@ -430,9 +438,12 @@ export const zetelModellen: ModelDefinitie[] = [
   model('fez', 'Fez pouf', POEF, 'Hoge, cilindervormige pouf.', {
     hoofdmateriaal: 'wol_grijs', opties: { poten: 'verdekt', poothoogte: 'laag' }, elementen: rij([['poef', 40, 40, { poefvorm: 'rond' }]]),
   }, 'P-Fez'),
-  model('pebble-pouf', 'Pebble pouf', POEF, 'Langwerpige, kiezelvormige pouf.', {
-    hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt', poothoogte: 'laag' }, elementen: rij([['poef', 120, 55, { poefvorm: 'kiezel' }]]),
-  }, 'P-Pebble'),
+  model('pebble-pouf', 'Pebble pouf', POEF, 'Kiezelvormige pouf, bij de Pebble fauteuil.', {
+    hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt', poothoogte: 'laag' },
+    // Pagina van de Pebble fauteuil: poef 82 × 61 × 42 (13/11). Vroeger 120 × 55.
+    vormgeving: { kuip: { hoogte: 42 } },
+    elementen: rij([['poef', 82, 61, { poefvorm: 'kiezel' }]]),
+  }, 'P-Pebble', MATEN_WEBSITE),
   model('mabel-hocker', 'Mabel Hocker', POEF, 'Hocker bij de Mabel fauteuil.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart' }, elementen: rij([['poef', 55, 55, { poefvorm: 'rond' }]]),
   }, null),

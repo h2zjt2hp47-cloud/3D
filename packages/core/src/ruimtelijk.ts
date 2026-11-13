@@ -9,7 +9,7 @@ import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
 import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, superellips, trommelKader, type Punt } from './kuip.js';
-import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
+import { poefHoogteVan, chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
   | 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken'
@@ -206,11 +206,19 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         // Kuipfauteuil: het frame volgt het grondvlak van de zitting (rond bij Milton, een afgeronde rechthoek bij Mabel),
         // 3 cm naar binnen, en de poten staan onder de vier "hoeken" van dat grondvlak.
         const kuipFrame = t.tekenstijl === 'kuip' ? kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip) : null;
-        const ringH = potVorm === 'ringframe' ? Math.min(kuipFrame?.frameDik ?? 4, P / 3) : 0;
+        // Een ronde poef (hocker) heeft ook een rond grondvlak: het frame en de poten volgen de cirkel. Met een recht frame
+        // en poten onder de hoeken van de rechthoek staken ze buiten de ronde poef. Haar eigen gegevens (`frameDik`,
+        // `frameKruis`) staan zoals bij de fauteuil in `vormgeving.kuip`.
+        const rondePoef = t.tekenstijl === 'poef' && String(te('poefvorm', 'vorm', 'kiezel')) === 'rond';
+        const eigenFrame = vormgevingVan(ontwerp, e).kuip ?? {};
+        const frameDik = kuipFrame ? kuipFrame.frameDik ?? 4 : typeof eigenFrame.frameDik === 'number' ? eigenFrame.frameDik : 4;
+        const frameKruis = kuipFrame ? kuipFrame.frameKruis === true : eigenFrame.frameKruis === true;
+        const rondPlan = kuipFrame !== null || rondePoef;
+        const ringH = potVorm === 'ringframe' ? Math.min(frameDik, P / 3) : 0;
         const exp = kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : 2;
         // Het onderstel staat onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
         const tk = trommelKader(B, D, kuipFrame);
-        if (ringH > 0 && kuipFrame) {
+        if (ringH > 0 && rondPlan) {
           const f = Math.max(0.5, 1 - 3 / (Math.min(tk.b, tk.d) / 2));
           omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(tk.x + tk.b / 2, tk.y + tk.d / 2, (tk.b / 2) * f, (tk.d / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });
         } else if (ringH > 0) {
@@ -219,7 +227,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         }
         // Poten onder de vier hoeken: op de diagonalen van het grondvlak, een eind naar binnen, met de voet schuin naar
         // buiten (zie framePoten). De verschuiving van de voet in wereldmaat, zodat het klopt bij een gedraaid element.
-        const fp = framePoten(tk.b, tk.d, P - ringH, kuipFrame ? exp : null);
+        const fp = framePoten(tk.b, tk.d, P - ringH, rondPlan ? exp : null);
         for (const q of fp.poten) { q.lx += tk.x; q.ly += tk.y; }
         for (const q of fp.poten) {
           const boven = lokaalNaarWereld(e, q.lx, q.ly, 0, 0), voet = lokaalNaarWereld(e, q.lx + q.dx, q.ly + q.dy, 0, 0);
@@ -228,7 +236,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           });
         }
         // Geen kruis onder heel korte poten (onder 6 cm is er geen plaats, en bij poothoogte 0 valt er niets te delen).
-        if ((potVorm === 'kruisframe' || kuipFrame?.frameKruis) && P - ringH >= 6) {
+        if ((potVorm === 'kruisframe' || frameKruis) && P - ringH >= 6) {
           // Twee latten kruiselings tussen de poten: een balk langs x rond het midden van het element, gedraaid tot op de
           // diagonaal naar een poot (in wereldmaat, zodat het ook klopt bij een gedraaid element en een niet-vierkant
           // grondvlak). Even lang als de afstand tussen de (schuine) poten op die hoogte.
@@ -448,8 +456,13 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       case 'poef': {
         const pv = String(te('poefvorm', 'vorm', 'kiezel'));
         const p = voetafdruk(e);
-        if (pv === 'rond') cilinderMidden('poef', 'kussen', P, zithoogte - 2 - P, p.b, p.h, stof);
-        else lokaal('poef', 'kussen', 0, 0, B, D, P, zithoogte - 2 - P, stof, { afronding: pv === 'vierkant' ? 3 : Math.min(B, D, zithoogte - P) / 2.5 });
+        // Bovenkant: 2 cm onder de zithoogte, of de eigen hoogte van het model (hocker met de maat van de site).
+        const poefTop = poefHoogteVan(ontwerp, catalogus, e), poefH = poefTop - P, rand = v.kuip?.zitRand;
+        // Een ronde poef met een eigen bolle rand (Tumble pouf, de hocker van Sullivan): zoals de trommelzitting van de
+        // fauteuil, een rond blok met afgeronde randen in plaats van een rechte cilinder.
+        if (pv === 'rond' && typeof rand === 'number') omtrekBlok('poef', 'kussen', P, poefH, stof, superellips(B / 2, D / 2, B / 2, D / 2, 2, 0, 360, 72).slice(0, -1), { afronding: rond1(Math.max(1, Math.min(rand, poefH / 2 - 0.5))) });
+        else if (pv === 'rond') cilinderMidden('poef', 'kussen', P, poefH, p.b, p.h, stof);
+        else lokaal('poef', 'kussen', 0, 0, B, D, P, poefH, stof, { afronding: pv === 'vierkant' ? 3 : Math.min(B, D, zithoogte - P) / 2.5 });
         break;
       }
       case 'rugleuning':

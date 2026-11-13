@@ -126,6 +126,9 @@ export interface Vormgeving {
    * Eigen vorm van de kuipfauteuil van dit model: velden die de gekozen kuipvorm overschrijven (zie KuipParameters in
    * kuip.ts: dikte, boog, voorBoven, profiel, zitTrommel, zitRand, schaalOp …). Zo is de vorm van een model gegevens in
    * het modelbestand, geen code in de motor. Benadering uit de productfoto's; de prijs leest dit niet.
+   * Ook voor een poef of hocker bij zo'n fauteuil: `hoogte` (bovenkant in cm, in plaats van 2 cm onder de zithoogte),
+   * `zitRand` (een ronde poef met een bolle rand in plaats van een rechte cilinder), `frameDik` en `frameKruis` (het
+   * onderstel met frame).
    */
   kuip?: Record<string, unknown>;
   /**
@@ -287,11 +290,20 @@ export function dragerVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: Ontw
  * (bij een poef de bovenkant van de poef), of de poothoogte als het nergens op ligt. Eén bron voor het vooraanzicht,
  * de 3D en het hoogteveld in de ontwerper.
  */
+/**
+ * Bovenkant van een poef in cm: 2 cm onder de zithoogte, of de eigen hoogte van het model (`vormgeving.kuip.hoogte`,
+ * de hoogte van de productpagina bij een hocker). Eén bron voor de 3D, het vooraanzicht en wat erop ligt.
+ */
+export function poefHoogteVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): number {
+  const eigen = vormgevingVan(ontwerp, e).kuip?.hoogte;
+  return typeof eigen === 'number' && Number.isFinite(eigen) && eigen > 10 ? eigen : hoogtesVan(ontwerp, catalogus).zithoogte - 2;
+}
+
 export function draagHoogteVan(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, e: OntwerpElement): number {
   const h = hoogtesVan(ontwerp, catalogus);
   const d = dragerVan(ontwerp, catalogus, e);
   if (!d) return h.poothoogte;
-  if (catalogus.typen.find((t) => t.code === d.type)?.tekenstijl === 'poef') return h.zithoogte - 2;
+  if (catalogus.typen.find((t) => t.code === d.type)?.tekenstijl === 'poef') return poefHoogteVan(ontwerp, catalogus, d);
   const vaste = gekozenOpties(ontwerp, catalogus, d).get('zitting')?.code === 'vaste_zitting';
   return h.zithoogte - (vaste ? 0 : vormgevingVan(ontwerp, d).kussendikte);
 }

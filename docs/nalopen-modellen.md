@@ -21,8 +21,9 @@ lopen tegen de productfoto's en per model op te lijsten wat afwijkt.
 - **Beslist door Jonas (13/11):** de maten van de site mogen; vaste zitting en onderstel worden echte keuzes in de
   catalogus; het type fauteuil mag tot 160 cm breed. Hij wilde eerst bijsturen: "bij Mabel komt de leuning niet zo ver
   als onze 3D". Dat is rechtgezet.
-- **Nog te doen:** de sofa's, de zetelbedden en de poefs nalopen (de hockers bij Sullivan, Fraser en Mabel staan nog in
-  de oude opbouw); publiceren na goedkeuring.
+- **Ook omgebouwd:** de Sullivan hocker, de Tumble pouf en de Pebble pouf, op de maten van de site.
+- **Nog te doen:** de sofa's en de zetelbedden nalopen; de Fraser en de Mabel hocker (geen foto of maten gevonden);
+  publiceren na goedkeuring.
 
 ## Werkwijze
 
@@ -245,6 +246,26 @@ losse kussens.
 - De tests over de keuze *Vorm fauteuil* hingen aan modellen van de klant (Tumble, Manon, Satie); ze gebruiken nu een
   gewone fauteuil uit de catalogus.
 
+## Hockers en poefs bij de fauteuils
+
+Drie poefs hebben hun maten op de pagina van de fauteuil staan; twee ervan staan ook op een foto.
+
+![Sullivan hocker, Tumble pouf en Pebble pouf: foto, 3D vroeger en nu](afbeeldingen/poefs-na.jpg)
+
+| Model | Site | Opbouw nu | Prijs voor | Prijs na |
+|---|---|---|---|---|
+| **Sullivan hocker** | 62 × 62 × 42 | Dezelfde ronde zitting en hetzelfde onderstel als de fauteuil: zwarte ring op vier schuine poten met een kruis (vroeger 65 × 65 op een draaivoet). | 478 | 493 |
+| **Tumble pouf** | ⌀ 59, hoogte 45 | Rond en bol tot op de vloer, met sterk afgeronde randen (vroeger een rechte cilinder van 50 cm). | 371 | 392 |
+| **Pebble pouf** | 82 × 61 × 42 | Kiezel op de maten van de site (vroeger 120 × 55). | 518 | 455 |
+
+- **Motor:** een poef kan een eigen hoogte krijgen (`vormgeving.kuip.hoogte`, anders 2 cm onder de zithoogte), een bolle
+  rand (`zitRand`) en een frame met kruis. Onder een ronde poef volgen het frame en de poten de cirkel; met een recht
+  frame stonden de poten buiten de ronde zitting. De maat "zit" in het vooraanzicht toont de hoogte van de poef.
+- **Prijsregel uit de foto:** Sullivan hocker poothoogte op maat (22 cm, rekent als *hoog*, +40); het onderstel gaat
+  van draaivoet (+85) naar houten frame (+60).
+- **Niet omgebouwd:** de Fraser hocker en de Mabel hocker (geen foto en geen maten gevonden; niet verzinnen),
+  Stockholm, Kanto en Fez (de pagina met de poefs gaf geen links naar productpagina's).
+
 ## Eerste proef (voor de bijsturing)
 
 Alleen als beeld; de leuning van Mabel liep hier nog tot bijna vooraan.
@@ -290,9 +311,8 @@ krijgt ze een (verzonnen) prijs en verandert de offertetekst van die modellen.
 
 ## Nog te doen
 
-- De sofa's, de zetelbedden en de poefs nalopen. De hockers bij Sullivan, Fraser en Mabel en de Tumble pouf staan nog
-  in de oude opbouw; hun maten staan op de pagina's van de fauteuils (Sullivan hocker 62 × 62 × 42, Tumble pouf ⌀ 59,
-  Pebble pouf 82 × 61 × 42). De pagina met de poefs gaf geen links naar productpagina's.
+- De sofa's en de zetelbedden nalopen. De Fraser hocker, de Mabel hocker en de poefs Stockholm, Kanto en Fez: foto's
+  en maten nog te vinden (de pagina met de poefs gaf geen links naar productpagina's).
 - Een schaal die helt of uitwaaiert (Sullivan, Manon), vierkante poten, dikkere armen dan de schaal (Ross, Sullivan).
 - De maten van de Pebble fauteuil vragen aan de klant (alleen de poef staat op de site).
 - Pas publiceren na goedkeuring.

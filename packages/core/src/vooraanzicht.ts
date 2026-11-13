@@ -5,7 +5,7 @@
  * Coördinaten in cm: x = zoals in het bovenaanzicht, y = 0 is de vloer, hoger is negatief (SVG).
  */
 import type { Materiaal } from './materialen.js';
-import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
+import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, poefHoogteVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
 import { framePoten, kuipOpbouw, kuipParameters, trommelKader } from './kuip.js';
 import { strakProfiel, uitlopendProfiel } from './ruimtelijk.js';
@@ -92,18 +92,23 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         case 'kruisframe': {
           // Onderstel van een fauteuil: een frame onder de zitting op schuine poten, of vier poten met een kruis.
           const kuipFrame = t.tekenstijl === 'kuip' ? kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip) : null;
-          const frame = vorm === 'ringframe' ? Math.min(kuipFrame?.frameDik ?? 4, P / 3) : 0;
+          // Zoals in de 3D: een ronde poef (hocker) heeft een rond grondvlak, met haar eigen `frameDik` en `frameKruis`.
+          const rondePoef = t.tekenstijl === 'poef' && String(te('poefvorm', 'vorm', 'kiezel')) === 'rond';
+          const eigenFrame = vormgevingVan(ontwerp, e).kuip ?? {};
+          const frameDik = kuipFrame ? kuipFrame.frameDik ?? 4 : typeof eigenFrame.frameDik === 'number' ? eigenFrame.frameDik : 4;
+          const frameKruis = kuipFrame ? kuipFrame.frameKruis === true : eigenFrame.frameKruis === true;
+          const frame = vorm === 'ringframe' ? Math.min(frameDik, P / 3) : 0;
           // Onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
           const tk = trommelKader(e.breedte, e.diepte, kuipFrame), wk = lokaalNaarWereld(e, tk.x, tk.y, tk.b, tk.d), mid = wk.x + wk.b / 2;
           if (frame) rect(`${e.id}.ring`, wk.x + 3, -P, wk.b - 6, frame, potKleur);
           // Zelfde poten als in de 3D (framePoten): de bovenkant onder het frame, de voet schuin naar buiten.
-          const fp = framePoten(wk.b, wk.h, P - frame, kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : null);
+          const fp = framePoten(wk.b, wk.h, P - frame, kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : rondePoef ? 2 : null);
           const rv = fp.poten[3]!, uit = rv.lx - wk.b / 2, voet = uit + rv.dx;
           for (const [k, s] of [['l', -1], ['r', 1]] as const) {
             const xb = mid + s * uit, xv = mid + s * voet;
             pad(`${e.id}.poot-${k}`, `M${rond(xb - 2.5)} ${rond(-(P - frame))} H${rond(xb + 2.5)} L${rond(xv + 1.75)} 0 H${rond(xv - 1.75)} Z`, Math.min(xb, xv) - 2.5, -(P - frame), Math.abs(xv - xb) + 5, P - frame, potKleur);
           }
-          if ((vorm === 'kruisframe' || kuipFrame?.frameKruis) && P - frame >= 6) {
+          if ((vorm === 'kruisframe' || frameKruis) && P - frame >= 6) {
             const y = Math.max(2, (P - frame) * 0.42), half = uit + rv.dx * (1 - y / (P - frame));
             rect(`${e.id}.kruis`, mid - half, -(y + 2.4), 2 * half, 2.4, potKleur);
           }
@@ -296,10 +301,11 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           if (losseRug && w.b > 40) rect(`${e.id}.rugkussen`, w.x + 3, top(rugH), w.b - 6, rugH - zithoogte + 2, stof, { afronding: 2 + zacht, ...lijn });
           maxHoogte = Math.max(maxHoogte, rugH);
         }
-        const h = t.tekenstijl === 'poef' ? zithoogte - 2 : zithoogte;
+        const h = t.tekenstijl === 'poef' ? poefHoogteVan(ontwerp, catalogus, e) : zithoogte;
         const dik = t.tekenstijl === 'poef' ? 0 : kussenDik;
         const poefvorm = String(te('poefvorm', 'vorm', 'kiezel'));
-        const poefRond = poefvorm === 'vierkant' ? 3 : poefvorm === 'rond' ? 4 + zacht : Math.min(p.b, h - P) / 2.5;
+        const eigenRand = v.kuip?.zitRand;
+        const poefRond = poefvorm === 'vierkant' ? 3 : poefvorm === 'rond' ? (typeof eigenRand === 'number' ? Math.min(eigenRand, (h - P) / 2) : 4 + zacht) : Math.min(p.b, h - P) / 2.5;
         rect(`${e.id}.basis`, x0, top(h - dik), p.b, h - dik - P, t.tekenstijl === 'poef' ? stof : donker, { afronding: t.tekenstijl === 'poef' ? poefRond : 2, ...lijn });
         if (dik) zitkussens(x0 + 1, p.b - 2, top(h), dik);
         if (t.tekenstijl !== 'poef') houtframe(h + 2);
@@ -437,11 +443,16 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   if (afdrukken.length) {
     const x0 = Math.min(...afdrukken.map((p) => p.x));
     const x1 = Math.max(...afdrukken.map((p) => p.x + p.b));
+    // De maat "zit": de zithoogte van de zetel. Bij een losse poef of hocker met een eigen hoogte (de maat van de
+    // productpagina) is dat haar bovenkant; anders stond er "zit 45" naast een hocker van 42 cm.
+    const dragers = ontwerp.elementen.filter((e) => !typen.get(e.type)?.opzet);
+    const eigenPoefs = dragers.length > 0 && dragers.every((e) => typen.get(e.type)?.tekenstijl === 'poef' && typeof vormgevingVan(ontwerp, e).kuip?.hoogte === 'number');
+    const zitMaat = eigenPoefs ? Math.max(...dragers.map((e) => poefHoogteVan(ontwerp, catalogus, e))) : zithoogte;
     vormen.unshift({ code: 'vloer', x: rond(x0 - 15), y: 0, breedte: rond(x1 - x0 + 30), hoogte: 0.6, vulling: '#9a9a96', lijn: '#9a9a96' });
     maatlijnen.push(
       { code: 'breedte', x1: x0, y1: 0, x2: x1, y2: 0, afstand: -12, tekst: `${rond(x1 - x0)}` },
       { code: 'hoogte', x1: x1, y1: 0, x2: x1, y2: -maxHoogte, afstand: -12, tekst: `${rond(maxHoogte)}` },
-      { code: 'zithoogte', x1: x0, y1: -zithoogte, x2: x0, y2: 0, afstand: -10, tekst: `zit ${zithoogte}` },
+      { code: 'zithoogte', x1: x0, y1: -zitMaat, x2: x0, y2: 0, afstand: -10, tekst: `zit ${zitMaat}` },
     );
   }
   return { titel: 'Vooraanzicht (cm)', eenheid: 'cm', vormen, maatlijnen };
