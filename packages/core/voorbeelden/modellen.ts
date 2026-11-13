@@ -216,10 +216,18 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'verdekt', poothoogte: 'laag', rughoogte: 'hoog', comfort: 'dons' },
     vormgeving: { zachtheid: 10 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'organisch' }]]),
   }, 'F-Pebble'),
-  model('karl', 'Karl', FAUTEUIL, 'Loungestoel met gebogen rug en zitting in bouclé op een houten frame met hoge poten.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', rug: 'vast' },
-    vormgeving: { zachtheid: 6, rugdikte: 12 }, elementen: rij([['fauteuil', 72, 78, { kuipvorm: 'schelp' }]]),
-  }, 'F-Karl'),
+  model('karl', 'Karl', FAUTEUIL, 'Loungestoel zonder armen: een brede, dikke rugschijf in bouclé die boven een ronde zitting zweeft, op een donker houten frame met hoge poten.', {
+    hoofdmateriaal: 'boucle_belize', opties: { poten: 'ringframe', hout: 'eik_zwart', rug: 'vast', zitting: 'vaste_zitting' },
+    // Productpagina: 68 × 72 × 75; geen zithoogte (42 geschat). Uit de foto's (benadering, 13/11): geen armen; een brede,
+    // dikke, ovale rugschijf die een eind boven de zitting zweeft, gedragen door het houten frame; een dikke zitting met
+    // sterk afgeronde randen; vier slanke schuine poten (poothoogte 28 geschat). Wat hier niet kan: op de foto lopen de
+    // achterpoten door tot achter de rug en ligt er een gebogen houten band rond de rugschijf; bij ons twee stijlen.
+    vormgeving: {
+      zachtheid: 6, rughoogte: 75, zithoogte: 42, poothoogte: 28,
+      kuip: { exponent: 3, dikte: 12, boog: 72, zitTrommel: true, zitRand: 6.5, frameDik: 3, profiel: [[0, 1], [0.55, 1], [1, 0.55]] },
+    },
+    elementen: rij([['fauteuil', 68, 72, { kuipvorm: 'schelp' }]]),
+  }, 'F-Karl', MATEN_WEBSITE),
   model('tumble', 'Tumble', FAUTEUIL, 'Ronde kuipfauteuil in bouclé, op een verdekte voet.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', poothoogte: 'laag', comfort: 'dons' },
     vormgeving: { zachtheid: 9 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'omhullend' }]]),

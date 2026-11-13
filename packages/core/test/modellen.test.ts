@@ -251,7 +251,7 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
   // Maten van de productpagina's: breedte × diepte × hoogte en de zithoogte.
   const SITE: Record<string, [number, number, number, number]> = {
     milton: [70, 68, 72, 40], 'mabel-1': [68, 65, 76, 45], 'mabel-2': [150, 65, 76, 45], 'mabel-meridienne': [150, 65, 76, 45],
-    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45], quin: [91, 91, 78, 45], ross: [66, 64, 78, 43], sullivan: [72, 80, 93, 42],
+    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45], quin: [91, 91, 78, 45], ross: [66, 64, 78, 43], sullivan: [72, 80, 93, 42], karl: [68, 72, 75, 42],
   };
   it('de maten van de productpagina: het kader van de 3D en de bovenkant van de zitting', () => {
     for (const [code, [b, d, h, zit]] of Object.entries(SITE)) {
@@ -317,6 +317,21 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(b.find((x) => x.code === 'e1.ring')).toMatchObject({ y: 19, h: 3 });
     expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
     expect(b.some((x) => x.code === 'e1.draaivoet')).toBe(false);
+  });
+  it('Karl: geen armen; een dikke rugschijf zweeft boven de zitting op twee houten stijlen van het frame', () => {
+    const b = scene('karl').blokken, rug = b.find((x) => x.code === 'e1.rug')!, zit = b.find((x) => x.code === 'e1.zitkussen')!;
+    expect(rug.dikte).toBe(12);
+    // Zwevend: een kier tussen zitting en rugschijf, met een ronde onderrand.
+    expect(rug.y).toBeGreaterThan(zit.y + zit.h + 4);
+    expect(rug.afronding).toBe(6);
+    // De schijf loopt niet als armen naar voren: ze blijft in de achterste helft.
+    const pad = rug.pad!.map((q) => q[1]);
+    expect(Math.max(...pad)).toBeLessThan(72 / 2);
+    // Twee stijlen van het frame tot in de rugschijf; ze beginnen in het frame onder de zitting.
+    const stijlen = b.filter((x) => x.code.startsWith('e1.drager-'));
+    expect(stijlen).toHaveLength(2);
+    for (const st of stijlen) { expect(st.y).toBeLessThanOrEqual(zit.y); expect(st.y + st.h).toBeGreaterThan(rug.y); }
+    expect(b.find((x) => x.code === 'e1.ring')).toMatchObject({ y: 25, h: 3 });
   });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;
