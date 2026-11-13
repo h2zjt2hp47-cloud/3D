@@ -251,7 +251,7 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
   // Maten van de productpagina's: breedte × diepte × hoogte en de zithoogte.
   const SITE: Record<string, [number, number, number, number]> = {
     milton: [70, 68, 72, 40], 'mabel-1': [68, 65, 76, 45], 'mabel-2': [150, 65, 76, 45], 'mabel-meridienne': [150, 65, 76, 45],
-    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45], quin: [91, 91, 78, 45], ross: [66, 64, 78, 43],
+    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45], quin: [91, 91, 78, 45], ross: [66, 64, 78, 43], sullivan: [72, 80, 93, 42],
   };
   it('de maten van de productpagina: het kader van de 3D en de bovenkant van de zitting', () => {
     for (const [code, [b, d, h, zit]] of Object.entries(SITE)) {
@@ -308,6 +308,15 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(h[n - 1]).toBe(40);
     expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
     expect(b.some((x) => x.code === 'e1.zitband')).toBe(false);
+  });
+  it('Sullivan: hoge smalle rug die naar lage armen zakt, zwarte ring op vier poten met een kruis', () => {
+    const b = scene('sullivan').blokken, rug = b.find((x) => x.code === 'e1.rug')!, h = rug.hoogtes!, midden = (h.length - 1) / 2;
+    expect(h[midden]).toBe(93);
+    // Armen ±20 cm boven de zitting, halverwege elke kant.
+    for (const i of [Math.round(midden * 0.4), Math.round(midden * 1.6)]) { expect(h[i]!).toBeGreaterThan(58); expect(h[i]!).toBeLessThan(66); }
+    expect(b.find((x) => x.code === 'e1.ring')).toMatchObject({ y: 19, h: 3 });
+    expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
+    expect(b.some((x) => x.code === 'e1.draaivoet')).toBe(false);
   });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;

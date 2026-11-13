@@ -277,10 +277,21 @@ export const zetelModellen: ModelDefinitie[] = [
     },
     elementen: rij([['fauteuil', 68, 65, { kuipvorm: 'afgerond' }]]),
   }, 'F-Mabel1', MATEN_WEBSITE),
-  model('sullivan', 'Sullivan', FAUTEUIL, 'Fauteuil met hoge, afgeronde rug op een draaivoet; bijpassende hocker.', {
-    hoofdmateriaal: 'wol_grijs', opties: { poten: 'draaivoet', rughoogte: 'hoog' },
-    vormgeving: { zachtheid: 6 }, elementen: rij([['fauteuil', 80, 85, { kuipvorm: 'afgerond' }]]),
-  }, 'F-Sullivan'),
+  model('sullivan', 'Sullivan', FAUTEUIL, 'Fauteuil met een hoge rug die naar lage armen zakt, rond een dikke, ronde zitting op een zwart houten frame; bijpassende hocker.', {
+    hoofdmateriaal: 'wol_grijs', opties: { poten: 'ringframe', hout: 'eik_zwart', zitting: 'vaste_zitting' },
+    // Productpagina: 72 × 80 × 93, zithoogte 42. Uit de foto's (benadering, 13/11): een dikke, ronde zitting op een zwarte
+    // houten ring met vier schuine poten en een kruis (poothoogte 22 geschat); de rug is bovenaan smal en rond en loopt
+    // schuin breder uit naar lage, korte armen (±20 cm boven de zitting) die vooraan tot op de zitting zakken. Wat hier
+    // niet kan: op de foto helt de rug achterover (vandaar 80 cm diep); bij ons staat de schaal recht boven het grondvlak.
+    vormgeving: {
+      zachtheid: 6, rughoogte: 93, zithoogte: 42, poothoogte: 22,
+      kuip: {
+        plan: 'rond', dikte: 10, boog: 118, voorBoven: -3, zitTrommel: true, zitRand: 7, frameDik: 3, frameKruis: true,
+        profiel: [[0, 1], [0.2, 1], [0.52, 0.43], [0.8, 0.36], [1, 0]],
+      },
+    },
+    elementen: rij([['fauteuil', 72, 80, { kuipvorm: 'afgerond' }]]),
+  }, 'F-Sullivan', MATEN_WEBSITE),
   model('fraser', 'Fraser', FAUTEUIL, 'Kleine ronde fauteuil: een dikke, vaste zitting met een lage, rechte schaal rond de achterste helft, op vier zwarte poten met een kruis.', {
     hoofdmateriaal: 'chenille_nachtblauw', opties: { poten: 'kruisframe', hout: 'eik_zwart', zitting: 'vaste_zitting' },
     // Productpagina: 61 × 61 × 70, zithoogte 44, zitdiepte 49. Uit de foto's (benadering, 13/11): ronde zitting van ±18 cm
