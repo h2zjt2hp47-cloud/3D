@@ -323,7 +323,20 @@ toeslagen in de catalogus die voor een gewone zetel bedoeld zijn. Dat is een pri
    naar 8 cm?
 3. De vaste rug van Zora zou 43 cm dik moeten zijn voor een zitdiepte van 55; de rugdikte stopt bij 30 cm.
 
-De modelgegevens van het voorstel staan klaar (buiten de repo), zodat het na een akkoord één stap is.
+**De gegevens van het voorstel** (om het na een akkoord in één stap door te voeren), per model in `vormgeving` en in de
+elementen:
+
+| Model | zithoogte | karkashoogte | rughoogte (met kussen) | armhoogte | rugdikte | rugkussendikte | arm × diepte | zit × diepte |
+|---|---|---|---|---|---|---|---|---|
+| Ziggy | 50 | 76 | 82 | 76 | 20 | 23 | 12 × 98 | 160 × 98 |
+| Zora (vaste rug) | 47 | n.v.t. | 74 | 74 | 30 | n.v.t. | 12 × 98 | 170 × 98 |
+| Daizy Classic | 47 | 74 | 80 | 60 | 20 | 23 | 14 × 98 | 170 × 98 |
+| Daizy Slim | 47 | 74 | 80 | 60 | 20 | 23 | 12 × 98 | 160 × 98 |
+| Phoenix | 46 | ongewijzigd | ongewijzigd | ongewijzigd | ongewijzigd | n.v.t. | ongewijzigd | ongewijzigd |
+
+Geschat uit de tekening, niet afgelezen: het rugkussen komt ±6 cm boven het karkas (rughoogte = karkas + 6), en de
+verdeling van de 43 cm achter de zitting over karkas (20) en rugkussen (23). De armen staan op 12 cm waar de tekening
+10 of 8 geeft (grens van het type). De breedte staat op geen enkele tekening en blijft zoals ze was.
 
 ## Eerste proef (voor de bijsturing)
 
