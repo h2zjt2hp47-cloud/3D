@@ -108,6 +108,9 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 18. **Tests over een keuze hangen niet aan een model van de klant.** De tests over *Vorm fauteuil* gebruikten Tumble,
     Manon en Satie; toen die hun eigen opbouw kregen, braken ze om de verkeerde reden. Ze gebruiken nu een gewone
     fauteuil uit de catalogus.
+19. **Lees de tekst van de productpagina, niet alleen de maten.** Quin kreeg drie kussens (geteld op de foto); de pagina
+    zegt "4 kussens inbegrepen". Ook de zitdiepte stond erbij en was bij de tweede ronde niet nagerekend: bij zes
+    modellen bleek de zitting 3 tot 13 cm te diep.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 

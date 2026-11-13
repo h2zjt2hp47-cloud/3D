@@ -236,7 +236,9 @@ export const zetelModellen: ModelDefinitie[] = [
     // zichtbare poten.
     vormgeving: {
       zachtheid: 9, rughoogte: 75, zithoogte: 45, poothoogte: 2,
-      kuip: { dikte: 17, boog: 95, zitTrommel: true, zitRand: 11, schaalOp: true, profiel: [[0, 1], [1, 1]] },
+      // De rug is 24 cm dik: de site geeft een zitdiepte van 59 op 86 cm diepte (27 cm voor de rug, die op de foto ook
+      // wat achter de zitting uitsteekt).
+      kuip: { dikte: 24, boog: 95, zitTrommel: true, zitRand: 11, schaalOp: true, profiel: [[0, 1], [1, 1]] },
     },
     elementen: rij([['fauteuil', 78, 86, { kuipvorm: 'omhullend' }]]),
   }, 'F-Tumble', MATEN_WEBSITE),
@@ -262,16 +264,17 @@ export const zetelModellen: ModelDefinitie[] = [
     vormgeving: { zithoogte: 40, rughoogte: 71, armhoogte: 60, rugdikte: 25, kussendikte: 16, zachtheid: 4, rugvorm: 'hellend' },
     elementen: rij([['arm', 13, 80, strak], ['zit', 60, 80], ['arm', 13, 80, strak]]),
   }, 'F-Amusette', MATEN_WEBSITE),
-  model('quin', 'Quin', FAUTEUIL, 'Grote ronde draaifauteuil: een trommel op een lage ronde voet, een dunne schaal rond de achterste helft en drie losse rugkussens.', {
+  model('quin', 'Quin', FAUTEUIL, 'Grote ronde draaifauteuil: een trommel op een lage ronde voet, een dunne schaal rond de achterste helft en vier losse rugkussens.', {
     hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons', zitting: 'vaste_zitting' },
     // Productpagina: 91 × 91 × 78, zithoogte 45. Uit de foto's (benadering, 13/11): een grote ronde trommel op een lage,
     // donkere ronde voet (4 cm geschat); een dunne schaal, rondom even hoog, die er een paar cm rond uitsteekt, rond de
-    // achterste helft; drie gewone vierkante kussens (±43 cm) tegen de schaal, die erboven uitkomen.
+    // achterste helft; vier gewone vierkante kussens (±43 cm) tegen de schaal, die erboven uitkomen (de productpagina:
+    // "4 kussens inbegrepen"; eerst drie gezet op de foto's, waar het vierde achter de andere staat).
     // Onzeker: de hoogte van de site (78) is hier de rand van de schaal; de kussens komen erboven (88). Op de foto van opzij
     // ligt de rand bij een zithoogte van 45 op ±71 cm en de kussens op ±84 cm: 78 past bij geen van beide. Na te vragen.
     vormgeving: {
       zachtheid: 8, rughoogte: 78, zithoogte: 45, poothoogte: 4,
-      kuip: { dikte: 6, boog: 93, zitTrommel: true, zitRand: 4, zitIn: 4, profiel: [[0, 1], [1, 1]], kussens: 3, kussenMaat: 43 },
+      kuip: { dikte: 6, boog: 93, zitTrommel: true, zitRand: 4, zitIn: 4, profiel: [[0, 1], [1, 1]], kussens: 4, kussenMaat: 43 },
     },
     elementen: rij([['fauteuil', 91, 91, { kuipvorm: 'trommel' }]]),
   }, 'F-Quin', MATEN_WEBSITE),

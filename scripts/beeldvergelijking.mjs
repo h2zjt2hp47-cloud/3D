@@ -71,7 +71,7 @@ const ZETELBEELDEN = [
   { naam: 'fraser-schuin', model: 'Fraser', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Trommel tot op de vloer, de schaal steekt errond uit, één los rugkussen tegen de rand (Satie).
   { naam: 'satie-schuin', model: 'Satie', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
-  // Drie losse kussens tegen de schaal: één achteraan, twee schuin ervoor (Quin).
+  // Vier losse kussens tegen de schaal: twee achteraan, twee schuin ervoor (Quin).
   { naam: 'quin-schuin', model: 'Quin', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Zwevende rugschijf boven een vaste zitting, op een houten frame (Karl).
   { naam: 'karl-schuin', model: 'Karl', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },

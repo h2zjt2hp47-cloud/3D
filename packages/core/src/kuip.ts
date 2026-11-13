@@ -309,7 +309,9 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
     // zijkanten toe. Ze staan op dezelfde lijn binnen de schaal, de buitenste een eind verder rond (dus meer naar voren),
     // en kijken schuin naar voren in plaats van recht naar het midden: zo blijven het losse kussens die elkaar wat
     // overlappen, geen doorlopende band langs de schaal.
-    const stapGraden = k.kussens > 1 ? Math.min(62, ((maat * 0.62) / ((a + b) / 2)) * (180 / Math.PI)) : 0;
+    // De buitenste kussens staan hoogstens 62° van het midden achteraan (anders vallen ze voorbij de schaal): bij drie
+    // kussens 62° per stap, bij vier ±21° en ±62° (twee achteraan, twee schuin ervoor), bij vijf 31° per stap.
+    const stapGraden = k.kussens > 1 ? Math.min(62, 124 / (k.kussens - 1), ((maat * 0.62) / ((a + b) / 2)) * (180 / Math.PI)) : 0;
     for (let i = 0; i < k.kussens; i++) {
       const graden = (i - (k.kussens - 1) / 2) * stapGraden, [px, py] = superellips(cx, cy, a, b, n, -90 + graden, -90 + graden, 1)[0]!;
       rugkussens.push({ lx: rond1(px - maat / 2), ly: rond1(py - dik / 2), lb: maat, ld: dik, y: zitBoven, h: hoog, draai: rond1(graden * 0.65), vierkant: true });

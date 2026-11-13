@@ -290,17 +290,18 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     // Het kussen komt boven de schaal uit, zoals op de foto.
     expect(kussens[0]!.y + kussens[0]!.h).toBeGreaterThan(70);
   });
-  it('Quin: grote trommel op een lage ronde voet, drie losse kussens: één achteraan, twee schuin ervoor', () => {
+  it('Quin: grote trommel op een lage ronde voet, vier losse kussens (zoals op de productpagina): twee achteraan, twee schuin ervoor', () => {
     const b = scene('quin').blokken, kussens = b.filter((x) => x.code.startsWith('e1.rugkussen'));
     expect(b.find((x) => x.code === 'e1.draaivoet')).toBeDefined();
     expect(b.find((x) => x.code === 'e1.zitkussen')!.y).toBe(4);
-    expect(kussens).toHaveLength(3);
-    const [links, midden, rechts] = kussens as [typeof kussens[0], typeof kussens[0], typeof kussens[0]];
-    // Het middelste recht tegen de schaal; de andere twee gedraaid (elk naar zijn kant) en verder naar voren.
-    expect(midden.draai ?? 0).toBe(0);
+    expect(kussens).toHaveLength(4);
+    const [links, achterL, achterR, rechts] = kussens as [typeof kussens[0], typeof kussens[0], typeof kussens[0], typeof kussens[0]];
+    // De twee middelste bijna recht tegen de schaal; de buitenste twee meer gedraaid (elk naar zijn kant) en verder naar voren.
+    expect(Math.abs(achterL.draai!)).toBeLessThan(16);
+    expect(achterR.draai!).toBeCloseTo(-achterL.draai!, 1);
     expect(links.draai!).toBeLessThan(-25);
     expect(rechts.draai!).toBeGreaterThan(25);
-    expect(links.z + links.d / 2).toBeGreaterThan(midden.z + midden.d / 2 + 8);
+    expect(links.z + links.d / 2).toBeGreaterThan(achterL.z + achterL.d / 2 + 6);
     expect(rechts.z + rechts.d / 2).toBeCloseTo(links.z + links.d / 2, 0);
     // Een los kussen is een lens: een dunne rand met een bolling tot de volle dikte.
     for (const k of kussens) { expect(k.d).toBe(5); expect(k.bol).toBe(4); expect(k.b).toBe(43); }
@@ -348,7 +349,7 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(zit.afronding).toBeGreaterThanOrEqual(10);
     // De rug begint waar de bolle rand van de zitting begint (45 − 11), niet op de vloer.
     expect(rug.y).toBe(34);
-    expect(rug.dikte).toBe(17);
+    expect(rug.dikte).toBe(24);
     expect(Math.max(...rug.hoogtes!)).toBe(75);
     expect(Math.min(...rug.hoogtes!)).toBe(75);
   });

@@ -164,11 +164,11 @@ foto / vroeger / nu naast elkaar, boven- en vooraanzicht bekeken, prijs regel pe
 | **Mabel méridienne** | 150 × 65 × 76, zit 45 | Eén kuip: de leuning draait om het linkeruiteinde en loopt langs de rug schuin af; vroeger arm + chaise van 184 × 80. | 1.938 | 1.401 | [beeld](afbeeldingen/fauteuils-meridienne-na.jpg) |
 | **Fraser** | 61 × 61 × 70, zit 44 | Ronde zitting in twee lagen; lage rechte schaal die errond uitsteekt; vier schuine zwarte poten met een kruis. | 842 | 835 | [beeld](afbeeldingen/fauteuils-fraser-na.jpg) |
 | **Satie** | ⌀ 70, hoogte 70 | Trommel tot op de vloer; dunne schaal met bies die errond uitsteekt; **één** los rugkussen (Jonas: "Satie heeft maar 1 kussen"). | 1.018 | 959 | [beeld](afbeeldingen/fauteuils-satie-na.jpg) |
-| **Quin** | 91 × 91 × 78, zit 45 | Grote trommel op een lage ronde voet; dunne schaal; drie losse kussens. | 1.341 | 1.393 | [beeld](afbeeldingen/fauteuils-quin-na.jpg) |
+| **Quin** | 91 × 91 × 78, zit 45 | Grote trommel op een lage ronde voet; dunne schaal; vier losse kussens (de productpagina: "4 kussens inbegrepen"; eerst drie gezet op de foto's). | 1.341 | 1.393 | [beeld](afbeeldingen/fauteuils-quin-na.jpg) |
 | **Ross** | 66 × 64 × 78, zit 43 | Dunne schaal met bies: brede hoge rug, steile schouders, lage armen tot op de zitting; houten poten met kruis. | 768 | 806 | [beeld](afbeeldingen/fauteuils-ross-na.jpg) |
 | **Sullivan** | 72 × 80 × 93, zit 42 | Hoge smalle rug die naar lage armen zakt; ronde zitting op een zwarte ring met vier poten en een kruis (vroeger een draaivoet). | 998 | 954 | [beeld](afbeeldingen/fauteuils-sullivan-na.jpg) |
 | **Karl** | 68 × 72 × 75 | Geen armen: een dikke rugschijf zweeft boven een ronde zitting, op een donker houten frame. | 990 | 970 | [beeld](afbeeldingen/fauteuils-karl-na.jpg) |
-| **Tumble** | 78 × 86 × 75, zit 45 | Eén bolle zitting tot op de vloer met een dikke rug erop. | 1.084 | 1.081 | [beeld](afbeeldingen/fauteuils-tumble-na.jpg) |
+| **Tumble** | 78 × 86 × 75, zit 45 | Eén bolle zitting tot op de vloer met een dikke rug (24 cm) erop. | 1.084 | 1.081 | [beeld](afbeeldingen/fauteuils-tumble-na.jpg) |
 | **Manon** | 75 × 70 × 75, zit 42 | Dunne schaal met bies die van de rug naar voren afloopt, tot op de vloer, rond een trommel. | 1.050 | 966 | [beeld](afbeeldingen/fauteuils-manon-na.jpg) |
 | **Amusette fauteuil** | 86 × 80 × 71, zit 40 | Geen kuip: arm + zit + arm zoals de Amusette sofa, op de maten van de site. | 1.520 | 1.473 | [beeld](afbeeldingen/fauteuils-amusette-na.jpg) |
 
@@ -196,7 +196,27 @@ losse kussens.
 - **Manon:** op de foto staat de schaal bovenaan wat naar buiten; zelfde beperking.
 - **Karl:** op de foto lopen de achterpoten door tot achter de rug, met een gebogen houten band rond de rugschijf; bij
   ons dragen twee stijlen de schijf.
-- **Quin:** de drie kussens staan netter gerangschikt dan op de foto, waar ze los door elkaar liggen.
+- **Quin:** de vier kussens staan netter gerangschikt dan op de foto, waar ze los door elkaar liggen.
+- **Zitdiepte (nagerekend tegen de site):** bij zes modellen is de zitting bij ons dieper dan op de productpagina,
+  omdat onze schaal overal even dik is en recht staat. De echte rug is onderaan dikker dan aan de rand, of helt
+  achterover.
+
+  | Model | Diepte | Zitdiepte site | Dus voor de rug | Schaal bij ons | Zitdiepte bij ons | Verschil |
+  |---|---|---|---|---|---|---|
+  | Milton | 68 | 60 | 8 | 8 | 60 | 0 |
+  | Amusette fauteuil | 80 | 55 | 25 | 25 | 55 | 0 |
+  | Fraser | 61 | 49 | 12 | 9 | 52 | +3 |
+  | Ross | 64 | 53 | 11 | 6 | 58 | +5 |
+  | Mabel (1-zit, 2-zit, méridienne) | 65 | 49 | 16 | 7 | 58 | +9 |
+  | Sullivan | 80 | 60 | 20 | 10 | 70 | +10 |
+  | Tumble | 86 | 59 | 27 | 24 | 62 | +3 |
+  | Manon | 70 | 52 | 18 | 6 | 64 | +12 |
+  | Quin | 91 | 50 | 41 (schaal en kussens) | 6 + kussens | ±63 | +13 |
+
+  Karl en Satie hebben geen zitdiepte op de site. **Voorstel (nog niet gebouwd, te beslissen door Jonas):** een schaal
+  die aan de rand dun is en ter hoogte van de zitting zo dik als de site aangeeft. Dan klopt de zitdiepte, blijft de
+  rand zoals op de foto, en krijgt de rug vanzelf de helling die Sullivan en Manon nu missen. Het raakt het uitzicht
+  van de goedgekeurde Mabels (de binnenkant van de leuning wordt schuin).
 - **Ross en Sullivan:** de armen zijn op de foto dikker en boller dan de schaal; bij ons is de schaal overal even dik.
 - **Poten:** op de foto vierkant en naar onderen smaller; bij ons rond. De houtkleur van Ross (cognac) bestaat niet als
   keuze; hij staat op eik naturel.
@@ -220,6 +240,8 @@ losse kussens.
   kussen bovenop de voorste.
 - De rug van Tumble hing als een losse rol boven de bolle rand van de zitting. Een schaal die op een trommel staat,
   begint nu waar die rand begint.
+- Quin had drie kussens (geteld op de foto's); de productpagina zegt vier. De tekst van de pagina's was bij de tweede
+  ronde niet opnieuw gelezen, alleen de maten. Daarna alle pagina's nagelezen: de zitdieptes hierboven komen daaruit.
 - De tests over de keuze *Vorm fauteuil* hingen aan modellen van de klant (Tumble, Manon, Satie); ze gebruiken nu een
   gewone fauteuil uit de catalogus.
 
