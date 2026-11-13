@@ -36,7 +36,7 @@ export interface Blok {
   h: number;
   d: number;
   kleur: string;
-  /** Afronding van de randen (cm), voor kussens en armen. */
+  /** Afronding van de randen (cm), voor kussens en armen. Bij een kuipwand: de afronding van de onderrand (zwevende schaal). */
   afronding?: number;
   /** Bolling van een kussen in cm (midden van het dunste vlak); leeg = standaard (max. 2,2 cm). */
   bol?: number;
@@ -439,7 +439,26 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           const opb = kuipOpbouw(B, D, { P, zithoogte, rugH, kussenDik }, kp, losseRug);
           // De onderbouw net binnen de wand (0,8 cm): anders vallen de buitenkant van de wand en de zijkant van de onderbouw
           // samen, en dat gaf vlekken en strepen op de onderbouw (z-fighting). Bij een schelp staat de wand niet op de onderbouw.
-          const krimp = kp.zwevend ? 0 : 0.8;
+          // De buitenkant van de wand ligt niet overal op de omtrek: bij een afgerond grondvlak tot ±1 cm erbinnen in de
+          // hoeken (de middenlijn is een kleiner grondvlak, geen evenwijdige lijn). Daar stak de onderbouw een haar door de
+          // wand: een dun streepje naast het wanduiteinde (Ross, 13/11). Daarom krimpt de onderbouw zoveel extra als de
+          // omtrek op zijn verst buiten de wand ligt, gemeten onder de wand zelf (niet voorbij zijn uiteinden).
+          // Niet bij de kiezel (Pebble): daar is de zitting de vorm zelf en de schaal een eigen zachte vorm (goedgekeurd op 5/11).
+          let buitenWand = 0;
+          if (!kp.zwevend && !kp.organisch) {
+            const wp = opb.wand.pad, half = opb.wand.dikte / 2;
+            for (const [x, y] of opb.plan) {
+              let beste = Infinity, binnenPad = false;
+              for (let i = 0; i < wp.length - 1; i++) {
+                const ax = wp[i]![0], ay = wp[i]![1], ux = wp[i + 1]![0] - ax, uy = wp[i + 1]![1] - ay;
+                const f = ((x - ax) * ux + (y - ay) * uy) / (ux * ux + uy * uy || 1e-9), g = Math.max(0, Math.min(1, f));
+                const d = Math.hypot(x - ax - g * ux, y - ay - g * uy);
+                if (d < beste) { beste = d; binnenPad = !((i === 0 && f < 0) || (i === wp.length - 2 && f > 1)); }
+              }
+              if (binnenPad) buitenWand = Math.max(buitenWand, beste - half);
+            }
+          }
+          const krimp = kp.zwevend ? 0 : r2(0.8 + buitenWand);
           const basisPlan = opb.plan.map(([x, y]) => [B / 2 + (x - B / 2) * (1 - krimp / (B / 2)), D / 2 + (y - D / 2) * (1 - krimp / (D / 2))] as Punt);
           // Organisch (Pebble): de zitting is één zachte kiezel in de stof (geen donkere onderbouw met een los kussen erop) en
           // de schaal een eigen zachte vorm met ronde uiteinden (glad, zoals de doorlopende zetel), in plaats van een wand die
@@ -459,6 +478,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
             x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),
             y: r2(wandOnder), h: r2(Math.max(...opb.wand.hoogtes) - wandOnder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
+            // Schelp: de schaal zweeft boven de zitting, dus je ziet haar onderrand: ook die rond (zoals op de foto van Karl).
+            ...(kp.zwevend ? { afronding: r2(opb.wand.dikte / 2) } : {}),
             ...(kiezel ? { glad: true } : {}),
           });
           if (kp.zwevend) {

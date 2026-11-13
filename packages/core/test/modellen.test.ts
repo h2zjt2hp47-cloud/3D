@@ -185,6 +185,37 @@ describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meube
   });
 });
 
+describe('kuipfauteuils: onderbouw binnen de wand, ronde onderrand bij een zwevende schaal (13/11)', () => {
+  const blokken = (code: string) => bouw3D(structuredClone(zetelModellen.find((m) => m.code === code)!.ontwerp), zetelCatalogus, standaardMaterialen).blokken;
+  /** Kleinste speling van de onderbouw binnen de buitenkant van de wand, gemeten onder de wand zelf (niet voorbij zijn uiteinden). */
+  const speling = (code: string) => {
+    const b = blokken(code), rug = b.find((x) => x.code === 'e1.rug')!, basis = b.find((x) => x.code === 'e1.basis')!;
+    const wp = rug.pad!, half = rug.dikte! / 2;
+    let kleinst = Infinity;
+    for (const [x, z] of basis.omtrek!) {
+      let beste = Infinity, onderWand = false;
+      for (let i = 0; i < wp.length - 1; i++) {
+        const ax = wp[i]![0], az = wp[i]![1], ux = wp[i + 1]![0] - ax, uz = wp[i + 1]![1] - az;
+        const f = ((x - ax) * ux + (z - az) * uz) / (ux * ux + uz * uz), g = Math.max(0, Math.min(1, f));
+        const d = Math.hypot(x - ax - g * ux, z - az - g * uz);
+        if (d < beste) { beste = d; onderWand = !((i === 0 && f < 0) || (i === wp.length - 2 && f > 1)); }
+      }
+      if (onderWand) kleinst = Math.min(kleinst, half - beste);
+    }
+    return kleinst;
+  };
+  it('de onderbouw steekt nergens door de wand (vroeger een dun streepje naast het wanduiteinde van Ross)', () => {
+    // Bij een afgerond grondvlak ligt de buitenkant van de wand in de hoeken tot ±1 cm binnen de omtrek.
+    for (const code of ['ross', 'mabel-1', 'sullivan', 'tumble', 'quin', 'satie', 'fraser', 'milton', 'manon'])
+      expect(speling(code), code).toBeGreaterThan(0.7);
+  });
+  it('alleen de zwevende schaal (Karl) krijgt een ronde onderrand; een wand op de onderbouw niet', () => {
+    const karl = blokken('karl').find((x) => x.code === 'e1.rug')!;
+    expect(karl.afronding).toBeCloseTo(karl.dikte! / 2, 2);
+    for (const code of ['ross', 'tumble', 'quin', 'pebble']) expect(blokken(code).find((x) => x.code === 'e1.rug')!.afronding, code).toBeUndefined();
+  });
+});
+
 describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse lagen', () => {
   const blokken = (code: string) => bouw3D(structuredClone(zetelModellen.find((m) => m.code === code)!.ontwerp), zetelCatalogus, standaardMaterialen).blokken;
   it('zitting is één zacht blok in de stof tot op zithoogte, zonder los zitkussen; de schaal is glad en staat op de vloer', () => {

@@ -983,7 +983,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    * Kuipwand: een gestoffeerde wand langs een gebogen middenlijn (`pad`, wereld x/z), met per punt een eigen
    * bovenhoogte, een volledig afgeronde bovenrand en afgeronde uiteinden. Vorm rond (ox, oy, oz).
    */
-  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0) {
+  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0, onderRond = 0) {
     const w = dikte / 2;
     const n = pad.length;
     // Richting en zijwaartse normaal per punt.
@@ -992,25 +992,41 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const tx = c[0] - a[0], tz = c[1] - a[1], l = Math.hypot(tx, tz) || 1;
       return { tx: tx / l, tz: tz / l, nx: tz / l, nz: -tx / l };
     });
-    // Profiel (dwarsdoorsnede): onderkant, zijkant op, halve cirkel over de top, zijkant neer.
+    // Profiel (dwarsdoorsnede): onderkant, zijkant op, halve cirkel over de top, zijkant neer. Met `onderRond` (een schaal
+    // die boven de zitting zweeft, waar je de onderrand ziet) zijn ook de twee onderhoeken afgerond, tot die straal.
     const profiel = (hoog: number, breed: number): [number, number][] => {
       const r = Math.min(breed, Math.max(0.5, hoog - 0.5));
-      const pts: [number, number][] = [[-breed, 0], [-breed, Math.max(0, hoog - r)]];
+      const rb = Math.max(0, Math.min(onderRond, breed, hoog - r));
+      const pts: [number, number][] = [];
+      if (onderRond > 0) for (let k = 0; k < 4; k++) { const a = (k / 4) * (Math.PI / 2); pts.push([-breed + rb - rb * Math.sin(a), rb - rb * Math.cos(a)]); }
+      else pts.push([-breed, 0]);
+      pts.push([-breed, Math.max(rb, hoog - r)]);
       for (let k = 1; k < 12; k++) { const a = Math.PI - (k / 12) * Math.PI; pts.push([Math.cos(a) * breed, hoog - r + Math.sin(a) * r]); }
-      pts.push([breed, Math.max(0, hoog - r)], [breed, 0]);
+      pts.push([breed, Math.max(rb, hoog - r)]);
+      if (onderRond > 0) for (let k = 3; k >= 0; k--) { const a = (k / 4) * (Math.PI / 2); pts.push([breed - rb + rb * Math.sin(a), rb - rb * Math.cos(a)]); }
+      else pts.push([breed, 0]);
       return pts;
     };
-    // Ringen langs de middenlijn, met afgeronde uiteinden (de breedte loopt als een kwartcirkel af).
-    type Ring = { x: number; z: number; nx: number; nz: number; hoog: number; breed: number };
+    // Ringen langs de middenlijn, met een ronde kop aan elk uiteinde: in het grondvlak half rond, en bovenaan loopt de
+    // kop als een kwart bol naar beneden (zoals het einde van een gestoffeerde arm, en zoals de zachte vorm van dezelfde
+    // wand). Vroeger bleef de hoogte tot aan de punt gelijk: dat gaf een dun, scherp mes (Ross, analyse van 13/11).
+    type Ring = { x: number; z: number; nx: number; nz: number; hoog: number; breed: number; kop?: boolean; voet?: number };
     const ringen: Ring[] = [];
+    const KOP = 8;
     const eind = (i: number, richting: number) => {
       const q = pad[i]!, r = zij[i]!, hoog = hoogtes[i]! - onder;
       const stap = richting < 0 ? [ -r.tx, -r.tz ] : [ r.tx, r.tz ];
+      // Straal van de ronding bovenaan (zoals in het profiel van de volle wand): een lage wand rondt minder diep af.
+      const rTop = Math.min(w, Math.max(0.5, hoog - 0.5));
+      // Met een ronde onderrand komt de kop ook onderaan omhoog (een zwevende schaal eindigt rondom rond).
+      const rVoet = Math.max(0, Math.min(onderRond, w, hoog - rTop));
       const reeks: Ring[] = [];
-      for (let k = 5; k >= 1; k--) {
-        const f = k / 5, a = (f * Math.PI) / 2;
-        // Uiteinde: in het grondvlak half rond, de hoogte blijft (geen knik in de arm).
-        reeks.push({ x: q[0] + stap[0]! * w * Math.sin(a), z: q[1] + stap[1]! * w * Math.sin(a), nx: r.nx, nz: r.nz, hoog: Math.max(0.6, hoog), breed: Math.max(0.05, w * Math.cos(a)) });
+      for (let k = KOP; k >= 1; k--) {
+        const a = ((k / KOP) * Math.PI) / 2;
+        reeks.push({
+          x: q[0] + stap[0]! * w * Math.sin(a), z: q[1] + stap[1]! * w * Math.sin(a), nx: r.nx, nz: r.nz,
+          hoog: Math.max(0.6, hoog - rTop * (1 - Math.cos(a))), breed: Math.max(0.05, w * Math.cos(a)), kop: true, voet: rVoet * (1 - Math.cos(a)),
+        });
       }
       return reeks;
     };
@@ -1022,8 +1038,10 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const pos: number[] = [], uvs: number[] = [];
     let langs = 0;
     ringen.forEach((r, i) => {
-      if (i > 0) langs += Math.hypot(r.x - ringen[i - 1]!.x, r.z - ringen[i - 1]!.z);
-      const pr = profiel(r.hoog, r.breed);
+      // Langs de wand in cm; rond een kop de booglengte (de afstand tussen de ringen is daar korter dan de stof).
+      if (i > 0) langs += r.kop || ringen[i - 1]!.kop ? (w * Math.PI) / 2 / KOP : Math.hypot(r.x - ringen[i - 1]!.x, r.z - ringen[i - 1]!.z);
+      const voet = Math.min(r.voet ?? 0, r.hoog - 0.6);
+      const pr = profiel(r.hoog - voet, r.breed).map(([u, y]) => [u, y + voet] as [number, number]);
       pr.push(pr[0]!);
       // Textuurmaat rond het profiel van de volle wand (ook in de afgeronde uiteinden), anders drukt ze samen tot strepen.
       const ref = profiel(r.hoog, w);
@@ -1178,7 +1196,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (b.vorm === 'kuipwand' && b.pad && b.hoogtes) {
       const cxo = b.x + b.b / 2, czo = b.z + b.d / 2;
       const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
-      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm);
+      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, b.afronding ?? 0);
       const base = materiaal(b);
       const sleutel = `vc:${base.uuid}`;
       let mat = materialen.get(sleutel);
