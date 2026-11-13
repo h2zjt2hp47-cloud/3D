@@ -44,8 +44,13 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `pebble-schuin` | kuipfauteuil met verdekte voet |
 | `stockholm-schuin` | ronde poef |
 | `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
+| `pebble-naad` (close-up) | de naad waar de schaal in de zitting duikt |
+| `ross-kop` (close-up) | het wanduiteinde van een kuipfauteuil en de aansluiting met de onderbouw |
+| `zora-arm` (close-up) | de arm met ronde bovenkant |
 
-Allemaal bij kwaliteit *Mooi*, venster 1400 × 950.
+Allemaal bij kwaliteit *Mooi*, venster 1400 × 950. Een close-up is een stuk uit de foto op hoge resolutie (2400 px
+breed), opgegeven als `uitsnede` in het script. Ze zijn er sinds 13/11: de gebreken op die plekken waren op het hele
+beeld te klein om op te vallen (zie `docs/analyse-ronde-vormen.md`).
 
 ## Wat het niet doet
 

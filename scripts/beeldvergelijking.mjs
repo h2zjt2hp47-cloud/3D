@@ -50,6 +50,10 @@ const alleen = alleenIdx >= 0 ? args[alleenIdx + 1].split(',') : null;
  * Gekozen om de onderdelen te dekken die al eens stuk gingen: doorlopende zetel (Doha, Montego), hoeksofa met chaise
  * (Kotor), kuipfauteuil (Pebble), ronde poef (Stockholm), strakke arm (Husk), slagschaduw (Doha van boven, daglicht),
  * decor met raam en glas (Kotor in de woonkamer), en de woning en het raam in de bouwdemo.
+ *
+ * Met `uitsnede` [x0, y0, x1, y1] (delen van het beeld) is het een close-up: een stuk uit de foto op hoge resolutie
+ * (`foto()`, 2400 px breed). Voor plekken die op het hele beeld te klein zijn om op te vallen (analyse van 13/11): de
+ * naad tussen schaal en zitting van Pebble, het wanduiteinde van een kuipfauteuil (Ross), de arm van Zora.
  */
 const ZETELBEELDEN = [
   { naam: 'doha-schuin', model: 'Doha', familie: "Sofa's", standpunt: 'schuin', decor: 'studio', licht: 'studio' },
@@ -60,6 +64,9 @@ const ZETELBEELDEN = [
   { naam: 'husk-schuin', model: 'Husk', familie: "Sofa's", standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'pebble-schuin', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'stockholm-schuin', model: 'Stockholm pouf', familie: 'Poufs', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'pebble-naad', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.42, 0.17, 0.57, 0.45] },
+  { naam: 'ross-kop', model: 'Ross', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.4, 0.34, 0.6, 0.86] },
+  { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.08, 0.28, 0.36, 0.88] },
 ];
 const BOUWBEELDEN = [{ naam: 'bouw-woning' }, { naam: 'bouw-raam' }];
 
@@ -131,7 +138,9 @@ async function maakBeelden() {
         s.dispatchEvent(new Event('change', { bubbles: true }));
       }, b.zon ?? null);
       await p.click(`[data-standpunt="${b.standpunt}"]`);
-      beelden.set(b.naam, await wachtTotStil(p, '#o-3d canvas'));
+      const stil = await wachtTotStil(p, '#o-3d canvas');
+      // Close-up: een stuk uit de foto op hoge resolutie.
+      beelden.set(b.naam, b.uitsnede ? uitsnede(png(await p.evaluate(() => window.__zetel3d.foto())), b.uitsnede) : png(stil));
       console.log('klaar');
     }
     await p.close();
@@ -146,14 +155,14 @@ async function maakBeelden() {
       process.stdout.write('  bouw-woning … ');
       await p.click('.nav [data-weergave="plan"]');
       await p.click('[data-pl-weergave="3d"]');
-      beelden.set('bouw-woning', await wachtTotStil(p, '#pl-3d canvas'));
+      beelden.set('bouw-woning', png(await wachtTotStil(p, '#pl-3d canvas')));
       console.log('klaar');
     }
     if (bouw.some((b) => b.naam === 'bouw-raam')) {
       process.stdout.write('  bouw-raam … ');
       await p.click('.nav [data-weergave="positie"]');
       await p.click('[data-p-weergave="3d"]');
-      beelden.set('bouw-raam', await wachtTotStil(p, '#p-3d canvas'));
+      beelden.set('bouw-raam', png(await wachtTotStil(p, '#p-3d canvas')));
       console.log('klaar');
     }
     await p.close();
@@ -162,7 +171,16 @@ async function maakBeelden() {
   return { beelden, fouten };
 }
 
-const png = (dataUrl) => PNG.sync.read(Buffer.from(dataUrl.split(',')[1], 'base64'));
+function png(dataUrl) { return PNG.sync.read(Buffer.from(dataUrl.split(',')[1], 'base64')); }
+
+/** Het stuk [x0, y0, x1, y1] (delen van breedte en hoogte) uit een beeld. */
+function uitsnede(beeld, [x0, y0, x1, y1]) {
+  const x = Math.round(x0 * beeld.width), y = Math.round(y0 * beeld.height);
+  const w = Math.round(x1 * beeld.width) - x, h = Math.round(y1 * beeld.height) - y;
+  const uit = new PNG({ width: w, height: h });
+  PNG.bitblt(beeld, uit, x, y, w, h, 0, 0);
+  return uit;
+}
 
 /** Strook referentie | nu | verschil naast elkaar. */
 function strook(a, b, verschil) {
@@ -187,8 +205,7 @@ mkdirSync(UITSLAG, { recursive: true });
 
 let mis = 0;
 const regels = [];
-for (const [naam, url] of beelden) {
-  const nu = png(url);
+for (const [naam, nu] of beelden) {
   writeFileSync(join(UITSLAG, `${naam}.png`), PNG.sync.write(nu));
   const refPad = join(REFERENTIE, `${naam}.png`);
   if (vernieuw || !existsSync(refPad)) {
