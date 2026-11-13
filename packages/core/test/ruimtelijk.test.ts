@@ -41,7 +41,9 @@ describe('3D-opbouw', () => {
     const s = scene(o);
     expect(s.blokken.find((b) => b.code === 'e2.plint')).toMatchObject({ h: 4, soort: 'hout', kleur: '#5e4030' });
     expect(s.blokken.find((b) => b.code === 'e2.rugkussen')).toMatchObject({ y: 45, h: 47 });
-    expect(s.blokken.find((b) => b.code === 'e1.rol')).toMatchObject({ vorm: 'cilinder', as: 'z', d: 95 });
+    // Rolarm (13/11): één doorsnede met een ronde bovenkant, geen cilinder op een blok meer.
+    expect(s.blokken.find((b) => b.code === 'e1.rol')).toBeUndefined();
+    expect(s.blokken.find((b) => b.code === 'e1.arm')).toMatchObject({ vorm: 'profiel', d: 95 });
     expect(s.blokken.find((b) => b.code === 'e4.blad')).toMatchObject({ soort: 'hout', y: 62 });
     expect(s.kader.h).toBe(92);
   });

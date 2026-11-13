@@ -52,6 +52,50 @@ describe('uitlopende arm', () => {
   });
 });
 
+describe('arm met ronde bovenkant (armstijl rond en Engels, 13/11)', () => {
+  it('rond: één doorsnede, even hoog en even breed als in het vooraanzicht (vroeger een cilinder op een blok, hoger dan de tekening)', () => {
+    for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
+      const o = bank({ naad: 'bies' }, { vormgeving: { armhoogte: 60 } }, 'rond');
+      o.elementen = [{ ...o.elementen[0]!, rotatie }];
+      const blokken = bouw3D(o, zetelCatalogus, standaardMaterialen).blokken;
+      const arm = blokken.find((b) => b.code === 'a1.arm')!;
+      expect(arm.vorm, `rotatie ${rotatie}`).toBe('profiel');
+      expect(blokken.some((b) => b.code === 'a1.rol')).toBe(false);
+      // Zelfde omtrek als bovenRond in het vooraanzicht: van de poten tot 3 cm boven de armhoogte, over de volle breedte.
+      const tekening = tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen).vormen.find((v) => v.code === 'a1.arm')!;
+      const ys = arm.profiel!.map((q) => q[1]), ss = arm.profiel!.map((q) => q[0]);
+      expect(Math.max(...ys)).toBe(63);
+      expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(tekening.hoogte!, 1);
+      // De breedte in de tekening is de kant die je van voren ziet: bij 0 en 180 de breedte van de arm.
+      if (rotatie === 0 || rotatie === 180) expect(Math.max(...ss) - Math.min(...ss)).toBeCloseTo(tekening.breedte!, 1);
+      expect(Math.max(...ss) - Math.min(...ss)).toBe(20);
+      expect(arm.y + arm.h).toBe(63);
+      // Ronde bovenkant: halverwege de breedte op volle hoogte, aan de rand een halve breedte lager.
+      expect(arm.profiel!.some((q) => Math.abs(q[0]) < 0.1 && q[1] === 63)).toBe(true);
+      expect(Math.max(...arm.profiel!.filter((q) => Math.abs(q[0]) > 9.9).map((q) => q[1]))).toBe(53);
+      // Gestoffeerd voorpaneel: afgeronde rand, licht bol, met de bies eromheen.
+      expect(arm.rand).toBeGreaterThanOrEqual(2.5);
+      expect(arm.kopBol).toBeGreaterThan(0);
+      expect(arm.naad?.soort).toBe('bies');
+    }
+  });
+  it('Engels: 8 cm onder de armhoogte, met een iets vlakkere bovenkant', () => {
+    const o = bank({}, { vormgeving: { armhoogte: 60 } }, 'engels');
+    const arm = blok(o, 'a1.arm')!;
+    const tekening = tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen).vormen.find((v) => v.code === 'a1.arm')!;
+    const ys = arm.profiel!.map((q) => q[1]);
+    expect(Math.max(...ys)).toBe(52);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(tekening.hoogte!, 1);
+    // Straal breedte / 2,2: bovenaan blijft een kort vlak stuk.
+    expect(arm.profiel!.filter((q) => q[1] === 52).length).toBeGreaterThan(1);
+  });
+  it('met een hoes blijft de rok apart, zoals in het vooraanzicht', () => {
+    const blokken = bouw3D(bank({ poten: 'housse' }, {}, 'rond'), zetelCatalogus, standaardMaterialen).blokken;
+    expect(blokken.some((b) => b.code === 'a1.housse')).toBe(true);
+    expect(blokken.find((b) => b.code === 'a1.arm')!.y).toBeGreaterThan(0);
+  });
+});
+
 describe('strakke arm', () => {
   it('eigen doorsnede: ronde, licht bolle bovenkant op armhoogte, binnen de breedte, naar buiten gericht', () => {
     const o = bank({}, { vormgeving: { armhoogte: 66, zachtheid: 6 } });

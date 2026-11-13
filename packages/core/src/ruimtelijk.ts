@@ -149,12 +149,6 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       const w = lokaalNaarWereld(e, lx, ly, lb, ld);
       blokken.push({ code: `${e.id}.${code}`, soort, vorm: 'blok', x: r2(w.x), y: r2(y), z: r2(w.y), b: r2(w.b), h: r2(h), d: r2(w.h), kleur, ...extra });
     };
-    /** Liggende cilinder langs de diepte (lokaal ly), bv. een rolarm. */
-    const rol = (code: string, lx: number, lb: number, y: number, kleur: string) => {
-      const w = lokaalNaarWereld(e, lx, 0, lb, D);
-      const langsX = e.rotatie === 90 || e.rotatie === 270;
-      blokken.push({ code: `${e.id}.${code}`, soort: 'stof', vorm: 'cilinder', as: langsX ? 'x' : 'z', x: r2(w.x), y: r2(y), z: r2(w.y), b: r2(w.b), h: r2(lb), d: r2(w.h), kleur });
-    };
 
     // --- Onderbouw ---
     const potVorm = String(te('poten', 'vorm', 'conisch'));
@@ -512,22 +506,24 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const armH = hoogtesVan(ontwerp, catalogus, e).armhoogte;
         const vorm = String(te('armstijl', 'vorm', 'strak'));
         if (vorm === 'hout') lokaal('arm', 'hout', 0, 0, B, D, P, armH - P, hout, { afronding: 1 });
-        else if (vorm === 'rond' || vorm === 'engels') {
-          const top = vorm === 'engels' ? armH - 8 : armH;
-          lokaal('arm', 'stof', 0, 0, B, D, P, top - P - B / 2, stof, { afronding: 2 });
-          rol('rol', -1, B + 2, top - B / 2 - 1, stof);
-        } else if (vorm === 'schuin') {
+        else if (vorm === 'schuin') {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P - 5, stof, { afronding: 6 });
-        } else if (vorm === 'uitlopend' || vorm === 'strak') {
+        } else if (vorm === 'uitlopend' || vorm === 'strak' || vorm === 'rond' || vorm === 'engels') {
           // Arm met een eigen doorsnede (profiel) die van voor naar achter loopt; met een hoes tot op de vloer (geen aparte
           // rok eronder), anders vanaf de poten.
+          // - Rond en Engels (13/11): een slanke arm met een ronde bovenkant, dezelfde omtrek als in het vooraanzicht
+          //   (rond: tot 3 cm boven de armhoogte, Engels: 8 cm eronder). Vroeger een cilinder op een blok, hoger dan de
+          //   tekening. Rond volgt de foto van Zora (ronde bovenkant, bies rond het voorpaneel); Engels heeft geen foto:
+          //   benadering volgens de tekening. De rok van een hoes blijft hier apart, zoals in het vooraanzicht.
           // - Uitlopend (technische tekening van Wallace, vorm benaderd uit de foto): binnenkant recht tegen de zitting,
           //   buitenkant onderaan iets naar binnen en bovenaan uitlopend tot een opgerolde rand (krul) op armhoogte, naar
           //   achteren oplopend tot de hoogte van het karkas.
           // - Strak (track arm, benaderd uit de foto's van Husk, Attribute, Amusette …): rechte arm met een zacht afgeronde,
           //   licht bolle bovenkant, licht bolle zijkanten en een voorpaneel met zachte rand; hoe zacht volgt de zachtheid.
-          const onder = potVorm === 'housse' ? 0 : P;
-          const achter = vorm === 'uitlopend' ? Math.max(armH, v.karkashoogte ?? armH) : armH;
+          const rondeTop = vorm === 'rond' || vorm === 'engels';
+          const onder = potVorm === 'housse' && !rondeTop ? 0 : P;
+          const voor = vorm === 'rond' ? armH + 3 : vorm === 'engels' ? armH - 8 : armH;
+          const achter = vorm === 'uitlopend' ? Math.max(armH, v.karkashoogte ?? armH) : voor;
           // Welke lokale kant (x = 0 of x = B) ligt aan de buitenkant van de zetel?
           const buiten = naarBuiten(e);
           const w0 = lokaalNaarWereld(e, 0, 0, 1, 1), wB = lokaalNaarWereld(e, B - 1, 0, 1, 1);
@@ -539,18 +535,20 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             const t = i / 14; // 0 = vooraan, 1 = achteraan
             const s = Math.max(0, Math.min(1, (t - 0.5) / 0.5));
             padLokaal.push([B / 2, D - t * D]);
-            hoogtes.push(rond1(armH + (achter - armH) * s * s * (3 - 2 * s)));
+            hoogtes.push(rond1(voor + (achter - voor) * s * s * (3 - 2 * s)));
           }
           const padW = padLokaal.map(([lx, ly]) => { const q = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(q.x), r2(q.y)] as [number, number]; });
           const hw = B / 2;
-          const profiel = vorm === 'uitlopend' ? uitlopendProfiel(B, zithoogte, onder) : strakProfiel(B, onder, armH, v.zachtheid, potVorm === 'housse');
+          const profiel = vorm === 'uitlopend' ? uitlopendProfiel(B, zithoogte, onder)
+            : rondeTop ? rondProfiel(B, onder, voor, vorm === 'rond' ? B / 2 : B / 2.2)
+            : strakProfiel(B, onder, armH, v.zachtheid, potVorm === 'housse');
           const zijden = profiel.map((q) => q[0]), wijd = Math.max(hw, ...zijden.map(Math.abs));
           const xs = padW.flatMap((q) => [q[0] - Math.abs(ux) * wijd, q[0] + Math.abs(ux) * wijd]), zs = padW.flatMap((q) => [q[1] - Math.abs(uz) * wijd, q[1] + Math.abs(uz) * wijd]);
           blokken.push({
             code: `${e.id}.arm`, soort: 'stof', vorm: 'profiel',
             x: r2(Math.min(...xs)), z: r2(Math.min(...zs)), b: r2(Math.max(...xs) - Math.min(...xs)), d: r2(Math.max(...zs) - Math.min(...zs)),
             y: r2(onder), h: r2(Math.max(...hoogtes) - onder), kleur: stof, pad: padW, hoogtes, profiel, uit: [r2(ux), r2(uz)],
-            ...(vorm === 'strak' ? { rand: rond1(Math.max(2.5, Math.min(6, (0.14 + 0.012 * v.zachtheid) * B))), kopBol: rond1(0.4 + 0.08 * v.zachtheid) } : {}),
+            ...(vorm !== 'uitlopend' ? { rand: rond1(Math.max(2.5, Math.min(6, (0.14 + 0.012 * v.zachtheid) * B))), kopBol: rond1(0.4 + 0.08 * v.zachtheid) } : {}),
           });
         } else {
           lokaal('arm', 'stof', 0, 0, B, D, P, armH - P, stof, { afronding: 3 });
@@ -663,6 +661,27 @@ export function strakProfiel(B: number, onder: number, top: number, zachtheid: n
   for (const a of [90, 135, 180]) { const r = (a * Math.PI) / 180; p.push([rond1(-hw + rTop + rTop * Math.cos(r)), rond1(ySide1 + rTop * Math.sin(r)), 0]); }
   for (const f of [0.66, 0.33]) p.push([rond1(-(hw - bol * (1 - f) ** 2)), rond1(ySide0 + f * (ySide1 - ySide0)), 0]);
   p.push([rond1(-hw + bol), rond1(ySide0), 0]);
+  return p;
+}
+
+/**
+ * Doorsnede van een arm met een ronde bovenkant (armstijl rond en Engels): punten [s, y, 0] (y absoluut), s in cm opzij
+ * van het midden. Rechte zijkanten en bovenaan twee afgeronde hoeken met straal `r` (bij r = de halve breedte één ronde
+ * boog), met dezelfde kromme als `bovenRond` in het vooraanzicht: 3D en tekening hebben zo dezelfde omtrek.
+ */
+export function rondProfiel(B: number, onder: number, top: number, r: number): [number, number, 0 | 1][] {
+  const hw = B / 2, rr = Math.max(0.5, Math.min(r, hw, top - onder - 0.5));
+  const p: [number, number, 0 | 1][] = [[-hw, onder, 0], [hw, onder, 0]];
+  const hoek = (x0: number, y0: number, sx: number, sy: number, x1: number, y1: number) => {
+    for (let k = 0; k <= 8; k++) {
+      const f = k / 8, g = 1 - f;
+      const q: [number, number, 0 | 1] = [rond1(g * g * x0 + 2 * g * f * sx + f * f * x1), rond1(g * g * y0 + 2 * g * f * sy + f * f * y1), 0];
+      const vorig = p[p.length - 1]!;
+      if (Math.hypot(q[0] - vorig[0], q[1] - vorig[1]) > 0.05) p.push(q);
+    }
+  };
+  hoek(hw, top - rr, hw, top, hw - rr, top);
+  hoek(-hw + rr, top, -hw, top, -hw, top - rr);
   return p;
 }
 
