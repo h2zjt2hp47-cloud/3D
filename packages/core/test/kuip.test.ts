@@ -185,8 +185,18 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     expect(bouw3D(fauteuil({ ...milton, frameDik: 2.5 }, 'ringframe'), cat, standaardMaterialen).blokken.find((b) => b.code === 'f.ring')).toMatchObject({ y: 15.5, h: 2.5 });
     const kruis = bouw3D(fauteuil(milton, 'kruisframe'), cat, standaardMaterialen).blokken;
     expect(kruis.some((b) => b.code === 'f.ring')).toBe(false);
-    // De latten liggen langs de diagonalen van het grondvlak (70 × 68: ±44,2°).
-    expect(kruis.filter((b) => b.code.startsWith('f.kruis-')).map((b) => b.draai).sort()).toEqual([-44.2, 44.2]);
+    // De latten liggen langs de diagonalen naar de poten (70 × 68: 44,2° en 135,8°), ook bij een gedraaid element.
+    for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
+      const b = bouw3D(fauteuil(milton, 'kruisframe', rotatie), cat, standaardMaterialen).blokken;
+      const poten = b.filter((x) => x.code.startsWith('f.poot-')), latten = b.filter((x) => x.code.startsWith('f.kruis-'));
+      expect(latten).toHaveLength(2);
+      for (const lat of latten) {
+        // Elke lat wijst van het midden naar twee poten: op haar lijn liggen twee pootmiddens (binnen 1 cm).
+        const cx = lat.x + lat.b / 2, cz = lat.z + lat.d / 2, a = (lat.draai! * Math.PI) / 180;
+        const opLijn = poten.filter((p) => Math.abs(-(p.x + p.b / 2 - cx) * Math.sin(a) + (p.z + p.d / 2 - cz) * Math.cos(a)) < 1);
+        expect(opLijn, `rotatie ${rotatie}`).toHaveLength(2);
+      }
+    }
     for (const p of kruis.filter((b) => b.code.startsWith('f.poot-'))) expect(p).toMatchObject({ y: 0, h: 18 });
     // Het vooraanzicht tekent het frame en de poten ook.
     const voor = tekenVooraanzicht(fauteuil(milton, 'ringframe'), cat, standaardMaterialen).vormen;
@@ -202,6 +212,25 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     const oud = fauteuil(undefined, 'conisch');
     oud.opties = { ...oud.opties, naad: 'bies' };
     expect(bouw3D(oud, cat, standaardMaterialen).blokken.find((b) => b.code === 'f.rug')!.naad).toBeUndefined();
+  });
+
+  it('een andere keuze bij "Vorm fauteuil" op een model met een eigen vorm geeft geen fout', () => {
+    for (const vorm of ['rond', 'afgerond', 'omhullend', 'trommel', 'organisch', 'schelp', 'hoekig']) {
+      const o = fauteuil(milton);
+      o.elementen[0]!.opties = { kuipvorm: vorm };
+      const s = bouw3D(o, cat, standaardMaterialen);
+      expect(s.blokken.length, vorm).toBeGreaterThan(3);
+      for (const b of s.blokken) for (const w of [b.x, b.y, b.z, b.b, b.h, b.d]) expect(Number.isFinite(w), `${vorm} ${b.code}`).toBe(true);
+      expect(() => tekenVooraanzicht(o, cat, standaardMaterialen)).not.toThrow();
+      expect(berekenOntwerp(o, cat, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout'), vorm).toHaveLength(0);
+    }
+  });
+
+  it('het frame op vier poten werkt ook onder een zitelement van een sofa (recht frame, poten onder de hoeken)', () => {
+    const o: Ontwerp = { hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'ringframe' }, elementen: [{ id: 'z', type: 'zit', x: 0, y: 0, breedte: 180, diepte: 95, rotatie: 0 }] };
+    const b = bouw3D(o, cat, standaardMaterialen).blokken;
+    expect(b.find((x) => x.code === 'z.ring')).toMatchObject({ vorm: 'blok', b: 174, d: 89 });
+    expect(b.filter((x) => x.code.startsWith('z.poot-'))).toHaveLength(4);
   });
 
   it('zonder eigen vorm blijft alles zoals het was', () => {

@@ -108,12 +108,37 @@ Zonder die gegevens verandert er niets aan een fauteuil: de bestaande kuipvormen
 - **Keuzes:** *Houten frame op vier poten*, *Vaste zitting* en *Bies in dezelfde stof*. De prijs en de offertetekst
   volgen dus wat de 3D toont.
 - **Tekeningen:** het boven- en vooraanzicht van deze drie modellen zijn mee veranderd (zelfde bron, `kuip.ts`): de
-  zitting als één blok, de leuning met haar nieuwe verloop, het frame en de poten.
+  zitting als één blok, de leuning met haar nieuwe verloop, het frame en de poten. Nagekeken in beeld; in het
+  vooraanzicht stonden de uiteinden van de schaal eerst als twee palen vóór de zitting, dat is rechtgezet.
+
+![Boven- en vooraanzicht van Milton, Mabel 1-zit en Mabel 2-zit na de ombouw](afbeeldingen/fauteuils-tekeningen.png)
 - **Wat nog verschilt van de foto:** de poten staan recht (op de foto schuin naar buiten); de stof en de kleur zijn die
   van het model, niet die van de foto.
 
 Fout onderweg gevonden: bij een breed grondvlak met een korte schaal kromp de zitting tot een klein blokje, omdat de
 motor de voorkant van het grondvlak mat tegen de wand achteraan. Rechtgezet, met een test.
+
+**De prijs, regel per regel** (euro, exclusief btw; alle prijzen verzonnen):
+
+| Regel | Milton | Mabel 1-zit | Mabel 2-zit | Beslist? |
+|---|---|---|---|---|
+| Houten frame op vier poten | +60 | +60 | +60 | Ja (13/11) |
+| Vaste zitting (−3 %) | −26 | −30 | −35 | Ja (13/11) |
+| Maten van de site (element en rughoogte) | zit in de totalen | zit in de totalen | zit in de totalen | Ja (13/11) |
+| Bies in dezelfde stof (+4 %) | +32 | +36 | +43 | **Nog niet gevraagd** |
+| Poothoogte op maat, rekent als *hoog* | +40 (18 cm, geschat uit de foto; vroeger een draaivoet zonder poothoogte) | +40 (22 cm; stond al op *hoog*) | +40 (22 cm; stond al op *hoog*) | **Milton nog niet gevraagd** |
+| **Totaal voor → na** | 963 → 884 | 990 → 1.007 | 1.552 → 1.163 | |
+
+**Open afwijkingen:**
+- **Zitdiepte van Mabel:** de site geeft 49 cm bij een diepte van 65, dus 16 cm voor de rug. Onze leuning is 7 cm dik
+  (zoals ze er op de foto's bovenaan uitziet), wat een zitdiepte van ±58 cm geeft. De echte rug is onderaan wellicht
+  dikker of helt achterover; na te vragen bij de klant.
+- **De nieuwe pootkeuzes** staan bij elk gestoffeerd element, niet alleen bij fauteuils (een keuze kan niet aan een
+  type gebonden worden). Onder een zitelement geeft *Houten frame op vier poten* een recht frame met poten onder de
+  hoeken (test); in beeld is dat nog niet bekeken.
+- ***Vier poten met kruis*** wordt nog door geen model gebruikt (komt bij Fraser en Ross).
+- **Een andere keuze bij *Vorm fauteuil*** op een omgebouwd model geeft geen fout (test), maar de eigen vorm van het
+  model blijft dan grotendeels gelden.
 
 ## Eerste proef (voor de bijsturing)
 

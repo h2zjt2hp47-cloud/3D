@@ -210,21 +210,23 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           const f = Math.max(0.5, 1 - 3 / (m / 2));
           omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(B / 2, D / 2, (B / 2) * f, (D / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });
         } else if (ringH > 0) {
-          const ringD = m * 0.84, w = lokaalNaarWereld(e, (B - ringD) / 2, (D - ringD) / 2, ringD, ringD);
-          blokken.push({ code: `${e.id}.ring`, soort: potSoort, vorm: 'cilinder', x: r2(w.x), y: r2(P - ringH), z: r2(w.y), b: r2(w.b), h: r2(ringH), d: r2(w.h), kleur: potKleur });
+          // Een ander element (bv. een zitelement van een sofa): een recht frame onder het hele element, 3 cm naar binnen.
+          lokaal('ring', potSoort, 3, 3, B - 6, D - 6, P - ringH, ringH, potKleur, { afronding: 1 });
         }
-        // Poten schuin onder de vier hoeken: op de diagonalen van het grondvlak, een eind naar binnen.
-        const hoek = (2 ** (-1 / exp)) * (potVorm === 'ringframe' ? 0.8 : 0.74);
+        // Poten onder de vier hoeken: op de diagonalen van het grondvlak, een eind naar binnen.
+        const hoek = kuipFrame ? (2 ** (-1 / exp)) * (potVorm === 'ringframe' ? 0.8 : 0.74) : Math.max(0.5, 1 - 16 / m);
         for (const [k, sx, sy] of [['la', -1, -1], ['ra', 1, -1], ['lv', -1, 1], ['rv', 1, 1]] as const)
           lokaal(`poot-${k}`, potSoort, B / 2 + sx * (B / 2) * hoek - dik / 2, D / 2 + sy * (D / 2) * hoek - dik / 2, dik, dik, 0, P - ringH, potKleur, { vorm: 'kegel', taps: 0.7 });
         const straal = Math.hypot((B / 2) * hoek, (D / 2) * hoek);
         if (potVorm === 'kruisframe') {
-          // Twee latten kruiselings tussen de poten: een balk langs de breedte, gedraaid rond het midden volgens de
-          // diagonaal van het grondvlak (45° bij een vierkant of rond grondvlak).
-          const lang = 2 * straal, y = Math.max(2, P * 0.42), diagonaal = rond1((Math.atan2(D, B) * 180) / Math.PI);
-          for (const [k, hoek] of [['a', diagonaal], ['b', -diagonaal]] as const) {
-            const w = lokaalNaarWereld(e, B / 2 - lang / 2, D / 2 - 1.2, lang, 2.4);
-            blokken.push({ code: `${e.id}.kruis-${k}`, soort: potSoort, vorm: 'blok', x: r2(w.x), y: r2(y), z: r2(w.y), b: r2(w.b), h: 2.4, d: r2(w.h), kleur: potKleur, draai: hoek });
+          // Twee latten kruiselings tussen de poten: een balk langs x rond het midden van het element, gedraaid tot op de
+          // diagonaal naar een poot (in wereldmaat, zodat het ook klopt bij een gedraaid element en een niet-vierkant
+          // grondvlak).
+          const lang = 2 * straal, y = Math.max(2, P * 0.42), c = lokaalNaarWereld(e, B / 2, D / 2, 0, 0);
+          for (const [k, sx] of [['a', 1], ['b', -1]] as const) {
+            const poot = lokaalNaarWereld(e, B / 2 + sx * (B / 2) * hoek, D / 2 + (D / 2) * hoek, 0, 0);
+            const graden = rond1((Math.atan2(poot.y - c.y, poot.x - c.x) * 180) / Math.PI);
+            blokken.push({ code: `${e.id}.kruis-${k}`, soort: potSoort, vorm: 'blok', x: r2(c.x - lang / 2), y: r2(y), z: r2(c.y - 1.2), b: r2(lang), h: 2.4, d: 2.4, kleur: potKleur, draai: graden });
           }
         }
       } else if (potVorm === 'slede') {

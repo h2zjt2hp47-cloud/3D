@@ -243,14 +243,18 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             rect(`${e.id}.rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, xa, top(k.y + k.h), xb - xa, k.h, stof, { afronding: 2 + zacht, ...lijn });
           }
           const [bx0, bx1] = xs(opb.plan);
-          // Trommel: één zitting van de poten tot de zithoogte; anders een onderbouw met het kussen erop.
-          if (kp.zitTrommel) rect(`${e.id}.zitkussen`, bx0, top(zithoogte), bx1 - bx0, opb.zitDik, stof, { afronding: Math.min(kp.zitRand ?? 6, opb.zitDik / 2), ...lijn });
-          else {
+          const voor = kp.zwevend ? null : omhullende(true);
+          // Trommel: één zitting van de poten tot de zithoogte, die vóór de uiteinden van de schaal staat (de schaal stopt
+          // rond het midden; getekend na de zitting leken haar uiteinden twee palen ervoor). Anders een onderbouw met het
+          // kussen erop, en de armen ervoor.
+          if (kp.zitTrommel) {
+            if (voor) pad(`${e.id}.arm`, voor.d, voor.x, top(voor.hMax), voor.b, voor.hMax - opb.wand.onder, stof, lijn);
+            rect(`${e.id}.zitkussen`, bx0, top(zithoogte), bx1 - bx0, opb.zitDik, stof, { afronding: Math.min(kp.zitRand ?? 6, opb.zitDik / 2), ...lijn });
+          } else {
             rect(`${e.id}.basis`, bx0, top(opb.basis.boven), bx1 - bx0, opb.basis.boven - opb.basis.onder, donker, { afronding: kp.plan === 'rond' ? Math.min(14, (opb.basis.boven - opb.basis.onder) / 2) : 6, ...lijn });
             if (kussenDik) { const [zx0, zx1] = xs(opb.zit); rect(`${e.id}.zitkussen`, zx0, top(zithoogte), zx1 - zx0, kussenDik, stof, { afronding: zacht, ...lijn }); }
           }
-          const voor = kp.zwevend ? null : omhullende(true);
-          if (voor) pad(`${e.id}.arm`, voor.d, voor.x, top(voor.hMax), voor.b, voor.hMax - opb.wand.onder, stof, lijn);
+          if (voor && !kp.zitTrommel) pad(`${e.id}.arm`, voor.d, voor.x, top(voor.hMax), voor.b, voor.hMax - opb.wand.onder, stof, lijn);
           maxHoogte = Math.max(maxHoogte, ...opb.wand.hoogtes, ...opb.rugkussens.map((k) => k.y + k.h));
           break;
         }
