@@ -8,7 +8,7 @@
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
-import { framePoten, kuipOpbouw, kuipParameters, superellips, type Punt } from './kuip.js';
+import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, superellips, trommelKader, type Punt } from './kuip.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -208,16 +208,19 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const kuipFrame = t.tekenstijl === 'kuip' ? kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip) : null;
         const ringH = potVorm === 'ringframe' ? Math.min(kuipFrame?.frameDik ?? 4, P / 3) : 0;
         const exp = kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : 2;
+        // Het onderstel staat onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
+        const tk = trommelKader(B, D, kuipFrame);
         if (ringH > 0 && kuipFrame) {
-          const f = Math.max(0.5, 1 - 3 / (m / 2));
-          omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(B / 2, D / 2, (B / 2) * f, (D / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });
+          const f = Math.max(0.5, 1 - 3 / (Math.min(tk.b, tk.d) / 2));
+          omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(tk.x + tk.b / 2, tk.y + tk.d / 2, (tk.b / 2) * f, (tk.d / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });
         } else if (ringH > 0) {
           // Een ander element (bv. een zitelement van een sofa): een recht frame onder het hele element, 3 cm naar binnen.
           lokaal('ring', potSoort, 3, 3, B - 6, D - 6, P - ringH, ringH, potKleur, { afronding: 1 });
         }
         // Poten onder de vier hoeken: op de diagonalen van het grondvlak, een eind naar binnen, met de voet schuin naar
         // buiten (zie framePoten). De verschuiving van de voet in wereldmaat, zodat het klopt bij een gedraaid element.
-        const fp = framePoten(B, D, P - ringH, kuipFrame ? exp : null);
+        const fp = framePoten(tk.b, tk.d, P - ringH, kuipFrame ? exp : null);
+        for (const q of fp.poten) { q.lx += tk.x; q.ly += tk.y; }
         for (const q of fp.poten) {
           const boven = lokaalNaarWereld(e, q.lx, q.ly, 0, 0), voet = lokaalNaarWereld(e, q.lx + q.dx, q.ly + q.dy, 0, 0);
           lokaal(`poot-${q.k}`, potSoort, q.lx - dik / 2, q.ly - dik / 2, dik, dik, 0, P - ringH, potKleur, {
@@ -228,7 +231,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // Twee latten kruiselings tussen de poten: een balk langs x rond het midden van het element, gedraaid tot op de
           // diagonaal naar een poot (in wereldmaat, zodat het ook klopt bij een gedraaid element en een niet-vierkant
           // grondvlak). Even lang als de afstand tussen de (schuine) poten op die hoogte.
-          const y = Math.max(2, (P - ringH) * 0.42), c = lokaalNaarWereld(e, B / 2, D / 2, 0, 0);
+          const y = Math.max(2, (P - ringH) * 0.42), c = lokaalNaarWereld(e, tk.x + tk.b / 2, tk.y + tk.d / 2, 0, 0);
           const lang = 2 * (fp.straal + fp.spreid * (1 - y / (P - ringH)));
           for (const [k, i] of [['a', 3], ['b', 2]] as const) {
             const q = fp.poten[i]!, poot = lokaalNaarWereld(e, q.lx, q.ly, 0, 0);
@@ -495,8 +498,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
               if (binnenPad && beste < half + 4) buitenWand = Math.max(buitenWand, beste - half);
             }
           }
-          const krimp = kp.zwevend || kp.schaalOp ? 0 : r2(0.8 + buitenWand);
-          const basisPlan = opb.plan.map(([x, y]) => [B / 2 + (x - B / 2) * (1 - krimp / (B / 2)), D / 2 + (y - D / 2) * (1 - krimp / (D / 2))] as Punt);
+          const krimp = kp.zwevend || kp.schaalOp || (kp.zitTrommel && kp.zitIn) ? 0 : r2(0.8 + buitenWand);
+          // Trommel binnen de schaal (`zitIn`): het kleinere grondvlak uit de opbouw; anders het hele grondvlak.
+          const basisPlan = kp.zitTrommel && kp.zitIn ? opb.zit : opb.plan.map(([x, y]) => [B / 2 + (x - B / 2) * (1 - krimp / (B / 2)), D / 2 + (y - D / 2) * (1 - krimp / (D / 2))] as Punt);
           // Organisch (Pebble): de zitting is één zachte kiezel in de stof (geen donkere onderbouw met een los kussen erop) en
           // de schaal een eigen zachte vorm met ronde uiteinden (glad, zoals de doorlopende zetel), in plaats van een wand die
           // recht afgesneden in de onderbouw steekt. Twee aparte zachte delen: waar de schaal tegen de zitting drukt, blijft
@@ -541,7 +545,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           opb.rugkussens.forEach((k, i) => lokaal(`rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, 'kussen', k.lx, k.ly, k.lb, k.ld, k.y, k.h, stof,
             // Een gewoon vierkant kussen: ronder, boller, naar het midden van de zetel gedraaid en wat meer achterover.
             k.vierkant
-              ? { afronding: rond1(Math.min(k.ld / 2.2, 3 + zacht * 0.5)), bol: rond1(k.ld * 0.22), kantel: { graden: 14, richting }, ...(k.draai ? { draai: k.draai } : {}) }
+              ? { afronding: rond1(Math.min(k.ld / 2.2, 3 + zacht * 0.5)), bol: rond1(k.ld * 0.22), kantel: { graden: KUSSEN_KANTEL, richting }, ...(k.draai ? { draai: k.draai } : {}) }
               : { afronding: 2 + zacht, kantel: { graden: 10, richting } }));
           break;
         }

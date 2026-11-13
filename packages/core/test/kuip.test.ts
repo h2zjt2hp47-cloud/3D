@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, bouw3D, tekenVooraanzicht, type Ontwerp, type Rotatie } from '../src/index.js';
-import { framePoten, kuipOpbouw, kuipParameters } from '../src/kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters, trommelKader } from '../src/kuip.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -291,6 +291,46 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     expect(band.omtrek).toEqual(kussen.omtrek);
     // Zonder: één geheel, zoals voorheen.
     expect(bouw3D(fauteuil(milton), cat, standaardMaterialen).blokken.some((x) => x.code === 'f.zitband')).toBe(false);
+  });
+
+  it('de schaal steekt rond de trommel uit (`zitIn`): smallere zitting, vooraan tot de voorkant, onderstel eronder', () => {
+    const kp = kuipParameters({ plan: 'rond', dikte: 6, boog: 95 }, { zitTrommel: true, zitIn: 4, profiel: [[0, 1], [1, 1]] })!;
+    // Zijkanten 4 cm naar binnen; achteraan tot net in de schaal (5,5 van de 6 cm: geen kier), vooraan niets.
+    expect(trommelKader(70, 70, kp)).toEqual({ x: 4, y: 5.5, b: 62, d: 64.5 });
+    expect(trommelKader(70, 70, { ...kp, zitIn: undefined })).toEqual({ x: 0, y: 0, b: 70, d: 70 });
+    const opb = kuipOpbouw(70, 70, { P: 2, zithoogte: 45, rugH: 70, kussenDik: 0 }, kp, false);
+    const xs = opb.zit.map((q) => q[0]), ys = opb.zit.map((q) => q[1]);
+    expect([Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]).toEqual([4, 66, 5.5, 70]);
+    // In de 3D en in beide tekeningen dezelfde zitting; het frame en de poten staan eronder, niet onder de schaal.
+    for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
+      const o = fauteuil({ ...milton, zitIn: 3 }, 'ringframe', rotatie), b = bouw3D(o, cat, standaardMaterialen).blokken;
+      const zit = b.find((x) => x.code === 'f.zitkussen')!, ring = b.find((x) => x.code === 'f.ring')!;
+      expect(Math.min(zit.b, zit.d), `rotatie ${rotatie}`).toBeCloseTo(62, 0);
+      expect(ring.x, `rotatie ${rotatie}`).toBeGreaterThan(zit.x);
+      expect(ring.x + ring.b, `rotatie ${rotatie}`).toBeLessThan(zit.x + zit.b);
+      expect(ring.z, `rotatie ${rotatie}`).toBeGreaterThan(zit.z);
+      expect(ring.z + ring.d, `rotatie ${rotatie}`).toBeLessThan(zit.z + zit.d);
+      for (const p of b.filter((x) => x.code.startsWith('f.poot-'))) {
+        expect(p.x, `rotatie ${rotatie}`).toBeGreaterThan(zit.x);
+        expect(p.x + p.b, `rotatie ${rotatie}`).toBeLessThan(zit.x + zit.b);
+      }
+      const voor = tekenVooraanzicht(o, cat, standaardMaterialen).vormen, zitV = voor.find((v) => v.code === 'f.zitkussen')!, ringV = voor.find((v) => v.code === 'f.ring')!;
+      expect(zitV.breedte, `rotatie ${rotatie}`).toBeCloseTo(zit.b, 0);
+      expect(ringV.x, `rotatie ${rotatie}`).toBeGreaterThan(zitV.x);
+      expect(ringV.x + ringV.breedte!, `rotatie ${rotatie}`).toBeLessThan(zitV.x + zitV.breedte!);
+    }
+  });
+
+  it('een los vierkant rugkussen leunt tegen de rand van de schaal en steekt er niet doorheen', () => {
+    const kp = kuipParameters({ plan: 'rond', dikte: 6, boog: 95 }, { zitTrommel: true, profiel: [[0, 1], [1, 1]], kussens: 1, kussenMaat: 48, kussenHoog: 38 })!;
+    const k = kuipOpbouw(70, 70, { P: 2, zithoogte: 45, rugH: 70, kussenDik: 0 }, kp, true).rugkussens[0]!;
+    expect(k).toMatchObject({ lb: 48, h: 38, vierkant: true });
+    // Onderaan staat de achterkant van het kussen 25 cm × tan 14° (±6,2 cm) voor de binnenkant van de schaal (6 cm).
+    expect(k.ly).toBeGreaterThan(6 + 6);
+    expect(k.ly).toBeLessThan(6 + 8);
+    // Zonder eigen hoogte blijft het vierkant.
+    const vier = kuipOpbouw(70, 70, { P: 2, zithoogte: 45, rugH: 70, kussenDik: 0 }, { ...kp, kussenHoog: undefined }, true).rugkussens[0]!;
+    expect(vier.h).toBe(48);
   });
 
   it('de schaal van een trommelfauteuil krijgt een naad of bies langs haar rand', () => {

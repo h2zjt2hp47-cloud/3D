@@ -50,6 +50,12 @@ export interface KuipParameters {
   zitTrommel?: boolean;
   /** Afronding van de bovenrand van die trommel in cm (standaard 6). */
   zitRand?: number;
+  /**
+   * De schaal steekt zoveel cm rond de trommelzitting uit (een trapje tussen schaal en zitting, zoals op de foto's van
+   * Satie, Quin en Fraser). De zitting wordt aan de zijkanten zoveel smaller en blijft vooraan tot tegen de voorkant
+   * komen, zodat de maten van de zetel gelijk blijven. Leeg = zitting en schaal (bijna) gelijk.
+   */
+  zitIn?: number;
   /** De schaal staat op de zitting (onderkant net onder de zithoogte) in plaats van eromheen tot onderaan. */
   schaalOp?: boolean;
   /** Dikte in cm van het houten frame onder de zitting bij poten met een frame (ringframe); standaard 4. */
@@ -75,6 +81,8 @@ export interface KuipParameters {
    */
   kussens?: number;
   kussenMaat?: number;
+  /** Hoogte van die kussens in cm als ze niet vierkant zijn (Satie: één breed kussen); leeg = zoals `kussenMaat`. */
+  kussenHoog?: number;
 }
 
 /** Parameters uit de `teken`-velden van de gekozen kuipvorm; null voor de hoekige fauteuil (rechte rug en armen). */
@@ -102,6 +110,7 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
     ...(teken.profielRecht === true ? { profielRecht: true } : {}),
     ...(teken.zitTrommel === true ? { zitTrommel: true } : {}),
     ...(typeof teken.zitRand === 'number' ? { zitRand: teken.zitRand } : {}),
+    ...(typeof teken.zitIn === 'number' && teken.zitIn > 0 ? { zitIn: teken.zitIn } : {}),
     ...(teken.schaalOp === true ? { schaalOp: true } : {}),
     ...(typeof teken.frameDik === 'number' ? { frameDik: teken.frameDik } : {}),
     ...(teken.frameKruis === true ? { frameKruis: true } : {}),
@@ -110,8 +119,12 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
     ...(profielRechts.length >= 2 ? { profielRechts } : {}),
     ...(typeof teken.kussens === 'number' && teken.kussens >= 1 ? { kussens: Math.min(5, Math.round(teken.kussens)) } : {}),
     ...(typeof teken.kussenMaat === 'number' ? { kussenMaat: teken.kussenMaat } : {}),
+    ...(typeof teken.kussenHoog === 'number' ? { kussenHoog: teken.kussenHoog } : {}),
   };
 }
+
+/** Hoeveel graden een los vierkant rugkussen achterover tegen de schaal leunt (rond zijn onderkant). */
+export const KUSSEN_KANTEL = 14;
 
 /** Waarde van een verloop [u, f] op plaats u: tussen twee punten een zachte S-bocht (of recht). */
 function langsProfiel(profiel: [number, number][], u: number, recht = false): number {
@@ -137,6 +150,17 @@ export function superellips(cx: number, cy: number, a: number, b: number, n: num
     uit.push([cx + a * Math.sign(c) * Math.abs(c) ** (2 / n), cy + b * Math.sign(s) * Math.abs(s) ** (2 / n)]);
   }
   return uit;
+}
+
+/**
+ * Kader van de trommelzitting in lokale maten. Zonder `zitIn` het hele grondvlak; met `zitIn` aan de zijkanten zoveel
+ * naar binnen, achteraan tot in de schaal (nooit voorbij haar binnenkant, anders een kier) en vooraan tot de voorkant.
+ * Het onderstel (frame en poten) staat onder dit kader.
+ */
+export function trommelKader(B: number, D: number, k: KuipParameters | null): { x: number; y: number; b: number; d: number } {
+  if (!k?.zitTrommel || !k.zitIn) return { x: 0, y: 0, b: B, d: D };
+  const w = Math.min(k.dikte, B / 3, D / 3), zi = Math.min(k.zitIn, B / 6, D / 6), achter = Math.max(0, Math.min(2 * zi, w - 0.5));
+  return { x: zi, y: achter, b: B - 2 * zi, d: D - achter };
 }
 
 /**
@@ -260,19 +284,25 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   const achter = k.zwevend ? 3 : w * (k.organisch ? 0.9 : 0.85);
   const zij = k.zwevend ? 1.5 : w * (k.organisch ? 0.45 : 0.8);
   const zcy = (achter + D - 1.5) / 2, zb = (D - 1.5 - achter) / 2;
-  // Trommel: de zitting is het hele grondvlak.
-  const zit = k.zitTrommel ? plan : superellips(cx, zcy, B / 2 - zij, zb, k.plan === 'rond' ? 2.4 : n, 0, 360, 64).slice(0, -1);
+  // Trommel: de zitting is het hele grondvlak, of met `zitIn` een kleiner grondvlak binnen de schaal (zie trommelKader).
+  const tk = trommelKader(B, D, k);
+  const zit = k.zitTrommel
+    ? k.zitIn ? plan.map(([x, y]) => [rond1(tk.x + (x / B) * tk.b), rond1(tk.y + (y / D) * tk.d)] as Punt) : plan
+    : superellips(cx, zcy, B / 2 - zij, zb, k.plan === 'rond' ? 2.4 : n, 0, 360, 64).slice(0, -1);
   // Losse rugkussens tegen de wand achteraan.
   const rugkussens: KuipOpbouw['rugkussens'] = [];
   if (losseRug && k.kussens) {
     // Gewone vierkante kussens langs de binnenkant van de schaal, elk naar het midden van de zetel gedraaid. Ze staan op
     // een kleiner grondvlak (de schaal, het halve kussen en 1 cm speling naar binnen) en overlappen elkaar wat.
-    const dik = 13, maat = Math.max(25, Math.min(k.kussenMaat ?? 46, B - 2 * w - 6));
-    const a = B / 2 - w - dik / 2 - 1, b = D / 2 - w - dik / 2 - 1;
+    const dik = 13, maat = Math.max(25, Math.min(k.kussenMaat ?? 46, B - 2 * w - 6)), hoog = Math.max(20, k.kussenHoog ?? maat);
+    // Het kussen leunt achterover tegen de bovenrand van de schaal: onderaan staat het zoveel verder naar voren als het
+    // tot die rand achteruit helt. Anders stak het door de schaal heen (van achter te zien, Satie 13/11).
+    const leun = Math.max(0, Math.min(rug - zitBoven, hoog)) * Math.tan((KUSSEN_KANTEL * Math.PI) / 180);
+    const a = B / 2 - w - dik / 2 - 1 - leun, b = D / 2 - w - dik / 2 - 1 - leun;
     const stapGraden = k.kussens > 1 ? Math.min(46, ((maat * 0.82) / ((a + b) / 2)) * (180 / Math.PI)) : 0;
     for (let i = 0; i < k.kussens; i++) {
       const graden = (i - (k.kussens - 1) / 2) * stapGraden, [px, py] = superellips(cx, cy, a, b, n, -90 + graden, -90 + graden, 1)[0]!;
-      rugkussens.push({ lx: rond1(px - maat / 2), ly: rond1(py - dik / 2), lb: maat, ld: dik, y: zitBoven, h: maat, draai: rond1(graden), vierkant: true });
+      rugkussens.push({ lx: rond1(px - maat / 2), ly: rond1(py - dik / 2), lb: maat, ld: dik, y: zitBoven, h: hoog, draai: rond1(graden), vierkant: true });
     }
   } else if (losseRug) {
     const aantal = Math.max(1, Math.min(3, Math.round((B - 2 * w) / 30)));

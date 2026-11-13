@@ -172,7 +172,8 @@ describe('verdekte voet volgt de vorm (geen vierkante plaat onder een rond meube
   });
   it('kuipfauteuil: voet met de omtrek van de onderbouw, helemaal binnen die omtrek', () => {
     for (const code of ['pebble', 'tumble', 'manon', 'satie']) {
-      const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, basis = b.find((x) => x.code === 'e1.basis')!;
+      // De onderbouw, of bij een fauteuil met een vaste trommelzitting (Satie) die zitting zelf.
+      const b = blokken(code), voet = b.find((x) => x.code === 'e1.verdekt')!, basis = (b.find((x) => x.code === 'e1.basis') ?? b.find((x) => x.code === 'e1.zitkussen'))!;
       expect(voet.omtrek, code).toBeDefined();
       for (const p of voet.omtrek!) expect(binnen(p, basis.omtrek!), `${code} ${p}`).toBe(true);
     }
@@ -207,8 +208,11 @@ describe('kuipfauteuils: onderbouw binnen de wand, ronde onderrand bij een zweve
   };
   it('de onderbouw steekt nergens door de wand (vroeger een dun streepje naast het wanduiteinde van Ross)', () => {
     // Bij een afgerond grondvlak ligt de buitenkant van de wand in de hoeken tot ±1 cm binnen de omtrek.
-    for (const code of ['ross', 'mabel-1', 'mabel-2', 'sullivan', 'tumble', 'quin', 'satie', 'fraser', 'milton', 'manon'])
+    for (const code of ['ross', 'mabel-1', 'mabel-2', 'sullivan', 'tumble', 'quin', 'milton', 'manon'])
       expect(speling(code), code).toBeGreaterThan(0.7);
+    // Een trommel die binnen de schaal staat (`zitIn`: Satie, Fraser): haar rand ligt overal binnen de wand, tegen de
+    // binnenkant aan (geen kier tussen zitting en schaal, en niets dat erdoor steekt).
+    for (const code of ['satie', 'fraser']) expect(speling(code), code).toBeGreaterThan(0.3);
   });
   it('alleen de zwevende schaal (Karl) krijgt een ronde onderrand; een wand op de onderbouw niet', () => {
     const karl = blokken('karl').find((x) => x.code === 'e1.rug')!;
@@ -231,7 +235,7 @@ describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse 
     expect(rug.y).toBeLessThan(0); // platte onderkant onder de vloer
   });
   it('andere kuipfauteuils blijven zoals ze waren (donkere onderbouw, los zitkussen, wand op de onderbouw)', () => {
-    for (const code of ['tumble', 'manon', 'satie']) {
+    for (const code of ['tumble', 'manon']) {
       const b = blokken(code), basis = b.find((x) => x.code === 'e1.basis')!, rug = b.find((x) => x.code === 'e1.rug')!;
       expect(basis.soort, code).toBe('stof');
       expect(basis.glad, code).toBeUndefined();
@@ -247,7 +251,7 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
   // Maten van de productpagina's: breedte × diepte × hoogte en de zithoogte.
   const SITE: Record<string, [number, number, number, number]> = {
     milton: [70, 68, 72, 40], 'mabel-1': [68, 65, 76, 45], 'mabel-2': [150, 65, 76, 45], 'mabel-meridienne': [150, 65, 76, 45],
-    fraser: [61, 61, 70, 44],
+    fraser: [61, 61, 70, 44], satie: [70, 70, 70, 45],
   };
   it('de maten van de productpagina: het kader van de 3D en de bovenkant van de zitting', () => {
     for (const [code, [b, d, h, zit]] of Object.entries(SITE)) {
@@ -255,12 +259,27 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
       // Het kader van de fauteuil zelf (een los sierkussen, zoals op de méridienne, telt niet mee).
       const eigen = s.blokken.filter((x) => x.code.startsWith('e1.'));
       expect(s.kader, code).toMatchObject({ b, d });
-      expect(Math.max(...eigen.map((x) => x.y + x.h)), code).toBe(h);
+      // De hoogte van de site is de schaal; een los rugkussen mag erboven uitkomen (Satie).
+      expect(Math.max(...eigen.filter((x) => !x.code.includes('rugkussen')).map((x) => x.y + x.h)), code).toBe(h);
       expect(zitting.y + zitting.h, code).toBe(zit);
       // Eén vaste zitting in de stof, zonder donkere onderbouw; geen fout in de prijsberekening.
       expect(s.blokken.some((x) => x.code === 'e1.basis'), code).toBe(false);
       expect(berekenOntwerp(model(code).ontwerp, zetelCatalogus, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout'), code).toHaveLength(0);
     }
+  });
+  it('Satie: trommel tot op de vloer, de schaal steekt errond uit, één los rugkussen (geen drie rollen)', () => {
+    const b = scene('satie').blokken, rug = b.find((x) => x.code === 'e1.rug')!, zit = b.find((x) => x.code === 'e1.zitkussen')!;
+    expect(new Set(rug.hoogtes)).toEqual(new Set([70]));
+    expect(rug.naad?.soort).toBe('bies');
+    expect(zit.y).toBeLessThanOrEqual(2);
+    // Het trapje: de zitting is 8 cm smaller dan de schaal, en komt vooraan tot de voorkant.
+    expect(zit.b).toBeCloseTo(62, 0);
+    expect(zit.z + zit.d).toBeCloseTo(70, 0);
+    const kussens = b.filter((x) => x.code.startsWith('e1.rugkussen'));
+    expect(kussens).toHaveLength(1);
+    expect(kussens[0]).toMatchObject({ b: 48, h: 38 });
+    // Het kussen komt boven de schaal uit, zoals op de foto.
+    expect(kussens[0]!.y + kussens[0]!.h).toBeGreaterThan(70);
   });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;

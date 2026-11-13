@@ -236,10 +236,18 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons' },
     vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 90, 90, { kuipvorm: 'trommel' }]]),
   }, 'F-Quin'),
-  model('satie', 'Satie', FAUTEUIL, 'Ronde kuipfauteuil met los rugkussen in velours, op een verdekte voet.', {
-    hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los' },
-    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'trommel' }]]),
-  }, 'F-Satie'),
+  model('satie', 'Satie', FAUTEUIL, 'Ronde fauteuil: een trommel tot op de vloer met een dunne schaal met bies rond de achterste helft en één los rugkussen.', {
+    hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', rug: 'los', zitting: 'vaste_zitting', naad: 'bies' },
+    // Productpagina: diameter 70 (ook 110 en 130), hoogte 70; geen zithoogte (45 geschat). Uit de foto's (benadering,
+    // 13/11): een ronde trommel tot op de vloer; een dunne schaal met een bies die er rondom een paar cm uitsteekt, even
+    // hoog rondom, rond de achterste helft; één los, breed rugkussen dat boven de schaal uitkomt (Jonas, 13/11: "Satie
+    // heeft maar 1 kussen"; de grotere maten hebben er volgens de site 4 en 5).
+    vormgeving: {
+      zachtheid: 7, rughoogte: 70, zithoogte: 45, poothoogte: 2,
+      kuip: { dikte: 6, boog: 95, zitTrommel: true, zitRand: 3, zitIn: 4, profiel: [[0, 1], [1, 1]], kussens: 1, kussenMaat: 48, kussenHoog: 38 },
+    },
+    elementen: rij([['fauteuil', 70, 70, { kuipvorm: 'trommel' }]]),
+  }, 'F-Satie', MATEN_WEBSITE),
   model('mabel-1', 'Mabel 1-zit', FAUTEUIL, 'Kuipfauteuil in bouclé: een dunne leuning die aan de zijkanten tot op de dikke zitting zakt, op een donker frame met slanke poten.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'ringframe', poothoogte: 'hoog', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: 68 × 65 × 76, zithoogte 45, zitdiepte 49. Uit de foto's (benadering, 13/11): de leuning staat achteraan
@@ -263,7 +271,7 @@ export const zetelModellen: ModelDefinitie[] = [
     // Geen bies te zien.
     vormgeving: {
       zachtheid: 6, rughoogte: 70, zithoogte: 44, poothoogte: 26,
-      kuip: { dikte: 9, boog: 96, zitTrommel: true, zitRand: 5, zitNaad: 10, profiel: [[0, 1], [1, 1]] },
+      kuip: { dikte: 9, boog: 96, zitTrommel: true, zitRand: 5, zitNaad: 10, zitIn: 3.5, profiel: [[0, 1], [1, 1]] },
     },
     elementen: rij([['fauteuil', 61, 61, { kuipvorm: 'rond' }]]),
   }, 'F-Fraser', MATEN_WEBSITE),

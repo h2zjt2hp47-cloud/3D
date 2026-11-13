@@ -601,7 +601,7 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
         const w0 = lokaalNaarWereld(e, 0, 0, B, D);
         const vorm = (code: string, punten: string[], vulling: string): VormResultaat =>
           ({ code: `${e.id}.${code}`, x: rond(w0.x), y: rond(w0.y), breedte: rond(w0.b), hoogte: rond(w0.h), vulling, pad: `M${punten.join(' L')} Z` });
-        const uit: VormResultaat[] = [vorm('zit', opb.plan.map(([x, y]) => naarW(x, y)), kleur), vorm('kussen', opb.zit.map(([x, y]) => naarW(x, y)), kleur)];
+        const uit: VormResultaat[] = [vorm('zit', (kp.zitTrommel ? opb.zit : opb.plan).map(([x, y]) => naarW(x, y)), kleur), vorm('kussen', opb.zit.map(([x, y]) => naarW(x, y)), kleur)];
         // Wand: buitenkant heen, rond uiteinde, binnenkant terug, rond begin.
         const p = opb.wand.pad, h = opb.wand.dikte / 2;
         const nrm = p.map((q, i) => {
