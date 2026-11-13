@@ -255,10 +255,13 @@ export const zetelModellen: ModelDefinitie[] = [
     },
     elementen: rij([['fauteuil', 66, 64, { kuipvorm: 'afgerond' }]]),
   }, 'F-Ross', MATEN_WEBSITE),
-  model('amusette-fauteuil', 'Amusette fauteuil', FAUTEUIL, 'Fauteuil met brede, strakke armen en vaste rug (zelfde lijn als de Amusette sofa).', {
+  model('amusette-fauteuil', 'Amusette fauteuil', FAUTEUIL, 'Blokvormige clubfauteuil met strakke armen en een vaste, licht hellende rug (zelfde lijn als de Amusette sofa).', {
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast' },
-    vormgeving: { kussendikte: 18 }, elementen: rij([['arm', 26, 90, strak], ['zit', 70, 90], ['arm', 26, 90, strak]]),
-  }, 'F-Amusette'),
+    // Productpagina: 86 × 80 × 71, zithoogte 40. Armhoogte 60, rug en zitkussen zoals op de technische tekening van de
+    // Amusette sofa (13/11). De armen zijn hier 13 cm breed (op de sofa 15): het zitelement begint bij 60 cm breed.
+    vormgeving: { zithoogte: 40, rughoogte: 71, armhoogte: 60, rugdikte: 25, kussendikte: 16, zachtheid: 4, rugvorm: 'hellend' },
+    elementen: rij([['arm', 13, 80, strak], ['zit', 60, 80], ['arm', 13, 80, strak]]),
+  }, 'F-Amusette', MATEN_WEBSITE),
   model('quin', 'Quin', FAUTEUIL, 'Grote ronde draaifauteuil: een trommel op een lage ronde voet, een dunne schaal rond de achterste helft en drie losse rugkussens.', {
     hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'draaivoet', rug: 'los_dons', comfort: 'dons', zitting: 'vaste_zitting' },
     // Productpagina: 91 × 91 × 78, zithoogte 45. Uit de foto's (benadering, 13/11): een grote ronde trommel op een lage,

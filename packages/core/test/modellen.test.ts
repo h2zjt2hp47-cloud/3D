@@ -366,6 +366,17 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(voorste).toBeLessThan(50);
     expect(rug.naad?.soort).toBe('bies');
   });
+  it('Amusette fauteuil: geen kuip maar arm + zit + arm, met de maten van de productpagina', () => {
+    const o = model('amusette-fauteuil').ontwerp, s = scene('amusette-fauteuil');
+    expect(o.elementen.map((e) => e.type)).toEqual(['arm', 'zit', 'arm']);
+    expect(s.kader).toMatchObject({ b: 86, d: 80 });
+    // Hoogte 71 (de hellende rug komt bovenaan iets lager uit dan haar lengte), zithoogte 40, armhoogte 60.
+    expect(s.kader.h).toBeGreaterThan(68);
+    expect(s.kader.h).toBeLessThanOrEqual(71);
+    expect(vormgevingVan(o, o.elementen[1]!)).toMatchObject({ rughoogte: 71, armhoogte: 60 });
+    expect(o.vormgeving?.zithoogte).toBe(40);
+    expect(berekenOntwerp(o, zetelCatalogus, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout')).toHaveLength(0);
+  });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;
     expect(new Set(rug.hoogtes)).toEqual(new Set([70]));
