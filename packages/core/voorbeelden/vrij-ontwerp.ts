@@ -29,6 +29,9 @@ export const zetelOpties: OptieGroep[] = [
       { code: 'messing', label: 'Messing cilinderpoot', prijs: 60, teken: { vorm: 'cilinder', metaal: true, kleur: '#b8963e' }, kost: 32 },
       { code: 'metaal_staaf', label: 'Slanke metalen poot', prijs: 25, teken: { vorm: 'cilinder', metaal: true }, kost: 14 },
       { code: 'draaivoet', label: 'Draaivoet (zwenkvoet)', uitleg: 'Centrale voet, de zetel kan draaien', prijs: 85, teken: { vorm: 'draaivoet' }, kost: 40 },
+      // Onderstel van de fauteuils van de klant (13/11, uit de productfoto's; prijzen verzonnen zoals alle andere).
+      { code: 'ringframe', label: 'Houten frame op vier poten', uitleg: 'Frame onder de zitting met vier schuine poten', prijs: 60, teken: { vorm: 'ringframe' }, kost: 30 },
+      { code: 'kruisframe', label: 'Vier poten met kruis', uitleg: 'Vier houten poten met een kruis ertussen', prijs: 45, teken: { vorm: 'kruisframe' }, kost: 24 },
       { code: 'housse', label: 'Hoes tot op de grond (housse)', uitleg: 'Afneembare hoes die de poten bedekt', prijsPerM: 60, stofPct: 18, teken: { vorm: 'housse' }, kost: 10 },
       {
         code: 'plint', label: 'Houten plint (sokkel)', uitleg: 'Doorlopende lage sokkel', prijsPerM: 140, teken: { vorm: 'plint' }, kostPerM: 55,
@@ -291,7 +294,8 @@ export const zetelCatalogus: OntwerpCatalogus = {
     },
     {
       code: 'fauteuil', label: 'Fauteuil', tekenstijl: 'kuip',
-      breedte: { min: 60, max: 110, standaard: 80 }, diepte: { min: 60, max: 100, standaard: 80 },
+      // Tot 160 cm breed: de klant heeft kuipen als tweezit (Mabel 150 cm) en brede trommels (Satie 110 en 130 cm).
+      breedte: { min: 60, max: 160, standaard: 80 }, diepte: { min: 60, max: 100, standaard: 80 },
       prijs: g(690, 760, 870, 620), per10cm: g(30, 34, 40, 26),
       stofVast: 1.6, stofPerM: 2.6, kostVast: 140, kostPerM: 150, uren: 5, urenPerM: 2,
     },

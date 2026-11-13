@@ -64,6 +64,9 @@ const ZETELBEELDEN = [
   { naam: 'husk-schuin', model: 'Husk', familie: "Sofa's", standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'pebble-schuin', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'stockholm-schuin', model: 'Stockholm pouf', familie: 'Poufs', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  // Fauteuils met de opbouw van de klant (vaste ronde zitting, dunne schaal met bies, houten frame), sinds 13/11.
+  { naam: 'milton-schuin', model: 'Milton', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'mabel2-schuin', model: 'Mabel 2-zit', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'pebble-naad', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.42, 0.17, 0.57, 0.45] },
   { naam: 'ross-kop', model: 'Ross', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.4, 0.34, 0.6, 0.86] },
   { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.08, 0.28, 0.36, 0.88] },

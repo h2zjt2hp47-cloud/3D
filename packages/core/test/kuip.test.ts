@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bouw3D, tekenVooraanzicht, type Ontwerp, type Rotatie } from '../src/index.js';
+import { berekenOntwerp, bouw3D, tekenVooraanzicht, type Ontwerp, type Rotatie } from '../src/index.js';
 import { kuipOpbouw, kuipParameters } from '../src/kuip.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
@@ -85,11 +85,7 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
   // De fauteuils van de klant (Milton, Fraser, Satie, Quin, Mabel …) hebben een dikke, vaste, ronde zitting met een dunne
   // schaal erachter op een eigen onderstel. Die vorm staat als gegevens in `vormgeving.kuip` en overschrijft de gekozen
   // kuipvorm; zonder die gegevens verandert er niets.
-  const cat = structuredClone(zetelCatalogus);
-  cat.opties!.find((g) => g.code === 'poten')!.keuzes.push(
-    { code: 'ringframe', label: 'Houten ring op vier poten', teken: { vorm: 'ringframe' } },
-    { code: 'kruisframe', label: 'Vier poten met kruis', teken: { vorm: 'kruisframe' } },
-  );
+  const cat = zetelCatalogus;
   const fauteuil = (kuip: Record<string, unknown> | undefined, poten = 'ringframe', rotatie: Rotatie = 0): Ontwerp => ({
     hoofdmateriaal: 'linnen_ficelle', opties: { poten },
     vormgeving: { rughoogte: 72, zithoogte: 40, poothoogte: 18, ...(kuip ? { kuip } : {}) },
@@ -144,21 +140,68 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     expect(voor.find((v) => v.code === 'f.zitkussen')).toMatchObject({ hoogte: 22 });
   });
 
+  it('een brede kuip met een korte schaal (Mabel 2-zit): de zitting blijft het hele grondvlak', () => {
+    // De schaal staat alleen achteraan en zakt aan de zijkanten tot op de zitting. De zitting mag niet wegkrimpen omdat de
+    // voorkant van het grondvlak ver van de wand ligt.
+    const o = fauteuil({ plan: 'afgerond', exponent: 4.5, dikte: 7, boog: 96, voorBoven: -3, zitTrommel: true, profiel: [[0, 1], [0.62, 1], [1, 0]] });
+    o.elementen[0]!.breedte = 150; o.elementen[0]!.diepte = 65;
+    o.vormgeving = { ...o.vormgeving, rughoogte: 76, zithoogte: 45, poothoogte: 22 };
+    const blokken = bouw3D(o, cat, standaardMaterialen).blokken;
+    const zit = blokken.find((b) => b.code === 'f.zitkussen')!, rug = blokken.find((b) => b.code === 'f.rug')!;
+    expect(zit.b).toBeGreaterThan(145);
+    expect(zit.d).toBeGreaterThan(61);
+    // De schaal: achteraan op rughoogte, aan de uiteinden net onder de zithoogte (ze duikt in de zitting), en ze stopt
+    // rond het midden van de diepte.
+    expect(Math.max(...rug.hoogtes!)).toBe(76);
+    expect(rug.hoogtes![0]).toBe(42);
+    expect(rug.hoogtes![rug.hoogtes!.length - 1]).toBe(42);
+    expect(Math.max(...rug.pad!.map((q) => q[1]))).toBeLessThan(45);
+    expect(berekenOntwerp(o, cat, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout')).toHaveLength(0);
+  });
+
   it('schaal op de zitting: haar onderkant ligt net onder de zithoogte en de zitting is het volle grondvlak', () => {
     const blokken = bouw3D(fauteuil({ ...milton, schaalOp: true }), cat, standaardMaterialen).blokken;
     expect(blokken.find((b) => b.code === 'f.rug')!.y).toBe(38);
     expect(blokken.find((b) => b.code === 'f.zitkussen')!.b).toBe(70);
   });
 
-  it('onderstel: ring op vier poten, of vier poten met een kruis', () => {
+  it('onderstel: frame op vier poten, of vier poten met een kruis', () => {
     const ring = bouw3D(fauteuil(milton, 'ringframe'), cat, standaardMaterialen).blokken;
-    expect(ring.find((b) => b.code === 'f.ring')).toMatchObject({ vorm: 'cilinder', y: 14, h: 4 });
-    expect(ring.filter((b) => b.code.startsWith('f.poot-'))).toHaveLength(4);
-    for (const p of ring.filter((b) => b.code.startsWith('f.poot-'))) expect(p).toMatchObject({ y: 0, h: 14 });
+    // Het frame volgt het grondvlak van de zitting (hier rond), 3 cm naar binnen, vlak onder de zitting.
+    const frame = ring.find((b) => b.code === 'f.ring')!, zit = ring.find((b) => b.code === 'f.zitkussen')!;
+    expect(frame).toMatchObject({ vorm: 'blok', y: 14, h: 4 });
+    expect(frame.omtrek).toBeDefined();
+    expect(frame.b).toBeCloseTo(64, 0);
+    expect(frame.b).toBeLessThan(zit.b);
+    const poten = ring.filter((b) => b.code.startsWith('f.poot-'));
+    expect(poten).toHaveLength(4);
+    for (const p of poten) {
+      expect(p).toMatchObject({ vorm: 'kegel', y: 0, h: 14 });
+      // Onder de zitting, niet erbuiten.
+      expect(p.x).toBeGreaterThan(zit.x);
+      expect(p.x + p.b).toBeLessThan(zit.x + zit.b);
+    }
+    // Een eigen dikte van het frame (Mabel: dunner).
+    expect(bouw3D(fauteuil({ ...milton, frameDik: 2.5 }, 'ringframe'), cat, standaardMaterialen).blokken.find((b) => b.code === 'f.ring')).toMatchObject({ y: 15.5, h: 2.5 });
     const kruis = bouw3D(fauteuil(milton, 'kruisframe'), cat, standaardMaterialen).blokken;
     expect(kruis.some((b) => b.code === 'f.ring')).toBe(false);
-    expect(kruis.filter((b) => b.code.startsWith('f.kruis-')).map((b) => b.draai).sort()).toEqual([-45, 45]);
+    // De latten liggen langs de diagonalen van het grondvlak (70 × 68: ±44,2°).
+    expect(kruis.filter((b) => b.code.startsWith('f.kruis-')).map((b) => b.draai).sort()).toEqual([-44.2, 44.2]);
     for (const p of kruis.filter((b) => b.code.startsWith('f.poot-'))) expect(p).toMatchObject({ y: 0, h: 18 });
+    // Het vooraanzicht tekent het frame en de poten ook.
+    const voor = tekenVooraanzicht(fauteuil(milton, 'ringframe'), cat, standaardMaterialen).vormen;
+    expect(voor.find((v) => v.code === 'f.ring')).toMatchObject({ hoogte: 4 });
+    expect(voor.filter((v) => v.code.startsWith('f.poot-'))).toHaveLength(2);
+  });
+
+  it('de schaal van een trommelfauteuil krijgt een naad of bies langs haar rand', () => {
+    const o = fauteuil(milton, 'ringframe');
+    o.opties = { ...o.opties, naad: 'bies' };
+    expect(bouw3D(o, cat, standaardMaterialen).blokken.find((b) => b.code === 'f.rug')!.naad?.soort).toBe('bies');
+    // Zonder trommel (de bestaande kuipvormen) niet.
+    const oud = fauteuil(undefined, 'conisch');
+    oud.opties = { ...oud.opties, naad: 'bies' };
+    expect(bouw3D(oud, cat, standaardMaterialen).blokken.find((b) => b.code === 'f.rug')!.naad).toBeUndefined();
   });
 
   it('zonder eigen vorm blijft alles zoals het was', () => {

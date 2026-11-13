@@ -52,6 +52,8 @@ export interface KuipParameters {
   zitRand?: number;
   /** De schaal staat op de zitting (onderkant net onder de zithoogte) in plaats van eromheen tot onderaan. */
   schaalOp?: boolean;
+  /** Dikte in cm van het houten frame onder de zitting bij poten met een frame (ringframe); standaard 4. */
+  frameDik?: number;
 }
 
 /** Parameters uit de `teken`-velden van de gekozen kuipvorm; null voor de hoekige fauteuil (rechte rug en armen). */
@@ -79,6 +81,7 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
     ...(teken.zitTrommel === true ? { zitTrommel: true } : {}),
     ...(typeof teken.zitRand === 'number' ? { zitRand: teken.zitRand } : {}),
     ...(teken.schaalOp === true ? { schaalOp: true } : {}),
+    ...(typeof teken.frameDik === 'number' ? { frameDik: teken.frameDik } : {}),
   };
 }
 

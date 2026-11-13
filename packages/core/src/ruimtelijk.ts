@@ -8,7 +8,7 @@
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
-import { kuipOpbouw, kuipParameters, type Punt } from './kuip.js';
+import { kuipOpbouw, kuipParameters, superellips, type Punt } from './kuip.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -201,19 +201,28 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         // - ringframe (Milton, Sullivan): een houten ring onder de zitting op vier korte poten;
         // - kruisframe (Fraser, Ross): vier poten met een kruis ertussen, halverwege de hoogte.
         const m = Math.min(B, D), dik = 5;
-        const ringH = potVorm === 'ringframe' ? Math.min(4, P / 3) : 0, ringD = m * 0.84;
-        if (ringH > 0) {
-          const w = lokaalNaarWereld(e, (B - ringD) / 2, (D - ringD) / 2, ringD, ringD);
+        // Kuipfauteuil: het frame volgt het grondvlak van de zitting (rond bij Milton, een afgeronde rechthoek bij Mabel),
+        // 3 cm naar binnen, en de poten staan onder de vier "hoeken" van dat grondvlak.
+        const kuipFrame = t.tekenstijl === 'kuip' ? kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip) : null;
+        const ringH = potVorm === 'ringframe' ? Math.min(kuipFrame?.frameDik ?? 4, P / 3) : 0;
+        const exp = kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : 2;
+        if (ringH > 0 && kuipFrame) {
+          const f = Math.max(0.5, 1 - 3 / (m / 2));
+          omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(B / 2, D / 2, (B / 2) * f, (D / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });
+        } else if (ringH > 0) {
+          const ringD = m * 0.84, w = lokaalNaarWereld(e, (B - ringD) / 2, (D - ringD) / 2, ringD, ringD);
           blokken.push({ code: `${e.id}.ring`, soort: potSoort, vorm: 'cilinder', x: r2(w.x), y: r2(P - ringH), z: r2(w.y), b: r2(w.b), h: r2(ringH), d: r2(w.h), kleur: potKleur });
         }
-        // Poten op een cirkel, schuin naar de vier hoeken.
-        const straal = m * (potVorm === 'ringframe' ? 0.385 : 0.36), a = straal / Math.SQRT2;
+        // Poten schuin onder de vier hoeken: op de diagonalen van het grondvlak, een eind naar binnen.
+        const hoek = (2 ** (-1 / exp)) * (potVorm === 'ringframe' ? 0.8 : 0.74);
         for (const [k, sx, sy] of [['la', -1, -1], ['ra', 1, -1], ['lv', -1, 1], ['rv', 1, 1]] as const)
-          lokaal(`poot-${k}`, potSoort, B / 2 + sx * a - dik / 2, D / 2 + sy * a - dik / 2, dik, dik, 0, P - ringH, potKleur, { vorm: 'kegel', taps: 0.8 });
+          lokaal(`poot-${k}`, potSoort, B / 2 + sx * (B / 2) * hoek - dik / 2, D / 2 + sy * (D / 2) * hoek - dik / 2, dik, dik, 0, P - ringH, potKleur, { vorm: 'kegel', taps: 0.7 });
+        const straal = Math.hypot((B / 2) * hoek, (D / 2) * hoek);
         if (potVorm === 'kruisframe') {
-          // Twee latten kruiselings tussen de poten: een balk langs de breedte, 45° gedraaid rond het midden.
-          const lang = 2 * straal, y = Math.max(2, P * 0.42);
-          for (const [k, hoek] of [['a', 45], ['b', -45]] as const) {
+          // Twee latten kruiselings tussen de poten: een balk langs de breedte, gedraaid rond het midden volgens de
+          // diagonaal van het grondvlak (45° bij een vierkant of rond grondvlak).
+          const lang = 2 * straal, y = Math.max(2, P * 0.42), diagonaal = rond1((Math.atan2(D, B) * 180) / Math.PI);
+          for (const [k, hoek] of [['a', diagonaal], ['b', -diagonaal]] as const) {
             const w = lokaalNaarWereld(e, B / 2 - lang / 2, D / 2 - 1.2, lang, 2.4);
             blokken.push({ code: `${e.id}.kruis-${k}`, soort: potSoort, vorm: 'blok', x: r2(w.x), y: r2(y), z: r2(w.y), b: r2(w.b), h: 2.4, d: r2(w.h), kleur: potKleur, draai: hoek });
           }
@@ -472,7 +481,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
                 const d = Math.hypot(x - ax - g * ux, y - ay - g * uy);
                 if (d < beste) { beste = d; binnenPad = !((i === 0 && f < 0) || (i === wp.length - 2 && f > 1)); }
               }
-              if (binnenPad) buitenWand = Math.max(buitenWand, beste - half);
+              // Alleen punten van de omtrek die echt bij de wand liggen: bij een breed grondvlak met een korte wand is het
+              // dichtste punt van de voorkant de wand achteraan, tientallen cm verder (Mabel 2-zit: de zitting kromp weg).
+              if (binnenPad && beste < half + 4) buitenWand = Math.max(buitenWand, beste - half);
             }
           }
           const krimp = kp.zwevend || kp.schaalOp ? 0 : r2(0.8 + buitenWand);
@@ -622,6 +633,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
       ? { soort: 'bies', kleur: naadTeken.contrast ? '#2b2622' : stof }
       : naadTeken?.stiksel ? { soort: 'stiksel', kleur: donkerder(stof, 0.6) } : { soort: 'naad', kleur: donkerder(stof, 0.7) };
     for (const b of blokken.slice(eersteBlok)) if (b.soort === 'kussen' && b.kleur === stof && ((b.vorm ?? 'blok') === 'blok' || (b.vorm === 'cilinder' && !b.as))) b.naad = naad;
+    // De schaal van een fauteuil met een trommelzitting: een naad of bies langs haar rand, zoals op de productfoto's.
+    for (const b of blokken.slice(eersteBlok)) if (b.vorm === 'kuipwand' && b.code === `${e.id}.rug` && b.kleur === stof && naad.soort !== 'stiksel' && kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip)?.zitTrommel) b.naad = naad;
     // Arm met een profiel: een naad of bies rond het voorpaneel (zoals een gestoffeerde arm), geen sierstiksel.
     for (const b of blokken.slice(eersteBlok)) if (b.vorm === 'profiel' && b.kleur === stof && naad.soort !== 'stiksel') b.naad = naad;
     if (m) for (const b of blokken.slice(eersteBlok)) if ((b.soort === 'stof' || b.soort === 'kussen') && b.kleur === stof) {

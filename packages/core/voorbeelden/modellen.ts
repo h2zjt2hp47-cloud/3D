@@ -240,10 +240,17 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'los' },
     vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 80, 80, { kuipvorm: 'trommel' }]]),
   }, 'F-Satie'),
-  model('mabel-1', 'Mabel 1-zit', FAUTEUIL, 'Afgeronde fauteuil in bouclé op slanke donkere poten.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart' },
-    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 75, 75, { kuipvorm: 'afgerond' }]]),
-  }, 'F-Mabel1'),
+  model('mabel-1', 'Mabel 1-zit', FAUTEUIL, 'Kuipfauteuil in bouclé: een dunne leuning die aan de zijkanten tot op de dikke zitting zakt, op een donker frame met slanke poten.', {
+    hoofdmateriaal: 'boucle_belize', opties: { poten: 'ringframe', poothoogte: 'hoog', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
+    // Productpagina: 68 × 65 × 76, zithoogte 45, zitdiepte 49. Uit de foto's (benadering, 13/11): de leuning staat achteraan
+    // en zakt aan de zijkanten in een vloeiende lijn tot op de zitting, rond het midden van de zitdiepte; het voorste deel
+    // van de zitting ligt vrij. Vaste zitting met een bies, dun donker frame op vier poten (poothoogte 22 geschat).
+    vormgeving: {
+      zachtheid: 6, rughoogte: 76, zithoogte: 45, poothoogte: 22,
+      kuip: { exponent: 3, dikte: 7, boog: 100, voorBoven: -3, zitTrommel: true, zitRand: 6, frameDik: 2.5, profiel: [[0, 1], [0.3, 1], [1, 0]] },
+    },
+    elementen: rij([['fauteuil', 68, 65, { kuipvorm: 'afgerond' }]]),
+  }, 'F-Mabel1', MATEN_WEBSITE),
   model('sullivan', 'Sullivan', FAUTEUIL, 'Fauteuil met hoge, afgeronde rug op een draaivoet; bijpassende hocker.', {
     hoofdmateriaal: 'wol_grijs', opties: { poten: 'draaivoet', rughoogte: 'hoog' },
     vormgeving: { zachtheid: 6 }, elementen: rij([['fauteuil', 80, 85, { kuipvorm: 'afgerond' }]]),
@@ -252,18 +259,31 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'chenille_nachtblauw', opties: { poten: 'cilinder', poothoogte: 'hoog', hout: 'eik_zwart' },
     vormgeving: { zachtheid: 6 }, elementen: rij([['fauteuil', 70, 70, { kuipvorm: 'rond' }]]),
   }, 'F-Fraser'),
-  model('milton', 'Milton', FAUTEUIL, 'Ronde draaifauteuil met hoge rug in zachte stof.', {
-    hoofdmateriaal: 'linnen_travertin', opties: { poten: 'draaivoet', rughoogte: 'hoog' },
-    vormgeving: { zachtheid: 7 }, elementen: rij([['fauteuil', 75, 75, { kuipvorm: 'rond' }]]),
-  }, 'F-Milton'),
+  model('milton', 'Milton', FAUTEUIL, 'Ronde fauteuil: een dikke, vaste zitting met een dunne, rechte schaal rond de achterste helft, op een donker houten frame.', {
+    hoofdmateriaal: 'linnen_travertin', opties: { poten: 'ringframe', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
+    // Productpagina: 70 × 68 × 72, zithoogte 40, zitdiepte 60 (schaal 8 cm = diepte − zitdiepte). Uit de foto's (benadering,
+    // 13/11): schaal met een vlakke rand rond de achterste helft, tot onderaan de zitting; zitting van ±22 cm met een bies;
+    // houten ring op vier poten (poothoogte 18 geschat).
+    vormgeving: {
+      zachtheid: 7, rughoogte: 72, zithoogte: 40, poothoogte: 18,
+      kuip: { dikte: 8, boog: 94, zitTrommel: true, zitRand: 7, profiel: [[0, 1], [1, 1]] },
+    },
+    elementen: rij([['fauteuil', 70, 68, { kuipvorm: 'rond' }]]),
+  }, 'F-Milton', MATEN_WEBSITE),
   model('manon', 'Manon', FAUTEUIL, 'Omhullende, ronde fauteuil op een verdekte voet.', {
     hoofdmateriaal: 'velours_oudroze', opties: { poten: 'verdekt', poothoogte: 'laag' },
     vormgeving: { zachtheid: 8 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'omhullend' }]]),
   }, 'F-Manon'),
-  model('mabel-2', 'Mabel 2-zit', FAUTEUIL, 'Kleine tweezit met afgeronde rug en lage armen op slanke donkere poten.', {
-    hoofdmateriaal: 'wol_oceaan', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', rug: 'vast' },
-    vormgeving: { rugvorm: 'rond', zachtheid: 6 }, elementen: rij([['arm', 12, 82, { armstijl: 'rond', armhoogte: 'laag' }], ['zit', 140, 82], ['arm', 12, 82, { armstijl: 'rond', armhoogte: 'laag' }]]),
-  }, 'F-Mabel2'),
+  model('mabel-2', 'Mabel 2-zit', FAUTEUIL, 'Kleine tweezit als kuip: dezelfde leuning als de Mabel 1-zit, 150 cm breed, op een donker frame met slanke poten.', {
+    hoofdmateriaal: 'wol_oceaan', opties: { poten: 'ringframe', poothoogte: 'hoog', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
+    // Productpagina: 150 × 65 × 76, zithoogte 45. Op de foto dezelfde kuip als de 1-zit (vroeger hier arm + zit + arm: een
+    // andere zetel, 13/11). Eén element van het type fauteuil; de vorm is een benadering uit de foto.
+    vormgeving: {
+      zachtheid: 6, rughoogte: 76, zithoogte: 45, poothoogte: 22,
+      kuip: { exponent: 4.5, dikte: 7, boog: 96, voorBoven: -3, zitTrommel: true, zitRand: 6, frameDik: 2.5, profiel: [[0, 1], [0.62, 1], [1, 0]] },
+    },
+    elementen: rij([['fauteuil', 150, 65, { kuipvorm: 'afgerond' }]]),
+  }, 'F-Mabel2', MATEN_WEBSITE),
   model('mabel-meridienne', 'Mabel Meridienne', FAUTEUIL, 'Meridienne met rug en arm aan één kant, bies en slanke donkere poten.', {
     hoofdmateriaal: 'boucle_belize', opties: { poten: 'conisch', poothoogte: 'hoog', hout: 'eik_zwart', naad: 'bies', rug: 'vast' },
     // Eén méridienne zoals op de foto: arm links en een chaise longue met de rug langs de lange zijde (gedraaid).

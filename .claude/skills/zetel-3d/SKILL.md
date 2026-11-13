@@ -170,6 +170,19 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - Start Chromium met `--use-angle=swiftshader --enable-unsafe-swiftshader --ignore-gpu-blocklist` voor WebGL zonder GPU.
 - Menu (3/11): `[data-weergave]` = modellen, ontwerp, offerte, sofa, kast, beheer (Beheer opent `#materialen` of `#catalogus`; tabbladen `[data-beheer="stoffen"]` en `[data-cat]`). De startopstellingen zitten ingeklapt in `#o-opnieuw` (eerst `open = true`) en vragen een tweede klik als er al een ontwerp is ("Klik nogmaals"). *Alles wissen* bestaat niet meer: dat is *Leeg tekenvlak*.
 
+## Fauteuils van de klant: zitting, schaal en onderstel als gegevens (13/11)
+- **Waarom:** de kuipvormen (dikke wand, boogrug, los kussen, gewone poten) leken niet op de fauteuils van de klant. Die hebben een dikke, vaste, ronde zitting met een dunne schaal erachter op een eigen onderstel. Lijst per model en beelden: `docs/nalopen-modellen.md`.
+- **Gegevens per model in `vormgeving.kuip`** (overschrijft velden van de gekozen kuipvorm; `kuipParameters(teken, eigen)` in `kuip.ts`, gebruikt door `ruimtelijk.ts`, `ontwerp.ts` en `vooraanzicht.ts`):
+  - `dikte`, `boog`, `voorBoven`, `exponent` zoals bij de kuipvormen. `voorBoven: -3` laat de schaal aan het uiteinde in de zitting duiken (Mabel);
+  - `profiel: [[u, f], …]`: verloop van de bovenrand, u van 0 (midden achteraan) tot 1 (uiteinde), f van 0 (zithoogte + voorBoven) tot 1 (rughoogte); tussen de punten een zachte S-bocht, of recht met `profielRecht`. Met een profiel liggen de punten van de schaal op gelijke afstanden en is het hoogste punt precies de rughoogte;
+  - `zitTrommel` (+ `zitRand`): geen `.basis`; `.zitkussen` is de hele zitting (soort kussen, stofkleur, naad) van de poten tot de zithoogte over het hele grondvlak; `KuipOpbouw.zitDik`;
+  - `schaalOp`: de schaal staat op de zitting (onderkant 2 cm erin), de zitting is dan het volle grondvlak;
+  - `frameDik`: dikte van het frame bij `ringframe`.
+- **Poten** `ringframe` (frame onder de zitting op vier poten; bij een kuip volgt het frame het grondvlak, `.ring` als blok met omtrek) en `kruisframe` (vier poten met twee latten langs de diagonalen, `Blok.draai`). Keuzes in de catalogus, ook getekend in het vooraanzicht.
+- **Naad of bies op de schaal:** `ruimtelijk.ts` zet `naad` op de kuipwand van een trommelfauteuil; `kuipwandGeometrie` bewaart de lijn over de rand (`geo.userData.kroon`) en `mesh()` trekt er een buis langs.
+- **Valkuil:** `buitenWand` (hoe ver de omtrek buiten de wand ligt, voor het krimpen van de zitting) telt alleen punten binnen 4 cm van de wand. Bij een breed grondvlak met een korte schaal mat de motor anders de voorkant tegen de wand achteraan en kromp de zitting weg (Mabel 2-zit).
+- **Werkwijze die werkte:** eerst alle foto's en de maten van de productpagina ophalen en per model een blad foto / 3D maken; de dikte van de schaal narekenen (diepte − zitdiepte); één model als proef tonen via een losse scène (geen modelwijziging, dus geen prijs); pas na het oordeel van Jonas omzetten. Wat de prijs raakt (maten, keuzes, grenzen van een type) eerst voorleggen met oud en nieuw bedrag.
+
 ## Beeldvergelijking (sinds 5/11)
 - **Close-ups (13/11):** een beeld met `uitsnede: [x0, y0, x1, y1]` is een stuk uit `foto()` (2400 px breed). Er zijn er drie: `pebble-naad`, `ross-kop`, `zora-arm`. Voeg er een toe voor elke plek die op het hele beeld te klein is om op te vallen; neem de referentie vóór je iets wijzigt.
 - **Bewaker voor de vaste regel** (prijs, offerte, boven- en vooraanzicht veranderen niet): maak vóór een reeks 3D-wijzigingen een momentopname van `berekenOntwerp` (zonder en met `tekening`), `tekenVooraanzicht` en hun SVG voor alle modellen, en vergelijk na elke stap. Zo viel op 13/11 op dat de zitting van Pebble onbedoeld meekromp.

@@ -44,6 +44,7 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `pebble-schuin` | kuipfauteuil met verdekte voet |
 | `stockholm-schuin` | ronde poef |
 | `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
+| `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame (13/11) |
 | `pebble-naad` (close-up) | de naad waar de schaal in de zitting duikt |
 | `ross-kop` (close-up) | het wanduiteinde van een kuipfauteuil en de aansluiting met de onderbouw |
 | `zora-arm` (close-up) | de arm met ronde bovenkant |

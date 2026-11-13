@@ -12,11 +12,14 @@ lopen tegen de productfoto's en per model op te lijsten wat afwijkt.
   los kussen en gewone poten.
 - **Ook de maten wijken af.** De fauteuils hadden nooit de maten van de productpagina's gekregen (de sofa's wel, op
   3/11). Milton is bij ons 92 cm hoog, op de site 72; Mabel 2-zit 164 × 82, op de site 150 × 65.
-- **De motor kan de echte opbouw nu tekenen**, als gegevens per model. Geen enkel model gebruikt dat al: prijs,
-  tekeningen en 3D van de 42 modellen zijn identiek gebleven.
-- **Proef op Milton en Mabel** (alleen als beeld, de modellen zijn niet gewijzigd): herkenbaar. Wacht op het oordeel van
-  Jonas en op zijn beslissing over wat de prijs raakt.
-- **Nog niet nagelopen:** de sofa's, de zetelbedden en de poefs.
+- **De motor kan de echte opbouw nu tekenen**, als gegevens per model.
+- **Drie fauteuils zijn omgebouwd:** Milton, Mabel 1-zit en Mabel 2-zit (als kuip van 150 cm). Zie
+  [Omgebouwd](#omgebouwd-milton-mabel-1-zit-en-mabel-2-zit). De andere 39 modellen zijn identiek gebleven.
+- **Beslist door Jonas (13/11):** de maten van de site mogen; vaste zitting en onderstel worden echte keuzes in de
+  catalogus; het type fauteuil mag tot 160 cm breed. Hij wilde eerst bijsturen: "bij Mabel komt de leuning niet zo ver
+  als onze 3D". Dat is rechtgezet.
+- **Nog te doen:** de tien andere fauteuils, na zijn oordeel over deze drie; de sofa's, de zetelbedden en de poefs zijn
+  nog niet nagelopen.
 
 ## Werkwijze
 
@@ -68,7 +71,7 @@ Maten in cm: breedte × diepte × hoogte, en de zithoogte.
 | **Amusette fauteuil** | 86 × 80 × 71, zit 40 | 122 × 90 × 80, zit 45 | Blokvormige clubfauteuil, rug en armen bijna even hoog, tot op de vloer. | 36 cm te breed; rug te hoog. |
 | **Pebble** | (alleen de poef staat op de site) | 85 × 85 × 92 | Goedgekeurd op 5/11. | Maten van de fauteuil nog te vragen aan de klant. |
 
-## Wat de motor nu kan (nog door geen model gebruikt)
+## Wat de motor nu kan
 
 In `vormgeving.kuip` van een model staan velden die de gekozen kuipvorm overschrijven (`kuip.ts`, gedeeld door de 3D en
 het boven- en vooraanzicht):
@@ -78,15 +81,43 @@ het boven- en vooraanzicht):
   een schouder naar lage armen zakt;
 - `zitTrommel`, `zitRand`: de zitting als één vaste trommel van de poten tot de zithoogte;
 - `schaalOp`: de schaal staat op de zitting in plaats van eromheen;
-- poten: `ringframe` (ring op vier poten) en `kruisframe` (vier poten met kruis) als tekenvormen. Ze staan nog niet als
-  keuze in de catalogus.
+- `frameDik`: dikte van het houten frame onder de zitting;
+- poten: de keuzes *Houten frame op vier poten* (`ringframe`: het frame volgt het grondvlak van de zitting) en *Vier
+  poten met kruis* (`kruisframe`), sinds 13/11 in de catalogus (prijs 60 en 45 euro, verzonnen);
+- de schaal van zo'n fauteuil krijgt een naad of bies langs haar rand, volgens de keuze *Naden*.
 
-Zonder die gegevens verandert er niets: prijs, offerte, tekeningen en 3D van de 42 modellen zijn identiek, de
-beeldvergelijking geeft 0,00 %.
+Zonder die gegevens verandert er niets aan een fauteuil: de bestaande kuipvormen tekenen zoals vroeger.
 
-## Proef: Milton en Mabel
+## Omgebouwd: Milton, Mabel 1-zit en Mabel 2-zit
 
-Alleen als beeld; de modellen in de repo zijn niet gewijzigd.
+![Milton: foto van de site, 3D voor en na](afbeeldingen/fauteuils-milton-na.jpg)
+
+![Mabel 1-zit en 2-zit: foto van de site, 3D voor en na](afbeeldingen/fauteuils-mabel-na.jpg)
+
+| Model | Voor | Na | Prijs voor | Prijs na |
+|---|---|---|---|---|
+| **Milton** | 75 × 75 × 92, eivormige kuip, los kussen, draaivoet | 70 × 68 × 72, zithoogte 40; vaste ronde zitting; schaal van 8 cm met een vlakke rand en een bies; houten frame op vier poten | 963 | 884 |
+| **Mabel 1-zit** | 75 × 75 × 80, dikke wand met boogrug, los kussen | 68 × 65 × 76, zithoogte 45; leuning van 7 cm die achteraan staat en aan de zijkanten tot op de zitting zakt; vaste zitting met bies; dun frame op vier poten | 990 | 1.007 |
+| **Mabel 2-zit** | 164 × 82 × 80, arm + zit + arm | 150 × 65 × 76: dezelfde kuip als de 1-zit, als één element | 1.552 | 1.163 |
+
+- **Uit de productpagina:** breedte, diepte, hoogte, zithoogte, en de dikte van de schaal van Milton (diepte − zitdiepte).
+- **Benadering uit de foto's:** hoe ver de schaal rondloopt, het verloop van de bovenrand, de poothoogte (Milton 18,
+  Mabel 22), de dikte van het frame, de ronding van het grondvlak.
+- **De leuning van Mabel** (bijsturing van Jonas): ze stopt rond het midden van de zitdiepte en zakt daar in een
+  vloeiende lijn tot net onder de zithoogte, zodat ze in de zitting duikt. Het voorste deel van de zitting ligt vrij.
+- **Keuzes:** *Houten frame op vier poten*, *Vaste zitting* en *Bies in dezelfde stof*. De prijs en de offertetekst
+  volgen dus wat de 3D toont.
+- **Tekeningen:** het boven- en vooraanzicht van deze drie modellen zijn mee veranderd (zelfde bron, `kuip.ts`): de
+  zitting als één blok, de leuning met haar nieuwe verloop, het frame en de poten.
+- **Wat nog verschilt van de foto:** de poten staan recht (op de foto schuin naar buiten); de stof en de kleur zijn die
+  van het model, niet die van de foto.
+
+Fout onderweg gevonden: bij een breed grondvlak met een korte schaal kromp de zitting tot een klein blokje, omdat de
+motor de voorkant van het grondvlak mat tegen de wand achteraan. Rechtgezet, met een test.
+
+## Eerste proef (voor de bijsturing)
+
+Alleen als beeld; de leuning van Mabel liep hier nog tot bijna vooraan.
 
 ![Milton: foto, 3D nu en het voorstel, van voor, opzij en schuin](afbeeldingen/fauteuils-proef-milton.jpg)
 
@@ -101,7 +132,8 @@ Alleen als beeld; de modellen in de repo zijn niet gewijzigd.
 
 ## Wat de prijs raakt
 
-Alle prijzen zijn verzonnen. Volgens de vaste regel beslist Jonas hierover.
+Alle prijzen zijn verzonnen. Volgens de vaste regel besliste Jonas hierover (13/11): de maten van de site mogen, vaste
+zitting en onderstel worden echte keuzes, en het type fauteuil mag tot 160 cm.
 
 **1. De maten van de productpagina's** (breedte, diepte, hoogte en zithoogte; geen andere keuzes):
 
@@ -128,6 +160,9 @@ krijgt ze een (verzonnen) prijs en verandert de offertetekst van die modellen.
 
 ## Nog te doen
 
-- Het oordeel van Jonas over de proef, en zijn beslissing over de vier punten hierboven.
-- Daarna de fauteuils één voor één ombouwen, met per model een beeld foto / voor / na.
+- Het oordeel van Jonas over Milton en de twee Mabels.
+- Daarna de tien andere fauteuils één voor één: Fraser, Satie, Quin, Ross, Sullivan, Karl, Tumble, Manon, Amusette en
+  Mabel méridienne. Daarvoor nog nodig: vierkante losse rugkussens (Quin, Satie), een scheve schaal met eigen gegevens
+  (Manon, méridienne), een lage ronde voet (Quin).
 - De sofa's, de zetelbedden en de poefs nalopen. De pagina met de poefs gaf geen links naar productpagina's.
+- Pas publiceren na goedkeuring.

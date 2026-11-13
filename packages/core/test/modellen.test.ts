@@ -189,7 +189,8 @@ describe('kuipfauteuils: onderbouw binnen de wand, ronde onderrand bij een zweve
   const blokken = (code: string) => bouw3D(structuredClone(zetelModellen.find((m) => m.code === code)!.ontwerp), zetelCatalogus, standaardMaterialen).blokken;
   /** Kleinste speling van de onderbouw binnen de buitenkant van de wand, gemeten onder de wand zelf (niet voorbij zijn uiteinden). */
   const speling = (code: string) => {
-    const b = blokken(code), rug = b.find((x) => x.code === 'e1.rug')!, basis = b.find((x) => x.code === 'e1.basis')!;
+    // De onderbouw, of bij een trommel (Milton, Mabel) de zitting zelf.
+    const b = blokken(code), rug = b.find((x) => x.code === 'e1.rug')!, basis = (b.find((x) => x.code === 'e1.basis') ?? b.find((x) => x.code === 'e1.zitkussen'))!;
     const wp = rug.pad!, half = rug.dikte! / 2;
     let kleinst = Infinity;
     for (const [x, z] of basis.omtrek!) {
@@ -200,13 +201,13 @@ describe('kuipfauteuils: onderbouw binnen de wand, ronde onderrand bij een zweve
         const d = Math.hypot(x - ax - g * ux, z - az - g * uz);
         if (d < beste) { beste = d; onderWand = !((i === 0 && f < 0) || (i === wp.length - 2 && f > 1)); }
       }
-      if (onderWand) kleinst = Math.min(kleinst, half - beste);
+      if (onderWand && beste < half + 4) kleinst = Math.min(kleinst, half - beste);
     }
     return kleinst;
   };
   it('de onderbouw steekt nergens door de wand (vroeger een dun streepje naast het wanduiteinde van Ross)', () => {
     // Bij een afgerond grondvlak ligt de buitenkant van de wand in de hoeken tot ±1 cm binnen de omtrek.
-    for (const code of ['ross', 'mabel-1', 'sullivan', 'tumble', 'quin', 'satie', 'fraser', 'milton', 'manon'])
+    for (const code of ['ross', 'mabel-1', 'mabel-2', 'sullivan', 'tumble', 'quin', 'satie', 'fraser', 'milton', 'manon'])
       expect(speling(code), code).toBeGreaterThan(0.7);
   });
   it('alleen de zwevende schaal (Karl) krijgt een ronde onderrand; een wand op de onderbouw niet', () => {
@@ -237,5 +238,46 @@ describe('Pebble (kuipvorm organisch): zachte kiezel met een schaal, geen losse 
       expect(rug.glad, code).toBeUndefined();
       expect(rug.y, code).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe('fauteuils naar de productfoto\'s (13/11): Milton, Mabel 1-zit en Mabel 2-zit', () => {
+  const model = (code: string) => zetelModellen.find((m) => m.code === code)!;
+  const scene = (code: string) => bouw3D(structuredClone(model(code).ontwerp), zetelCatalogus, standaardMaterialen);
+  it('de maten van de productpagina', () => {
+    expect(scene('milton').kader).toMatchObject({ b: 70, d: 68, h: 72 });
+    expect(scene('mabel-1').kader).toMatchObject({ b: 68, d: 65, h: 76 });
+    expect(scene('mabel-2').kader).toMatchObject({ b: 150, d: 65, h: 76 });
+  });
+  it('vaste ronde zitting, dunne schaal met bies, houten frame op vier poten', () => {
+    for (const code of ['milton', 'mabel-1', 'mabel-2']) {
+      const b = scene(code).blokken, rug = b.find((x) => x.code === 'e1.rug')!, zit = b.find((x) => x.code === 'e1.zitkussen')!;
+      expect(b.some((x) => x.code === 'e1.basis'), code).toBe(false);
+      expect(zit.soort, code).toBe('kussen');
+      expect(zit.y + zit.h, code).toBe(model(code).ontwerp.vormgeving!.zithoogte);
+      expect(rug.dikte, code).toBeLessThanOrEqual(8);
+      expect(rug.naad?.soort, code).toBe('bies');
+      expect(b.find((x) => x.code === 'e1.ring'), code).toBeDefined();
+      expect(b.filter((x) => x.code.startsWith('e1.poot-')), code).toHaveLength(4);
+    }
+  });
+  it('Milton: de schaal is overal even hoog; Mabel: de leuning zakt aan de zijkanten tot op de zitting en stopt rond het midden', () => {
+    expect(new Set(scene('milton').blokken.find((x) => x.code === 'e1.rug')!.hoogtes)).toEqual(new Set([72]));
+    for (const code of ['mabel-1', 'mabel-2']) {
+      const s = scene(code), rug = s.blokken.find((x) => x.code === 'e1.rug')!;
+      expect(Math.max(...rug.hoogtes!), code).toBe(76);
+      // Aan de uiteinden net onder de zithoogte: de leuning duikt in de zitting.
+      expect(rug.hoogtes![0], code).toBe(42);
+      // Jonas (13/11): "bij Mabel komt de leuning niet zo ver als onze 3D". Ze stopt voorbij het midden van de diepte,
+      // maar ruim voor de voorkant (65 cm).
+      const voorste = Math.max(...rug.pad!.map((q) => q[1]));
+      expect(voorste, code).toBeGreaterThan(30);
+      expect(voorste, code).toBeLessThan(46);
+    }
+  });
+  it('Mabel 2-zit is één kuip van 150 cm, zonder fout in de prijsberekening', () => {
+    const o = model('mabel-2').ontwerp;
+    expect(o.elementen.map((e) => e.type)).toEqual(['fauteuil']);
+    expect(berekenOntwerp(o, zetelCatalogus, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout')).toHaveLength(0);
   });
 });

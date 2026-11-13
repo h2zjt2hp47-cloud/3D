@@ -88,6 +88,17 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         case 'slede':
           pad(`${e.id}.slede`, `M${rond(x0 + inset)} ${-P} V0 H${rond(x1 - inset)} V${-P}`, x0, -P, p.b, P, 'none', { lijn: potKleur, lijndikte: 3 });
           break;
+        case 'ringframe':
+        case 'kruisframe': {
+          // Onderstel van een fauteuil: een frame onder de zitting op schuine poten, of vier poten met een kruis.
+          const frame = vorm === 'ringframe' ? Math.min(kuipParameters(opt.get('kuipvorm')?.teken, vormgevingVan(ontwerp, e).kuip)?.frameDik ?? 4, P / 3) : 0;
+          if (frame) rect(`${e.id}.ring`, x0 + 3, -P, p.b - 6, frame, potKleur);
+          const links = x0 + p.b * 0.2, rechts = x1 - p.b * 0.2;
+          for (const [k, xm] of [['l', links], ['r', rechts]] as const)
+            pad(`${e.id}.poot-${k}`, `M${rond(xm - 2.5)} ${rond(-(P - frame))} H${rond(xm + 2.5)} L${rond(xm + 1.75)} 0 H${rond(xm - 1.75)} Z`, xm - 2.5, -(P - frame), 5, P - frame, potKleur);
+          if (vorm === 'kruisframe') rect(`${e.id}.kruis`, links, -(P * 0.42 + 2.4), rechts - links, 2.4, potKleur);
+          break;
+        }
         case 'haarspeld':
           for (const [k, xm] of [['l', x0 + inset + 3], ['r', x1 - inset - 3]] as const)
             pad(`${e.id}.poot-${k}`, `M${rond(xm - 3)} ${-P} L${rond(xm)} 0 L${rond(xm + 3)} ${-P}`, xm - 3, -P, 6, P, 'none', { lijn: potKleur, lijndikte: 2 });

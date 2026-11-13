@@ -1092,6 +1092,14 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       kleuren[i * 3] = kleuren[i * 3 + 1] = kleuren[i * 3 + 2] = ao;
     }
     geo.setAttribute('color', new THREE.BufferAttribute(kleuren, 3));
+    // De lijn over de rand van de wand, voor een naad of bies: langs de punt van de ene kop omhoog, over de bovenkant en
+    // langs de andere kop weer omlaag (in de coördinaten van de mesh).
+    const eerste = ringen[0]!, laatste = ringen[ringen.length - 1]!;
+    const kroon: [number, number, number][] = [];
+    for (let k = 0; k < 4; k++) kroon.push([eerste.x - ox, (eerste.voet ?? 0) + ((eerste.hoog - (eerste.voet ?? 0)) * k) / 4, eerste.z - oz]);
+    for (const r of ringen) kroon.push([r.x - ox, r.hoog, r.z - oz]);
+    for (let k = 3; k >= 0; k--) kroon.push([laatste.x - ox, (laatste.voet ?? 0) + ((laatste.hoog - (laatste.voet ?? 0)) * k) / 4, laatste.z - oz]);
+    geo.userData.kroon = kroon;
     return geo;
   }
 
@@ -1203,6 +1211,17 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       if (!mat) { mat = base.clone(); mat.vertexColors = true; materialen.set(sleutel, mat); }
       const m = new THREE.Mesh(g, mat);
       m.name = b.code;
+      // Naad of bies langs de rand van de schaal (fauteuils met een trommelzitting, zoals op de productfoto's).
+      if (b.naad && b.naad.soort !== 'stiksel' && g.userData.kroon) {
+        const curve = new THREE.CatmullRomCurve3((g.userData.kroon as [number, number, number][]).map((q) => new THREE.Vector3(q[0], q[1], q[2])), false, 'centripetal');
+        const bies = b.naad.soort === 'bies';
+        const naadMat = bies
+          ? new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur === b.kleur ? tint(b.kleur, 0.94) : b.naad.kleur), roughness: 0.85, envMapIntensity: OMGEVING })
+          : new THREE.MeshStandardMaterial({ color: kleur(b.naad.kleur), roughness: 1, envMapIntensity: OMGEVING });
+        const buis = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(600, g.userData.kroon.length * 4), bies ? 0.55 : 0.22, 6, false), naadMat);
+        buis.receiveShadow = true;
+        m.add(buis);
+      }
       m.position.set(cxo, b.y, czo);
       m.castShadow = m.receiveShadow = true;
       return m;
