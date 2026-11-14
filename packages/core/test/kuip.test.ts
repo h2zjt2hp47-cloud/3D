@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, bouw3D, tekenVooraanzicht, type Ontwerp, type Rotatie } from '../src/index.js';
-import { framePoten, kuipOpbouw, kuipParameters, kuipUit, trommelKader, wandBoven } from '../src/kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters, kuipUit, trommelKader, wandBoven, wandDoorsnede } from '../src/kuip.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -373,6 +373,132 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     }
     // Zonder helling geen veld op het blok.
     expect(bouw3D(fauteuil(milton, 'ringframe'), cat, standaardMaterialen).blokken.find((x) => x.code === 'f.rug')!.leun).toBeUndefined();
+  });
+
+  describe('armen dikker dan de rug (`dikteProfiel`, 14/11)', () => {
+    // Ross en Sullivan: een dunne rug met dikke armen. Het extra komt naar binnen; de buitenkant van de schaal blijft op
+    // de omtrek, want de breedte op de productpagina is over de armen gemeten.
+    const h = { P: 26, zithoogte: 43, rugH: 78, kussenDik: 0 };
+    const basis = { exponent: 2.6, zitTrommel: true, voorBoven: -3, profiel: [[0, 1], [0.33, 1], [0.47, 0.5], [0.75, 0.42], [1, 0]] };
+    const dun = kuipParameters({ plan: 'afgerond', dikte: 6, boog: 125 }, basis)!;
+    const dik = kuipParameters({ plan: 'afgerond', dikte: 6, boog: 125 }, { ...basis, dikteProfiel: [[0.5, 11.5], [0, 6], [0.44, 6], [1, 11.5]] })!;
+    const a = kuipOpbouw(66, 64, h, dun, false).wand, b = kuipOpbouw(66, 64, h, dik, false).wand;
+    const da = wandDoorsnede(a.pad, a.dikte, a.binnen), db = wandDoorsnede(b.pad, b.dikte, b.binnen);
+    type D = typeof da;
+    const kant = (d: D, i: number, s: 1 | -1): [number, number] => [d.midden[i]![0] + d.normaal[i]![0] * d.half[i]! * s, d.midden[i]![1] + d.normaal[i]![1] * d.half[i]! * s];
+    const totLijn = ([x, y]: [number, number], lijn: [number, number][]) => {
+      let beste = Infinity;
+      for (let i = 0; i < lijn.length - 1; i++) {
+        const [ax, ay] = lijn[i]!, ux = lijn[i + 1]![0] - ax, uy = lijn[i + 1]![1] - ay;
+        const f = Math.max(0, Math.min(1, ((x - ax) * ux + (y - ay) * uy) / (ux * ux + uy * uy || 1e-9)));
+        beste = Math.min(beste, Math.hypot(x - ax - f * ux, y - ay - f * uy));
+      }
+      return beste;
+    };
+    /** De punt van de ronde kop aan het begin van de wand: het uiteinde van de arm. */
+    const punt = (w: typeof a, d: D): [number, number] => {
+      const tx = w.pad[0]![0] - w.pad[1]![0], ty = w.pad[0]![1] - w.pad[1]![1], l = Math.hypot(tx, ty);
+      return [d.midden[0]![0] + (tx / l) * d.half[0]!, d.midden[0]![1] + (ty / l) * d.half[0]!];
+    };
+
+    it('het gegeven wordt gesorteerd gelezen en geldt alleen samen met een eigen verloop', () => {
+      expect(dun.dikteProfiel).toBeUndefined();
+      expect(dik.dikteProfiel).toEqual([[0, 6], [0.44, 6], [0.5, 11.5], [1, 11.5]]);
+      expect(kuipParameters({ plan: 'rond', dikte: 6, boog: 125 }, { dikteProfiel: [[0, 6], [1, 12]] })!.dikteProfiel).toBeUndefined();
+    });
+    it('zonder het gegeven verandert er niets: geen extra veld, de doorsnede is het pad zelf', () => {
+      expect(a.binnen).toBeUndefined();
+      expect('binnen' in a).toBe(false);
+      expect(da.midden).toBe(a.pad);
+      expect(new Set(da.half)).toEqual(new Set([3]));
+    });
+    it('rug 6 cm, armen 11,5 cm: het extra staat per punt, symmetrisch, en begint pas aan de schouder', () => {
+      const n = b.pad.length, mid = (n - 1) / 2;
+      expect(b.dikte).toBe(6);
+      expect(b.binnen).toHaveLength(n);
+      expect(b.binnen![mid]).toBe(0);
+      expect(b.binnen![Math.round(mid * 0.62)]).toBe(0);
+      expect(b.binnen![0]).toBe(5.5);
+      expect(b.binnen![n - 1]).toBe(5.5);
+      for (let i = 0; i < n; i++) expect(b.binnen![i], `punt ${i}`).toBe(b.binnen![n - 1 - i]);
+      expect(db.half[0]).toBeCloseTo(5.75, 5);
+      expect(db.half[mid]).toBeCloseTo(3, 5);
+      // De overgang is kort (een plooi tussen rug en arm), geen lange zwelling: binnen ±6 cm langs de schaal.
+      const eerste = b.binnen!.findIndex((x, i) => i > mid && x > 0), vol = b.binnen!.findIndex((x, i) => i > mid && x === 5.5);
+      let lang = 0;
+      for (let i = eerste; i < vol; i++) lang += Math.hypot(b.pad[i + 1]![0] - b.pad[i]![0], b.pad[i + 1]![1] - b.pad[i]![1]);
+      expect(lang).toBeLessThan(7);
+    });
+    it('de buitenkant blijft staan, de binnenkant komt aan de armen naar binnen', () => {
+      const n = b.pad.length, buitenA = a.pad.map((_, i) => kant(da, i, 1));
+      for (let i = 0; i < n; i++) {
+        expect(totLijn(kant(db, i, 1), buitenA), `buitenkant, punt ${i}`).toBeLessThan(0.15);
+        // De dikte ter plaatse, van buitenkant tot binnenkant.
+        const [ux, uy] = kant(db, i, 1), [ix, iy] = kant(db, i, -1);
+        expect(Math.hypot(ux - ix, uy - iy), `dikte, punt ${i}`).toBeCloseTo(6 + b.binnen![i]!, 5);
+      }
+      // Buiten is echt buiten: verder van het midden van de zetel (33, 32) dan de binnenkant.
+      for (const i of [0, Math.round((n - 1) / 2), n - 1]) {
+        const [ux, uy] = kant(db, i, 1), [ix, iy] = kant(db, i, -1);
+        expect(Math.hypot(ux - 33, uy - 32)).toBeGreaterThan(Math.hypot(ix - 33, iy - 32));
+      }
+    });
+    it('het uiteinde van de arm blijft waar het was: de middenlijn stopt zoveel vroeger als de kop ronder is', () => {
+      const pa = punt(a, da), pb = punt(b, db);
+      const tx = a.pad[0]![0] - a.pad[1]![0], ty = a.pad[0]![1] - a.pad[1]![1], l = Math.hypot(tx, ty);
+      // Langs de richting van de arm even ver (binnen 3 mm); opzij ligt de punt naar binnen (het midden van de dikke kop).
+      expect(Math.abs(((pb[0] - pa[0]) * tx + (pb[1] - pa[1]) * ty) / l)).toBeLessThan(0.3);
+      // De hoogtes: bovenaan nog steeds de rughoogte, aan het uiteinde nog steeds net onder de zitting.
+      expect(Math.max(...b.hoogtes)).toBe(78);
+      expect(b.hoogtes[0]).toBe(40);
+      expect(b.hoogtes[b.hoogtes.length - 1]).toBe(40);
+    });
+    it('3D, boven- en vooraanzicht volgen, bij elke draaiing; de maten van de zetel blijven gelijk', () => {
+      const ontwerp = (kuip: Record<string, unknown>, rotatie: Rotatie): Ontwerp => ({
+        hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'kruisframe' }, vormgeving: { rughoogte: 78, zithoogte: 43, poothoogte: 26, kuip },
+        elementen: [{ id: 'f', type: 'fauteuil', x: 0, y: 0, breedte: 66, diepte: 64, rotatie, opties: { kuipvorm: 'afgerond' } }],
+      });
+      const metDik = { ...basis, dikte: 6, boog: 125, dikteProfiel: [[0, 6], [0.44, 6], [0.5, 11.5], [1, 11.5]] }, zonder = { ...basis, dikte: 6, boog: 125 };
+      for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
+        const s1 = bouw3D(ontwerp(zonder, rotatie), cat, standaardMaterialen), s2 = bouw3D(ontwerp(metDik, rotatie), cat, standaardMaterialen);
+        const r1 = s1.blokken.find((x) => x.code === 'f.rug')!, r2 = s2.blokken.find((x) => x.code === 'f.rug')!;
+        expect(r1.binnen, `draaiing ${rotatie}`).toBeUndefined();
+        expect(r2.binnen, `draaiing ${rotatie}`).toHaveLength(r2.pad!.length);
+        expect(r2.dikte).toBe(6);
+        // Zelfde kader van de hele zetel, en dat van de schaal op hooguit 1 cm (haar dikke kop is ronder, dus hij komt
+        // schuin vooraan een haar anders uit): de buitenkant is niet verschoven.
+        for (const k of ['x', 'z', 'b', 'd'] as const) expect(Math.abs(r2[k] - r1[k]), `draaiing ${rotatie}, ${k}`).toBeLessThan(1);
+        expect(s2.kader).toEqual(s1.kader);
+        // In wereldmaat wijst het extra naar het midden van de zetel, hoe hij ook gedraaid staat.
+        const d = wandDoorsnede(r2.pad!, r2.dikte!, r2.binnen), mx = s2.kader.x + s2.kader.b / 2, mz = s2.kader.z + s2.kader.d / 2;
+        for (const i of [0, r2.pad!.length - 1]) {
+          expect(Math.hypot(d.midden[i]![0] - mx, d.midden[i]![1] - mz), `draaiing ${rotatie}`).toBeLessThan(Math.hypot(r2.pad![i]![0] - mx, r2.pad![i]![1] - mz));
+          expect(d.half[i]).toBeCloseTo(5.75, 5);
+        }
+        // Tekeningen: andere vorm van de schaal, zelfde maten.
+        const t1 = berekenOntwerp(ontwerp(zonder, rotatie), cat, standaardMaterialen), t2 = berekenOntwerp(ontwerp(metDik, rotatie), cat, standaardMaterialen);
+        const rug = (t: typeof t1) => t.tekening.vormen.find((v) => v.code === 'f.rug')!;
+        expect(rug(t2).pad).not.toBe(rug(t1).pad);
+        expect(t2.tekening.maatlijnen).toEqual(t1.tekening.maatlijnen);
+        expect(t2.prijs.verkoopprijsExcl).toBe(t1.prijs.verkoopprijsExcl);
+        const v1 = tekenVooraanzicht(ontwerp(zonder, rotatie), cat, standaardMaterialen), v2 = tekenVooraanzicht(ontwerp(metDik, rotatie), cat, standaardMaterialen);
+        expect(v2.maatlijnen).toEqual(v1.maatlijnen);
+        expect(JSON.stringify(v2.vormen)).not.toBe(JSON.stringify(v1.vormen));
+      }
+    });
+    it('samen met een hellende schaal (Sullivan): de helling en het extra staan allebei op het blok', () => {
+      const kp = kuipParameters({ plan: 'rond', dikte: 10, boog: 118 }, { zitTrommel: true, helling: 10.4, profiel: [[0, 1], [0.2, 1], [0.52, 0.43], [1, 0]], dikteProfiel: [[0, 10], [0.48, 10], [0.55, 14.5], [1, 14.5]] })!;
+      const w = kuipOpbouw(72, 80, { P: 22, zithoogte: 42, rugH: 93, kussenDik: 0 }, kp, false).wand;
+      expect(w.leun).toBeGreaterThan(0.16);
+      expect(w.binnen![0]).toBe(4.5);
+      expect(wandBoven(w)).toHaveLength(w.binnen!.length);
+    });
+    it('nooit dunner dan de wand zelf en hoogstens een derde van de zetel', () => {
+      const kp = kuipParameters({ plan: 'rond', dikte: 8, boog: 110 }, { zitTrommel: true, profiel: [[0, 1], [1, 0.3]], dikteProfiel: [[0, 2], [0.5, 2], [1, 90]] })!;
+      const w = kuipOpbouw(70, 68, h, kp, false).wand;
+      expect(Math.min(...w.binnen!)).toBe(0);
+      expect(Math.max(...w.binnen!) + w.dikte).toBeCloseTo(68 / 3, 0);
+    });
   });
 
   it('een los vierkant rugkussen leunt tegen de rand van de schaal en steekt er niet doorheen', () => {

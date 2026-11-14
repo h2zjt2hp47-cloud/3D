@@ -44,6 +44,14 @@ export interface KuipParameters {
   /** Tussen de punten van `profiel` een rechte lijn in plaats van een zachte S-bocht. */
   profielRecht?: boolean;
   /**
+   * Dikte van de schaal langs haar lengte, als punten [u, dikte in cm]: u zoals bij `profiel` (0 = midden achteraan,
+   * 1 = het uiteinde, aan beide kanten gelijk). Voor armen die dikker zijn dan de rug (Ross, Sullivan): bv.
+   * [[0, 6], [0.42, 6], [0.5, 10.5], [1, 10.5]] = een rug van 6 cm en vanaf halverwege een arm van 10,5 cm. Wat dikker
+   * is dan `dikte`, komt naar binnen: de buitenkant van de schaal blijft op de omtrek (de breedte van de zetel is over
+   * de armen gemeten). Nooit dunner dan `dikte`. Alleen samen met `profiel`. Leeg = overal `dikte`.
+   */
+  dikteProfiel?: [number, number][];
+  /**
    * De zitting is één ronde, vaste trommel in de stof over het hele grondvlak, van de poten tot de zithoogte, in plaats
    * van een onderbouw met een los kussen erop (zoals de fauteuils van de klant: Milton, Fraser, Satie, Quin …).
    */
@@ -109,7 +117,7 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
   const verloop = (x: unknown): [number, number][] => Array.isArray(x)
     ? (x as unknown[]).filter((q): q is [number, number] => Array.isArray(q) && typeof q[0] === 'number' && typeof q[1] === 'number').sort((a, b) => a[0] - b[0])
     : [];
-  const profiel = verloop(teken.profiel), profielRechts = verloop(teken.profielRechts);
+  const profiel = verloop(teken.profiel), profielRechts = verloop(teken.profielRechts), dikteProfiel = verloop(teken.dikteProfiel);
   return {
     plan: teken.plan === 'afgerond' ? 'afgerond' : 'rond',
     dikte: getal('dikte', 14),
@@ -123,6 +131,7 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
     ...(typeof teken.exponent === 'number' ? { exponent: teken.exponent } : {}),
     ...(profiel.length >= 2 ? { profiel } : {}),
     ...(teken.profielRecht === true ? { profielRecht: true } : {}),
+    ...(profiel.length >= 2 && dikteProfiel.length >= 2 ? { dikteProfiel } : {}),
     ...(teken.zitTrommel === true ? { zitTrommel: true } : {}),
     ...(typeof teken.zitRand === 'number' ? { zitRand: teken.zitRand } : {}),
     ...(typeof teken.zitIn === 'number' && teken.zitIn > 0 ? { zitIn: teken.zitIn } : {}),
@@ -224,9 +233,11 @@ export interface KuipOpbouw {
   plan: Punt[];
   /**
    * Middenlijn van de wand (aan haar voet) met de bovenhoogte per punt (absoluut, cm), dikte en onderkant (cm). Met een
-   * hellende schaal ook `leun`: hoeveel cm de wand per cm hoogte naar achteren (lokale −y) verschuift.
+   * hellende schaal ook `leun`: hoeveel cm de wand per cm hoogte naar achteren (lokale −y) verschuift. Met dikkere
+   * armen (`dikteProfiel`) ook `binnen`: per punt hoeveel cm de wand daar dikker is dan `dikte`, naar binnen toe. `pad`
+   * blijft de middenlijn van de wand op haar gewone dikte, zodat de buitenkant niet verschuift; zie `wandDoorsnede`.
    */
-  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number; leun?: number };
+  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number; leun?: number; binnen?: number[] };
   /** Omtrek van het zitkussen. */
   zit: Punt[];
   /** Onder- en bovenkant van de basis (cm). Bij een trommel (`zitTrommel`) is er geen basis: boven = onder. */
@@ -277,6 +288,31 @@ export function wandBoven(wand: KuipOpbouw['wand']): Punt[] {
   });
 }
 
+/**
+ * De doorsnede van een wand per punt van haar middenlijn, voor alles wat de wand tekent (3D, zachte vorm, boven- en
+ * vooraanzicht): het midden van de doorsnede, haar halve dikte en de richting naar buiten (de buitenkant van de bocht).
+ * Zonder `binnen` is dat het pad zelf met de halve dikte. Met `binnen` (dikkere armen) schuift het midden de helft van het extra naar binnen en
+ * groeit de halve dikte mee: de buitenkant blijft dus precies waar ze was. De richting komt van het pad zelf (niet van
+ * de verschoven middens), anders zou de buitenkant meedraaien waar de dikte verandert.
+ */
+export function wandDoorsnede(pad: Punt[], dikte: number, binnen?: number[]): { midden: Punt[]; half: number[]; normaal: Punt[] } {
+  const n = pad.length, w = dikte / 2;
+  const normaal = pad.map((_, i) => {
+    const a = pad[Math.max(0, i - 1)]!, c = pad[Math.min(n - 1, i + 1)]!, tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1;
+    return [ty / l, -tx / l] as Punt;
+  });
+  // Buiten is de kant van de bocht: weg van het midden tussen de twee uiteinden, gezien vanuit het midden van de wand.
+  const m = Math.floor(n / 2), ex = (pad[0]![0] + pad[n - 1]![0]) / 2, ey = (pad[0]![1] + pad[n - 1]![1]) / 2;
+  const teken = normaal[m]![0] * (pad[m]![0] - ex) + normaal[m]![1] * (pad[m]![1] - ey) >= 0 ? 1 : -1;
+  const naarBuiten = normaal.map(([x, y]) => [x * teken, y * teken] as Punt);
+  if (!binnen || binnen.length !== n || !binnen.some((x) => x > 0)) return { midden: pad, half: pad.map(() => w), normaal: naarBuiten };
+  return {
+    midden: pad.map(([x, y], i) => { const s = Math.max(0, binnen[i]!) / 2; return [x - naarBuiten[i]![0] * s, y - naarBuiten[i]![1] * s] as Punt; }),
+    half: binnen.map((x) => w + Math.max(0, x) / 2),
+    normaal: naarBuiten,
+  };
+}
+
 function kuipOpbouwRecht(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
   const n = k.exponent ?? exponent(k.plan);
   const w = Math.min(k.dikte, B / 3, D / 3);
@@ -290,6 +326,7 @@ function kuipOpbouwRecht(B: number, D: number, h: { P: number; zithoogte: number
   const rug = k.profiel ? h.rugH : k.vlak ? voor + 5 : Math.max(h.rugH, voor + 4);
   const rond1 = (x: number) => Math.round(x * 10) / 10;
   let pad: Punt[], hoogtes: number[];
+  const binnen: number[] = [];
   if (k.scheef) {
     // Volgens de productfoto's (pebble-01-6, -13, -18): van rechtsachter (−38°, de schaal komt daar op de zitting uit,
     // ±vier vijfde van de breedte) over de rug naar links, het hoogst op de rug links van het midden (−128°, ±een kwart van de breedte), en langs de linkerzijde naar
@@ -328,15 +365,23 @@ function kuipOpbouwRecht(B: number, D: number, h: { P: number; zithoogte: number
     const afstand = [0];
     for (let i = 1; i <= F; i++) afstand.push(afstand[i - 1]! + Math.hypot(fijn[i]![0] - fijn[i - 1]![0], fijn[i]![1] - fijn[i - 1]![1]));
     const totaal = afstand[F]!, half = afstand[Math.round((k.boog / (k.boog + boogR)) * F)]!, N = Math.max(stappen * 2, Math.round(totaal / 3 / 2) * 2);
+    // Dikkere armen: de dikte per punt volgens `dikteProfiel`, nooit dunner dan de wand zelf en hoogstens een derde van
+    // de zetel. De kop van de wand is zo rond als ze daar dik is; daarom stopt de middenlijn zoveel vroeger als de kop
+    // langer wordt, zodat het uiteinde van de arm blijft waar `boog` het legt.
+    const dikOp = (u: number) => (k.dikteProfiel ? Math.max(w, Math.min(langsProfiel(k.dikteProfiel, u), B / 3, D / 3)) : w);
+    const kort = (dikOp(1) - w) / 2;
     let j = 0;
     pad = []; hoogtes = [];
     for (let i = 0; i <= N; i++) {
-      const doel = (totaal * i) / N;
+      const doel = kort + ((totaal - 2 * kort) * i) / N;
       while (j < F - 1 && afstand[j + 1]! < doel) j++;
       const f = Math.max(0, Math.min(1, (doel - afstand[j]!) / (afstand[j + 1]! - afstand[j]! || 1)));
       pad.push([rond1(fijn[j]![0] + f * (fijn[j + 1]![0] - fijn[j]![0])), rond1(fijn[j]![1] + f * (fijn[j + 1]![1] - fijn[j]![1]))]);
-      const hoog = doel <= half ? langsProfiel(k.profiel, (half - doel) / half, k.profielRecht) : langsProfiel(profielR, (doel - half) / (totaal - half), k.profielRecht);
+      // u loopt tot het einde van de middenlijn (met dikkere armen dus iets korter): het uiteinde blijft u = 1.
+      const u = doel <= half ? (half - doel) / (half - kort) : (doel - half) / (totaal - half - kort);
+      const hoog = doel <= half ? langsProfiel(k.profiel, u, k.profielRecht) : langsProfiel(profielR, u, k.profielRecht);
       hoogtes.push(rond1(voor + (rug - voor) * hoog));
+      if (k.dikteProfiel) binnen.push(rond1(dikOp(u) - w));
     }
   } else {
     pad = superellips(cx, cy, B / 2 - w / 2, D / 2 - w / 2, n, -90 - k.boog, -90 + k.boog, stappen * 2);
@@ -392,5 +437,5 @@ function kuipOpbouwRecht(B: number, D: number, h: { P: number; zithoogte: number
       rugkussens.push({ lx: w + 3 + i * breed, ly: w - 3, lb: breed - 1, ld: 16, y: zitBoven, h: Math.max(20, (top - zitBoven) * (k.vlak ? 0.95 : 0.85)) });
     }
   }
-  return { plan, wand: { pad, hoogtes, dikte: w, onder }, zit, basis: { onder: h.P, boven: basisBoven }, zitDik: k.zitTrommel ? h.zithoogte - h.P : h.kussenDik, rugkussens };
+  return { plan, wand: { pad, hoogtes, dikte: w, onder, ...(binnen.some((x) => x > 0) ? { binnen } : {}) }, zit, basis: { onder: h.P, boven: basisBoven }, zitDik: k.zitTrommel ? h.zithoogte - h.P : h.kussenDik, rugkussens };
 }

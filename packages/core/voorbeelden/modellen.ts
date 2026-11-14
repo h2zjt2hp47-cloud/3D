@@ -256,6 +256,7 @@ export const zetelModellen: ModelDefinitie[] = [
       kuip: {
         exponent: 2.6, dikte: 6, boog: 125, voorBoven: -3, zitTrommel: true, zitRand: 6,
         profiel: [[0, 1], [0.33, 1], [0.47, 0.5], [0.75, 0.42], [1, 0]],
+        dikteProfiel: [[0, 6], [0.44, 6], [0.5, 11.5], [1, 11.5]],
       },
     },
     elementen: rij([['fauteuil', 66, 64, { kuipvorm: 'afgerond' }]]),
@@ -322,6 +323,7 @@ export const zetelModellen: ModelDefinitie[] = [
         plan: 'rond', dikte: 10, boog: 118, voorBoven: -3, zitTrommel: true, zitRand: 7, zitIn: 5, zitInAchter: 5,
         frameDik: 3, frameKruis: true, helling: 10.4,
         profiel: [[0, 1], [0.2, 1], [0.52, 0.43], [0.8, 0.36], [1, 0]],
+        dikteProfiel: [[0, 10], [0.48, 10], [0.55, 14.5], [1, 14.5]],
       },
     },
     elementen: rij([['fauteuil', 72, 80, { kuipvorm: 'afgerond' }]]),

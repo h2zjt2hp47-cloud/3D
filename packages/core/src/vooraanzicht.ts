@@ -7,7 +7,7 @@
 import type { Materiaal } from './materialen.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, poefHoogteVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
-import { framePoten, kuipOpbouw, kuipParameters, kuipUit, trommelKader } from './kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters, kuipUit, trommelKader, wandDoorsnede } from './kuip.js';
 import { strakProfiel, uitlopendProfiel } from './ruimtelijk.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
@@ -224,17 +224,19 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           const opb = kuipOpbouw(e.breedte, e.diepte, { P, zithoogte, rugH, kussenDik }, kp, losseRug);
           const wereld = (lx: number, ly: number) => lokaalNaarWereld(e, lx, ly, 0, 0);
           // Middenlijn fijn bemonsterd (om de ½ cm, hoogte ertussen), anders wordt de bovenlijn golvend of krijgt ze gaten.
-          const pw: { x: number; y: number }[] = [], hw: number[] = [];
-          opb.wand.pad.forEach(([lx, ly], i) => {
-            if (i === 0) { pw.push(wereld(lx, ly)); hw.push(opb.wand.hoogtes[0]!); return; }
-            const [vx, vy] = opb.wand.pad[i - 1]!, n = Math.max(1, Math.ceil(Math.hypot(lx - vx, ly - vy) / 0.5));
+          // Met dikkere armen (`binnen`) volgt de lijn het midden van de doorsnede, met de halve dikte per punt.
+          const ds = wandDoorsnede(opb.wand.pad, opb.wand.dikte, opb.wand.binnen);
+          const pw: { x: number; y: number }[] = [], hw: number[] = [], dw: number[] = [];
+          ds.midden.forEach(([lx, ly], i) => {
+            if (i === 0) { pw.push(wereld(lx, ly)); hw.push(opb.wand.hoogtes[0]!); dw.push(ds.half[0]!); return; }
+            const [vx, vy] = ds.midden[i - 1]!, n = Math.max(1, Math.ceil(Math.hypot(lx - vx, ly - vy) / 0.5));
             for (let k = 1; k <= n; k++) {
               const f = k / n;
               pw.push(wereld(vx + (lx - vx) * f, vy + (ly - vy) * f));
               hw.push(opb.wand.hoogtes[i - 1]! + (opb.wand.hoogtes[i]! - opb.wand.hoogtes[i - 1]!) * f);
+              dw.push(ds.half[i - 1]! + (ds.half[i]! - ds.half[i - 1]!) * f);
             }
           });
-          const half = opb.wand.dikte / 2;
           const midZ = voetafdruk(e).y + voetafdruk(e).h / 2;
           /** Bovenlijn (omhullende) van de wanddelen; alleenVoor = enkel het deel vóór het midden (de armen). */
           const omhullende = (alleenVoor: boolean) => {
@@ -242,7 +244,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             const top = new Array<number>(n).fill(-1);
             pw.forEach((q, i) => {
               if (alleenVoor && q.y < midZ) return;
-              const hT = hw[i]!;
+              const hT = hw[i]!, half = dw[i]!;
               for (let k = 0; k < n; k++) {
                 const dx = x0 + k * stap - q.x;
                 if (Math.abs(dx) > half) continue;

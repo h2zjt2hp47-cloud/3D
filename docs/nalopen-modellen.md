@@ -425,6 +425,31 @@ krijgt ze een (verzonnen) prijs en verandert de offertetekst van die modellen.
 
 **4. Mabel 2-zit** is 150 cm breed; het type fauteuil stopt bij 110 cm. Ook Satie bestaat in 110 en 130 cm.
 
+## Armen dikker dan de rug (14/11)
+
+Jonas: "Graag publiceren en Voorstel". Het voorstel was het eerste punt van de grenzen van de motor: bij Ross en
+Sullivan zijn de armen dikke kussens tegen een dunnere rug, met een plooi ertussen. Bij ons had de schaal één dikte.
+
+![Ross en Sullivan: foto, vroeger en nu](afbeeldingen/fauteuils-armen-dik.jpg)
+
+- **Nieuw gegeven per model:** `dikteProfiel` in `vormgeving.kuip`, als punten [plaats langs de schaal, dikte in cm]
+  (0 = midden achteraan, 1 = het uiteinde), zoals `profiel` voor de hoogte.
+- **Het extra komt naar binnen.** De breedte op de productpagina is over de armen gemeten, dus de buitenkant van de
+  schaal blijft op de omtrek. Op de foto van Ross loopt de dunne schaal buiten rond de arm door (met de bies langs
+  haar rand) en staat het armkussen ertegen, aan de binnenkant.
+- **Het uiteinde van de arm blijft waar het was.** Een dikkere arm heeft een rondere kop; de middenlijn stopt zoveel
+  vroeger.
+- **De bies volgt de buitenrand**, niet het midden van de dikke arm (zoals op de foto's van Ross).
+- **Diktes uit de foto's (benadering):** Ross een rug van 6 cm met armen van ±11,5 cm (gemeten op de arm die recht naar
+  de camera wijst, tegen de breedte van 66 cm); Sullivan 10 cm met armen van ±14,5 cm (van voren 11 à 14 cm, tegen de
+  breedte van 72 cm). De overgang is kort (±5 cm langs de schaal), juist waar de rug tot armhoogte gezakt is.
+- **Alles tekent dezelfde arm:** 3D, zachte vorm, boven- en vooraanzicht en de schaduw op de vloer (één hulpfunctie,
+  `wandDoorsnede`).
+- **Ongewijzigd:** de maten (66 × 64 × 78 en 72 × 80 × 93), de zitdiepte, de prijs (Ross 866, Sullivan 954) en de
+  andere 40 modellen (prijs, tekeningen en 3D identiek; beeldvergelijking 0,00 %).
+- **Wat nog afwijkt:** de arm van Sullivan is op de foto een ronde rol die ook wat naar buiten bolt, en zijn rug is van
+  voren breder dan bij ons (zie de grenzen van de motor hieronder).
+
 ## Stand van de afwijkingen (14/11)
 
 Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
@@ -443,13 +468,14 @@ Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
 | Vier kussens in plaats van drie; dikkere rug | Quin; Tumble |
 | Sierkussens vóór de rugkussens in het vooraanzicht | alle modellen met sierkussens |
 | Bovenaanzicht en 3D op dezelfde hoogtes | alle fauteuils met een helling of losse kussens |
+| Armen dikker dan de rug (zie het blad hieronder) | Ross, Sullivan |
 
 **Grens van de motor** (kan nu niet; met de reden)
 
 | Wat | Reden |
 |---|---|
-| De schaal van Sullivan en Manon waaiert ook opzij uit | De helling werkt alleen naar achteren; een schaal die naar boven breder wordt, vraagt een grondvlak per hoogte. |
-| Armen dikker dan de rug bij Ross en Sullivan | De schaal heeft één dikte over haar hele lengte. |
+| De schaal van Sullivan en Manon waaiert ook opzij uit | De helling werkt alleen naar achteren; een schaal die naar boven breder wordt, vraagt een grondvlak per hoogte. Gemeten bij Sullivan (14/11): van voren is de rug bovenaan ±47 cm breed, van opzij loopt de schouder over ±23 cm schuin af. Een rechte schaal op een rond grondvlak kan maar één van de twee: wij volgen de foto van opzij, dus is de rug van voren te smal (±29 cm). |
+| De arm van Sullivan is een ronde rol die ook ±2 cm naar buiten bolt | Het extra van een dikkere arm komt alleen naar binnen; de doorsnede van de schaal is een rechte wand met een ronde bovenkant. |
 | De kussens van Quin liggen los door elkaar | Kussens zijn stijve vormen die volgens een regel geplaatst worden. |
 | De arm van Zora loopt rond de rug door | Arm en rug zijn aparte elementen. |
 | De houten band rond de rugschijf van Karl | Een band die de hellende schijf volgt, bestaat niet als bouwsteen. De achterpoten lopen bij ons door de zitting in plaats van erachter. |
@@ -469,10 +495,10 @@ Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
 
 - Details uit de tweede doorgang: de aflopende armlijn van Esmee, de dikkere armen van Fréjus, de kleur van Belize en
   Azar, de arm van Zora die rond de rug doorloopt, de standaardstikking per model.
-- Het frame van Karl (achterpoten tot achter de rug, houten band rond de rugschijf); dikkere armen dan de schaal bij
-  Ross en Sullivan; de schaal van Sullivan en Manon die ook opzij uitwaaiert; de kussens van Quin losser.
+- Het frame van Karl (houten band rond de rugschijf); de schaal van Sullivan en Manon die ook opzij uitwaaiert; de
+  kussens van Quin losser. (De dikkere armen van Ross en Sullivan zijn gebouwd op 14/11.)
 - De Fraser hocker, de Mabel hocker en de poefs Stockholm, Kanto en Fez: geen eigen pagina, dus geen maten; Stockholm
   en Kanto lopen op de foto naar boven smaller toe.
-- Een schaal die helt of uitwaaiert (Sullivan, Manon), vierkante poten, dikkere armen dan de schaal (Ross, Sullivan).
+- Een schaal die uitwaaiert (Sullivan, Manon). De helling, de vierkante poten en de dikkere armen zijn gebouwd.
 - De maten van de Pebble fauteuil vragen aan de klant (alleen de poef staat op de site).
 - Pas publiceren na goedkeuring.

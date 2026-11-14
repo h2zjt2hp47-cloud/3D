@@ -50,8 +50,9 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `karl-schuin` | zwevende rugschijf boven een vaste zitting, op een houten frame |
 | `tumble-schuin` | dikke rug die op een bolle zitting staat |
 | `sullivan-zij` | de rug die achterover helt, van opzij (14/11) |
+| `sullivan-schuin` | armen die dikker zijn dan de rug, met de plooi ertussen (14/11) |
 | `pebble-naad` (close-up) | de naad waar de schaal in de zitting duikt |
-| `ross-kop` (close-up) | de arm van Ross die vooraan in de zitting duikt, met de bies langs de rand |
+| `ross-kop` (close-up) | de dikke arm van Ross die vooraan in de zitting duikt, met de bies langs de buitenrand |
 | `zora-arm` (close-up) | de arm met ronde bovenkant |
 
 Allemaal bij kwaliteit *Mooi*, venster 1400 × 950. Een close-up is een stuk uit de foto op hoge resolutie (2400 px

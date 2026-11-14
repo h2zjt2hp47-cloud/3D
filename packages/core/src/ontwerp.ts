@@ -8,7 +8,7 @@
  */
 import type { Echt3D } from './echt3d.js';
 import { gebruiksklasse, materiaalArtikel, patroonfactor, type Materiaal } from './materialen.js';
-import { kuipOpbouw, kuipParameters, wandBoven } from './kuip.js';
+import { kuipOpbouw, kuipParameters, wandBoven, wandDoorsnede } from './kuip.js';
 import type { Melding, StuklijstResultaat, TekeningResultaat, VormResultaat } from './types.js';
 
 export type Rotatie = 0 | 90 | 180 | 270;
@@ -632,8 +632,12 @@ function tekenElement(
           const tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1;
           return [ty / l, -tx / l, tx / l, ty / l] as const; // normaal (x, y) en richting (x, y)
         });
+        // Dikkere armen (`binnen`): het midden van de doorsnede schuift naar binnen en de halve dikte groeit mee; de
+        // richtingen blijven die van de middenlijn zelf, zodat de buitenkant op haar plaats blijft.
+        const ds = opb.wand.binnen ? wandDoorsnede(p, opb.wand.dikte, opb.wand.binnen) : null;
+        const mid = ds ? ds.midden : p, half = (i: number) => (ds ? ds.half[i]! : h);
         const kap = (i: number, van: 1 | -1) => {
-          const q = p[i]!, [nx, ny, tx, ty] = nrm[i]!;
+          const q = mid[i]!, [nx, ny, tx, ty] = nrm[i]!, h = half(i);
           const pts: string[] = [];
           for (let k = 1; k < 8; k++) {
             const a = (k / 8) * Math.PI;
@@ -642,8 +646,8 @@ function tekenElement(
           }
           return pts;
         };
-        const buiten = p.map((q, i) => naarW(q[0] + nrm[i]![0] * h, q[1] + nrm[i]![1] * h));
-        const binnen = p.map((q, i) => naarW(q[0] - nrm[i]![0] * h, q[1] - nrm[i]![1] * h)).reverse();
+        const buiten = mid.map((q, i) => naarW(q[0] + nrm[i]![0] * half(i), q[1] + nrm[i]![1] * half(i)));
+        const binnen = mid.map((q, i) => naarW(q[0] - nrm[i]![0] * half(i), q[1] - nrm[i]![1] * half(i))).reverse();
         uit.push(vorm('rug', [...buiten, ...kap(p.length - 1, 1), ...binnen, ...kap(0, -1)], donker));
         opb.rugkussens.forEach((k, i) => {
           const code = `rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`;

@@ -79,6 +79,8 @@ const ZETELBEELDEN = [
   { naam: 'tumble-schuin', model: 'Tumble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Rug die achterover helt, van opzij (Sullivan).
   { naam: 'sullivan-zij', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'zij', decor: 'studio', licht: 'studio' },
+  // Armen dikker dan de rug (14/11): de dikke armkussens tegen de dunnere rug, met de plooi ertussen.
+  { naam: 'sullivan-schuin', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'pebble-naad', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.42, 0.17, 0.57, 0.45] },
   { naam: 'ross-kop', model: 'Ross', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.3, 0.3, 0.5, 0.82] },
   { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.04, 0.2, 0.32, 0.8] },

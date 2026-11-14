@@ -117,6 +117,12 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 21. **Een helling is geen afschuiving van het geheel.** De eerste versie liet de hele schaal mee hellen; bij Manon stond
     toen ook de voorrand schuin, terwijl die op de foto recht naar beneden loopt. De rug helt waar ze naar achteren
     kijkt en dooft uit naar de zijkanten.
+22. **Wat dikker wordt, groeit naar de kant die niet gemeten is.** De armen van Ross en Sullivan zijn dikker dan de
+    rug. De breedte van de site is over de armen gemeten, dus het extra komt naar binnen en de buitenkant blijft staan.
+    Kijk op de foto waar de naad of bies loopt: die toont welke kant de vaste kant is.
+23. **Twee foto's die elkaar tegenspreken, tonen een vorm die de motor niet heeft.** De rug van Sullivan is van voren
+    ±47 cm breed en loopt van opzij over ±23 cm schuin af. Geen enkel verloop van de bovenrand geeft beide: de schaal
+    is bovenaan breder dan onderaan. Niet verder schuiven met de getallen, maar de ontbrekende bouwsteen noteren.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
@@ -227,6 +233,11 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
   zijden staat in `doorlopend.test.ts`.
 - **Een wand die oploopt of zakt:** de helling moet meetellen in de richting van het oppervlak, anders kloppen de
   schaduwen niet. Test de richtingen tegen kleine stapjes in het veld (`zachtevorm.test.ts`).
+- **Een wand die dikker wordt:** verschuif de middenlijn niet. Alles wat de wand tekent, rekent zijn richtingen uit de
+  middenlijn; een verschoven lijn draait in de overgang, en dan draait de buitenkant mee. De middenlijn blijft die van
+  de gewone dikte, en `wandDoorsnede` (`kuip.ts`) geeft per punt het midden van de doorsnede en haar halve dikte. Elke
+  plek die een kuipwand tekent, gebruikt die functie: de 3D, de zachte vorm, het boven- en vooraanzicht, de schaduw op
+  de vloer en het kader van het blok. Een plek die het vergeet, tekent een dunne wand.
 - **Schaduw van buurdelen met hun echte vorm.** Een zitkussen met een vrije omtrek dat als rechthoekige doos meetelde,
   gaf grijze vlekken waar niets staat.
 - **Elke schaduw volgt de echte vorm, niet het kader.** De contactschaduw onder de zetel tekende per onderdeel een

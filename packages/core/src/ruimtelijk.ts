@@ -8,7 +8,7 @@
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
-import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, kuipUit, superellips, trommelKader, type Punt } from './kuip.js';
+import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, kuipUit, superellips, trommelKader, wandDoorsnede, type Punt } from './kuip.js';
 import { poefHoogteVan, chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -75,6 +75,11 @@ export interface Blok {
   pad?: [number, number][];
   hoogtes?: number[];
   dikte?: number;
+  /**
+   * Kuipwand met dikkere armen: per punt van `pad` hoeveel cm de wand daar dikker is dan `dikte`, naar de binnenkant van
+   * de bocht. `pad` blijft de middenlijn op de gewone dikte, dus de buitenkant verschuift niet (zie `wandDoorsnede`).
+   */
+  binnen?: number[];
   /**
    * Profiel (vorm 'profiel'): de doorsnede als punten [s, y, boven]. s = cm opzij van de middenlijn (`pad`), positief naar
    * `uit` (de buitenkant); y = hoogte in cm, absoluut (boven = 0) of onder de bovenkant ter plaatse (boven = 1, dus mee
@@ -551,7 +556,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             if (kussenDik && !kiezel) omtrekBlok('zitkussen', 'kussen', zithoogte - kussenDik, kussenDik, stof, opb.zit, { afronding: kp.organisch ? 6 : zacht });
           }
           const pad = opb.wand.pad.map(([lx, ly]) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return [r2(w.x), r2(w.y)] as [number, number]; });
-          const xs = pad.map((q) => q[0]), zs = pad.map((q) => q[1]), half = opb.wand.dikte / 2;
+          // Het kader volgt de doorsnede van de wand: met dikkere armen (`binnen`) stopt de middenlijn vroeger en is de
+          // ronde kop groter, dus telt per punt het midden van de doorsnede met haar eigen halve dikte.
+          const ds = wandDoorsnede(pad, opb.wand.dikte, opb.wand.binnen);
           // Kiezel op een verdekte voet: de schaal staat op de vloer (zoals op de foto). Ze begint net onder de vloer, zodat
           // haar platte onderkant niet te zien is (die gaf rafels in de zachte vorm). Alleen de 3D; het vooraanzicht niet.
           const wandOnder = kiezel && P <= 8 ? -3 : opb.wand.onder;
@@ -564,12 +571,14 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             leun = [r2((c.x - a.x) * opb.wand.leun), r2((c.y - a.y) * opb.wand.leun)];
           }
           const ux = leun ? leun[0] * wandH : 0, uz = leun ? leun[1] * wandH : 0;
-          const bx0 = Math.min(...xs) - half + Math.min(0, ux), bx1 = Math.max(...xs) + half + Math.max(0, ux);
-          const bz0 = Math.min(...zs) - half + Math.min(0, uz), bz1 = Math.max(...zs) + half + Math.max(0, uz);
+          const bx0 = Math.min(...ds.midden.map((q, i) => q[0] - ds.half[i]!)) + Math.min(0, ux), bx1 = Math.max(...ds.midden.map((q, i) => q[0] + ds.half[i]!)) + Math.max(0, ux);
+          const bz0 = Math.min(...ds.midden.map((q, i) => q[1] - ds.half[i]!)) + Math.min(0, uz), bz1 = Math.max(...ds.midden.map((q, i) => q[1] + ds.half[i]!)) + Math.max(0, uz);
           blokken.push({
             code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
             x: r2(bx0), z: r2(bz0), b: r2(bx1 - bx0), d: r2(bz1 - bz0),
             y: r2(wandOnder), h: r2(wandH), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte), ...(leun ? { leun } : {}),
+            // Dikkere armen: het extra per punt, naar binnen (de buitenkant en dus het kader van het blok blijven gelijk).
+            ...(opb.wand.binnen ? { binnen: opb.wand.binnen } : {}),
             // Schelp: de schaal zweeft boven de zitting, dus je ziet haar onderrand: ook die rond (zoals op de foto van Karl).
             // Een schaal die op de zitting staat (`schaalOp`, Tumble): een licht afgeronde onderrand, zodat er een plooi is
             // waar ze op de zijkant van de zitting aansluit.

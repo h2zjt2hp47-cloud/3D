@@ -121,6 +121,29 @@ describe('doorlopende zetel als zachte vorm', () => {
     expect(afwijkend(v, [wand])).toBeLessThan(0.002);
   });
 
+  it('een wand met dikkere armen (`binnen`): dicht, kloppende normalen, buitenkant op haar plaats en de arm echt dikker', () => {
+    // Een kwart boog (straal 40) van 10 cm dik, waarvan het laatste stuk 6 cm dikker wordt naar de binnenkant van de bocht.
+    const N = 24, pad: [number, number][] = Array.from({ length: N + 1 }, (_, i) => { const a = (i / N) * (Math.PI / 2); return [40 * Math.cos(a), 40 * Math.sin(a)]; });
+    const binnen = pad.map((_, i) => { const s = Math.max(0, Math.min(1, (i - 12) / 3)); return 6 * s * s * (3 - 2 * s); });
+    const dun = blok('r.rug', -6, 0, -6, 52, 60, 52, { vorm: 'kuipwand', pad, hoogtes: pad.map(() => 60), dikte: 10, glad: true });
+    const dik = { ...dun, binnen };
+    const v = zachteVorm([dik], { minAfronding: 0 });
+    expect(dicht(v)).toBe(0);
+    expect(afwijkend(v, [dik])).toBeLessThan(0.004);
+    const veldDun = zachtVeld([dun], 4, 10, 0), veldDik = zachtVeld([dik], 4, 10, 0);
+    const op = (i: number, r: number): [number, number] => { const a = (i / N) * (Math.PI / 2); return [r * Math.cos(a), r * Math.sin(a)]; };
+    // Halverwege de hoogte. Aan het dunne begin: buitenkant op straal 45, binnenkant op 35, met of zonder het gegeven.
+    for (const veld of [veldDun, veldDik]) {
+      expect(veld(...[op(4, 45)[0], 30, op(4, 45)[1]] as [number, number, number])).toBeCloseTo(0, 1);
+      expect(veld(...[op(4, 35)[0], 30, op(4, 35)[1]] as [number, number, number])).toBeCloseTo(0, 1);
+    }
+    // Aan het dikke eind: de buitenkant blijft op straal 45, de binnenkant ligt 6 cm verder naar binnen (straal 29).
+    expect(veldDik(op(20, 45)[0], 30, op(20, 45)[1])).toBeCloseTo(0, 1);
+    expect(veldDik(op(20, 29)[0], 30, op(20, 29)[1])).toBeCloseTo(0, 1);
+    expect(veldDik(op(20, 32)[0], 30, op(20, 32)[1])).toBeLessThan(-2);
+    expect(veldDun(op(20, 32)[0], 30, op(20, 32)[1])).toBeGreaterThan(2);
+  });
+
   it('Doha en Montego: onderbouw, rug en zitkussen dicht, met kloppende normalen; snel genoeg dankzij de tabellen', () => {
     for (const code of ['doha', 'montego']) {
       const s = bouw3D(zetelModellen.find((m) => m.code === code)!.ontwerp, zetelCatalogus, standaardMaterialen);

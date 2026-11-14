@@ -319,6 +319,23 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
     expect(b.some((x) => x.code === 'e1.zitband')).toBe(false);
   });
+  it('Ross en Sullivan: de armen zijn dikker dan de rug, naar binnen toe; alleen zij (14/11)', () => {
+    // Uit de foto's (benadering): Ross een rug van 6 cm met armen van ±11,5 cm, Sullivan 10 cm met armen van ±14,5 cm.
+    for (const [code, rugDik, armDik] of [['ross', 6, 11.5], ['sullivan', 10, 14.5]] as const) {
+      const s = scene(code), rug = s.blokken.find((x) => x.code === 'e1.rug')!, n = rug.pad!.length, mid = (n - 1) / 2;
+      expect(rug.dikte, code).toBe(rugDik);
+      expect(rug.binnen, code).toHaveLength(n);
+      expect(rug.binnen![mid], code).toBe(0);
+      expect(rugDik + rug.binnen![0]!, code).toBe(armDik);
+      expect(rugDik + rug.binnen![n - 1]!, code).toBe(armDik);
+      // De rug zelf blijft dun tot waar hij naar de arm gezakt is: op een derde van elke kant nog niets extra.
+      expect(rug.binnen![Math.round(mid * 0.67)], code).toBe(0);
+      expect(rug.binnen![Math.round(mid * 1.33)], code).toBe(0);
+    }
+    // De maten van de site blijven (tabel SITE hierboven); geen enkele andere fauteuil heeft het gegeven.
+    for (const m of zetelModellen) if (m.code !== 'ross' && m.code !== 'sullivan')
+      for (const b of bouw3D(structuredClone(m.ontwerp), zetelCatalogus, standaardMaterialen).blokken) expect(b.binnen, `${m.code} ${b.code}`).toBeUndefined();
+  });
   it('Sullivan: de rug helt achterover; de zitting is rond en de zetel blijft 80 cm diep', () => {
     const s = scene('sullivan'), b = s.blokken, rug = b.find((x) => x.code === 'e1.rug')!, zit = b.find((x) => x.code === 'e1.zitkussen')!;
     // De wand helt naar achteren (z−, het element staat met zijn rug naar achter): ±0,18 cm per cm hoogte (10,4°).

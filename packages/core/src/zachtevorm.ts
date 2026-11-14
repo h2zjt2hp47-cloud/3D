@@ -17,6 +17,7 @@
  * Geen 3D-bibliotheek nodig: de weergave maakt er een mesh van (posities, normalen, textuurcoördinaten, schaduw).
  */
 import type { Blok } from './ruimtelijk.js';
+import { wandDoorsnede } from './kuip.js';
 
 export interface ZachteVormOpties {
   /** Maat van het raster in cm (standaard 2): kleiner = fijner en trager. */
@@ -132,10 +133,15 @@ function balk(b: Blok, afronding = b.afronding ?? 1): Primitief {
   };
 }
 
-/** Gebogen wand (kuipwand): halve cirkel bovenaan, platte onderkant, hoogte volgt de punten van de middenlijn. */
+/**
+ * Gebogen wand (kuipwand): halve cirkel bovenaan, platte onderkant, hoogte volgt de punten van de middenlijn. Met dikkere
+ * armen (`binnen`) volgt de vorm het midden van de doorsnede en verloopt de halve dikte langs de wand, net als de hoogte.
+ */
 function wand(b: Blok): Primitief {
-  const pad = b.pad!, hoog = b.hoogtes!, w = (b.dikte ?? 14) / 2, onder = b.y;
+  const ds = b.binnen ? wandDoorsnede(b.pad!, b.dikte ?? 14, b.binnen) : null;
+  const pad = ds ? ds.midden : b.pad!, hoog = b.hoogtes!, w = ds ? Math.max(...ds.half) : (b.dikte ?? 14) / 2, onder = b.y;
   const n = pad.length;
+  const dik = ds ? ds.half : null;
   const xs = pad.map((p) => p[0]), zs = pad.map((p) => p[1]);
   // Richting van het pad per punt: het gemiddelde van de twee stukken ernaast (de verstekrichting), genormaliseerd.
   const vx = new Float64Array(n), vz = new Float64Array(n);
@@ -152,7 +158,7 @@ function wand(b: Blok): Primitief {
   /**
    * Dichtste punt op de middenlijn (in het grondvlak), gezocht in de stukken `van` tot en met `tot` van het pad: het
    * verschil ernaartoe (0, 1), de hoogte van de bovenrand ter plaatse (2), de helling van die hoogte in het grondvlak
-   * (3, 4) en het stuk van het dichtste punt (5).
+   * (3, 4), het stuk van het dichtste punt (5) en de halve dikte ter plaatse met haar helling in het grondvlak (6, 7, 8).
    *
    * De hoogte volgt niet het dichtste punt maar de plaats tussen de twee verstekken van een stuk (de lijnen door zijn
    * eindpunten, haaks op de gemiddelde richting daar). Het dichtste punt verspringt op elk hoekpunt van het pad: aan de
@@ -179,14 +185,22 @@ function wand(b: Blok): Primitief {
       else break;
     }
     const dh = hoog[i + 1]! - hoog[i]!;
-    if (f0 <= 0) top = hoog[i]!;
-    else if (f1 <= 0) top = hoog[i + 1]!;
+    // De halve dikte verloopt tussen dezelfde verstekken als de hoogte (alleen bij dikkere armen).
+    let wHier = w, wx = 0, wz = 0;
+    const dw = dik ? dik[i + 1]! - dik[i]! : 0;
+    if (f0 <= 0) { top = hoog[i]!; if (dik) wHier = dik[i]!; }
+    else if (f1 <= 0) { top = hoog[i + 1]!; if (dik) wHier = dik[i + 1]!; }
     else {
       const som = f0 + f1, g = dh / (som * som);
       top = hoog[i]! + (dh * f0) / som;
       hx = g * (f1 * vx[i]! + f0 * vx[i + 1]!); hz = g * (f1 * vz[i]! + f0 * vz[i + 1]!);
+      if (dik) {
+        const gw = dw / (som * som);
+        wHier = dik[i]! + (dw * f0) / som;
+        wx = gw * (f1 * vx[i]! + f0 * vx[i + 1]!); wz = gw * (f1 * vz[i]! + f0 * vz[i + 1]!);
+      }
     }
-    o[0] = x - qx; o[1] = z - qz; o[2] = top; o[3] = hx; o[4] = hz; o[5] = stuk;
+    o[0] = x - qx; o[1] = z - qz; o[2] = top; o[3] = hx; o[4] = hz; o[5] = stuk; o[6] = wHier; o[7] = wx; o[8] = wz;
   };
   // Een lange wand (de rug van een doorlopende zetel) heeft tientallen stukken. Daarom, pas als het veld echt gebruikt
   // wordt, per cm in het grondvlak het dichtste stuk in een tabel (de middenlijn hangt niet van de hoogte af); daarna
@@ -195,7 +209,7 @@ function wand(b: Blok): Primitief {
   const x0 = Math.min(...xs) - w - 25, z0 = Math.min(...zs) - w - 25;
   const tw = Math.ceil(Math.max(...xs) + w + 25 - x0) + 1, th = Math.ceil(Math.max(...zs) + w + 25 - z0) + 1;
   let stukken: Uint16Array | null = null, oproepen = 0;
-  const o = new Float64Array(6);
+  const o = new Float64Array(9);
   return {
     x0: Math.min(...xs) - w, x1: Math.max(...xs) + w, z0: Math.min(...zs) - w, z1: Math.max(...zs) + w,
     y0: onder, y1: Math.max(...hoog),
@@ -214,7 +228,9 @@ function wand(b: Blok): Primitief {
       }
       dichtste(x, z, o, van, tot);
       const lx = o[0]!, lz = o[1]!, top = o[2]!;
-      // Doorsnede: capsule van onder − w tot top − w (straal w), onderaan plat afgesneden op `onder`.
+      // Doorsnede: capsule van onder − w tot top − w (straal w), onderaan plat afgesneden op `onder`. Met dikkere armen
+      // is w de halve dikte op deze plaats langs de wand.
+      const w = o[6]!;
       const yc = Math.max(onder - w, Math.min(y, top - w));
       const ly = y - yc;
       const l = Math.sqrt(lx * lx + ly * ly + lz * lz);
@@ -227,7 +243,9 @@ function wand(b: Blok): Primitief {
         // Waar de bovenrand oploopt of zakt, verandert `dc` sneller dan 1 cm per cm (de doorsnede schuift mee met de
         // hoogte): gedeeld door de lengte van de helling wordt het weer een echte afstand. Zonder dit legde de motor de
         // punten naast het oppervlak waar de rand steil is. Het oppervlak zelf (dc = 0) verschuift hierdoor niet.
-        const gx = lx - mee * o[3]!, gz = lz - mee * o[4]!, gl = Math.sqrt(gx * gx + ly * ly + gz * gz);
+        // Zelfde regel voor de dikte: waar ze verandert, schuift het middelpunt van de ronding mee (bovenaan) en groeit
+        // de straal zelf (overal).
+        const gx = lx - mee * (o[3]! - o[7]!) - l * o[7]!, gz = lz - mee * (o[4]! - o[8]!) - l * o[8]!, gl = Math.sqrt(gx * gx + ly * ly + gz * gz);
         schrijf(uit, gl > 1e-9 ? (dc * l) / gl : dc, gx, ly, gz);
       } else schrijf(uit, dc, 0, 1, 0);
     },
