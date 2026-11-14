@@ -389,32 +389,61 @@ export const zetelModellen: ModelDefinitie[] = [
   }, 'F-MabelMeridienne', MATEN_WEBSITE),
 
   // ---------------- Zetelbedden ----------------
-  model('ziggy', 'Ziggy zetelbed', ZETELBED, 'Zetelbed met strakke armen, één doorlopend zitkussen, rolkussens en metalen poten.', {
+  model('ziggy', 'Ziggy zetelbed', ZETELBED, 'Zetelbed met slanke, hoge armen, één doorlopend zitkussen, twee rugkussens, rolkussens tegen de armen en metalen poten.', {
     hoofdmateriaal: 'velours_bosgroen', opties: { poten: 'metaal_staaf', rug: 'los' },
-    elementen: rij([['arm', 22, 95, strak], ['zit', 160, 95, { functie: 'slaapfunctie' }], ['arm', 22, 95, strak]]),
-  }, 'Z-Ziggy'),
+    // Technische tekening op de productpagina (14/11): zithoogte 50, karkas en arm 76 hoog, arm 10 breed, diepte 98,
+    // zitdiepte 55. Uit de foto (benadering): twee rugkussens die ±12 cm boven de armen uitkomen, één lang zitkussen en
+    // een rolkussen tegen elke arm. De breedte staat niet op de tekening (blijft een benadering).
+    vormgeving: { zithoogte: 50, rughoogte: 88, armhoogte: 76, karkashoogte: 76, rugdikte: 20, rugkussendikte: 23, rugkussens: 2 },
+    elementen: [
+      ...rij([['arm', 10, 98, strak], ['zit', 160, 98, { functie: 'slaapfunctie' }], ['arm', 10, 98, strak]]),
+      rolkussen('e4', 10, 46, 46, 270), rolkussen('e5', 150, 46, 46, 90),
+    ],
+  }, 'Z-Ziggy', MATEN_WEBSITE),
   model('aurora', 'Aurora zetelbed', ZETELBED, 'Zetelbed met slanke armen, twee zitkussens en slanke metalen poten.', {
     hoofdmateriaal: 'katoen_naturel', opties: { poten: 'metaal_staaf', rug: 'los' },
     vormgeving: { zitkussens: 2 }, elementen: rij([['arm', 12, 95, strak], ['zit', 180, 95, { functie: 'slaapfunctie' }], ['arm', 12, 95, strak]]),
   }, 'Z-Aurora'),
-  model('zora', 'Zora zetelbed', ZETELBED, 'Zetelbed met afgeronde armen, bies en één zitkussen.', {
-    hoofdmateriaal: 'linnen_brume', opties: { poten: 'verdekt', poothoogte: 'laag', naad: 'bies', rug: 'vast' },
-    elementen: rij([['arm', 16, 95, { armstijl: 'rond' }], ['zit', 170, 95, { functie: 'slaapfunctie' }], ['arm', 16, 95, { armstijl: 'rond' }]]),
-  }, 'Z-Zora'),
+  model('zora', 'Zora zetelbed', ZETELBED, 'Zetelbed met slanke armen op rughoogte met een ronde bovenkant, bies, één lang rugkussen en één zitkussen.', {
+    hoofdmateriaal: 'sunny_zeegroen', opties: { poten: 'verdekt', poothoogte: 'laag', naad: 'bies', rug: 'los' },
+    // Technische tekening op de productpagina (14/11): zithoogte 47, hoogte en arm 74, arm 10 breed, diepte 98,
+    // zitdiepte 55. Uit de foto (benadering): één lang rugkussen tot aan de bovenkant van het karkas, één lang zitkussen,
+    // twee sierkussens links. De breedte staat niet op de tekening (blijft een benadering).
+    // De arm met ronde bovenkant komt 3 cm boven de armhoogte uit: 71 geeft de 74 cm van de tekening.
+    vormgeving: { zithoogte: 47, rughoogte: 74, armhoogte: 71, karkashoogte: 74, rugdikte: 20, rugkussendikte: 23 },
+    elementen: [
+      ...rij([['arm', 10, 98, { armstijl: 'rond' }], ['zit', 170, 98, { functie: 'slaapfunctie' }], ['arm', 10, 98, { armstijl: 'rond' }]]),
+      sierkussen('e4', 14, 46, 'sunny_taupe'), sierkussen('e5', 44, 48, 'sunny_taupe'),
+    ],
+  }, 'Z-Zora', MATEN_WEBSITE),
   model('phoenix', 'Phoenix zetelbed', ZETELBED, 'Compact zetelbed met strakke armen en vaste rug.', {
     hoofdmateriaal: 'wol_grijs', opties: { poten: 'verdekt', poothoogte: 'laag', rug: 'vast' },
+    // Productpagina (14/11): zithoogte 46, zitdiepte 55; in drie breedtes (canapé 130, 190 en 210). De diepte, de hoogte
+    // en de armen staan er niet: die blijven een benadering uit de foto.
+    vormgeving: { zithoogte: 46 },
     elementen: rij([['arm', 20, 95, strak], ['zit', 130, 95, { functie: 'slaapfunctie' }], ['arm', 20, 95, strak]]),
   }, 'Z-Phoenix'),
-  model('daizy-classic', 'Daizy Classic zetelbed', ZETELBED, 'Klassiek zetelbed met twee zitkussens en sierkussens.', {
-    hoofdmateriaal: 'linnen_travertin', opties: { poten: 'blok', poothoogte: 'laag', rug: 'los' },
-    vormgeving: { zitkussens: 2 }, elementen: rij([['arm', 18, 95, strak], ['zit', 170, 95, { functie: 'slaapfunctie' }], ['arm', 18, 95, strak]]),
-  }, 'Z-DaizyClassic'),
-  model('daizy-slim', 'Daizy Slim zetelbed', ZETELBED, 'Slanke variant met smalle armen en twee zitkussens.', {
-    hoofdmateriaal: 'linnen_travertin', opties: { poten: 'blok', poothoogte: 'laag', rug: 'los' },
-    vormgeving: { zitkussens: 2 }, elementen: rij([['arm', 12, 95, strak], ['zit', 160, 95, { functie: 'slaapfunctie' }], ['arm', 12, 95, strak]]),
-  }, 'Z-DaizySlim'),
-
-  // ---------------- Poufs & hockers ----------------
+  model('daizy-classic', 'Daizy Classic zetelbed', ZETELBED, 'Klassiek zetelbed met lage armen, twee zitkussens, twee rugkussens en een sierkussen tegen elke arm.', {
+    hoofdmateriaal: 'sunny_taupe', opties: { poten: 'blok', poothoogte: 'laag', hout: 'eik_zwart', rug: 'los' },
+    // Technische tekening op de productpagina (14/11): zithoogte 47, karkas 74, arm 60 hoog en 14 breed, diepte 98,
+    // zitdiepte 55. Uit de foto (benadering): de rugkussens komen ±8 cm boven het karkas, een sierkussen tegen elke arm.
+    // De breedte staat niet op de tekening (blijft een benadering).
+    vormgeving: { zitkussens: 2, zithoogte: 47, rughoogte: 82, armhoogte: 60, karkashoogte: 74, rugdikte: 20, rugkussendikte: 23 },
+    elementen: [
+      ...rij([['arm', 14, 98, strak], ['zit', 170, 98, { functie: 'slaapfunctie' }], ['arm', 14, 98, strak]]),
+      sierkussen('e4', 16, 48, 'sunny_taupe', 40), sierkussen('e5', 142, 48, 'sunny_taupe', 40),
+    ],
+  }, 'Z-DaizyClassic', MATEN_WEBSITE),
+  model('daizy-slim', 'Daizy Slim zetelbed', ZETELBED, 'Slanke variant met smalle, lage armen, twee zitkussens en twee rugkussens.', {
+    hoofdmateriaal: 'sunny_taupe', opties: { poten: 'blok', poothoogte: 'laag', hout: 'eik_zwart', rug: 'los' },
+    // Technische tekening op de productpagina (14/11): zithoogte 47, karkas 74, arm 60 hoog en 8 breed, diepte 98,
+    // zitdiepte 55. Uit de foto (benadering): de rugkussens komen ±8 cm boven het karkas, een sierkussen tegen elke arm.
+    vormgeving: { zitkussens: 2, zithoogte: 47, rughoogte: 82, armhoogte: 60, karkashoogte: 74, rugdikte: 20, rugkussendikte: 23 },
+    elementen: [
+      ...rij([['arm', 8, 98, strak], ['zit', 160, 98, { functie: 'slaapfunctie' }], ['arm', 8, 98, strak]]),
+      sierkussen('e4', 10, 48, 'sunny_taupe', 40), sierkussen('e5', 126, 48, 'sunny_taupe', 40),
+    ],
+  }, 'Z-DaizySlim', MATEN_WEBSITE),
   model('sullivan-hocker', 'Sullivan Hocker', POEF, 'Ronde hocker bij de Sullivan fauteuil: dezelfde dikke zitting op een zwarte houten ring met vier poten en een kruis.', {
     hoofdmateriaal: 'wol_grijs', opties: { poten: 'ringframe', hout: 'eik_zwart' },
     // Pagina van de Sullivan fauteuil: poef 62 × 62 × 42. Uit de foto (benadering, 13/11): dezelfde ronde zitting en

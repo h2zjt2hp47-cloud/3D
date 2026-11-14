@@ -410,6 +410,49 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(stockholm.y + stockholm.h).toBe(43);
     expect(stockholm.vorm).toBe('cilinder');
   });
+  it('zetelbedden: de maten van de technische tekening op de productpagina', () => {
+    // Per model: zithoogte, hoogte karkas, armhoogte, armbreedte, diepte en zitdiepte (cm).
+    const TEKENING: Record<string, [number, number, number, number, number, number]> = {
+      ziggy: [50, 76, 76, 10, 98, 55], zora: [47, 74, 74, 10, 98, 55], 'daizy-classic': [47, 74, 60, 14, 98, 55], 'daizy-slim': [47, 74, 60, 8, 98, 55],
+    };
+    for (const [code, [zit, karkas, armH, armB, diepte, zitdiepte]] of Object.entries(TEKENING)) {
+      const o = model(code).ontwerp, [arm, zitEl, arm2] = o.elementen as [typeof o.elementen[0], typeof o.elementen[0], typeof o.elementen[0]];
+      const v = vormgevingVan(o, zitEl);
+      expect(o.vormgeving?.zithoogte, code).toBe(zit);
+      expect(v.karkashoogte, code).toBe(karkas);
+      // De arm met ronde bovenkant (Zora) komt 3 cm boven de armhoogte uit; in de 3D hieronder telt de bovenkant.
+      expect(v.armhoogte, code).toBe(arm.opties?.armstijl === 'rond' ? armH - 3 : armH);
+      expect([arm.type, arm.breedte, arm2.type, arm2.breedte], code).toEqual(['arm', armB, 'arm', armB]);
+      expect([arm.diepte, zitEl.diepte], code).toEqual([diepte, diepte]);
+      // Achter de zitting: het karkas en het losse rugkussen.
+      expect(diepte - v.rugdikte - v.rugkussendikte, code).toBe(zitdiepte);
+      const s = scene(code), b = s.blokken;
+      expect(s.kader.d, code).toBe(diepte);
+      // In de 3D: de bovenkant van het zitkussen en van de armen op de maat van de tekening.
+      const kussens = b.filter((x) => x.code.startsWith('e2.zitkussen'));
+      expect(Math.max(...kussens.map((x) => x.y + x.h)), code).toBeCloseTo(zit, 0);
+      const armen = b.filter((x) => x.code.startsWith('e1.'));
+      expect(Math.max(...armen.map((x) => x.y + x.h)), code).toBeCloseTo(armH, 0);
+      expect(berekenOntwerp(o, zetelCatalogus, standaardMaterialen).meldingen.filter((m) => m.ernst === 'fout'), code).toHaveLength(0);
+    }
+    // Phoenix: alleen de zithoogte staat op de pagina.
+    expect(model('phoenix').ontwerp.vormgeving?.zithoogte).toBe(46);
+    // Ziggy: twee rugkussens en een rolkussen tegen elke arm, zoals op de foto.
+    const ziggy = scene('ziggy').blokken;
+    expect(ziggy.filter((x) => x.code.startsWith('e2.rugkussen'))).toHaveLength(2);
+    expect(ziggy.filter((x) => x.code.endsWith('.rol'))).toHaveLength(2);
+  });
+  it('een arm mag 8 cm smal zijn; onder 12 cm kost hij de basisprijs en de bestaande maten blijven even duur', () => {
+    const sofa = (armB: number): Ontwerp => ({ hoofdmateriaal: 'linnen_ficelle', elementen: [
+      { id: 'a', type: 'arm', x: 0, y: 0, breedte: armB, diepte: 95, rotatie: 0 }, { id: 'z', type: 'zit', x: armB, y: 0, breedte: 95, diepte: 95, rotatie: 0 },
+    ] });
+    const prijsArm = (armB: number) => bereken(sofa(armB)).elementen.find((e) => e.id === 'a')!.prijs;
+    expect(bereken(sofa(8)).meldingen.filter((m) => m.ernst === 'fout')).toHaveLength(0);
+    expect(bereken(sofa(7)).meldingen.some((m) => m.code === 'element.breedte')).toBe(true);
+    expect(prijsArm(8)).toBe(prijsArm(12));
+    expect(prijsArm(20)).toBe(prijsArm(12) + (prijsArm(22) - prijsArm(12)));
+    expect(prijsArm(13)).toBeGreaterThan(prijsArm(12));
+  });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;
     expect(new Set(rug.hoogtes)).toEqual(new Set([70]));

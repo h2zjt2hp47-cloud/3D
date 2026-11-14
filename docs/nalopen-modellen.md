@@ -23,10 +23,11 @@ lopen tegen de productfoto's en per model op te lijsten wat afwijkt.
   als onze 3D". Dat is rechtgezet.
 - **Ook omgebouwd:** de Sullivan hocker, de Tumble pouf en de Pebble pouf, op de maten van de site.
 - **Sofa's, zetelbedden en poefs zijn nagelopen** (eerste doorgang, op de kleine foto's): de opbouw van de sofa's
-  klopt; de zetelbedden hebben niet de maten van de technische tekening op de site. Dat staat klaar als voorstel, niet
-  doorgevoerd, omdat het vier modellen 135 tot 208 euro duurder maakt.
-- **Nog te doen:** de beslissingen van Jonas (zetelbedden, zitdiepte van de fauteuils); een tweede doorgang op de grote
-  foto's; publiceren na goedkeuring.
+  klopt. De zetelbedden Ziggy, Zora, Daizy Classic en Daizy Slim hebben sinds 14/11 de maten van de technische tekening
+  op de site.
+- **Sinds 14/11 is de prijs geen rem meer** (Jonas: de prijzen zijn fictief; doorwerken tot de 3D klopt). Oud en nieuw
+  worden nog gemeld.
+- **Nog te doen:** een tweede doorgang van de sofa's op de grote foto's; publiceren na goedkeuring.
 
 ## Werkwijze
 
@@ -284,59 +285,41 @@ details.
 | Groep | Bevinding |
 |---|---|
 | **Sofa's** | De opbouw klopt bij alle veertien (ze zijn op 3/11 en 4/11 al naar de site gebracht): chaise, hoek, tussenstuk, armen, losse kussens staan waar ze op de foto staan. Negen hebben de maten van de site (Kotor, Doha, Montego, Nestor, Belize, Pula, Amusette, Attribute, Wallace). Voor Fréjus, Gozo, Azar, Husk en Esmee geeft de site geen maten in tekst; ze blijven een benadering. |
-| **Zetelbedden** | De opbouw (arm + zit + arm) klopt, maar de **maten niet**: de site heeft voor Ziggy, Zora, Daizy Classic en Daizy Slim een technische tekening. Zie het voorstel hieronder. Zora heeft op de foto armen die rond de rug doorlopen; bij ons losse armen met een ronde bovenkant. Ziggy heeft twee rugkussens en rolkussens tegen de armen. |
+| **Zetelbedden** | De opbouw (arm + zit + arm) klopt, maar de **maten niet**: de site heeft voor Ziggy, Zora, Daizy Classic en Daizy Slim een technische tekening. Doorgevoerd op 14/11, zie hieronder. Zora heeft op de foto armen die rond de rug doorlopen; bij ons losse armen met een ronde bovenkant. Ziggy heeft twee rugkussens en rolkussens tegen de armen. |
 | **Poefs** | Stockholm loopt op de foto naar boven smaller toe (bij ons een rechte cilinder) en is donkerblauw. Kanto is een kubus die naar boven smaller wordt. Fez klopt. Geen van de drie heeft een eigen pagina met maten. |
 
-### Voorstel: de zetelbedden op de maten van de tekening (niet doorgevoerd)
+### De zetelbedden op de maten van de tekening (doorgevoerd op 14/11)
 
-![Ziggy, Zora, Daizy Classic en Daizy Slim: foto, 3D nu en het voorstel](afbeeldingen/zetelbedden-voorstel.jpg)
+Eerst als voorstel voorgelegd, omdat het de prijs verhoogt. Jonas (14/11): "Het zijn nog allemaal fictieve prijzen dus
+maakt niet uit, doe maar verder tot we perfecte 3D's hebben."
+
+![Ziggy, Zora, Daizy Classic en Daizy Slim: foto, 3D vroeger en nu](afbeeldingen/zetelbedden-na.jpg)
 
 Uit de technische tekeningen op de productpagina's:
 
-| Model | Zithoogte | Hoogte karkas | Arm (hoog × breed) | Diepte | Zitdiepte |
-|---|---|---|---|---|---|
-| Ziggy | 50 | 76 | 76 × 10 | 98 | 55 |
-| Zora | 47 | 74 | 74 × 10 | 98 | 55 |
-| Daizy Classic | 47 | 74 | 60 × 14 | 98 | 55 |
-| Daizy Slim | 47 | 74 | 60 × 8 | 98 | 55 |
-| Phoenix (alleen tekst) | 46 | geen | geen | geen | 55 |
-| Aurora | geen | geen | geen | geen | geen |
+| Model | Zithoogte | Hoogte karkas | Arm (hoog × breed) | Diepte | Zitdiepte | Prijs voor | Prijs na |
+|---|---|---|---|---|---|---|---|
+| Ziggy | 50 | 76 | 76 × 10 | 98 | 55 | 2.470 | 2.835 |
+| Zora | 47 | 74 | 74 × 10 | 98 | 55 | 2.301 | 2.621 |
+| Daizy Classic | 47 | 74 | 60 × 14 | 98 | 55 | 2.253 | 2.550 |
+| Daizy Slim | 47 | 74 | 60 × 8 | 98 | 55 | 2.172 | 2.463 |
+| Phoenix (alleen tekst) | 46 | geen | geen | geen | 55 | 2.052 | 2.052 |
+| Aurora | geen | geen | geen | geen | geen | 2.094 | 2.094 |
 
-Bij ons staan ze allemaal op zithoogte 45, 95 cm diep, met armen van 62 cm hoog en 12 tot 22 cm breed.
+Vroeger stonden ze allemaal op zithoogte 45, 95 cm diep, met armen van 62 cm hoog en 12 tot 22 cm breed.
 
-**Waarom niet doorgevoerd:** de maten van de tekening maken vier modellen 135 tot 208 euro duurder, vooral door
-toeslagen in de catalogus die voor een gewone zetel bedoeld zijn. Dat is een prijswijziging die Jonas eerst moet zien.
-
-| Model | Prijs nu | Met de maten van de tekening | Verschil | Waar het vandaan komt |
-|---|---|---|---|---|
-| Ziggy | 2.470 | 2.605 | +135 | zithoogte 50 rekent als *hoog* (+60), armhoogte 76 op maat (+30), dikkere rug en hoger karkas (+31), rest uit de maten |
-| Zora | 2.301 | 2.509 | +208 | zithoogte 47 rekent als *hoog* (+60), armhoogte 74 op maat (+30), vaste rug van 30 cm dik (+106) |
-| Daizy Classic | 2.253 | 2.397 | +144 | zithoogte 47 rekent als *hoog* (+60), dikkere rug en rugkussen (+20), rest uit de maten |
-| Daizy Slim | 2.172 | 2.311 | +139 | zithoogte 47 rekent als *hoog* (+60), dikkere rug en rugkussen (+19), rest uit de maten |
-| Phoenix | 2.052 | 2.052 | 0 | zithoogte 46 rekent als *standaard* |
-
-**Te beslissen door Jonas:**
-
-1. Mogen de zetelbedden op de maten van de tekening, met deze prijzen? Of eerst de toeslag voor de zithoogte herzien
-   (47 cm is voor een zetelbed de gewone hoogte, niet *hoog*)?
-2. De armen van Ziggy en Zora zijn 10 cm breed en die van Daizy Slim 8 cm; het type arm begint bij 12 cm. Mag die grens
-   naar 8 cm?
-3. De vaste rug van Zora zou 43 cm dik moeten zijn voor een zitdiepte van 55; de rugdikte stopt bij 30 cm.
-
-**De gegevens van het voorstel** (om het na een akkoord in één stap door te voeren), per model in `vormgeving` en in de
-elementen:
-
-| Model | zithoogte | karkashoogte | rughoogte (met kussen) | armhoogte | rugdikte | rugkussendikte | arm × diepte | zit × diepte |
-|---|---|---|---|---|---|---|---|---|
-| Ziggy | 50 | 76 | 82 | 76 | 20 | 23 | 12 × 98 | 160 × 98 |
-| Zora (vaste rug) | 47 | n.v.t. | 74 | 74 | 30 | n.v.t. | 12 × 98 | 170 × 98 |
-| Daizy Classic | 47 | 74 | 80 | 60 | 20 | 23 | 14 × 98 | 170 × 98 |
-| Daizy Slim | 47 | 74 | 80 | 60 | 20 | 23 | 12 × 98 | 160 × 98 |
-| Phoenix | 46 | ongewijzigd | ongewijzigd | ongewijzigd | ongewijzigd | n.v.t. | ongewijzigd | ongewijzigd |
-
-Geschat uit de tekening, niet afgelezen: het rugkussen komt ±6 cm boven het karkas (rughoogte = karkas + 6), en de
-verdeling van de 43 cm achter de zitting over karkas (20) en rugkussen (23). De armen staan op 12 cm waar de tekening
-10 of 8 geeft (grens van het type). De breedte staat op geen enkele tekening en blijft zoals ze was.
+- **Uit de tekening:** de maten hierboven. Achter de zitting 43 cm: 20 cm karkas en 23 cm rugkussen (die verdeling is
+  geschat).
+- **Uit de foto (benadering):** Ziggy heeft twee rugkussens die ±12 cm boven de armen komen en een rolkussen tegen elke
+  arm; Zora heeft één lang rugkussen (vroeger een vaste rug) en twee sierkussens; Daizy heeft een sierkussen tegen elke
+  arm en donkere blokpoten. De stof is naar de foto gekozen (Zora zeegroen, Daizy taupe).
+- **Catalogus:** het type arm mag vanaf 8 cm (vroeger 12). De basisprijs blijft die van 12 cm, zodat geen bestaande arm
+  duurder werd.
+- **Waar de meerprijs vandaan komt:** zithoogte 47 of 50 rekent als *hoog* (+60), armhoogte op maat (+30), een dikker
+  karkas en rugkussen, bij Ziggy en Zora de rol- en sierkussens, de diepte van 98.
+- **Niet op de tekening:** de breedte (blijft een benadering). Phoenix heeft alleen de zithoogte gekregen; Aurora niets.
+- **Wat nog afwijkt:** bij Zora loopt de arm op de foto rond de rug door en staat hij bovenaan wat naar buiten; het
+  rugkussen van Zora ligt op de foto iets lager dan het karkas; de sierboord onder de zitkussens van Daizy ontbreekt.
 
 ## Eerste proef (voor de bijsturing)
 
@@ -383,7 +366,6 @@ krijgt ze een (verzonnen) prijs en verandert de offertetekst van die modellen.
 
 ## Nog te doen
 
-- De zetelbedden op de maten van de technische tekening, na het akkoord van Jonas op de prijzen (voorstel hierboven).
 - De sofa's en zetelbedden nog eens op de grote foto's van de site, model per model (deze doorgang was op 420 px):
   Zora (armen die rond de rug doorlopen), Ziggy (twee rugkussens, rolkussens), en de vijf sofa's zonder maten.
 - De Fraser hocker, de Mabel hocker en de poefs Stockholm, Kanto en Fez: geen eigen pagina, dus geen maten; Stockholm

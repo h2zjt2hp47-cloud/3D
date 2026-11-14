@@ -282,7 +282,9 @@ export const zetelCatalogus: OntwerpCatalogus = {
     },
     {
       code: 'arm', label: 'Armleuning', tekenstijl: 'arm',
-      breedte: { min: 12, max: 40, standaard: 20 }, diepte: { min: 60, max: 200, standaard: 95 },
+      // Vanaf 8 cm: de zetelbedden van de klant hebben armen van 8 en 10 cm (technische tekening, 14/11). De basisprijs
+      // blijft die van 12 cm, zodat de bestaande armen evenveel kosten.
+      breedte: { min: 8, max: 40, standaard: 20 }, prijsVanaf: 12, diepte: { min: 60, max: 200, standaard: 95 },
       prijs: g(190, 220, 260, 170), per10cm: g(20, 24, 28, 16),
       stofVast: 0.7, stofPerM: 1.5, kostVast: 45, kostPerM: 60, uren: 1.5, urenPerM: 1,
     },

@@ -75,6 +75,11 @@ export interface ElementType {
   hoogte?: number;
   /** Verkoopprijs bij minimale breedte en standaarddiepte, per prijsgroep. */
   prijs: Record<string, number>;
+  /**
+   * Breedte waarbij de basisprijs geldt, als die niet de minimale breedte is: smaller kost evenveel. Zo kan de
+   * ondergrens van een type zakken (arm van 12 naar 8 cm) zonder dat elke bestaande maat een trap duurder wordt.
+   */
+  prijsVanaf?: number;
   /** Meerprijs per begonnen 10 cm boven de minimale breedte, per prijsgroep. */
   per10cm: Record<string, number>;
   /** Stofverbruik (m bij 140 cm rolbreedte): vast + per meter breedte. */
@@ -769,7 +774,7 @@ export function berekenOntwerp(
     if (basis === undefined || per10 === undefined) {
       meldingen.push({ code: 'element.prijs', ernst: 'fout', elementId: e.id, melding: `${naam}: geen prijs voor prijsgroep ${groep}.` });
     } else {
-      const extra10 = Math.max(0, Math.ceil((e.breedte - t.breedte.min) / 10 - 1e-9));
+      const extra10 = Math.max(0, Math.ceil((e.breedte - (t.prijsVanaf ?? t.breedte.min)) / 10 - 1e-9));
       const diepte10 = Math.max(0, Math.ceil((e.diepte - t.diepte.standaard) / 10 - 1e-9));
       prijs = (basis + extra10 * per10) * (1 + (diepte10 * catalogus.diepteToeslagPctPer10cm) / 100) * (1 + (m?.toeslagPct ?? 0) / 100);
       prijs = rond(prijs);
