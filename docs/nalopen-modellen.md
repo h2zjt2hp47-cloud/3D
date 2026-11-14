@@ -373,8 +373,14 @@ Vroeger stonden ze allemaal op zithoogte 45, 95 cm diep, met armen van 62 cm hoo
 - **Waar de meerprijs vandaan komt:** zithoogte 47 of 50 rekent als *hoog* (+60), armhoogte op maat (+30), een dikker
   karkas en rugkussen, bij Ziggy en Zora de rol- en sierkussens, de diepte van 98.
 - **Niet op de tekening:** de breedte (blijft een benadering). Phoenix heeft alleen de zithoogte gekregen; Aurora niets.
+- **Sierboord van Daizy Classic** (melding van Jonas, 14/11: "er ontbreekt nog een boord bij daizy classic tussen
+  kussen en korpus"): gebouwd als keuze in de catalogus, *Sierboord onder de zitkussens* (+35, verzonnen), zoals de
+  optie op de productpagina. Een band in de stof tussen de zitkussens en het korpus, in de 3D en in het vooraanzicht.
+  Daizy Classic 2.550 → 2.585. De Daizy Slim heeft er op haar foto geen.
+
+  ![Daizy Classic met de sierboord: foto en 3D](afbeeldingen/daizy-boord.jpg)
 - **Wat nog afwijkt:** bij Zora loopt de arm op de foto rond de rug door en staat hij bovenaan wat naar buiten; het
-  rugkussen van Zora ligt op de foto iets lager dan het karkas; de sierboord onder de zitkussens van Daizy ontbreekt.
+  rugkussen van Zora ligt op de foto iets lager dan het karkas; het korpus is bij ons een tint donkerder dan de kussens.
 
 ## Eerste proef (voor de bijsturing)
 

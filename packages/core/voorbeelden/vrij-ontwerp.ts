@@ -104,6 +104,15 @@ export const zetelOpties: OptieGroep[] = [
     ],
   },
   {
+    // Sierboord: een band in de stof tussen de zitkussens en het korpus, over de hele breedte van de zitting (optie op de
+    // productpagina van Daizy: "sierboord onder zitkussens"; melding van Jonas op 14/11). Prijs verzonnen.
+    code: 'boord', label: 'Sierboord', niveau: 'ontwerp', perElement: true, voorTypen: ['zit', 'hoek'], standaard: 'geen',
+    keuzes: [
+      { code: 'geen', label: 'Zonder sierboord' },
+      { code: 'met', label: 'Sierboord onder de zitkussens', prijs: 35, stofPct: 2, kost: 12, teken: { boord: true }, uitleg: 'Band in de stof tussen de zitkussens en het korpus', alleenMet: { zitting: ['losse_kussens'] }, reden: 'een sierboord ligt onder losse zitkussens' },
+    ],
+  },
+  {
     // Nekrol: ronde rol bovenop het karkas achter de losse rugkussens (technische tekening van Nestor en Belize).
     code: 'nekrol', label: 'Nekrol', niveau: 'ontwerp', perElement: true, voorTypen: MET_RUG, standaard: 'geen',
     keuzes: [

@@ -431,11 +431,12 @@ export const zetelModellen: ModelDefinitie[] = [
     vormgeving: { zithoogte: 46 },
     elementen: rij([['arm', 20, 95, strak], ['zit', 130, 95, { functie: 'slaapfunctie' }], ['arm', 20, 95, strak]]),
   }, 'Z-Phoenix'),
-  model('daizy-classic', 'Daizy Classic zetelbed', ZETELBED, 'Klassiek zetelbed met lage armen, twee zitkussens, twee rugkussens en een sierkussen tegen elke arm.', {
-    hoofdmateriaal: 'sunny_taupe', opties: { poten: 'blok', poothoogte: 'laag', hout: 'eik_zwart', rug: 'los' },
+  model('daizy-classic', 'Daizy Classic zetelbed', ZETELBED, 'Klassiek zetelbed met lage armen, twee zitkussens op een sierboord, twee rugkussens en een sierkussen tegen elke arm.', {
+    hoofdmateriaal: 'sunny_taupe', opties: { poten: 'blok', poothoogte: 'laag', hout: 'eik_zwart', rug: 'los', boord: 'met' },
     // Technische tekening op de productpagina (14/11): zithoogte 47, karkas 74, arm 60 hoog en 14 breed, diepte 98,
     // zitdiepte 55. Uit de foto (benadering): de rugkussens komen ±8 cm boven het karkas, een sierkussen tegen elke arm.
     // De breedte staat niet op de tekening (blijft een benadering).
+    // Met de sierboord tussen zitkussens en korpus, zoals op de foto (de pagina toont ook een versie zonder boord).
     vormgeving: { zitkussens: 2, zithoogte: 47, rughoogte: 82, armhoogte: 60, karkashoogte: 74, rugdikte: 20, rugkussendikte: 23 },
     elementen: [
       ...rij([['arm', 14, 98, strak], ['zit', 170, 98, { functie: 'slaapfunctie' }], ['arm', 14, 98, strak]]),

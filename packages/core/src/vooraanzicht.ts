@@ -190,6 +190,11 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
         }
         // Basis, houten frame en zitkussen(s).
         rect(`${e.id}.basis`, x0, top(zithoogte - kussenDik), p.b, zithoogte - kussenDik - P, donker, { afronding: 2, ...lijn });
+        // Sierboord: een band in de stof tussen de zitkussens en het korpus (zoals in de 3D).
+        if (kussenDik && te('boord', 'boord', false) === true) {
+          const boordH = Math.min(5, Math.max(2, zithoogte - kussenDik - P - 2));
+          rect(`${e.id}.boord`, x0, top(zithoogte - kussenDik), p.b, boordH, stof, { afronding: 1, ...lijn });
+        }
         if (kussenDik) zitkussens(x0 + 1, p.b - 2, top(zithoogte), kussenDik);
         houtframe(zithoogte + 2);
         maxHoogte = Math.max(maxHoogte, rugH);

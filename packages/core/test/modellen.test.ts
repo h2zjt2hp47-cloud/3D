@@ -477,6 +477,29 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(ziggy.filter((x) => x.code.startsWith('e2.rugkussen'))).toHaveLength(2);
     expect(ziggy.filter((x) => x.code.endsWith('.rol'))).toHaveLength(2);
   });
+  it('Daizy Classic heeft een sierboord tussen de zitkussens en het korpus; een keuze in de catalogus', () => {
+    // Melding van Jonas (14/11): "er ontbreekt nog een boord bij Daizy Classic tussen kussen en korpus".
+    const o = model('daizy-classic').ontwerp, b = scene('daizy-classic').blokken;
+    const boord = b.find((x) => x.code === 'e2.boord')!, kussens = b.filter((x) => x.code.startsWith('e2.zitkussen')), basis = b.find((x) => x.code === 'e2.basis')!;
+    expect(boord).toBeDefined();
+    // Vlak onder de zitkussens, over de hele breedte van de zitting, in de stof (het korpus is donkerder), vooraan
+    // gelijk met de kussens en net vóór het korpus.
+    const onderKussens = Math.min(...kussens.map((x) => x.y));
+    expect(boord.y + boord.h).toBeCloseTo(onderKussens, 1);
+    expect(boord.h).toBe(5);
+    expect(boord.b).toBeCloseTo(basis.b, 1);
+    expect(boord.kleur).toBe(kussens[0]!.kleur);
+    expect(boord.kleur).not.toBe(basis.kleur);
+    expect(boord.z + boord.d).toBeGreaterThan(basis.z + basis.d);
+    expect(boord.z + boord.d).toBeLessThanOrEqual(98);
+    // In het vooraanzicht en in de prijs.
+    expect(tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen).vormen.find((v) => v.code === 'e2.boord')).toMatchObject({ hoogte: 5 });
+    expect(bereken(o).opties.find((x) => x.keuze === 'met' && x.groep === 'boord')?.bedrag).toBe(35);
+    // Daizy Slim en de andere modellen hebben er geen; met een vaste zitting kan het niet.
+    expect(scene('daizy-slim').blokken.some((x) => x.code.endsWith('.boord'))).toBe(false);
+    const vast = structuredClone(o); vast.opties = { ...vast.opties, zitting: 'vaste_zitting' };
+    expect(codes(bereken(vast))).toContain('optie.boord.met');
+  });
   it('een arm mag 8 cm smal zijn; onder 12 cm kost hij de basisprijs en de bestaande maten blijven even duur', () => {
     const sofa = (armB: number): Ontwerp => ({ hoofdmateriaal: 'linnen_ficelle', elementen: [
       { id: 'a', type: 'arm', x: 0, y: 0, breedte: armB, diepte: 95, rotatie: 0 }, { id: 'z', type: 'zit', x: armB, y: 0, breedte: 95, diepte: 95, rotatie: 0 },

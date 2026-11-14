@@ -341,6 +341,12 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const sx = hoek ? RUG : fr;
         lokaal('basis', 'stof', sx, RUG, B - sx - fr, D - RUG - 1.5, P, basisH, donker, { afronding: 2 });
         if (kussenDik) kussens(sx + 1, RUG, B - sx - fr - 2, D - RUG - 1 - (v.houtframe === 'rondom' ? 4 : 0), zithoogte - kussenDik, kussenDik);
+        // Sierboord (Daizy Classic): een band in de stof tussen de zitkussens en het korpus, over de hele breedte, vooraan
+        // gelijk met de kussens (het korpus ligt er een halve cm achter). Alleen onder losse zitkussens.
+        if (kussenDik && te('boord', 'boord', false) === true) {
+          const boordH = Math.min(5, Math.max(2, basisH - 2));
+          lokaal('boord', 'kussen', sx, D - 9, B - sx - fr, 8, zithoogte - kussenDik - boordH, boordH, stof, { afronding: 1.2 });
+        }
         if (!hoek) houtframe(zithoogte + 2);
         if (losseRug) {
           const n = Math.max(1, Math.round(v.rugkussens ?? v.zitkussens));
