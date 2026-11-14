@@ -425,6 +425,46 @@ krijgt ze een (verzonnen) prijs en verandert de offertetekst van die modellen.
 
 **4. Mabel 2-zit** is 150 cm breed; het type fauteuil stopt bij 110 cm. Ook Satie bestaat in 110 en 130 cm.
 
+## Stand van de afwijkingen (14/11)
+
+Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
+
+**Opgelost op 14/11**
+
+| Wat | Waar |
+|---|---|
+| Maten van de technische tekening | Ziggy, Zora, Daizy Classic, Daizy Slim; zithoogte van Phoenix |
+| De rug helt achterover | Sullivan, Manon, de drie Mabels, de rugschijf van Karl |
+| Vierkante, taps toelopende poten | alle modellen met een houten onderstel |
+| Achterpoten die doorlopen tot in de rugschijf | Karl |
+| Stof of hout naar de foto | Karl, Tumble, Mabel 2-zit, Milton, Ross, Zora, Daizy, Stockholm |
+| Bovenlijn van de arm zwaait van de rug naar voren | Esmee |
+| Sierboord tussen zitkussens en korpus | Daizy Classic |
+| Vier kussens in plaats van drie; dikkere rug | Quin; Tumble |
+| Sierkussens vóór de rugkussens in het vooraanzicht | alle modellen met sierkussens |
+| Bovenaanzicht en 3D op dezelfde hoogtes | alle fauteuils met een helling of losse kussens |
+
+**Grens van de motor** (kan nu niet; met de reden)
+
+| Wat | Reden |
+|---|---|
+| De schaal van Sullivan en Manon waaiert ook opzij uit | De helling werkt alleen naar achteren; een schaal die naar boven breder wordt, vraagt een grondvlak per hoogte. |
+| Armen dikker dan de rug bij Ross en Sullivan | De schaal heeft één dikte over haar hele lengte. |
+| De kussens van Quin liggen los door elkaar | Kussens zijn stijve vormen die volgens een regel geplaatst worden. |
+| De arm van Zora loopt rond de rug door | Arm en rug zijn aparte elementen. |
+| De houten band rond de rugschijf van Karl | Een band die de hellende schijf volgt, bestaat niet als bouwsteen. De achterpoten lopen bij ons door de zitting in plaats van erachter. |
+| Stockholm en Kanto lopen naar boven smaller toe | Een poef is een rechte cilinder of balk. |
+| Het korpus is een tint donkerder dan de kussens | Vaste afspraak in de weergave (onderbouw donkerder), voor alle zetels. |
+
+**Moet van de klant komen** (niet gokken)
+
+- Maten en een foto van de Fraser hocker en de Mabel hocker; maten van de Pebble fauteuil.
+- De breedte van de zetelbedden; maten van Aurora en Phoenix.
+- Welke hoogte de site bedoelt bij Satie en Quin (de schaal of de kussens).
+- Maten van Fréjus, Gozo, Azar, Husk en Esmee; maten van de poefs Stockholm, Kanto en Fez.
+- Wat de standaardstikking per model is in onze keuzes ("single stitching", "external stitching").
+- De echte stoffen en kleuren (Belize en Azar wijken in tint af; de demostoffen zijn geen stoffen van de klant).
+
 ## Nog te doen
 
 - Details uit de tweede doorgang: de aflopende armlijn van Esmee, de dikkere armen van Fréjus, de kleur van Belize en

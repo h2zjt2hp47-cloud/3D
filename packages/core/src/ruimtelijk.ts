@@ -577,11 +577,19 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
             ...(kiezel ? { glad: true } : {}),
           });
           if (kp.zwevend) {
-            // Schelp: twee houten dragers achteraan van het frame tot onder de schaal.
+            // Schelp: twee houten dragers achteraan van het frame tot onder de schaal. Op een houten onderstel (Karl) zijn
+            // dat de achterpoten zelf: ze lopen van de vloer schuin door tot in de rugschijf, zoals op de foto, in plaats
+            // van twee korte poten onder de zitting met een losse stijl erboven.
             const mid = Math.floor(opb.wand.pad.length / 2);
-            for (const [k, f] of [['l', 0.28], ['r', 0.72]] as const) {
+            for (const [k, f, achterpoot] of [['l', 0.28, 'la'], ['r', 0.72, 'ra']] as const) {
               const q = opb.wand.pad[Math.round(mid + (f - 0.5) * opb.wand.pad.length * 0.55)] ?? opb.wand.pad[mid]!;
-              lokaal(`drager-${k}`, 'hout', q[0] - 1.5, q[1] - 1.5, 3, 3, opb.basis.boven - 2, opb.wand.onder - opb.basis.boven + 6, hout, { afronding: 0.8 });
+              const i = blokken.findIndex((b, n) => n >= eersteBlok && b.code === `${e.id}.poot-${achterpoot}`);
+              if (i >= 0) {
+                const poot = blokken[i]!, top = lokaalNaarWereld(e, q[0], q[1], 0, 0), hoog = opb.wand.onder + 6;
+                const voetX = poot.x + poot.b / 2 + (poot.schuin?.[0] ?? 0), voetZ = poot.z + poot.d / 2 + (poot.schuin?.[1] ?? 0);
+                blokken.splice(i, 1);
+                blokken.push({ code: `${e.id}.drager-${k}`, soort: poot.soort, vorm: 'kegel', vierkant: true, taps: 0.8, x: r2(top.x - 2), y: 0, z: r2(top.y - 2), b: 4, h: r2(hoog), d: 4, kleur: poot.kleur, schuin: [r2(voetX - top.x), r2(voetZ - top.y)] });
+              } else lokaal(`drager-${k}`, 'hout', q[0] - 1.5, q[1] - 1.5, 3, 3, opb.basis.boven - 2, opb.wand.onder - opb.basis.boven + 6, hout, { afronding: 0.8 });
             }
           }
           opb.rugkussens.forEach((k, i) => {

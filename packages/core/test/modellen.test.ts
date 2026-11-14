@@ -368,10 +368,16 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     // De schijf loopt niet als armen naar voren: ze blijft in de achterste helft.
     const pad = rug.pad!.map((q) => q[1]);
     expect(Math.max(...pad)).toBeLessThan(72 / 2);
-    // Twee stijlen van het frame tot in de rugschijf; ze beginnen in het frame onder de zitting.
+    // De twee achterpoten lopen van de vloer schuin door tot in de rugschijf (zoals op de foto); vooraan twee gewone poten.
     const stijlen = b.filter((x) => x.code.startsWith('e1.drager-'));
     expect(stijlen).toHaveLength(2);
-    for (const st of stijlen) { expect(st.y).toBeLessThanOrEqual(zit.y); expect(st.y + st.h).toBeGreaterThan(rug.y); }
+    for (const st of stijlen) {
+      expect(st).toMatchObject({ y: 0, vorm: 'kegel', vierkant: true });
+      expect(st.y + st.h).toBeGreaterThan(rug.y);
+      // De voet staat verder naar voren dan de bovenkant (de poot helt achterover naar de rug toe).
+      expect(st.schuin![1]).toBeGreaterThan(1);
+    }
+    expect(b.filter((x) => x.code.startsWith('e1.poot-')).map((x) => x.code).sort()).toEqual(['e1.poot-lv', 'e1.poot-rv']);
     expect(b.find((x) => x.code === 'e1.ring')).toMatchObject({ y: 25, h: 3 });
   });
   it('Tumble: één bolle zitting tot op de vloer, met een lage dikke rug erop (geen wand errond tot onderaan)', () => {
