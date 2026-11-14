@@ -2068,7 +2068,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     mee.forEach((b, i) => { const w = wortel(i); groepen.set(w, [...(groepen.get(w) ?? []), b]); });
     return [...groepen.values()];
   }
-  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.schuin, b.vierkant, b.leun, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
+  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.schuin, b.vierkant, b.leun, b.as, b.pad, b.hoogtes, b.dikte, b.binnen, b.omtrek, b.profiel, b.uit]));
   /** De zachte vorm als mesh (onze stof, schaduw in de hoeken als hoekpuntkleur), of null als ze nog berekend moet worden. */
   function zachteMesh(delen: Blok[], buren: Blok[]) {
     const v = zachteVormen.get(vormSleutel(delen, buren));

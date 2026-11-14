@@ -120,7 +120,11 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 22. **Wat dikker wordt, groeit naar de kant die niet gemeten is.** De armen van Ross en Sullivan zijn dikker dan de
     rug. De breedte van de site is over de armen gemeten, dus het extra komt naar binnen en de buitenkant blijft staan.
     Kijk op de foto waar de naad of bies loopt: die toont welke kant de vaste kant is.
-23. **Twee foto's die elkaar tegenspreken, tonen een vorm die de motor niet heeft.** De rug van Sullivan is van voren
+23. **Meet een dikte als verhouding, niet op het oog.** De armen kregen eerst 11,5 en 14,5 cm, omdat ze op de schuine
+    foto's dikke rollen leken. Gemeten op de foto van voren en op ons beeld van voren (de vrije breedte tussen de armen
+    tegenover de hele breedte) bleek dat te dik: Ross 9 cm, en bij Sullivan was niet de arm dikker maar de rug ernaast
+    dunner. Een verhouding heeft geen schaal in cm nodig en vergelijkt foto en beeld op dezelfde manier.
+24. **Twee foto's die elkaar tegenspreken, tonen een vorm die de motor niet heeft.** De rug van Sullivan is van voren
     ±47 cm breed en loopt van opzij over ±23 cm schuin af. Geen enkel verloop van de bovenrand geeft beide: de schaal
     is bovenaan breder dan onderaan. Niet verder schuiven met de getallen, maar de ontbrekende bouwsteen noteren.
 

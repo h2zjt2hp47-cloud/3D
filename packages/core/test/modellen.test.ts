@@ -319,18 +319,20 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
     expect(b.some((x) => x.code === 'e1.zitband')).toBe(false);
   });
-  it('Ross en Sullivan: de armen zijn dikker dan de rug, naar binnen toe; alleen zij (14/11)', () => {
-    // Uit de foto's (benadering): Ross een rug van 6 cm met armen van ±11,5 cm, Sullivan 10 cm met armen van ±14,5 cm.
-    for (const [code, rugDik, armDik] of [['ross', 6, 11.5], ['sullivan', 10, 14.5]] as const) {
+  it('Ross en Sullivan: de armen zijn dikker dan de rug ernaast, naar binnen toe; alleen zij (14/11)', () => {
+    // Uit de foto's van voren (benadering; gemeten als de vrije breedte tussen de armen tegenover de hele breedte):
+    // Ross een rug van 6 cm met armen van ±9 cm; Sullivan in het midden van de rug 10 cm (de zitdiepte van de site),
+    // aan de schouders 7 cm en armen van ±10,5 cm.
+    for (const [code, schouder, midden, arm] of [['ross', 6, 6, 9], ['sullivan', 7, 10, 10.5]] as const) {
       const s = scene(code), rug = s.blokken.find((x) => x.code === 'e1.rug')!, n = rug.pad!.length, mid = (n - 1) / 2;
-      expect(rug.dikte, code).toBe(rugDik);
+      expect(rug.dikte, code).toBe(schouder);
       expect(rug.binnen, code).toHaveLength(n);
-      expect(rug.binnen![mid], code).toBe(0);
-      expect(rugDik + rug.binnen![0]!, code).toBe(armDik);
-      expect(rugDik + rug.binnen![n - 1]!, code).toBe(armDik);
-      // De rug zelf blijft dun tot waar hij naar de arm gezakt is: op een derde van elke kant nog niets extra.
-      expect(rug.binnen![Math.round(mid * 0.67)], code).toBe(0);
-      expect(rug.binnen![Math.round(mid * 1.33)], code).toBe(0);
+      expect(schouder + rug.binnen![mid]!, code).toBe(midden);
+      expect(schouder + rug.binnen![0]!, code).toBe(arm);
+      expect(schouder + rug.binnen![n - 1]!, code).toBe(arm);
+      // Aan de schouders (waar de rug naar de arm zakt) is de schaal het dunst: vlak ernaast begint het armkussen.
+      expect(rug.binnen![Math.round(mid * 0.58)], code).toBe(0);
+      expect(rug.binnen![Math.round(mid * 1.42)], code).toBe(0);
     }
     // De maten van de site blijven (tabel SITE hierboven); geen enkele andere fauteuil heeft het gegeven.
     for (const m of zetelModellen) if (m.code !== 'ross' && m.code !== 'sullivan')
@@ -349,7 +351,10 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(zit.d).toBeCloseTo(62, 0);
     expect(zit.z + zit.d).toBeCloseTo(80, 0);
     // Zitdiepte van de site (60): van de voorkant tot de binnenkant van de schaal ter hoogte van de zitting.
-    const voetAchter = Math.min(...rug.pad!.map((q) => q[1])), binnen = voetAchter + rug.dikte! / 2 + rug.leun![1] * (42 - rug.y);
+    // De schaal is daar 10 cm dik: haar gewone dikte plus het extra naar binnen in het midden van de rug.
+    const dikAchter = rug.dikte! + rug.binnen![(rug.pad!.length - 1) / 2]!;
+    expect(dikAchter).toBe(10);
+    const voetAchter = Math.min(...rug.pad!.map((q) => q[1])), binnen = voetAchter - rug.dikte! / 2 + dikAchter + rug.leun![1] * (42 - rug.y);
     expect(80 - binnen).toBeGreaterThan(58);
     expect(80 - binnen).toBeLessThan(62);
     expect(s.kader).toMatchObject({ b: 72, d: 80, h: 93 });

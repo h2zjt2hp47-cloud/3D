@@ -256,7 +256,9 @@ export const zetelModellen: ModelDefinitie[] = [
       kuip: {
         exponent: 2.6, dikte: 6, boog: 125, voorBoven: -3, zitTrommel: true, zitRand: 6,
         profiel: [[0, 1], [0.33, 1], [0.47, 0.5], [0.75, 0.42], [1, 0]],
-        dikteProfiel: [[0, 6], [0.44, 6], [0.5, 11.5], [1, 11.5]],
+        // Dikte (14/11, uit de foto van voren, benadering): de rug is een dunne schaal van 6 cm, de armen zijn kussens
+        // van ±9 cm ertegen, met een plooi waar de rug tot armhoogte gezakt is.
+        dikteProfiel: [[0, 6], [0.44, 6], [0.5, 9], [1, 9]],
       },
     },
     elementen: rij([['fauteuil', 66, 64, { kuipvorm: 'afgerond' }]]),
@@ -320,10 +322,12 @@ export const zetelModellen: ModelDefinitie[] = [
     vormgeving: {
       zachtheid: 6, rughoogte: 93, zithoogte: 42, poothoogte: 22,
       kuip: {
-        plan: 'rond', dikte: 10, boog: 118, voorBoven: -3, zitTrommel: true, zitRand: 7, zitIn: 5, zitInAchter: 5,
+        plan: 'rond', dikte: 7, boog: 118, voorBoven: -3, zitTrommel: true, zitRand: 7, zitIn: 5, zitInAchter: 5,
         frameDik: 3, frameKruis: true, helling: 10.4,
         profiel: [[0, 1], [0.2, 1], [0.52, 0.43], [0.8, 0.36], [1, 0]],
-        dikteProfiel: [[0, 10], [0.48, 10], [0.55, 14.5], [1, 14.5]],
+        // Dikte (14/11, uit de foto van voren, benadering): in het midden van de rug 10 cm (daar hoort de zitdiepte van
+        // 60 bij), naar de schouders toe dunner (7 cm), en de armen zijn kussens van ±10,5 cm met een plooi ertussen.
+        dikteProfiel: [[0, 10], [0.2, 10], [0.36, 7], [0.47, 7], [0.54, 10.5], [1, 10.5]],
       },
     },
     elementen: rij([['fauteuil', 72, 80, { kuipvorm: 'afgerond' }]]),

@@ -440,15 +440,24 @@ Sullivan zijn de armen dikke kussens tegen een dunnere rug, met een plooi ertuss
 - **Het uiteinde van de arm blijft waar het was.** Een dikkere arm heeft een rondere kop; de middenlijn stopt zoveel
   vroeger.
 - **De bies volgt de buitenrand**, niet het midden van de dikke arm (zoals op de foto's van Ross).
-- **Diktes uit de foto's (benadering):** Ross een rug van 6 cm met armen van ±11,5 cm (gemeten op de arm die recht naar
-  de camera wijst, tegen de breedte van 66 cm); Sullivan 10 cm met armen van ±14,5 cm (van voren 11 à 14 cm, tegen de
-  breedte van 72 cm). De overgang is kort (±5 cm langs de schaal), juist waar de rug tot armhoogte gezakt is.
+- **Diktes uit de foto's (benadering), gemeten als verhouding.** Op de foto van voren en op ons beeld van voren: de
+  vrije breedte tussen de armen tegenover de hele breedte. Zo heb je geen schaal in cm nodig.
+
+  | | Foto | Vroeger | Eerste poging | Nu |
+  |---|---|---|---|---|
+  | Ross, vrije breedte | 68 % | 75 % (arm 6 cm) | 58 % (arm 11,5 cm) | 64 % (arm 9 cm) |
+  | Sullivan, vrije breedte | 75 % | 70 % (overal 10 cm) | 62 % (arm 14,5 cm) | 70 % (schouder 7, arm 10,5 cm) |
+
+  De eerste poging was op het oog te dik (de arm leek op de schuine foto's een dikke rol). **Ross:** rug 6 cm, armen
+  ±9 cm. **Sullivan:** niet de arm is zo dik, de rug is naast de arm dunner. In het midden van de rug blijft de schaal
+  10 cm (daar hoort de zitdiepte van 60 cm van de site bij), naar de schouders wordt ze 7 cm, en de armen zijn kussens
+  van ±10,5 cm. De overgang naar de arm is kort (±5 cm langs de schaal), juist waar de rug tot armhoogte gezakt is.
 - **Alles tekent dezelfde arm:** 3D, zachte vorm, boven- en vooraanzicht en de schaduw op de vloer (één hulpfunctie,
   `wandDoorsnede`).
 - **Ongewijzigd:** de maten (66 × 64 × 78 en 72 × 80 × 93), de zitdiepte, de prijs (Ross 866, Sullivan 954) en de
   andere 40 modellen (prijs, tekeningen en 3D identiek; beeldvergelijking 0,00 %).
 - **Wat nog afwijkt:** de arm van Sullivan is op de foto een ronde rol die ook wat naar buiten bolt, en zijn rug is van
-  voren breder dan bij ons (zie de grenzen van de motor hieronder).
+  voren breder dan bij ons (vrije breedte 75 % tegenover 70 %; zie de grenzen van de motor hieronder).
 
 ## Stand van de afwijkingen (14/11)
 
