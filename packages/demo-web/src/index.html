@@ -170,6 +170,21 @@ button:disabled { opacity: .45; cursor: default; }
 .knoppenlijst { display: grid; gap: 6px; margin-bottom: 10px; }
 .knoppenlijst button { text-align: left; }
 .knoppenlijst button[aria-pressed="true"] { background: var(--accent); color: var(--vlak); }
+/* "Stop met tekenen" staat er alleen terwijl je zelf tekent (Shift + klik op een element). */
+.knoppenlijst button[data-gereedschap="selecteren"][aria-pressed="true"] { display: none; }
+.knoppenlijst button[data-gereedschap="selecteren"] { background: var(--accent); color: var(--vlak); }
+/* Knoppen voor het gekozen element, boven de tekening in elke weergave. */
+/* Blijft bovenaan in beeld terwijl je door de tekening, de 3D en de eigenschappen scrolt: Verwijder is altijd bij de hand. */
+.actiebalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-height: 44px; margin: 0 0 10px; padding: 5px 10px; border: 1px solid var(--lijn, #d9d6cf); border-radius: 8px; background: var(--vlak); position: sticky; top: 6px; z-index: 6; }
+/* De naam krimpt (met …) zodat de knoppen op dezelfde regel blijven: de tekening verspringt niet als je iets anders kiest. */
+.actiebalk strong { font-weight: 600; flex: 1 1 60px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.actiebalk > .klein { white-space: nowrap; }
+.actiebalk button { flex: none; white-space: nowrap; padding: 4px 9px; }
+.actiebalk .actiemelding { flex-basis: 100%; white-space: normal; color: var(--waarschuwing, #8a5a00); }
+.actiebalk .actiemelding:empty { display: none; }
+/* Op een scherm met een muis mogen de knoppen om toe te voegen compacter: zo passen er meer naast de tekening. */
+@media (hover: hover) and (pointer: fine) { main.ontwerp .gereedschap .knoppenlijst { gap: 4px; } main.ontwerp .gereedschap .knoppenlijst button { padding: 4px 10px; } main.ontwerp .gereedschap .gereedschapkop { margin: 6px 0 2px; } }
+body.klantmodus .actiebalk { display: none; }
 #o-3d-instellingen button[aria-pressed="true"] { background: var(--accent-zacht); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .drie-d-vak { position: relative; }
 .drie-d-voortgang { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; background: color-mix(in srgb, var(--vlak) 92%, transparent); border: 1px solid var(--lijn); border-radius: 10px; padding: 8px 12px; box-shadow: 0 4px 18px rgba(0,0,0,.12); font-size: 14px; max-width: calc(100% - 24px); flex-wrap: wrap; justify-content: center; }
@@ -532,7 +547,7 @@ main.catalogus { display: block; }
       <div id="o-start" class="knoppenlijst"></div>
     </details>
     <details class="sneltoetsen"><summary>Sneltoetsen</summary>
-      <ul class="klein"><li>Pijltjes: 1 cm verplaatsen (Shift: 10 cm)</li><li>R / Shift+R: draaien</li><li>D: dupliceren</li><li>Delete: verwijderen</li><li>Alt tijdens slepen: zonder magneet</li><li>Ctrl+Z: ongedaan maken</li><li>Esc: stoppen met tekenen</li></ul>
+      <ul class="klein"><li>Klik op + : meteen toevoegen (Shift + klik: zelf tekenen)</li><li>Pijltjes: 1 cm verplaatsen (Shift: 10 cm)</li><li>R / Shift+R: draaien</li><li>D: dupliceren</li><li>Delete: verwijderen</li><li>Alt tijdens slepen: zonder magneet</li><li>Ctrl+Z: ongedaan maken</li><li>Esc: stoppen met tekenen</li></ul>
     </details>
   </aside>
   <div class="midden">
@@ -545,6 +560,7 @@ main.catalogus { display: block; }
       </div>
       <span class="klein" id="o-weergave-uitleg">raster 10 cm · maten in cm</span>
     </div>
+    <div id="o-actiebalk" class="actiebalk" role="toolbar" aria-label="Gekozen element"></div>
     <svg id="o-canvas" tabindex="0" role="application" aria-label="Tekenvlak: bovenaanzicht van de zetel" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="o-voor" class="voorvlak" tabindex="0" role="application" aria-label="Vooraanzicht: klik, sleep grepen of teken een element" xmlns="http://www.w3.org/2000/svg" hidden></svg>
     <div class="drie-d-vak"><div id="o-3d" class="drie-d" hidden></div>

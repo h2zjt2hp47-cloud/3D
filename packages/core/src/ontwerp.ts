@@ -951,8 +951,8 @@ export function berekenOntwerp(
   }
   if (el.length > 1) {
     el.forEach((e, n) => {
-      // Een poef mag los staan; opzet-elementen worden apart gecontroleerd.
-      if (typen.get(e.type)?.tekenstijl === 'poef' || isOpzet(e)) return;
+      // Een poef of fauteuil mag los staan (naast of voor de zetel); opzet-elementen worden apart gecontroleerd.
+      if (['poef', 'kuip'].includes(typen.get(e.type)?.tekenstijl ?? '') || isOpzet(e)) return;
       if (!el.some((o) => o !== e && raken(e, o)))
         meldingen.push({ code: 'ontwerp.los', ernst: 'waarschuwing', elementId: e.id, melding: `Element ${n + 1} raakt geen ander element.` });
     });

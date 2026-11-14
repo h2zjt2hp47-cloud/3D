@@ -359,3 +359,77 @@ De groepering van de elementknoppen volgt de soort element (`tekenstijl`). Een z
 **Beslissingen voor Jonas**
 1. ***Kast op maat*** is geen zetel. Verbergen in de versie in de huisstijl van Corneille & Silence? En *Sofa op maat*, nu het model-gebaseerde ontwerpen het hoofdpad is?
 2. **Offerte:** is dit overzicht wat je bij de klant wil tonen en afdrukken? Volgende stap zou een offertenummer en klantgegevens zijn, en later het doorsturen naar Missing Link.
+
+## 12. Ontwerper: toevoegen, kiezen en verwijderen (14/11/2026)
+
+Aanleiding: "Kunnen we ook het gebruiksgemak, zaken toevoegen verwijderen etc ook eens bekijken?" (Jonas). Deze ronde
+gaat alleen over de ontwerper (stap 2): een element toevoegen, kiezen, verplaatsen en verwijderen, in het
+bovenaanzicht en in 3D.
+
+**Methode.** Dezelfde aanpak als hoofdstuk 8 en 10: de taken uitgevoerd in een echte browser (Chromium via Playwright),
+op een laptop (1280 × 800, muis) en een tablet (1024 × 768, aanraking), met na elke stap een schermafdruk en wat er in
+het ontwerp veranderde. Vertrekpunt: het model Kotor, een leeg blad en de hoeksofa.
+
+### Bevindingen en wat ermee gebeurde
+
+| # | Bevinding (wat je ziet) | Ernst | Stand |
+|---|---|---|---|
+| 12.1 | **In 3D kon je niets toevoegen.** De knop *+ Zitelement* werd actief, verder gebeurde er niets: je moest eerst naar het bovenaanzicht en daar nog eens klikken. Wie een model opent, staat in 3D. | hoog | **Opgelost:** één klik op de knop voegt het element meteen toe, in elke weergave. |
+| 12.2 | **Toevoegen was twee stappen op twee plaatsen.** Knop kiezen links, dan klikken op het tekenvlak. Op een laptop stonden de onderste knoppen onder het tekenvlak: kiezen, terug omhoog scrollen, klikken. | hoog | **Opgelost** (zie 12.1); de knoppen zijn op een scherm met muis ook compacter, zodat ze alle veertien naast de tekening passen. |
+| 12.3 | **Een nieuw element kwam precies waar je klikte**, ook boven op de zetel, en hechtte niet aan: meteen "overlappen" en "raakt geen ander element". | hoog | **Opgelost:** het element krijgt een logische plaats (zie hieronder) en overlapt nooit. |
+| 12.4 | **Verwijderen was moeilijk te vinden.** De knop stond onder de tekening (scrollen); de Delete-toets werkte alleen met de focus op het tekenvlak, en niet in 3D. | hoog | **Opgelost:** *Draai*, *Dupliceer* en *Verwijder* staan boven de tekening bij het gekozen element, in elke weergave, en blijven in beeld als je scrolt. Delete, Ctrl+Z en Esc werken overal in de ontwerper (niet terwijl je in een veld typt). |
+| 12.5 | **Een fauteuil naast de zetel gaf een waarschuwing** ("raakt geen ander element"), een poef niet. | laag | **Opgelost:** een fauteuil mag los staan, zoals een poef. |
+| 12.6 | **Een armleuning erbij aan een zetel met twee armen** kwam los te staan zonder uitleg. | laag | **Opgelost:** ze staat los naast de zetel, met de melding dat er geen vrij uiteinde is. |
+
+![Vroeger: een zitelement en een armleuning na een klik](afbeeldingen/gebruiksgemak-toevoegen-vroeger.png)
+
+*Vroeger: het zitelement (9) ligt over de chaise longue, de armleuning (10) staat los; twee fouten.*
+
+![Nu: een zitelement en een poef, elk met één klik](afbeeldingen/gebruiksgemak-toevoegen-nu.png)
+
+*Nu: het zitelement staat aan het uiteinde (de armleuning is opgeschoven), de poef voor de zetel; bovenaan de knoppen
+voor het gekozen element.*
+
+### Waar komt een nieuw element?
+
+| Wat je toevoegt | Waar het komt |
+|---|---|
+| Zitelement, hoek, chaise longue, zitbank zonder rug, houten tussenstuk | Tegen het gekozen element, anders aan het rechtse uiteinde van de rij (is dat niet vrij: het linkse). Even diep en in dezelfde richting; ook langs een gedraaide tak van een hoeksofa. Staat aan dat uiteinde een armleuning, dan schuift die op: de zetel wordt een element langer en houdt zijn arm. |
+| Armleuning | Aan een vrij uiteinde, tegen een zitting (niet tegen een bijzettafel), even diep. Geen vrij uiteinde: los ernaast, met uitleg. |
+| Afgerond eindelement | Aan een uiteinde, met de ronde kant naar buiten. Staat daar een armleuning, dan komt het in haar plaats (met melding). |
+| Fauteuil, poef | Los voor de zetel, in het midden; is die plek bezet, ernaast. |
+| Rugkussen, sierkussen, rolkussen | Op de gekozen zitting, anders de eerste zitting waar er nog een bij past (rug- en rolkussens liefst tegen een rug). Kussens van dezelfde soort liggen naast elkaar. |
+| Losse rugleuning | Op de gekozen zitbank zonder rug of poef, anders de eerste. Is er geen: uitleg wat je eerst moet toevoegen. |
+
+Het nieuwe element is meteen gekozen: verslepen, vergroten met het hoekje, of de maat intypen. *Ongedaan maken* zet
+alles terug, ook een opgeschoven of vervangen armleuning.
+
+**Zelf tekenen blijft mogelijk:** Shift + klik op een knop kiest het tekengereedschap zoals vroeger (een kader slepen
+op het tekenvlak of in het vooraanzicht); *✕ Stop met tekenen* of Esc stopt.
+
+### Taken (aantal handelingen)
+
+| Taak | Vroeger | Nu |
+|---|---|---|
+| Een zitelement toevoegen aan een model dat in 3D open staat | 4 (naar bovenaanzicht, knop, klik op het vlak, verslepen tot het aansluit) | 1 |
+| Een poef met een losse rugleuning erbij | 5 | 2 |
+| Een element verwijderen in 3D | 3 (naar bovenaanzicht, klik, Delete) of scrollen naar de knop | 2 (klik op het element, *Verwijder* of Delete) |
+| Een zetel van drie zittingen met twee armen op een leeg blad | 10 of meer | 5 |
+
+### Bewaking
+
+`npm run ontwerper` (`scripts/ontwerper-test.mjs`): 22 gevallen in een echte browser, van een leeg blad, in 3D en op
+de hoeksofa. De rekenmotor houdt zijn eigen tests (312).
+
+### Nog open (met voorstel)
+
+1. **De eigenschappen van het gekozen element** (maat, stof, keuzes) staan nog onder de tekening en de 3D-instellingen:
+   op een laptop is dat scrollen. Voorstel: breedte en diepte ook in de balk boven de tekening, en de rest in de
+   rechterkolom in plaats van eronder.
+2. **Verplaatsen in 3D** kan niet: slepen in 3D draait het beeld. Een element verplaatsen doe je in het bovenaanzicht.
+   Voorstel: in 3D pijltjes "naar links / naar rechts in de rij" bij het gekozen element.
+3. **Slepen vanuit de knoppenlijst** naar een plek op het tekenvlak (voor wie zelf de plaats wil kiezen zonder Shift).
+4. **Op een tablet** zijn de veertien knoppen hoger dan het scherm (aanraakdoelen van 44 px): toevoegen werkt met één
+   tik, maar je scrolt naar de knop. Voorstel: de knoppen in twee kolommen, of inklapbare groepen.
+5. **Geen "opnieuw"** naast *Ongedaan maken* (stond al open in hoofdstuk 10).
+6. **Niet getest met echte gebruikers of op de toonzaaltablet.**

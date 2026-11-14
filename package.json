@@ -1,12 +1,15 @@
 {
   "name": "configurator",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "npm test --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "demo": "npm run demo -w @configurator/core",
-    "beelden": "node scripts/beeldvergelijking.mjs"
+    "beelden": "node scripts/beeldvergelijking.mjs",
+    "ontwerper": "node scripts/ontwerper-test.mjs"
   },
   "devDependencies": {
     "pixelmatch": "^7.2.0",

@@ -431,6 +431,132 @@ function dupliceer(id: string) {
   toonEigenschappen();
   gewijzigd();
 }
+// ---------- toevoegen met één klik ----------
+/** Korte melding bij de knoppen boven de tekening (bv. waarom iets niet toegevoegd kon worden); verdwijnt vanzelf. */
+let meldingKlaar = 0;
+function meldActie(tekst: string) {
+  const vak = document.getElementById('o-actiemelding');
+  if (!vak) return;
+  vak.textContent = tekst;
+  clearTimeout(meldingKlaar);
+  if (tekst) meldingKlaar = window.setTimeout(() => { vak.textContent = ''; }, 6000);
+}
+
+/** Elementen waar je een ander element tegen kunt zetten (een rij vormen); een fauteuil of poef staat los. */
+const HECHT_STIJLEN = ['zit', 'hoek', 'chaise', 'zit_zonder_rug', 'rond', 'console'];
+const stijlVan = (e: OntwerpElement) => typen.get(e.type)?.tekenstijl ?? '';
+
+/**
+ * Een element toevoegen met één klik op zijn knop, in elke weergave (ook 3D): het komt meteen op een zinvolle plaats en
+ * is gekozen, klaar om te verslepen. Vroeger koos je de knop en klikte je daarna op het tekenvlak: in 3D gebeurde er
+ * niets, en het element kwam precies waar je klikte, ook boven op de zetel (gebruikstest van 14/11).
+ * - Zitting, hoek, chaise, eindelement, tussenstuk: tegen het gekozen element of anders aan het rechtse uiteinde van de
+ *   rij (dan het linkse), even diep en in dezelfde richting. Staat daar een armleuning, dan schuift die mee op.
+ * - Armleuning: aan een vrij uiteinde van de rij.
+ * - Fauteuil of poef: los voor de zetel.
+ * - Rugleuning en kussens: op de gekozen zitting, of de eerste waar er nog een bij past.
+ */
+function voegSlimToe(code: string) {
+  const t = typen.get(code);
+  if (!t) return;
+  meldActie('');
+  if (t.opzet) { voegOpzetSlim(code); return; }
+  const basis = ontwerp.elementen.filter((o) => !typen.get(o.type)?.opzet);
+  const raakt = (k: OntwerpElement, ander: OntwerpElement) => overlapOppervlak(k, ander) >= 1;
+  const std = (): OntwerpElement => ({ id: 'nieuw', type: code, x: 0, y: 0, breedte: t.breedte.standaard, diepte: t.diepte.standaard, rotatie: 0 });
+  let nieuw: OntwerpElement | null = null;
+  let verschuif: { arm: OntwerpElement; x: number; y: number }[] = [];
+  let vervangen: OntwerpElement[] = [];
+  const los = t.tekenstijl === 'kuip' || t.tekenstijl === 'poef';
+  if (!basis.length) nieuw = std();
+  else if (!los) {
+    const gekozen = elementVan(geselecteerd);
+    const gekozenBasis = gekozen ? (typen.get(gekozen.type)?.opzet ? dragerVan(ontwerp, getCatalogus(), gekozen) ?? null : gekozen) : null;
+    // Ankers: eerst het gekozen element, dan de zittingen van rechts naar links (het rechtse uiteinde eerst, dan het linkse).
+    // Een armleuning hoort tegen een zitting, niet tegen een houten tussenstuk (bijzettafel).
+    const rij = basis.filter((o) => HECHT_STIJLEN.includes(stijlVan(o)) && (t.tekenstijl !== 'arm' || stijlVan(o) !== 'console'));
+    const rechts = [...rij].sort((a, b) => voetafdruk(b).x + voetafdruk(b).b - (voetafdruk(a).x + voetafdruk(a).b));
+    const links = [...rij].sort((a, b) => voetafdruk(a).x - voetafdruk(b).x);
+    const ankers = [...new Set([...(gekozenBasis && rij.includes(gekozenBasis) ? [gekozenBasis] : []), ...(rechts[0] ? [rechts[0]] : []), ...(links[0] ? [links[0]] : []), ...rechts])];
+    zoek: for (const a of ankers) {
+      // Even diep als het anker (binnen wat het type toelaat); een chaise longue houdt haar eigen lengte.
+      const diepte = t.tekenstijl === 'chaise' ? t.diepte.standaard : klem(a.diepte, t.diepte.min, t.diepte.max);
+      const breedte = t.breedte.standaard;
+      // Voor het linkse uiteinde eerst links proberen, anders eerst rechts.
+      const kanten = a === links[0] && a !== rechts[0] ? (['links', 'rechts'] as const) : (['rechts', 'links'] as const);
+      for (const kant of kanten) {
+        const k = { ...plaatsOp(a, code, kant === 'rechts' ? a.breedte : -breedte, 0, breedte, diepte, 0), id: 'nieuw' };
+        if (t.tekenstijl === 'rond') k.opties = { ronde_kant: kant };
+        const inDeWeg = basis.filter((o) => raakt(k, o));
+        if (!inDeWeg.length) { nieuw = k; break zoek; }
+        // Staat er alleen een armleuning in de weg (het uiteinde van de zetel), dan schuift die op en komt het nieuwe
+        // element ertussen: de zetel wordt een element langer en houdt zijn arm.
+        if (t.tekenstijl === 'arm' || !inDeWeg.every((o) => stijlVan(o) === 'arm')) continue;
+        // Een afgerond eindelement ís het uiteinde: het komt in de plaats van de armleuning daar.
+        if (t.tekenstijl === 'rond') { nieuw = k; vervangen = inDeWeg; break zoek; }
+        const fa = voetafdruk(a), fk = voetafdruk(k);
+        const langsX = Math.abs(fk.x + fk.b / 2 - (fa.x + fa.b / 2)) >= Math.abs(fk.y + fk.h / 2 - (fa.y + fa.h / 2));
+        const sx = langsX ? Math.sign(fk.x - fa.x) * fk.b : 0, sy = langsX ? 0 : Math.sign(fk.y - fa.y) * fk.h;
+        const verplaatst = inDeWeg.map((arm) => ({ arm, x: arm.x + sx, y: arm.y + sy }));
+        const past = verplaatst.every((v) => !raakt({ ...v.arm, x: v.x, y: v.y }, k) && basis.every((o) => inDeWeg.includes(o) || !raakt({ ...v.arm, x: v.x, y: v.y }, o)));
+        if (past) { nieuw = k; verschuif = verplaatst; break zoek; }
+      }
+    }
+    if (!nieuw && t.tekenstijl === 'arm') { meldActie('Geen vrij uiteinde gevonden: de armleuning staat los naast de zetel. Sleep ze op haar plaats.'); }
+  }
+  if (!nieuw) {
+    // Los: een fauteuil of poef komt voor de zetel te staan (midden, anders ernaast); wat nergens tegen past, rechts ernaast.
+    const k = std();
+    const x0 = Math.min(...basis.map((o) => voetafdruk(o).x)), x1 = Math.max(...basis.map((o) => voetafdruk(o).x + voetafdruk(o).b));
+    const y0 = Math.min(...basis.map((o) => voetafdruk(o).y)), y1 = Math.max(...basis.map((o) => voetafdruk(o).y + voetafdruk(o).h));
+    const plekken: [number, number][] = los
+      ? [0, 1, -1, 2, -2, 3, -3].map((i) => [Math.round((x0 + x1) / 2 - k.breedte / 2 + i * (k.breedte + 20)), y1 + 40] as [number, number])
+      : [[x1 + 20, y0]];
+    const vrij = plekken.find(([x, y]) => basis.every((o) => !raakt({ ...k, x, y }, o))) ?? [x1 + 20, y0];
+    nieuw = { ...k, x: vrij[0], y: vrij[1] };
+  }
+  onthoud();
+  for (const v of verschuif) { v.arm.x = v.x; v.arm.y = v.y; }
+  if (vervangen.length) {
+    ontwerp.elementen = ontwerp.elementen.filter((o) => !vervangen.includes(o));
+    meldActie('Het afgeronde eindelement staat in de plaats van de armleuning aan dat uiteinde (terug met Ongedaan maken).');
+  }
+  nieuw.id = nieuwId();
+  ontwerp.elementen.push(nieuw);
+  geselecteerd = nieuw.id;
+  kiesGereedschap('selecteren');
+  // In het bovenaanzicht het hele ontwerp weer in beeld (het nieuwe element kan buiten een ingezoomd beeld vallen).
+  zoomBoven?.passendMaken();
+  toonEigenschappen();
+  gewijzigd();
+}
+
+/** Rugleuning of kussen met één klik: op de gekozen zitting, of de eerste zitting waar er nog een bij past. */
+function voegOpzetSlim(code: string) {
+  const wat: OpzetSoort = code === 'rugleuning' ? 'rug-achter' : (code as 'rugkussen' | 'sierkussen' | 'rolkussen');
+  const label = typen.get(code)?.label.toLowerCase() ?? code;
+  const gekozen = elementVan(geselecteerd);
+  const gekozenDrager = gekozen ? (typen.get(gekozen.type)?.opzet ? dragerVan(ontwerp, getCatalogus(), gekozen) ?? null : gekozen) : null;
+  const dragers = ontwerp.elementen.filter((o) => !typen.get(o.type)?.opzet && DRAGERS.includes(stijlVan(o))).sort((a, b) => voetafdruk(a).x - voetafdruk(b).x);
+  const kan = (d: OntwerpElement) => {
+    // Een losse rugleuning hoort op een zitting zonder eigen rug (zitbank zonder rug, poef); de chaise heeft een eigen keuze.
+    if (wat === 'rug-achter' && (stijlVan(d) === 'chaise' || voorkantRug(d) > 0)) return false;
+    return opzetMaat(d, wat).past;
+  };
+  // Rug- en rolkussens liefst tegen een rug; een sierkussen op elke zitting.
+  const metRug = dragers.filter((d) => voorkantRug(d) > 0), zonderRug = dragers.filter((d) => voorkantRug(d) <= 0);
+  const volgorde = [...(gekozenDrager ? [gekozenDrager] : []), ...(wat === 'rugkussen' || wat === 'rolkussen' ? [...metRug, ...zonderRug] : dragers)];
+  const drager = volgorde.find(kan);
+  if (!drager) {
+    meldActie(wat === 'rug-achter'
+      ? 'Een losse rugleuning past op een zitbank zonder rug of een poef: voeg die eerst toe.'
+      : dragers.length ? `Er is geen zitting meer waar nog een ${label} bij past.` : `Voeg eerst een zitting toe: een ${label} ligt op een zitting.`);
+    return;
+  }
+  voegOpzetToe(drager, wat);
+  zoomBoven?.passendMaken();
+}
+
 function ongedaan() {
   const vorige = geschiedenis.pop();
   if (!vorige) return;
@@ -456,7 +582,7 @@ function kiesGereedschap(code: string) {
       : 'Sleep een element om het zijwaarts te verplaatsen. Sleep de grepen: zijkant = breedte (de rest schuift mee), bovenkant = rug-, arm- of zithoogte, onderaan = poothoogte.'
     : t
       ? `Sleep op het tekenvlak om een ${t.label.toLowerCase()} te tekenen (${t.breedte.min}–${t.breedte.max} × ${t.diepte.min}–${t.diepte.max} cm), of klik voor de standaardmaat. Esc stopt.`
-      : 'Sleep elementen om ze te verplaatsen (rugleuningen en kussens verhuizen mee); ze klikken vast aan elkaar (Alt = zonder magneet). Sleep het hoekje rechtsonder om te vergroten.';
+      : 'Klik op + om iets toe te voegen: het komt meteen op een logische plaats. Sleep elementen om ze te verplaatsen (rugleuningen en kussens verhuizen mee); ze klikken vast aan elkaar (Alt = zonder magneet). Sleep het hoekje rechtsonder om te vergroten.';
 }
 
 // ---------- aanpassingen (opties) ----------
@@ -1284,13 +1410,43 @@ function vulHoofdmateriaal() {
   } else stalenkaart.ververs();
 }
 
+/**
+ * De knoppen voor het gekozen element, boven de tekening en in elke weergave (ook 3D): draaien, dupliceren, verwijderen.
+ * Vroeger stonden ze alleen onder de tekening (scrollen) en werkte Delete alleen met de focus op het tekenvlak.
+ */
+function toonActiebalk() {
+  const balk = document.getElementById('o-actiebalk');
+  if (!balk) return;
+  const e = elementVan(geselecteerd);
+  const melding = balk.querySelector('#o-actiemelding') ?? el('span', { id: 'o-actiemelding', class: 'klein actiemelding', role: 'status' });
+  if (!e) {
+    balk.replaceChildren(el('span', { class: 'klein' }, 'Klik op een element (in de tekening of in 3D) om het te kiezen; toevoegen doe je met de knoppen links.'), melding);
+    return;
+  }
+  const t = typen.get(e.type)!;
+  const knop = (tekst: string, titel: string, actie: () => void, klasse = 'tweede') => {
+    const b = el('button', { type: 'button', class: `${klasse} klein-knop`, title: titel }, tekst) as HTMLButtonElement;
+    b.addEventListener('click', actie);
+    return b;
+  };
+  balk.replaceChildren(
+    el('strong', {}, `${ontwerp.elementen.indexOf(e) + 1}. ${t.label}`),
+    el('span', { class: 'klein' }, `${e.breedte} × ${e.diepte} cm`),
+    knop('↻ Draai', 'Kwartslag draaien (R)', () => draai(e.id, 90)),
+    knop('⧉ Dupliceer', 'Kopie ernaast plaatsen (D)', () => dupliceer(e.id)),
+    knop('✕ Verwijder', 'Verwijderen (Delete); terug met Ongedaan maken', () => verwijder(e.id), 'gevaar'),
+    melding,
+  );
+}
+
 function toonEigenschappen() {
   const vak = $('#o-eigenschappen');
   const e = elementVan(geselecteerd);
+  toonActiebalk();
   // Het gekozen element ook in de 3D aanduiden.
   if (weergave === '3d') viewer?.markeer?.(e ? e.id : null);
   if (!e) {
-    vak.replaceChildren(el('p', { class: 'klein' }, 'Klik op een element om het aan te passen, of kies links een element om te tekenen.'));
+    vak.replaceChildren(el('p', { class: 'klein' }, 'Klik op een element om het aan te passen, of voeg links een element toe.'));
     return;
   }
   const t = typen.get(e.type)!;
@@ -1606,10 +1762,16 @@ export function startOntwerper() {
     balk.replaceChildren();
     const knop = (code: string, tekst: string) => {
       const b = el('button', { type: 'button', 'data-gereedschap': code, 'aria-pressed': String(code === gereedschap) }, tekst) as HTMLButtonElement;
-      b.addEventListener('click', () => kiesGereedschap(code));
+      // Klik: meteen toevoegen op een zinvolle plaats. Shift + klik: zelf tekenen op het tekenvlak (zoals vroeger).
+      b.addEventListener('click', (ev) => {
+        if (code === 'selecteren' || (ev.shiftKey && weergave !== '3d')) kiesGereedschap(code);
+        else voegSlimToe(code);
+      });
+      if (code !== 'selecteren') b.title = 'Klik: meteen toevoegen. Shift + klik: zelf tekenen op het tekenvlak.';
       balk.append(b);
     };
-    knop('selecteren', 'Selecteren en verplaatsen');
+    // Alleen zichtbaar terwijl je zelf tekent (Shift + klik): terug naar kiezen en verplaatsen.
+    knop('selecteren', '✕ Stop met tekenen (Esc)');
     const groepen: [string, (t: ElementType) => boolean][] = [
       ['Zittingen', (t) => !t.opzet && DRAGER_STIJLEN.includes(t.tekenstijl)],
       ['Armen en tussenstukken', (t) => !t.opzet && (t.tekenstijl === 'arm' || t.tekenstijl === 'console')],
@@ -1669,6 +1831,28 @@ export function startOntwerper() {
     stalenkaart?.ververs();
   });
   $('#o-ongedaan').addEventListener('click', ongedaan);
+  // Delete, Ctrl+Z en Esc werken overal in de ontwerper (ook met de 3D in beeld), niet alleen met de focus op het
+  // tekenvlak; behalve terwijl je in een veld typt. Op het tekenvlak en het vooraanzicht regelt opToets het zelf.
+  document.addEventListener('keydown', (ev) => {
+    if (ev.defaultPrevented || $('#view-ontwerp').hidden) return;
+    const doel = ev.target instanceof HTMLElement || ev.target instanceof SVGElement ? ev.target : null;
+    if (doel && ((doel as HTMLElement).isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(doel.tagName))) return;
+    if (doel && (svg().contains(doel) || voorvlak().contains(doel))) return;
+    const inDrieD = !!doel && $('#o-3d').contains(doel);
+    if (ev.key === 'Delete' || (ev.key === 'Backspace' && (inDrieD || doel === document.body))) {
+      if (!elementVan(geselecteerd)) return;
+      ev.preventDefault();
+      verwijder(geselecteerd!);
+    } else if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && ev.key.toLowerCase() === 'z') {
+      ev.preventDefault();
+      ongedaan();
+    } else if (ev.key === 'Escape' && (geselecteerd || gereedschap !== 'selecteren')) {
+      kiesGereedschap('selecteren');
+      geselecteerd = null;
+      toonEigenschappen();
+      tekenCanvas();
+    }
+  });
   $('#o-naar-offerte').addEventListener('click', () => { location.hash = 'offerte'; });
   $('#o-kopieer').addEventListener('click', () => {
     // Volledige omschrijving (ook keuzes per element, getekende hoogtes, vormgeving en korting): zie core/ontwerptekst.ts.

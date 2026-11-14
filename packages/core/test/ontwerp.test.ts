@@ -147,6 +147,14 @@ describe('vrij ontwerp', () => {
     expect(r.meldingen.find((m) => m.code === 'element.breedte')?.elementId).toBe('e');
   });
 
+  it('een fauteuil of een poef mag los naast de zetel staan; een los zitelement krijgt een waarschuwing', () => {
+    const r = bereken({ hoofdmateriaal: 'linnen_ficelle', elementen: [
+      el('a', 'zit', 0, 0, 90, 95), el('b', 'zit', 90, 0, 90, 95),
+      el('f', 'fauteuil', 40, 200, 80, 80), el('p', 'poef', 200, 200, 60, 60), el('z', 'zit', 400, 200, 90, 95),
+    ] });
+    expect(r.meldingen.filter((m) => m.code === 'ontwerp.los').map((m) => m.elementId)).toEqual(['z']);
+  });
+
   it('elementen die net tegen elkaar staan overlappen niet', () => {
     const r = bereken({ hoofdmateriaal: 'linnen_ficelle', elementen: [el('a', 'zit', 0, 0, 90, 95), el('b', 'zit', 90, 0, 90, 95)] });
     expect(codes(r)).not.toContain('ontwerp.overlap');
