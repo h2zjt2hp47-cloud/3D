@@ -111,6 +111,12 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 19. **Lees de tekst van de productpagina, niet alleen de maten.** Quin kreeg drie kussens (geteld op de foto); de pagina
     zegt "4 kussens inbegrepen". Ook de zitdiepte stond erbij en was bij de tweede ronde niet nagerekend: bij zes
     modellen bleek de zitting 3 tot 13 cm te diep.
+20. **Als de maten niet in elkaar passen, klopt de opbouw niet.** Sullivan: 72 breed, 80 diep, zitdiepte 60, hocker 62
+    rond. Met een rechte schaal paste dat nooit. Met een ronde zitting van 62 en een rug die 13 cm achterover helt klopt
+    alles tegelijk. De rekensom wees de weg, de foto van opzij bevestigde ze.
+21. **Een helling is geen afschuiving van het geheel.** De eerste versie liet de hele schaal mee hellen; bij Manon stond
+    toen ook de voorrand schuin, terwijl die op de foto recht naar beneden loopt. De rug helt waar ze naar achteren
+    kijkt en dooft uit naar de zijkanten.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 

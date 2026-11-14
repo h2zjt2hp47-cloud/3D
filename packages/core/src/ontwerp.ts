@@ -8,7 +8,7 @@
  */
 import type { Echt3D } from './echt3d.js';
 import { gebruiksklasse, materiaalArtikel, patroonfactor, type Materiaal } from './materialen.js';
-import { kuipOpbouw, kuipParameters } from './kuip.js';
+import { kuipOpbouw, kuipParameters, wandBoven } from './kuip.js';
 import type { Melding, StuklijstResultaat, TekeningResultaat, VormResultaat } from './types.js';
 
 export type Rotatie = 0 | 90 | 180 | 270;
@@ -620,7 +620,8 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
           ({ code: `${e.id}.${code}`, x: rond(w0.x), y: rond(w0.y), breedte: rond(w0.b), hoogte: rond(w0.h), vulling, pad: `M${punten.join(' L')} Z` });
         const uit: VormResultaat[] = [vorm('zit', (kp.zitTrommel ? opb.zit : opb.plan).map(([x, y]) => naarW(x, y)), kleur), vorm('kussen', opb.zit.map(([x, y]) => naarW(x, y)), kleur)];
         // Wand: buitenkant heen, rond uiteinde, binnenkant terug, rond begin.
-        const p = opb.wand.pad, h = opb.wand.dikte / 2;
+        // Van boven zie je de rand van de schaal: bij een hellende schaal ligt die verder naar achteren dan haar voet.
+        const p = wandBoven(opb.wand), h = opb.wand.dikte / 2;
         const nrm = p.map((q, i) => {
           const a = p[Math.max(0, i - 1)]!, c = p[Math.min(p.length - 1, i + 1)]!;
           const tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1;

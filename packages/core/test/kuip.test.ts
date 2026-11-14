@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, bouw3D, tekenVooraanzicht, type Ontwerp, type Rotatie } from '../src/index.js';
-import { framePoten, kuipOpbouw, kuipParameters, trommelKader } from '../src/kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters, kuipUit, trommelKader, wandBoven } from '../src/kuip.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -337,6 +337,41 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
       expect(ringV.x, `rotatie ${rotatie}`).toBeGreaterThan(zitV.x);
       expect(ringV.x + ringV.breedte!, `rotatie ${rotatie}`).toBeLessThan(zitV.x + zitV.breedte!);
     }
+  });
+
+  it('hellende schaal: korter grondvlak naar voren geschoven, de rug helt achteraan en dooft uit naar de zijkanten', () => {
+    const h = { P: 22, zithoogte: 42, rugH: 93, kussenDik: 0 };
+    const recht = kuipParameters({ plan: 'rond', dikte: 10, boog: 118 }, { zitTrommel: true, profiel: [[0, 1], [1, 0.4]] })!;
+    const schuin = { ...recht, helling: 10.4 };
+    // De bovenkant steekt (93 − 22) × tan 10,4° = 13 cm achter de voet; zonder helling niets.
+    expect(kuipUit(recht, h)).toBe(0);
+    expect(kuipUit(schuin, h)).toBeCloseTo(13, 0);
+    const a = kuipOpbouw(72, 80, h, recht, false), b = kuipOpbouw(72, 80, h, schuin, false), uit = kuipUit(schuin, h);
+    expect(a.wand.leun).toBeUndefined();
+    expect(b.wand.leun! * (93 - 22)).toBeCloseTo(uit, 1);
+    // Het grondvlak begint `uit` verder en loopt nog tot de voorkant: de zetel blijft 80 diep.
+    const ys = b.plan.map((q) => q[1]);
+    expect(Math.min(...ys)).toBeCloseTo(uit, 0);
+    expect(Math.max(...ys)).toBeCloseTo(80, 0);
+    expect(Math.min(...a.plan.map((q) => q[1]))).toBeCloseTo(0, 0);
+    // Het kader van de zitting (voor het onderstel) schuift mee.
+    expect(trommelKader(72, 80, schuin, uit)).toEqual({ x: 0, y: uit, b: 72, d: 80 - uit });
+    // De rand van de schaal op haar hoogte: achteraan tot tegen de achterkant van de zetel, aan de uiteinden waar de voet staat.
+    const voet = b.wand.pad, boven = wandBoven(b.wand), midden = Math.floor(voet.length / 2);
+    expect(boven[midden]![1]).toBeLessThan(voet[midden]![1] - 11);
+    expect(boven[midden]![1]).toBeGreaterThanOrEqual(0);
+    expect(boven[0]![1]).toBeCloseTo(voet[0]![1], 0);
+    expect(boven[voet.length - 1]![1]).toBeCloseTo(voet[voet.length - 1]![1], 0);
+    expect(wandBoven(a.wand)).toBe(a.wand.pad);
+    // In de 3D: de verschuiving per cm in wereldmaat, naar de achterkant van het element, ook als het gedraaid staat.
+    for (const [rotatie, verwacht] of [[0, [0, -1]], [90, [1, 0]], [180, [0, 1]], [270, [-1, 0]]] as const) {
+      const o = fauteuil({ ...milton, helling: 10 }, 'ringframe', rotatie as Rotatie), rug = bouw3D(o, cat, standaardMaterialen).blokken.find((x) => x.code === 'f.rug')!;
+      const l = Math.hypot(rug.leun![0], rug.leun![1]);
+      expect(l, `rotatie ${rotatie}`).toBeCloseTo(Math.tan((10 * Math.PI) / 180), 1);
+      expect([Math.round(rug.leun![0] / l), Math.round(rug.leun![1] / l)], `rotatie ${rotatie}`).toEqual([verwacht[0] + 0, verwacht[1] + 0]);
+    }
+    // Zonder helling geen veld op het blok.
+    expect(bouw3D(fauteuil(milton, 'ringframe'), cat, standaardMaterialen).blokken.find((x) => x.code === 'f.rug')!.leun).toBeUndefined();
   });
 
   it('een los vierkant rugkussen leunt tegen de rand van de schaal en steekt er niet doorheen', () => {

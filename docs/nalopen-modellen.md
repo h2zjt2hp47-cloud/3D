@@ -196,9 +196,8 @@ losse kussens.
 
 **Wat nog afwijkt van de foto's:**
 
-- **Sullivan:** op de foto helt de rug achterover (vandaar 80 cm diep); bij ons staat de schaal recht boven het
-  grondvlak. De motor kan een schaal niet laten hellen.
-- **Manon:** op de foto staat de schaal bovenaan wat naar buiten; zelfde beperking.
+- **Sullivan en Manon:** de rug helt sinds 14/11 achterover (zie verder). Wat blijft: op de foto staat de schaal ook
+  opzij wat naar buiten (ze waaiert uit); bij ons helt ze alleen naar achteren.
 - **Karl:** op de foto lopen de achterpoten door tot achter de rug, met een gebogen houten band rond de rugschijf; bij
   ons dragen twee stijlen de schijf.
 - **Quin:** de vier kussens staan netter gerangschikt dan op de foto, waar ze los door elkaar liggen.
@@ -218,10 +217,9 @@ losse kussens.
   | Manon | 70 | 52 | 18 | 6 | 64 | +12 |
   | Quin | 91 | 50 | 41 (schaal en kussens) | 6 + kussens | ±63 | +13 |
 
-  Karl en Satie hebben geen zitdiepte op de site. **Voorstel (nog niet gebouwd, te beslissen door Jonas):** een schaal
-  die aan de rand dun is en ter hoogte van de zitting zo dik als de site aangeeft. Dan klopt de zitdiepte, blijft de
-  rand zoals op de foto, en krijgt de rug vanzelf de helling die Sullivan en Manon nu missen. Het raakt het uitzicht
-  van de goedgekeurde Mabels (de binnenkant van de leuning wordt schuin).
+  Karl en Satie hebben geen zitdiepte op de site. **Opgelost op 14/11 voor Sullivan, Manon en Mabel** met een rug die
+  achterover helt (zie "De rug helt achterover"); de tabel hierboven is de stand van vóór die wijziging. Ross (+5),
+  Fraser (+3), Tumble (+3) en Quin blijven zoals ze zijn: hun foto's tonen geen helling, of er is geen foto van opzij.
 - **Ross en Sullivan:** de armen zijn op de foto dikker en boller dan de schaal; bij ons is de schaal overal even dik.
 - **Poten:** op de foto vierkant en naar onderen smaller; bij ons rond. De houtkleur van Ross (cognac) bestaat niet als
   keuze; hij staat op eik naturel.
@@ -249,6 +247,31 @@ losse kussens.
   ronde niet opnieuw gelezen, alleen de maten. Daarna alle pagina's nagelezen: de zitdieptes hierboven komen daaruit.
 - De tests over de keuze *Vorm fauteuil* hingen aan modellen van de klant (Tumble, Manon, Satie); ze gebruiken nu een
   gewone fauteuil uit de catalogus.
+
+## De rug helt achterover (14/11)
+
+Bij het narekenen van de zitdiepte bleek de zitting bij zes modellen 3 tot 13 cm te diep. De foto's van opzij tonen
+waarom: de rug staat niet recht, ze helt achterover. De motor kan dat nu (gegeven `helling` per model).
+
+![Sullivan, Manon, Mabel en Karl van opzij: foto en 3D](afbeeldingen/fauteuils-helling.jpg)
+
+- **Hoe het werkt:** de schaal helt vanaf haar voet naar achteren waar ze naar achteren kijkt, en steeds minder naar de
+  zijkanten toe; haar uiteinden blijven recht staan (zoals de voorrand van Manon op de foto). De zetel blijft binnen de
+  diepte van de site: het grondvlak van de zitting is zoveel korter als de bovenkant van de rug achteruit steekt.
+- **Sullivan** is de sleutel geweest. De maten van de site passen pas in elkaar met een helling: de zitting is rond en
+  62 cm (zoals zijn hocker, 62 × 62), de schaal is 72 breed, de bovenkant van de rug staat 13 cm achter haar voet
+  (10,4°): samen 80 cm diep, met een zitdiepte van ±60 (site: 60).
+- **Manon** 9,5° (foto van opzij: de bovenkant ±12 cm achter de voet), **Mabel** 1-zit, 2-zit en méridienne 9,5° (foto
+  van opzij van de 1-zit; de armleuning eindigt waar ze goedgekeurd was), **Karl** 12° (de rugschijf).
+- **Niet:** Milton, Fraser, Satie, Quin en Tumble staan op hun foto's recht. Ross heeft geen foto van opzij.
+
+| Model | Zitdiepte site | Vroeger | Nu |
+|---|---|---|---|
+| Sullivan | 60 | 70 | ±61 |
+| Manon | 52 | 64 | ±58 |
+| Mabel | 49 | 58 | ±53 |
+
+De prijzen veranderen hier niet door. Het bovenaanzicht tekent de rand van de schaal waar ze bovenaan staat.
 
 ## Hockers en poefs bij de fauteuils
 

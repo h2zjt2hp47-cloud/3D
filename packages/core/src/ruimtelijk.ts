@@ -8,7 +8,7 @@
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
-import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, superellips, trommelKader, type Punt } from './kuip.js';
+import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, kuipUit, superellips, trommelKader, type Punt } from './kuip.js';
 import { poefHoogteVan, chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -46,6 +46,11 @@ export interface Blok {
   taps?: number;
   /** Schuine poot (staande kegel of cilinder): hoeveel cm de voet verschoven is tegenover de bovenkant, [x, z] in wereldmaat. */
   schuin?: [number, number];
+  /**
+   * Hellende kuipwand: hoeveel cm de wand per cm hoogte boven haar onderkant verschuift, [x, z] in wereldmaat (de rug
+   * van een fauteuil die achterover helt). x/z/b/d omvatten ook de verschoven bovenkant.
+   */
+  leun?: [number, number];
   /** Achterover hellen (rug): graden en de richting naar achter in het grondvlak. */
   kantel?: { graden: number; richting: 'x+' | 'x-' | 'z+' | 'z-' };
   /** Ander materiaal per zijvlak (alleen voor rechte balken). */
@@ -217,7 +222,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const ringH = potVorm === 'ringframe' ? Math.min(frameDik, P / 3) : 0;
         const exp = kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : 2;
         // Het onderstel staat onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
-        const tk = trommelKader(B, D, kuipFrame);
+        const hoogFrame = hoogtesVan(ontwerp, catalogus, e);
+        const tk = trommelKader(B, D, kuipFrame, kuipUit(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }));
         if (ringH > 0 && rondPlan) {
           const f = Math.max(0.5, 1 - 3 / (Math.min(tk.b, tk.d) / 2));
           omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(tk.x + tk.b / 2, tk.y + tk.d / 2, (tk.b / 2) * f, (tk.d / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });
@@ -540,10 +546,21 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // Kiezel op een verdekte voet: de schaal staat op de vloer (zoals op de foto). Ze begint net onder de vloer, zodat
           // haar platte onderkant niet te zien is (die gaf rafels in de zachte vorm). Alleen de 3D; het vooraanzicht niet.
           const wandOnder = kiezel && P <= 8 ? -3 : opb.wand.onder;
+          // Hellende schaal: de verschuiving per cm hoogte in wereldmaat (lokaal naar achteren), en het kader van het blok
+          // mee tot waar haar bovenkant komt.
+          const wandH = Math.max(...opb.wand.hoogtes) - wandOnder;
+          let leun: [number, number] | undefined;
+          if (opb.wand.leun) {
+            const a = lokaalNaarWereld(e, 0, 1, 0, 0), c = lokaalNaarWereld(e, 0, 0, 0, 0);
+            leun = [r2((c.x - a.x) * opb.wand.leun), r2((c.y - a.y) * opb.wand.leun)];
+          }
+          const ux = leun ? leun[0] * wandH : 0, uz = leun ? leun[1] * wandH : 0;
+          const bx0 = Math.min(...xs) - half + Math.min(0, ux), bx1 = Math.max(...xs) + half + Math.max(0, ux);
+          const bz0 = Math.min(...zs) - half + Math.min(0, uz), bz1 = Math.max(...zs) + half + Math.max(0, uz);
           blokken.push({
             code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
-            x: r2(Math.min(...xs) - half), z: r2(Math.min(...zs) - half), b: r2(Math.max(...xs) - Math.min(...xs) + 2 * half), d: r2(Math.max(...zs) - Math.min(...zs) + 2 * half),
-            y: r2(wandOnder), h: r2(Math.max(...opb.wand.hoogtes) - wandOnder), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte),
+            x: r2(bx0), z: r2(bz0), b: r2(bx1 - bx0), d: r2(bz1 - bz0),
+            y: r2(wandOnder), h: r2(wandH), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte), ...(leun ? { leun } : {}),
             // Schelp: de schaal zweeft boven de zitting, dus je ziet haar onderrand: ook die rond (zoals op de foto van Karl).
             // Een schaal die op de zitting staat (`schaalOp`, Tumble): een licht afgeronde onderrand, zodat er een plooi is
             // waar ze op de zijkant van de zitting aansluit.
@@ -801,6 +818,7 @@ export function plaatsBlokken(blokken: Blok[], plaats: { x: number; y?: number; 
     if (wissel && b.as && b.as !== 'y') n.as = b.as === 'x' ? 'z' : 'x';
     if (b.kantel) n.kantel = { ...b.kantel, richting: richting(b.kantel.richting) };
     if (b.schuin) n.schuin = draaiVector(b.schuin[0], b.schuin[1]);
+    if (b.leun) n.leun = draaiVector(b.leun[0], b.leun[1]);
     if (b.zijden) {
       n.zijden = {};
       for (const [k, w] of Object.entries(b.zijden)) n.zijden[k === 'y+' ? 'y+' : richting(k as 'x+')] = w;

@@ -984,7 +984,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    * Kuipwand: een gestoffeerde wand langs een gebogen middenlijn (`pad`, wereld x/z), met per punt een eigen
    * bovenhoogte, een volledig afgeronde bovenrand en afgeronde uiteinden. Vorm rond (ox, oy, oz).
    */
-  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0, onderRond = 0) {
+  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0, onderRond = 0, leun: [number, number] = [0, 0]) {
     const w = dikte / 2;
     const n = pad.length;
     // Richting en zijwaartse normaal per punt.
@@ -1038,6 +1038,13 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const Q = profiel(10, w).length + 1;
     const pos: number[] = [], uvs: number[] = [];
     let langs = 0;
+    // Hellende schaal: de wand helt naar achteren waar ze naar achteren kijkt, en steeds minder naar de zijkanten toe
+    // (de helling maal het deel van de buitennormaal dat naar achteren wijst). Haar uiteinden blijven dus recht staan,
+    // zoals op de foto's van Manon en Sullivan van opzij. De doorsnede en de dikte blijven gelijk.
+    const leunLang = Math.hypot(leun[0], leun[1]);
+    let buiten = 1;
+    if (leunLang > 0) { const m = zij[Math.floor(n / 2)]!; buiten = m.nx * leun[0] + m.nz * leun[1] >= 0 ? 1 : -1; }
+    const gewicht = (r: Ring) => (leunLang > 0 ? Math.max(0, (buiten * (r.nx * leun[0] + r.nz * leun[1])) / leunLang) : 0);
     ringen.forEach((r, i) => {
       // Langs de wand in cm; rond een kop de booglengte (de afstand tussen de ringen is daar korter dan de stof).
       if (i > 0) langs += r.kop || ringen[i - 1]!.kop ? (w * Math.PI) / 2 / KOP : Math.hypot(r.x - ringen[i - 1]!.x, r.z - ringen[i - 1]!.z);
@@ -1050,7 +1057,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       let rond = 0;
       pr.forEach(([u, y], j) => {
         if (j > 0) rond += Math.hypot(ref[j]![0] - ref[j - 1]![0], ref[j]![1] - ref[j - 1]![1]);
-        pos.push(r.x + r.nx * u - ox, y, r.z + r.nz * u - oz);
+        const g = gewicht(r) * y;
+        pos.push(r.x + r.nx * u - ox + leun[0] * g, y, r.z + r.nz * u - oz + leun[1] * g);
         // Textuur langs de wand (cm) en rond het profiel (cm), op ware grootte: geen sprongen in de bocht.
         uvs.push(tegel ? langs / tegel : 0, tegel ? rond / tegel : 0);
       });
@@ -1098,7 +1106,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     const eerste = ringen[0]!, laatste = ringen[ringen.length - 1]!;
     const kroon: [number, number, number][] = [];
     for (let k = 0; k < 4; k++) kroon.push([eerste.x - ox, (eerste.voet ?? 0) + ((eerste.hoog - (eerste.voet ?? 0)) * k) / 4, eerste.z - oz]);
-    for (const r of ringen) kroon.push([r.x - ox, r.hoog, r.z - oz]);
+    for (const r of ringen) { const g = gewicht(r) * r.hoog; kroon.push([r.x - ox + leun[0] * g, r.hoog, r.z - oz + leun[1] * g]); }
     for (let k = 3; k >= 0; k--) kroon.push([laatste.x - ox, (laatste.voet ?? 0) + ((laatste.hoog - (laatste.voet ?? 0)) * k) / 4, laatste.z - oz]);
     geo.userData.kroon = kroon;
     return geo;
@@ -1205,7 +1213,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (b.vorm === 'kuipwand' && b.pad && b.hoogtes) {
       const cxo = b.x + b.b / 2, czo = b.z + b.d / 2;
       const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
-      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, b.afronding ?? 0);
+      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, b.afronding ?? 0, b.leun);
       const base = materiaal(b);
       const sleutel = `vc:${base.uuid}`;
       let mat = materialen.get(sleutel);
@@ -2013,7 +2021,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     mee.forEach((b, i) => { const w = wortel(i); groepen.set(w, [...(groepen.get(w) ?? []), b]); });
     return [...groepen.values()];
   }
-  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.schuin, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
+  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.schuin, b.leun, b.as, b.pad, b.hoogtes, b.dikte, b.omtrek, b.profiel, b.uit]));
   /** De zachte vorm als mesh (onze stof, schaduw in de hoeken als hoekpuntkleur), of null als ze nog berekend moet worden. */
   function zachteMesh(delen: Blok[], buren: Blok[]) {
     const v = zachteVormen.get(vormSleutel(delen, buren));

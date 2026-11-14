@@ -57,10 +57,22 @@ export interface KuipParameters {
    */
   zitIn?: number;
   /**
+   * Hoeveel cm de trommel achteraan in de schaal steekt, als dat anders is dan de standaard (tweemaal `zitIn`, wat bij
+   * een vierkant grondvlak een ronde zitting geeft). Voor een ronde zitting in een grondvlak dat dieper of ondieper is
+   * dan breed (Sullivan: zitting van 62 cm in een schaal van 72 breed).
+   */
+  zitInAchter?: number;
+  /**
    * De schaal staat op de zitting in plaats van eromheen tot onderaan: haar onderkant ligt net onder de zithoogte, bij een
    * trommel waar de bolle rand van de zitting begint.
    */
   schaalOp?: boolean;
+  /**
+   * De schaal helt achterover: zoveel graden, vanaf haar onderkant (zoals de rug van Sullivan en Manon op de foto's van
+   * opzij). De zetel blijft binnen zijn diepte: het grondvlak van de zitting wordt zoveel korter als de bovenkant van
+   * de schaal achteruit steekt, en schuift naar voren.
+   */
+  helling?: number;
   /** Dikte in cm van het houten frame onder de zitting bij poten met een frame (ringframe); standaard 4. */
   frameDik?: number;
   /** Bij poten met een frame (ringframe) ook een kruis tussen de poten (Sullivan: een ring op vier poten met een kruis). */
@@ -114,7 +126,9 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
     ...(teken.zitTrommel === true ? { zitTrommel: true } : {}),
     ...(typeof teken.zitRand === 'number' ? { zitRand: teken.zitRand } : {}),
     ...(typeof teken.zitIn === 'number' && teken.zitIn > 0 ? { zitIn: teken.zitIn } : {}),
+    ...(typeof teken.zitInAchter === 'number' && teken.zitInAchter >= 0 ? { zitInAchter: teken.zitInAchter } : {}),
     ...(teken.schaalOp === true ? { schaalOp: true } : {}),
+    ...(typeof teken.helling === 'number' && teken.helling > 0 ? { helling: Math.min(20, teken.helling) } : {}),
     ...(typeof teken.frameDik === 'number' ? { frameDik: teken.frameDik } : {}),
     ...(teken.frameKruis === true ? { frameKruis: true } : {}),
     ...(typeof teken.zitNaad === 'number' && teken.zitNaad > 0 ? { zitNaad: teken.zitNaad } : {}),
@@ -160,10 +174,27 @@ export function superellips(cx: number, cy: number, a: number, b: number, n: num
  * naar binnen, achteraan tot in de schaal (nooit voorbij haar binnenkant, anders een kier) en vooraan tot de voorkant.
  * Het onderstel (frame en poten) staat onder dit kader.
  */
-export function trommelKader(B: number, D: number, k: KuipParameters | null): { x: number; y: number; b: number; d: number } {
-  if (!k?.zitTrommel || !k.zitIn) return { x: 0, y: 0, b: B, d: D };
-  const w = Math.min(k.dikte, B / 3, D / 3), zi = Math.min(k.zitIn, B / 6, D / 6), achter = Math.max(0, Math.min(2 * zi, w - 0.5));
-  return { x: zi, y: achter, b: B - 2 * zi, d: D - achter };
+export function trommelKader(B: number, D: number, k: KuipParameters | null, uit = 0): { x: number; y: number; b: number; d: number } {
+  // `uit` = hoeveel de bovenkant van een hellende schaal achteruit steekt (kuipUit): het grondvlak begint zoveel verder.
+  const Dp = D - uit;
+  if (!k?.zitTrommel || !k.zitIn) return { x: 0, y: uit, b: B, d: Dp };
+  const w = Math.min(k.dikte, B / 3, Dp / 3), zi = Math.min(k.zitIn, B / 6, Dp / 6), achter = Math.max(0, Math.min(k.zitInAchter ?? 2 * zi, w - 0.5));
+  return { x: zi, y: uit + achter, b: B - 2 * zi, d: Dp - achter };
+}
+
+/** Onderkant van de wand in cm: op de poothoogte, of bij een zwevende schelp of een schaal op de zitting hoger. */
+function wandOnder(k: KuipParameters, h: { P: number; zithoogte: number }): number {
+  const schouder = k.zitTrommel ? Math.max(2, Math.min(k.zitRand ?? 6, (h.zithoogte - h.P) / 2 - 0.5)) : 2;
+  return k.zwevend ? h.zithoogte + 6 : k.schaalOp ? h.zithoogte - schouder : h.P;
+}
+
+/**
+ * Hoeveel cm de bovenkant van een hellende schaal (`helling`) achter haar voet steekt: de hoogte van de wand maal de
+ * tangens van de hoek. 0 zonder helling. Het grondvlak van de zetel is zoveel korter dan zijn diepte.
+ */
+export function kuipUit(k: KuipParameters | null, h: { P: number; zithoogte: number; rugH: number }): number {
+  if (!k?.helling) return 0;
+  return Math.round(Math.max(0, h.rugH - wandOnder(k, h)) * Math.tan((k.helling * Math.PI) / 180) * 10) / 10;
 }
 
 /**
@@ -190,8 +221,11 @@ export function framePoten(B: number, D: number, pootH: number, exp: number | nu
 export interface KuipOpbouw {
   /** Volledig grondvlak (basis), gesloten omtrek. */
   plan: Punt[];
-  /** Middenlijn van de wand met de bovenhoogte per punt (absoluut, cm), dikte en onderkant (cm). */
-  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number };
+  /**
+   * Middenlijn van de wand (aan haar voet) met de bovenhoogte per punt (absoluut, cm), dikte en onderkant (cm). Met een
+   * hellende schaal ook `leun`: hoeveel cm de wand per cm hoogte naar achteren (lokale −y) verschuift.
+   */
+  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number; leun?: number };
   /** Omtrek van het zitkussen. */
   zit: Punt[];
   /** Onder- en bovenkant van de basis (cm). Bij een trommel (`zitTrommel`) is er geen basis: boven = onder. */
@@ -210,6 +244,39 @@ export interface KuipOpbouw {
  * `kussenDik` = dikte zitkussen (0 = vaste zitting).
  */
 export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
+  // Hellende schaal: dezelfde opbouw op een korter grondvlak, naar voren geschoven; de wand helt vanaf haar voet.
+  const uit = Math.min(kuipUit(k, h), D / 4);
+  if (!uit) return kuipOpbouwRecht(B, D, h, k, losseRug);
+  const o = kuipOpbouwRecht(B, D - uit, h, k, losseRug);
+  const schuif = (p: Punt): Punt => [p[0], Math.round((p[1] + uit) * 10) / 10];
+  const hoog = Math.max(...o.wand.hoogtes) - o.wand.onder;
+  return {
+    ...o, plan: o.plan.map(schuif), zit: o.zit.map(schuif), rugkussens: o.rugkussens.map((r) => ({ ...r, ly: r.ly + uit })),
+    wand: { ...o.wand, pad: o.wand.pad.map(schuif), leun: hoog > 0 ? uit / hoog : 0 },
+  };
+}
+
+/**
+ * De middenlijn van de wand op de hoogte van haar bovenrand. Bij een hellende schaal ligt die naar achteren: de wand
+ * helt waar ze naar achteren kijkt en steeds minder naar de zijkanten toe (de helling maal het deel van haar
+ * buitennormaal dat naar achteren wijst); haar uiteinden blijven recht staan. Zelfde regel als de 3D.
+ */
+export function wandBoven(wand: KuipOpbouw['wand']): Punt[] {
+  if (!wand.leun) return wand.pad;
+  const p = wand.pad, n = p.length;
+  const normaal = (i: number): [number, number] => {
+    const a = p[Math.max(0, i - 1)]!, c = p[Math.min(n - 1, i + 1)]!, tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1;
+    return [ty / l, -tx / l];
+  };
+  // Naar achteren is lokaal −y; de buitenkant is de kant waar de normaal in het midden van de wand naar achteren wijst.
+  const buiten = normaal(Math.floor(n / 2))[1] <= 0 ? 1 : -1;
+  return p.map(([x, y], i) => {
+    const g = Math.max(0, buiten * -normaal(i)[1]);
+    return [x, Math.round((y - wand.leun! * g * (wand.hoogtes[i]! - wand.onder)) * 10) / 10] as Punt;
+  });
+}
+
+function kuipOpbouwRecht(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
   const n = k.exponent ?? exponent(k.plan);
   const w = Math.min(k.dikte, B / 3, D / 3);
   const cx = B / 2, cy = D / 2;
@@ -283,8 +350,7 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   // `schaalOp` staat de schaal op de zitting: haar onderkant ligt 2 cm in de zitting (geen kier). Op een trommel met een
   // bolle rand begint ze waar die rand begint: aan de buitenkant sluit ze dan aan op de zijkant van de zitting, in plaats
   // van met haar buitenrand boven de afgeronde schouder te hangen (Tumble).
-  const schouder = k.zitTrommel ? Math.max(2, Math.min(k.zitRand ?? 6, (h.zithoogte - h.P) / 2 - 0.5)) : 2;
-  const onder = k.zwevend ? h.zithoogte + 6 : k.schaalOp ? h.zithoogte - schouder : h.P;
+  const onder = wandOnder(k, h);
   // Zitkussen: binnen de wand en tot vooraan (bij een schelp over het hele grondvlak).
   // Organisch: de zitting loopt breed tot vooraan door (de wand zakt er in weg).
   const achter = k.zwevend ? 3 : w * (k.organisch ? 0.9 : 0.85);

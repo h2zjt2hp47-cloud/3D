@@ -214,11 +214,11 @@ describe('kuipfauteuils: onderbouw binnen de wand, ronde onderrand bij een zweve
   };
   it('de onderbouw steekt nergens door de wand (vroeger een dun streepje naast het wanduiteinde van Ross)', () => {
     // Bij een afgerond grondvlak ligt de buitenkant van de wand in de hoeken tot ±1 cm binnen de omtrek.
-    for (const code of ['ross', 'mabel-1', 'mabel-2', 'sullivan', 'milton'])
-      expect(speling(code), code).toBeGreaterThan(0.7);
+    for (const code of ['ross', 'mabel-1', 'mabel-2', 'milton'])
+      expect(speling(code), code).toBeGreaterThan(0.6);
     // Een trommel die binnen de schaal staat (`zitIn`: Satie, Quin, Fraser, Manon): haar rand ligt overal binnen de wand, tegen de
     // binnenkant aan (geen kier tussen zitting en schaal, en niets dat erdoor steekt).
-    for (const code of ['satie', 'quin', 'fraser', 'manon']) expect(speling(code), code).toBeGreaterThan(0.3);
+    for (const code of ['satie', 'quin', 'fraser', 'manon', 'sullivan']) expect(speling(code), code).toBeGreaterThan(0.3);
   });
   it('alleen de zwevende schaal (Karl) krijgt een ronde onderrand; een wand op de onderbouw niet', () => {
     const karl = blokken('karl').find((x) => x.code === 'e1.rug')!;
@@ -319,6 +319,37 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
     expect(b.some((x) => x.code === 'e1.zitband')).toBe(false);
   });
+  it('Sullivan: de rug helt achterover; de zitting is rond en de zetel blijft 80 cm diep', () => {
+    const s = scene('sullivan'), b = s.blokken, rug = b.find((x) => x.code === 'e1.rug')!, zit = b.find((x) => x.code === 'e1.zitkussen')!;
+    // De wand helt naar achteren (z−, het element staat met zijn rug naar achter): ±0,18 cm per cm hoogte (10,4°).
+    expect(rug.leun).toBeDefined();
+    expect(rug.leun![0]).toBe(0);
+    expect(rug.leun![1]).toBeLessThan(-0.16);
+    expect(rug.leun![1]).toBeGreaterThan(-0.2);
+    // De zitting is rond en 62 cm, zoals de hocker (62 × 62 op de site), en komt vooraan tot de voorkant; de schaal is
+    // 72 breed en haar bovenkant steekt 13 cm achter haar voet: samen 80 cm.
+    expect(zit.b).toBeCloseTo(62, 0);
+    expect(zit.d).toBeCloseTo(62, 0);
+    expect(zit.z + zit.d).toBeCloseTo(80, 0);
+    // Zitdiepte van de site (60): van de voorkant tot de binnenkant van de schaal ter hoogte van de zitting.
+    const voetAchter = Math.min(...rug.pad!.map((q) => q[1])), binnen = voetAchter + rug.dikte! / 2 + rug.leun![1] * (42 - rug.y);
+    expect(80 - binnen).toBeGreaterThan(58);
+    expect(80 - binnen).toBeLessThan(62);
+    expect(s.kader).toMatchObject({ b: 72, d: 80, h: 93 });
+    // Ook bij een gedraaide zetel helt de rug naar zijn eigen achterkant en blijft het kader 80 diep.
+    for (const rotatie of [90, 180, 270] as const) {
+      const o = structuredClone(model('sullivan').ontwerp); o.elementen[0]!.rotatie = rotatie;
+      const g = bouw3D(o, zetelCatalogus, standaardMaterialen), w = g.blokken.find((x) => x.code === 'e1.rug')!;
+      expect(Math.hypot(w.leun![0], w.leun![1]), `rotatie ${rotatie}`).toBeGreaterThan(0.16);
+      expect([g.kader.b, g.kader.d].sort(), `rotatie ${rotatie}`).toEqual([72, 80]);
+    }
+    // Het bovenaanzicht tekent de rand van de schaal waar ze bovenaan staat: tot tegen de achterkant van de zetel.
+    const boven = berekenOntwerp(model('sullivan').ontwerp, zetelCatalogus, standaardMaterialen).tekening.vormen.find((v) => v.code === 'e1.rug')!;
+    const ys = [...boven.pad!.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map((m) => Number(m[2]));
+    expect(Math.min(...ys)).toBeLessThan(1.5);
+    // Zonder helling verandert er niets: geen leun op de andere fauteuils.
+    for (const code of ['milton', 'ross', 'fraser']) expect(scene(code).blokken.find((x) => x.code === 'e1.rug')!.leun, code).toBeUndefined();
+  });
   it('Sullivan: hoge smalle rug die naar lage armen zakt, zwarte ring op vier poten met een kruis', () => {
     const b = scene('sullivan').blokken, rug = b.find((x) => x.code === 'e1.rug')!, h = rug.hoogtes!, midden = (h.length - 1) / 2;
     expect(h[midden]).toBe(93);
@@ -364,7 +395,11 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(rug.y).toBe(2);
     const voorste = Math.max(...rug.pad!.map((q) => q[1]));
     expect(voorste).toBeGreaterThan(35);
-    expect(voorste).toBeLessThan(50);
+    expect(voorste).toBeLessThan(55);
+    // Ze helt achterover (foto van opzij): haar bovenkant staat ±12 cm achter haar voet, binnen de 70 cm van de site.
+    expect(rug.leun![1] * (75 - 2)).toBeLessThan(-11);
+    expect(rug.leun![1] * (75 - 2)).toBeGreaterThan(-13.5);
+    expect(scene('manon').kader).toMatchObject({ b: 75, d: 70, h: 75 });
     expect(rug.naad?.soort).toBe('bies');
   });
   it('Amusette fauteuil: geen kuip maar arm + zit + arm, met de maten van de productpagina', () => {
