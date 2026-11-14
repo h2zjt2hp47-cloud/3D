@@ -324,18 +324,25 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
   // uitsteekt) precies op de rand van het element komt. Anders zou de afronding van de voet de zetel een millimeter
   // breder of smaller maken dan de maten van de productpagina.
   const ds = wandDoorsnede(pad, o.wand.dikte, o.wand.binnen);
-  let waaier = Infinity, achter = 0;
+  let waaier = Infinity;
   pad.forEach((_, i) => {
-    const H = o.wand.hoogtes[i]! - o.wand.onder, [nx, ny] = ds.normaal[i]!;
-    if (ny < ds.normaal[achter]![1]) achter = i;
+    const H = o.wand.hoogtes[i]! - o.wand.onder, nx = ds.normaal[i]![0];
     if (H < 1 || Math.abs(nx) < 0.05) return;
-    const buitenX = ds.midden[i]![0] + nx * ds.half[i]!;
+    // Aan een uiteinde telt de ronde kop: die komt opzij zo ver als ze dik is, ook als de wand daar schuin kijkt.
+    const kop = i === 0 || i === n - 1, buitenX = ds.midden[i]![0] + (kop ? Math.sign(nx) : nx) * ds.half[i]!;
     waaier = Math.min(waaier, (nx < 0 ? buitenX : B - buitenX) / (Math.abs(nx) * H));
   });
   if (!Number.isFinite(waaier) || waaier < 0) waaier = 0;
   // Achteraan dezelfde regel: wat de waaier niet haalt van de diepte, komt van de helling (de rest, zoals `uit / hoog`).
-  const hoogAchter = o.wand.hoogtes[achter]! - o.wand.onder;
-  const leun = hoogAchter > 0 ? (ds.midden[achter]![1] + ds.normaal[achter]![1] * ds.half[achter]!) / hoogAchter - waaier : 0;
+  // Het punt dat het eerst de achterkant raakt, is bij een symmetrische schaal het midden; bij een scheve schaal (hoogste
+  // punt naast het midden) kan het een ander zijn, dus ook hier het kleinste van alle punten die naar achteren kijken.
+  let samen = Infinity;
+  pad.forEach((_, i) => {
+    const H = o.wand.hoogtes[i]! - o.wand.onder, g = -ds.normaal[i]![1];
+    if (H < 1 || g < 0.3) return;
+    samen = Math.min(samen, (ds.midden[i]![1] - g * ds.half[i]!) / (g * H));
+  });
+  const leun = Number.isFinite(samen) ? samen - waaier : 0;
   return {
     ...o, plan: o.plan.map(schuif), zit: o.zit.map(schuif), rugkussens: o.rugkussens.map((r) => ({ ...r, lx: r.lx + zij, ly: r.ly + uit })),
     wand: { ...o.wand, pad, leun, waaier },

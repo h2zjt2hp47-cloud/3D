@@ -253,6 +253,11 @@ losse kussens.
 
 ## De rug helt achterover (14/11)
 
+> **Stand van die ochtend.** Voor Manon en Sullivan is dit later op de dag vervangen door de schaal die uitwaaiert (zie
+> "De schaal waaiert uit"): Manon staat niet meer 9,5° achterover maar 5,7° rondom met 1° extra achteraan, Sullivan
+> niet 10,4° maar 5,7° rondom met 7,9° extra achteraan. Het blad hieronder toont die twee nog in de oude vorm, Manon met
+> de spleet achter de zitting die daarbij rechtgezet is. Voor de drie Mabels en Karl geldt dit hoofdstuk nog.
+
 Bij het narekenen van de zitdiepte bleek de zitting bij zes modellen 3 tot 13 cm te diep. De foto's van opzij tonen
 waarom: de rug staat niet recht, ze helt achterover. De motor kan dat nu (gegeven `helling` per model).
 
@@ -270,8 +275,8 @@ waarom: de rug staat niet recht, ze helt achterover. De motor kan dat nu (gegeve
 
 | Model | Zitdiepte site | Vroeger | Nu |
 |---|---|---|---|
-| Sullivan | 60 | 70 | ±61 |
-| Manon | 52 | 64 | ±58 |
+| Sullivan | 60 | 70 | ±61 (sinds de waaier: 59,9) |
+| Manon | 52 | 64 | ±58 (dat telde de spleet mee; sinds de waaier: 60, zie "De schaal waaiert uit") |
 | Mabel | 49 | 58 | ±53 |
 
 De prijzen veranderen hier niet door. Het bovenaanzicht tekent de rand van de schaal waar ze bovenaan staat.
@@ -487,7 +492,7 @@ Sullivan is de schaal een tulp: aan haar voet sluit ze om de zitting, naar boven
   | | Bijna bovenaan | 40 % lager | 70 % lager | Bij de armen |
   |---|---|---|---|---|
   | Foto | 65 % | 75 % | 80 % | 85 % |
-  | Vroeger | 38 % | 52 % | 67 % | 82 % |
+  | Vroeger | 43 % | 54 % | 63 % | 68 % |
   | Nu | 62 % | 68 % | 76 % | 84 % |
 
   In het midden van de rug is de schaal nu 8 cm dik (was 10), zodat de zitdiepte op 60 cm blijft (site: 60).

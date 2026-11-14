@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, blokkenVan, bouw3D, tekenVooraanzicht, vormgevingVan, type Ontwerp } from '../src/index.js';
+import { wandDoorsnede } from '../src/kuip.js';
 import { zetelModellen } from '../voorbeelden/modellen.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { startOntwerpen, zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
@@ -319,25 +320,59 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(b.filter((x) => x.code.startsWith('e1.kruis-'))).toHaveLength(2);
     expect(b.some((x) => x.code === 'e1.zitband')).toBe(false);
   });
+  /**
+   * Kleinste overlap (cm) tussen de binnenkant van de schaal op zithoogte en de rand van de zitting, over alle punten van
+   * de schaal die boven de zitting uitkomen; negatief = een spleet. null als er geen schaal of zitting is.
+   */
+  const kleinsteOverlap = (o: Ontwerp) => {
+    const s = bouw3D(o, zetelCatalogus, standaardMaterialen), rug = s.blokken.find((x) => x.code === 'e1.rug' && x.vorm === 'kuipwand'), zit = s.blokken.find((x) => x.code === 'e1.zitkussen');
+    if (!rug || !zit) return null;
+    const ds = wandDoorsnede(rug.pad!, rug.dikte!, rug.binnen), boven = zit.y + zit.h - rug.y, leun = rug.leun ?? [0, 0], lang = Math.hypot(leun[0], leun[1]), w = rug.waaier ?? 0;
+    const om = zit.omtrek ?? [[zit.x, zit.z], [zit.x + zit.b, zit.z], [zit.x + zit.b, zit.z + zit.d], [zit.x, zit.z + zit.d]];
+    const erin = (x: number, y: number) => { let c = false; for (let i = 0, j = om.length - 1; i < om.length; j = i++) { const [xi, yi] = om[i]!, [xj, yj] = om[j]!; if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c; } return c; };
+    const totRand = (x: number, y: number) => { let d = Infinity; for (let i = 0, j = om.length - 1; i < om.length; j = i++) { const [ax, ay] = om[j]!, ux = om[i]![0] - ax, uy = om[i]![1] - ay, f = Math.max(0, Math.min(1, ((x - ax) * ux + (y - ay) * uy) / (ux * ux + uy * uy || 1e-9))); d = Math.min(d, Math.hypot(x - ax - f * ux, y - ay - f * uy)); } return d; };
+    let kleinst = Infinity;
+    rug.pad!.forEach((_, i) => {
+      if (rug.hoogtes![i]! - rug.y < boven + 3) return; // hier duikt de wand in de zitting
+      const [nx, nz] = ds.normaal[i]!, g = lang ? Math.max(0, (nx * leun[0] + nz * leun[1]) / lang) : 0;
+      const x = ds.midden[i]![0] - nx * ds.half[i]! + (leun[0] * g + nx * w) * boven, z = ds.midden[i]![1] - nz * ds.half[i]! + (leun[1] * g + nz * w) * boven;
+      kleinst = Math.min(kleinst, totRand(x, z) * (erin(x, z) ? 1 : -1));
+    });
+    return kleinst;
+  };
   it('een schaal die helt of uitwaaiert, blijft op zithoogte tegen de zitting: geen spleet (14/11)', () => {
     // De schaal wijkt met de hoogte van de zitting weg. Op zithoogte moet haar binnenkant nog binnen de rand van de
-    // zitting liggen, achteraan en opzij; anders zie je van boven een donkere spleet (Manon vóór 14/11: 6 cm).
+    // zitting liggen, op elk punt van de schaal (ook aan de schouders, waar ze het dunst is); anders zie je van boven
+    // een donkere spleet (Manon vóór 14/11: 6 cm achter de zitting).
     // Niet Karl: zijn rugschijf zweeft boven de zitting op het frame (kuipvorm schelp) en staat er niet tegen.
     const metHelling = zetelModellen.filter((m) => { const k = m.ontwerp.vormgeving?.kuip as Record<string, unknown> | undefined; return k && (k.helling || k.waaier) && k.zitTrommel && m.code !== 'karl'; });
     expect(metHelling.map((m) => m.code).sort()).toEqual(['mabel-1', 'mabel-2', 'mabel-meridienne', 'manon', 'sullivan']);
-    for (const m of metHelling) {
-      const s = bouw3D(structuredClone(m.ontwerp), zetelCatalogus, standaardMaterialen);
-      const rug = s.blokken.find((x) => x.code === 'e1.rug')!, zit = s.blokken.find((x) => x.code === 'e1.zitkussen')!;
-      const n = rug.pad!.length, mid = (n - 1) / 2, boven = zit.y + zit.h - rug.y, w = rug.waaier ?? 0, leun = rug.leun ?? [0, 0];
-      const om = zit.omtrek ?? [[zit.x, zit.z], [zit.x + zit.b, zit.z + zit.d]];
-      // Achteraan (het midden van de schaal kijkt naar z−): de binnenkant van de schaal op zithoogte, tegenover de
-      // achterrand van de zitting.
-      const binnenAchter = rug.pad![mid]![1] - rug.dikte! / 2 + rug.dikte! + (rug.binnen?.[mid] ?? 0) + (leun[1] - w) * boven;
-      expect(binnenAchter - Math.min(...om.map((q) => q[1])), `${m.code} achter`).toBeGreaterThan(0.3);
-      // Opzij (waar de schaal recht naar links kijkt): tegenover de linkerrand van de zitting.
-      const links = rug.pad!.reduce((best, q, i) => (q[0] < rug.pad![best]![0] ? i : best), 0);
-      const binnenLinks = rug.pad![links]![0] - rug.dikte! / 2 + rug.dikte! + (rug.binnen?.[links] ?? 0) - w * boven;
-      expect(binnenLinks - Math.min(...om.map((q) => q[0])), `${m.code} opzij`).toBeGreaterThan(0.3);
+    for (const m of metHelling) expect(kleinsteOverlap(structuredClone(m.ontwerp)), m.code).toBeGreaterThan(0.3);
+  });
+  it('Manon en Sullivan bij elke keuze in de configurator: binnen de maten van de zetel, zonder spleet, met gewone getallen', () => {
+    // Wat een gebruiker kan aanklikken: een andere vorm, de kleinste en grootste maten, losse kussens, een draaiing.
+    const vormen = zetelCatalogus.opties!.find((g) => g.code === 'kuipvorm')!.keuzes.map((k) => k.code), type = zetelCatalogus.typen.find((x) => x.code === 'fauteuil')!;
+    const proeven: [string, (o: Ontwerp) => void][] = [['zoals het model', () => {}]];
+    for (const v of vormen) proeven.push([`vorm ${v}`, (o) => { o.elementen[0]!.opties = { ...o.elementen[0]!.opties, kuipvorm: v }; }]);
+    proeven.push(['smalst', (o) => { o.elementen[0]!.breedte = type.breedte.min; }], ['breedst', (o) => { o.elementen[0]!.breedte = type.breedte.max; }]);
+    proeven.push(['ondiepst', (o) => { o.elementen[0]!.diepte = type.diepte!.min; }], ['diepst', (o) => { o.elementen[0]!.diepte = type.diepte!.max; }]);
+    proeven.push(['losse rugkussens', (o) => { o.opties = { ...o.opties, rug: 'los' }; }], ['los zitkussen', (o) => { o.opties = { ...o.opties, zitting: 'losse_kussens' }; }]);
+    for (const rotatie of [90, 180, 270] as const) proeven.push([`draaiing ${rotatie}`, (o) => { o.elementen[0]!.rotatie = rotatie; }]);
+    expect(proeven.length).toBeGreaterThan(14);
+    for (const code of ['manon', 'sullivan']) for (const [naam, pas] of proeven) {
+      const o = structuredClone(model(code).ontwerp); pas(o);
+      const s = bouw3D(o, zetelCatalogus, standaardMaterialen), k = s.kader, waar = `${code}, ${naam}`;
+      for (const b of s.blokken) {
+        for (const v of [b.x, b.y, b.z, b.b, b.h, b.d, ...(b.pad ?? []).flat(), ...(b.hoogtes ?? []), ...(b.omtrek ?? []).flat(), ...(b.leun ?? []), b.waaier ?? 0]) expect(Number.isFinite(v), `${waar} ${b.code}`).toBe(true);
+        // Stof en kussens blijven binnen het element (de maten van de site), op 0,2 mm.
+        if (b.soort === 'stof' || b.soort === 'kussen')
+          expect(Math.max(k.x - b.x, k.z - b.z, b.x + b.b - k.x - k.b, b.z + b.d - k.z - k.d), `${waar} ${b.code}`).toBeLessThan(0.02);
+      }
+      const overlap = kleinsteOverlap(o);
+      if (overlap !== null) expect(overlap, waar).toBeGreaterThan(0.3);
+      const r = berekenOntwerp(o, zetelCatalogus, standaardMaterialen);
+      expect(r.meldingen.filter((x) => x.ernst === 'fout'), waar).toHaveLength(0);
+      expect(JSON.stringify([r.tekening, tekenVooraanzicht(o, zetelCatalogus, standaardMaterialen)]), waar).not.toMatch(/NaN|Infinity|null/);
     }
   });
   it('Ross en Sullivan: de armen zijn dikker dan de rug ernaast, naar binnen toe; alleen zij (14/11)', () => {

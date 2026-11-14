@@ -567,7 +567,9 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           const ds = wandDoorsnede(pad, opb.wand.dikte, opb.wand.binnen);
           // Kiezel op een verdekte voet: de schaal staat op de vloer (zoals op de foto). Ze begint net onder de vloer, zodat
           // haar platte onderkant niet te zien is (die gaf rafels in de zachte vorm). Alleen de 3D; het vooraanzicht niet.
-          const wandOnder = kiezel && P <= 8 ? -3 : opb.wand.onder;
+          // Niet bij een schaal die helt of uitwaaiert: die verschuift vanaf haar eigen onderkant, en 5 cm lager beginnen
+          // zou haar bovenaan buiten de zetel duwen.
+          const wandOnder = kiezel && P <= 8 && !opb.wand.leun && !opb.wand.waaier ? -3 : opb.wand.onder;
           // Hellende schaal: de verschuiving per cm hoogte in wereldmaat (lokaal naar achteren), en het kader van het blok
           // mee tot waar haar bovenkant komt.
           const wandH = Math.max(...opb.wand.hoogtes) - wandOnder;

@@ -113,7 +113,8 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
     modellen bleek de zitting 3 tot 13 cm te diep.
 20. **Als de maten niet in elkaar passen, klopt de opbouw niet.** Sullivan: 72 breed, 80 diep, zitdiepte 60, hocker 62
     rond. Met een rechte schaal paste dat nooit. Met een ronde zitting van 62 en een rug die 13 cm achterover helt klopt
-    alles tegelijk. De rekensom wees de weg, de foto van opzij bevestigde ze.
+    alles tegelijk. De rekensom wees de weg, de foto van opzij bevestigde ze. (Later dezelfde dag verfijnd: de schaal
+    is een tulp, zie les 25. De rekensom klopte toen nog beter.)
 21. **Een helling is geen afschuiving van het geheel.** De eerste versie liet de hele schaal mee hellen; bij Manon stond
     toen ook de voorrand schuin, terwijl die op de foto recht naar beneden loopt. De rug helt waar ze naar achteren
     kijkt en dooft uit naar de zijkanten.
@@ -134,8 +135,12 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
     helling geven 72 × 80. Past het niet, zoek dan verder naar de vorm (zie ook les 20).
 26. **Een schaal die van de zitting wegwijkt, laat een spleet.** De rug van Manon helde 9,5° en lag op zithoogte 6 cm
     achter de rand van de zitting; van voren zag je het niet, van boven wel. Reken voor elke schaal die helt of
-    uitwaaiert na of haar binnenkant op zithoogte nog binnen de zitting ligt (test in `modellen.test.ts`), en bekijk het
-    model ook van boven.
+    uitwaaiert na of haar binnenkant op zithoogte nog binnen de zitting ligt, op elk punt van de schaal (test in
+    `modellen.test.ts`), en bekijk het model ook van boven.
+27. **Klik door wat de gebruiker kan kiezen.** Manon en Sullivan klopten zoals ze zijn, maar met de vorm *Organisch*
+    stak de schaal achteraan 1,5 cm buiten de zetel: de scheve schaal heeft haar hoogste punt naast het midden, en de
+    variant op een verdekte voet begon 5 cm lager. Een test loopt nu voor die twee modellen elke vorm, de kleinste en
+    grootste maten, losse kussens en elke draaiing af: gewone getallen, binnen de zetel, zonder spleet.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
