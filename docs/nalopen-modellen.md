@@ -338,8 +338,10 @@ model gewijzigd.
 | Azar | Klopt: open loungedeel links, twee zitten, hoge blokarm rechts. | Het leder is op de foto donkerder bruin; vijf sierkussens in plaats van drie. |
 | Esmee | Klopt: hoes tot op de vloer, uitlopende armen, één lang zitkussen. | Op de foto loopt de bovenlijn van de arm in een boog af van de rug naar voren; bij ons is ze vlak. |
 
-De standaardstikking uit de paginatekst (Husk: enkele stiksel met bies; Attribute: met boord; Azar, Belize en Nestor:
-enkele stiksel; Gozo: stiksel aan de buitenkant) is nog niet vergeleken met de keuze *Naden* per model.
+De standaardstikking uit de paginatekst is vergeleken met de keuze *Naden* per model. Amusette (gewone naad),
+Attribute (met boord) en Husk (stiksel met bies) kloppen. Azar, Belize en Nestor hebben op de site een "enkele
+stiksel" en Gozo een "stiksel aan de buitenkant": die keuze bestaat niet in onze catalogus (gewone naad, platte naad,
+bies, dubbele sierstiksel). Niet omgezet; het staat bij de vragen voor de klant.
 
 ### De zetelbedden op de maten van de tekening (doorgevoerd op 14/11)
 

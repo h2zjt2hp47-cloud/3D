@@ -465,7 +465,8 @@ export const zetelModellen: ModelDefinitie[] = [
     elementen: rij([['poef', 59, 59, { poefvorm: 'rond' }]]),
   }, 'P-Tumble', MATEN_WEBSITE),
   model('stockholm', 'Stockholm pouf', POEF, 'Ronde pouf in velours, in twee formaten.', {
-    hoofdmateriaal: 'velours_petrol', opties: { poten: 'verdekt', poothoogte: 'laag' }, elementen: rij([['poef', 60, 60, { poefvorm: 'rond' }]]),
+    // Op de foto donkerblauw (14/11). Geen eigen pagina met maten; op de foto loopt de pouf naar boven smaller toe.
+    hoofdmateriaal: 'chenille_nachtblauw', opties: { poten: 'verdekt', poothoogte: 'laag' }, elementen: rij([['poef', 60, 60, { poefvorm: 'rond' }]]),
   }, 'P-Stockholm'),
   model('kanto', 'Kanto pouf', POEF, 'Vierkante pouf, hier in een stof met patroon.', {
     hoofdmateriaal: 'jacquard_ruit', opties: { poten: 'verdekt', poothoogte: 'laag' }, elementen: rij([['poef', 45, 45, { poefvorm: 'vierkant' }]]),
