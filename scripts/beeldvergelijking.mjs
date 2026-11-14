@@ -79,6 +79,8 @@ const ZETELBEELDEN = [
   { naam: 'tumble-schuin', model: 'Tumble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Rug die achterover helt, van opzij (Sullivan).
   { naam: 'sullivan-zij', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'zij', decor: 'studio', licht: 'studio' },
+  // Schaal die uitwaaiert (14/11): van voren een tulp, smal aan de voet rond de ronde zitting en breed bovenaan (Manon).
+  { naam: 'manon-voor', model: 'Manon', familie: 'Fauteuils', standpunt: 'voor', decor: 'studio', licht: 'studio' },
   // Armen dikker dan de rug (14/11): de dikke armkussens tegen de dunnere rug, met de plooi ertussen.
   { naam: 'sullivan-schuin', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'pebble-naad', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.42, 0.17, 0.57, 0.45] },

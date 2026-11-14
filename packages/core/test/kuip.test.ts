@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, bouw3D, tekenVooraanzicht, type Ontwerp, type Rotatie } from '../src/index.js';
-import { framePoten, kuipOpbouw, kuipParameters, kuipUit, trommelKader, wandBoven, wandDoorsnede } from '../src/kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters, kuipUit, kuipVoet, trommelKader, wandBoven, wandDoorsnede, wandKader } from '../src/kuip.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -498,6 +498,120 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
       const w = kuipOpbouw(70, 68, h, kp, false).wand;
       expect(Math.min(...w.binnen!)).toBe(0);
       expect(Math.max(...w.binnen!) + w.dikte).toBeCloseTo(68 / 3, 0);
+    });
+  });
+
+  describe('een schaal die uitwaaiert (`waaier`, 14/11)', () => {
+    // Manon en Sullivan: de schaal is een tulp. Aan haar voet sluit ze om de zitting, naar boven staat ze rondom naar
+    // buiten. De maten van de productpagina zijn die van de bovenrand, dus de voet (en de zitting) is kleiner.
+    const h = { P: 2, zithoogte: 42, rugH: 75, kussenDik: 0 };
+    const basis = { zitTrommel: true, voorBoven: 0, profiel: [[0, 1], [0.5, 0.89], [1, 0.55]] };
+    const vorm = { plan: 'rond', dikte: 6, boog: 104 };
+    const recht = kuipParameters(vorm, basis)!, tulp = kuipParameters(vorm, { ...basis, waaier: 5.7 })!, metHelling = kuipParameters(vorm, { ...basis, waaier: 5.7, helling: 4 })!;
+    const graden = (x: number) => (Math.atan(x) * 180) / Math.PI, tan = (g: number) => Math.tan((g * Math.PI) / 180);
+    const kaders = (w: ReturnType<typeof kuipOpbouw>['wand']) => ({
+      voet: wandKader(w.pad, w.hoogtes, w.onder, w.dikte, w.binnen),
+      rand: wandKader(w.pad, w.hoogtes, w.onder, w.dikte, w.binnen, [0, -(w.leun ?? 0)], w.waaier),
+    });
+
+    it('het gegeven wordt gelezen (hoogstens 12°); zonder verandert er niets', () => {
+      expect(recht.waaier).toBeUndefined();
+      expect(tulp.waaier).toBe(5.7);
+      expect(kuipParameters(vorm, { ...basis, waaier: 40 })!.waaier).toBe(12);
+      const o = kuipOpbouw(75, 70, h, recht, false);
+      expect('waaier' in o.wand).toBe(false);
+      expect('leun' in o.wand).toBe(false);
+      expect(kuipVoet(recht, h, 75, 70)).toEqual({ uit: 0, zij: 0 });
+      expect(trommelKader(75, 70, recht)).toEqual({ x: 0, y: 0, b: 75, d: 70 });
+    });
+    it('de voet is smaller en korter dan het element; de bovenrand vult het element precies', () => {
+      const v = kuipVoet(tulp, h, 75, 70), o = kuipOpbouw(75, 70, h, tulp, false), { voet, rand } = kaders(o.wand);
+      // Achteraan (75 − 2) × tan 5,7° = 7,3 cm; opzij, waar de rand ±65 cm hoog is, ±6 cm.
+      expect(v.uit).toBeCloseTo(7.3, 1);
+      expect(v.zij).toBeGreaterThan(5.5);
+      expect(v.zij).toBeLessThan(7);
+      expect(voet.x0).toBeCloseTo(v.zij, 1);
+      expect(voet.x1).toBeCloseTo(75 - v.zij, 1);
+      expect(voet.y0).toBeCloseTo(v.uit, 1);
+      // Het breedste punt bovenaan ligt precies op de rand van het element (de maten van de site), links, rechts en achter.
+      expect(rand.x0).toBeCloseTo(0, 6);
+      expect(rand.x1).toBeCloseTo(75, 6);
+      expect(rand.y0).toBeCloseTo(0, 6);
+      // De hoek die daaruit volgt, is de gevraagde (op een halve graad), en er is geen helling bij.
+      expect(graden(o.wand.waaier!)).toBeGreaterThan(5.2);
+      expect(graden(o.wand.waaier!)).toBeLessThan(6.2);
+      expect(Math.abs(o.wand.leun ?? 0)).toBeLessThan(0.005);
+      // Grondvlak en zitting liggen binnen de voet, en de zitting komt vooraan tot de voorkant van de zetel.
+      for (const [x, y] of [...o.plan, ...o.zit]) {
+        expect(x).toBeGreaterThan(v.zij - 0.06);
+        expect(x).toBeLessThan(75 - v.zij + 0.06);
+        expect(y).toBeGreaterThan(v.uit - 0.06);
+      }
+      expect(Math.max(...o.zit.map((q) => q[1]))).toBeCloseTo(70, 1);
+      expect(trommelKader(75, 70, tulp, v.uit, v.zij)).toEqual({ x: v.zij, y: v.uit, b: 75 - 2 * v.zij, d: 70 - v.uit });
+    });
+    it('de schaal is links en rechts exact gelijk', () => {
+      const w = kuipOpbouw(75, 70, h, tulp, false).wand, n = w.pad.length;
+      for (let i = 0; i < n; i++) {
+        expect(w.pad[i]![0] + w.pad[n - 1 - i]![0], `punt ${i}`).toBeCloseTo(75, 9);
+        expect(w.pad[i]![1], `punt ${i}`).toBeCloseTo(w.pad[n - 1 - i]![1], 9);
+      }
+    });
+    it('samen met een helling: achteraan tellen de twee hoeken op, opzij telt alleen de waaier', () => {
+      const v = kuipVoet(metHelling, h, 75, 70), w = kuipOpbouw(75, 70, h, metHelling, false).wand, { rand } = kaders(w);
+      expect(v.uit).toBeCloseTo(73 * (tan(5.7) + tan(4)), 1);
+      expect(v.zij).toBeCloseTo(kuipVoet(tulp, h, 75, 70).zij, 1);
+      expect((w.leun! + w.waaier!) * 73).toBeCloseTo(v.uit, 1);
+      expect(graden(w.leun!)).toBeGreaterThan(3.5);
+      expect(graden(w.leun!)).toBeLessThan(4.5);
+      expect([rand.x0, rand.x1, rand.y0].map((x) => Math.round(x * 1e6) / 1e6 + 0)).toEqual([0, 75, 0]);
+    });
+    it('van boven gezien staat de rand rondom buiten de voet', () => {
+      const w = kuipOpbouw(75, 70, h, tulp, false).wand, rand = wandBoven(w), n = w.pad.length, mid = (n - 1) / 2;
+      const links = w.pad.reduce((best, q, i) => (q[0] < w.pad[best]![0] ? i : best), 0);
+      // Achteraan ±7 cm naar achteren, opzij ±6 cm naar buiten; en nergens naar binnen.
+      expect(rand[mid]![1]).toBeLessThan(w.pad[mid]![1] - 6.5);
+      expect(rand[mid]![0]).toBeCloseTo(37.5, 1);
+      expect(rand[links]![0]).toBeLessThan(w.pad[links]![0] - 5);
+      for (let i = 0; i < n; i++) expect(Math.hypot(rand[i]![0] - 37.5, rand[i]![1] - 38), `punt ${i}`).toBeGreaterThan(Math.hypot(w.pad[i]![0] - 37.5, w.pad[i]![1] - 38) + 3);
+    });
+    it('3D en tekeningen bij elke draaiing: de schaal vult het element, het onderstel staat onder de smallere voet', () => {
+      const ontwerp = (kuip: Record<string, unknown>, rotatie: Rotatie): Ontwerp => ({
+        hoofdmateriaal: 'linnen_ficelle', opties: { poten: 'ringframe' }, vormgeving: { rughoogte: 90, zithoogte: 42, poothoogte: 22, kuip },
+        elementen: [{ id: 'f', type: 'fauteuil', x: 0, y: 0, breedte: 72, diepte: 80, rotatie, opties: { kuipvorm: 'rond' } }],
+      });
+      const eigen = { dikte: 8, boog: 118, zitTrommel: true, zitIn: 1, zitInAchter: 1, voorBoven: -3, profiel: [[0, 1], [0.3, 1], [0.55, 0.4], [1, 0]], waaier: 6, helling: 7 };
+      for (const rotatie of [0, 90, 180, 270] as Rotatie[]) {
+        const s = bouw3D(ontwerp(eigen, rotatie), cat, standaardMaterialen), rug = s.blokken.find((x) => x.code === 'f.rug')!, zit = s.blokken.find((x) => x.code === 'f.zitkussen')!, ring = s.blokken.find((x) => x.code === 'f.ring')!;
+        expect(rug.waaier, `draaiing ${rotatie}`).toBeGreaterThan(0.09);
+        expect(rug.waaier, `draaiing ${rotatie}`).toBeLessThan(0.12);
+        expect(Math.hypot(rug.leun![0], rug.leun![1]), `draaiing ${rotatie}`).toBeGreaterThan(0.1);
+        // De schaal raakt drie randen van het element: de twee zijkanten en de achterkant.
+        const k = s.kader, raakt = [Math.abs(rug.x - k.x), Math.abs(rug.z - k.z), Math.abs(rug.x + rug.b - k.x - k.b), Math.abs(rug.z + rug.d - k.z - k.d)].filter((d) => d < 0.02);
+        expect(raakt, `draaiing ${rotatie}`).toHaveLength(3);
+        // Zitting en ring staan onder de voet: smaller dan het element, en ze raken hoogstens de voorkant van de zetel
+        // (de zitting komt daar tot de rand), niet de zijkanten of de achterkant.
+        for (const b of [zit, ring]) {
+          expect(Math.min(b.b, b.d), `draaiing ${rotatie} ${b.code}`).toBeLessThan(66);
+          const randen = [b.x - k.x, b.z - k.z, k.x + k.b - b.x - b.b, k.z + k.d - b.z - b.d];
+          expect(randen.filter((d) => d < 2).length, `draaiing ${rotatie} ${b.code}`).toBeLessThanOrEqual(1);
+          for (const d of randen) expect(d, `draaiing ${rotatie} ${b.code}`).toBeGreaterThan(-0.02);
+        }
+      }
+      // Bovenaanzicht: de rand van de schaal komt tot de zijkanten en de achterkant van de zetel.
+      const boven = berekenOntwerp(ontwerp(eigen, 0), cat, standaardMaterialen).tekening.vormen.find((v) => v.code === 'f.rug')!;
+      const punten = (pad: string) => [...pad.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])] as const);
+      const pb = punten(boven.pad!);
+      expect(Math.min(...pb.map((q) => q[0]))).toBeLessThan(0.3);
+      expect(Math.max(...pb.map((q) => q[0]))).toBeGreaterThan(71.7);
+      expect(Math.min(...pb.map((q) => q[1]))).toBeLessThan(0.3);
+      // Vooraanzicht: het silhouet is bovenaan breder dan aan de voet (aan de voet ±4 cm binnen de rand, hoger tot op de rand).
+      const voor = tekenVooraanzicht(ontwerp(eigen, 0), cat, standaardMaterialen), pv = punten(voor.vormen.find((v) => v.code === 'f.rug')!.pad!);
+      const opVoet = pv.filter((q) => q[1] > -23), xVoet = Math.min(...opVoet.map((q) => q[0]));
+      expect(xVoet).toBeGreaterThan(2.5);
+      expect(Math.min(...pv.map((q) => q[0]))).toBeLessThan(0.6);
+      expect(Math.max(...pv.map((q) => q[0]))).toBeGreaterThan(71.4);
+      expect(voor.maatlijnen).toEqual(tekenVooraanzicht(ontwerp({ ...eigen, waaier: undefined }, 0), cat, standaardMaterialen).maatlijnen);
     });
   });
 

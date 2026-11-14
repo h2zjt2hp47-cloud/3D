@@ -8,7 +8,7 @@
 import { weefselVan, type Materiaal } from './materialen.js';
 import { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing } from './echt3d.js';
 import { doorlopendeOpbouw } from './doorlopend.js';
-import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, kuipUit, superellips, trommelKader, wandDoorsnede, type Punt } from './kuip.js';
+import { framePoten, KUSSEN_KANTEL, kuipOpbouw, kuipParameters, kuipVoet, superellips, trommelKader, wandDoorsnede, wandKader, type Punt } from './kuip.js';
 import { poefHoogteVan, chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, hoogtesVan, materiaalVan, lokaalNaarWereld, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OntwerpElement } from './ontwerp.js';
 
 export type BlokSoort =
@@ -80,6 +80,11 @@ export interface Blok {
    * de bocht. `pad` blijft de middenlijn op de gewone dikte, dus de buitenkant verschuift niet (zie `wandDoorsnede`).
    */
   binnen?: number[];
+  /**
+   * Uitwaaierende kuipwand: hoeveel cm de wand per cm hoogte boven haar onderkant naar buiten verschuift, langs haar
+   * buitennormaal en dus rondom (een getal, geen richting: het draait vanzelf mee met de zetel). Samen met `leun`.
+   */
+  waaier?: number;
   /**
    * Profiel (vorm 'profiel'): de doorsnede als punten [s, y, boven]. s = cm opzij van de middenlijn (`pad`), positief naar
    * `uit` (de buitenkant); y = hoogte in cm, absoluut (boven = 0) of onder de bovenkant ter plaatse (boven = 1, dus mee
@@ -230,7 +235,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const exp = kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : 2;
         // Het onderstel staat onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
         const hoogFrame = hoogtesVan(ontwerp, catalogus, e);
-        const tk = trommelKader(B, D, kuipFrame, kuipUit(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }, D));
+        const voetFrame = kuipVoet(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }, B, D);
+        const tk = trommelKader(B, D, kuipFrame, voetFrame.uit, voetFrame.zij);
         if (ringH > 0 && rondPlan) {
           const f = Math.max(0.5, 1 - 3 / (Math.min(tk.b, tk.d) / 2));
           omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(tk.x + tk.b / 2, tk.y + tk.d / 2, (tk.b / 2) * f, (tk.d / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });
@@ -566,19 +572,28 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
           // mee tot waar haar bovenkant komt.
           const wandH = Math.max(...opb.wand.hoogtes) - wandOnder;
           let leun: [number, number] | undefined;
-          if (opb.wand.leun) {
-            const a = lokaalNaarWereld(e, 0, 1, 0, 0), c = lokaalNaarWereld(e, 0, 0, 0, 0);
-            leun = [r2((c.x - a.x) * opb.wand.leun), r2((c.y - a.y) * opb.wand.leun)];
-          }
+          const a = lokaalNaarWereld(e, 0, 1, 0, 0), c = lokaalNaarWereld(e, 0, 0, 0, 0);
+          // Met een waaier is de helling de rest van de diepte (soms bijna niets): vier decimalen, en weg als ze nul is.
+          const rl = opb.wand.waaier ? (x: number) => Math.round(x * 1e4) / 1e4 : r2;
+          if (opb.wand.leun) leun = [rl((c.x - a.x) * opb.wand.leun), rl((c.y - a.y) * opb.wand.leun)];
+          if (leun && !leun[0] && !leun[1]) leun = undefined;
           const ux = leun ? leun[0] * wandH : 0, uz = leun ? leun[1] * wandH : 0;
-          const bx0 = Math.min(...ds.midden.map((q, i) => q[0] - ds.half[i]!)) + Math.min(0, ux), bx1 = Math.max(...ds.midden.map((q, i) => q[0] + ds.half[i]!)) + Math.max(0, ux);
-          const bz0 = Math.min(...ds.midden.map((q, i) => q[1] - ds.half[i]!)) + Math.min(0, uz), bz1 = Math.max(...ds.midden.map((q, i) => q[1] + ds.half[i]!)) + Math.max(0, uz);
+          let bx0 = Math.min(...ds.midden.map((q, i) => q[0] - ds.half[i]!)) + Math.min(0, ux), bx1 = Math.max(...ds.midden.map((q, i) => q[0] + ds.half[i]!)) + Math.max(0, ux);
+          let bz0 = Math.min(...ds.midden.map((q, i) => q[1] - ds.half[i]!)) + Math.min(0, uz), bz1 = Math.max(...ds.midden.map((q, i) => q[1] + ds.half[i]!)) + Math.max(0, uz);
+          // Uitwaaierende schaal: bovenaan staat de wand rondom naar buiten. Het kader is dat van haar voet en haar
+          // bovenrand samen, gerekend met de echte verschuiving per punt (de helling niet afgerond).
+          if (opb.wand.waaier) {
+            const wk = wandKader(pad, opb.wand.hoogtes, wandOnder, opb.wand.dikte, opb.wand.binnen, [(c.x - a.x) * (opb.wand.leun ?? 0), (c.y - a.y) * (opb.wand.leun ?? 0)], opb.wand.waaier);
+            bx0 = wk.x0; bx1 = wk.x1; bz0 = wk.y0; bz1 = wk.y1;
+          }
           blokken.push({
             code: `${e.id}.rug`, soort: 'stof', vorm: 'kuipwand',
-            x: r2(bx0), z: r2(bz0), b: r2(bx1 - bx0), d: r2(bz1 - bz0),
+            x: r2(bx0) + 0, z: r2(bz0) + 0, b: r2(bx1 - bx0), d: r2(bz1 - bz0),
             y: r2(wandOnder), h: r2(wandH), kleur: stof, pad, hoogtes: opb.wand.hoogtes, dikte: r2(opb.wand.dikte), ...(leun ? { leun } : {}),
             // Dikkere armen: het extra per punt, naar binnen (de buitenkant en dus het kader van het blok blijven gelijk).
             ...(opb.wand.binnen ? { binnen: opb.wand.binnen } : {}),
+            // Uitwaaierende schaal: cm per cm hoogte langs de buitennormaal (vier decimalen: over 70 cm hoogte telt elke).
+            ...(opb.wand.waaier ? { waaier: Math.round(opb.wand.waaier * 1e4) / 1e4 } : {}),
             // Schelp: de schaal zweeft boven de zitting, dus je ziet haar onderrand: ook die rond (zoals op de foto van Karl).
             // Een schaal die op de zitting staat (`schaalOp`, Tumble): een licht afgeronde onderrand, zodat er een plooi is
             // waar ze op de zijkant van de zitting aansluit.

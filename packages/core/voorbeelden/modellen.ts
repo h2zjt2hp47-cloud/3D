@@ -317,17 +317,19 @@ export const zetelModellen: ModelDefinitie[] = [
     // houten ring met vier schuine poten en een kruis (poothoogte 22 geschat); de rug is bovenaan smal en rond en loopt
     // schuin breder uit naar lage, korte armen (±20 cm boven de zitting) die vooraan tot op de zitting zakken. De rug
     // helt achterover (foto van opzij). De maten passen in elkaar: de zitting is rond en 62 cm (zoals de hocker, 62 × 62
-    // op de site), de schaal is 72 breed, en de bovenkant van de rug steekt 13 cm achter haar voet: samen de 80 cm
-    // diepte van de site, en een zitdiepte van ±60 (site: 60). De hoek (10,4°) volgt daaruit.
+    // op de site); de schaal is een tulp (14/11) die aan haar voet om de zitting sluit (±65 cm) en rondom ±5,7° naar
+    // buiten staat, tot 72 cm bij de armen; achteraan helt ze nog 7,9° extra (foto van opzij: ±14° boven de zitting),
+    // zodat de bovenkant van de rug ±17 cm achter haar voet staat: samen de 80 cm diepte van de site, en een zitdiepte
+    // van ±60 (site: 60). De rug blijft tot een derde van de schaal op volle hoogte (van voren ±62 % van de breedte).
     vormgeving: {
       zachtheid: 6, rughoogte: 93, zithoogte: 42, poothoogte: 22,
       kuip: {
-        plan: 'rond', dikte: 7, boog: 118, voorBoven: -3, zitTrommel: true, zitRand: 7, zitIn: 5, zitInAchter: 5,
-        frameDik: 3, frameKruis: true, helling: 10.4,
-        profiel: [[0, 1], [0.2, 1], [0.52, 0.43], [0.8, 0.36], [1, 0]],
-        // Dikte (14/11, uit de foto van voren, benadering): in het midden van de rug 10 cm (daar hoort de zitdiepte van
+        plan: 'rond', dikte: 7, boog: 118, voorBoven: -3, zitTrommel: true, zitRand: 7, zitIn: 1.4, zitInAchter: 1,
+        frameDik: 3, frameKruis: true, waaier: 5.7, helling: 7.9,
+        profiel: [[0, 1], [0.33, 1], [0.53, 0.43], [0.8, 0.36], [1, 0]],
+        // Dikte (14/11, uit de foto van voren, benadering): in het midden van de rug 8 cm (daar hoort de zitdiepte van
         // 60 bij), naar de schouders toe dunner (7 cm), en de armen zijn kussens van ±10,5 cm met een plooi ertussen.
-        dikteProfiel: [[0, 10], [0.2, 10], [0.36, 7], [0.47, 7], [0.54, 10.5], [1, 10.5]],
+        dikteProfiel: [[0, 8], [0.3, 8], [0.42, 7], [0.48, 7], [0.55, 10.5], [1, 10.5]],
       },
     },
     elementen: rij([['fauteuil', 72, 80, { kuipvorm: 'afgerond' }]]),
@@ -360,12 +362,13 @@ export const zetelModellen: ModelDefinitie[] = [
     // Productpagina: 75 × 70 × 75, zithoogte 42. Uit de vier foto's (benadering, 13/11): een ronde trommel tot op de vloer;
     // een dunne schaal met een dikke bies die er een paar cm rond uitsteekt; haar rand loopt van de rug (75 cm) aan beide
     // kanten schuin af naar voren (±60 cm) en eindigt voorbij het midden met een rechte rand tot op de vloer; de zitting
-    // steekt er vooraan uit. De schaal helt achterover (foto van opzij: haar bovenkant staat ±12 cm achter haar voet,
-    // 9,5°), zodat de zitting ondieper is dan breed. Wat nog afwijkt: op de foto staat de schaal ook opzij wat naar buiten.
+    // steekt er vooraan uit. De schaal is een tulp (14/11, opgemeten op de foto's van voren en van opzij): ze sluit aan
+    // haar voet om een ronde zitting van ±62 cm en staat rondom ±5,7° naar buiten, achteraan nog ±1° extra; bovenaan
+    // geeft dat precies de 75 × 70 van de site. De zitting komt overal tot tegen de schaal (kleine `zitIn`).
     vormgeving: {
       zachtheid: 8, rughoogte: 75, zithoogte: 42, poothoogte: 2,
       kuip: {
-        dikte: 6, boog: 104, voorBoven: 0, zitTrommel: true, zitRand: 4, zitIn: 3, helling: 9.5,
+        dikte: 6, boog: 104, voorBoven: 0, zitTrommel: true, zitRand: 4, zitIn: 0.5, zitInAchter: 0.5, waaier: 5.7, helling: 1,
         // Eén vloeiende, bolle lijn van de rug naar voren (een parabool in zeven punten, recht ertussen).
         profiel: [[0, 1], [0.17, 0.99], [0.33, 0.95], [0.5, 0.89], [0.67, 0.8], [0.83, 0.69], [1, 0.55]], profielRecht: true,
       },

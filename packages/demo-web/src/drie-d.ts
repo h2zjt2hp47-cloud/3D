@@ -985,9 +985,10 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
    * Kuipwand: een gestoffeerde wand langs een gebogen middenlijn (`pad`, wereld x/z), met per punt een eigen
    * bovenhoogte, een volledig afgeronde bovenrand en afgeronde uiteinden. Vorm rond (ox, oy, oz). Met `binnen` is de
    * wand per punt zoveel cm dikker, naar de binnenkant van de bocht (armen die dikker zijn dan de rug): de doorsnede
-   * schuift mee naar binnen, de buitenkant blijft staan.
+   * schuift mee naar binnen, de buitenkant blijft staan. Met `waaier` staat de wand rondom naar buiten: per cm hoogte
+   * zoveel cm langs haar buitennormaal (een tulp), bovenop de helling.
    */
-  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0, onderRond = 0, leun: [number, number] = [0, 0], binnen?: number[]) {
+  function kuipwandGeometrie(pad: [number, number][], hoogtes: number[], dikte: number, onder: number, ox: number, oz: number, buren: Doos[] = [], tegel = 0, onderRond = 0, leun: [number, number] = [0, 0], binnen?: number[], waaier = 0) {
     const w = dikte / 2;
     const n = pad.length;
     const ds = wandDoorsnede(pad, dikte, binnen);
@@ -1064,7 +1065,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       pr.forEach(([u, y], j) => {
         if (j > 0) rond += Math.hypot(ref[j]![0] - ref[j - 1]![0], ref[j]![1] - ref[j - 1]![1]);
         const g = gewicht(r) * y;
-        pos.push(r.x + r.nx * u - ox + leun[0] * g, y, r.z + r.nz * u - oz + leun[1] * g);
+        pos.push(r.x + r.nx * u - ox + leun[0] * g + r.ux * waaier * y, y, r.z + r.nz * u - oz + leun[1] * g + r.uz * waaier * y);
         // Textuur langs de wand (cm) en rond het profiel (cm), op ware grootte: geen sprongen in de bocht.
         uvs.push(tegel ? langs / tegel : 0, tegel ? rond / tegel : 0);
       });
@@ -1111,7 +1112,12 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     // langs de andere kop weer omlaag (in de coördinaten van de mesh).
     const eerste = ringen[0]!, laatste = ringen[ringen.length - 1]!;
     const kroon: [number, number, number][] = [];
-    for (let k = 0; k < 4; k++) kroon.push([eerste.x - ox, (eerste.voet ?? 0) + ((eerste.hoog - (eerste.voet ?? 0)) * k) / 4, eerste.z - oz]);
+    // Langs de punt van de kop omhoog; bij een uitwaaierende schaal staat ook die punt naar buiten.
+    const langsKop = (r: Ring, k: number): [number, number, number] => {
+      const y = (r.voet ?? 0) + ((r.hoog - (r.voet ?? 0)) * k) / 4;
+      return [r.x + r.ux * waaier * y - ox, y, r.z + r.uz * waaier * y - oz];
+    };
+    for (let k = 0; k < 4; k++) kroon.push(langsKop(eerste, k));
     for (const r of ringen) {
       // De lijn blijft op de halve gewone dikte van de buitenkant, zoals de bies op de foto's: bij een dikkere arm ligt
       // ze dus naast het midden van de arm, naar buiten, en wat lager op de ronding. In een kop krimpt dat mee.
@@ -1119,9 +1125,9 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
       const voet = Math.min(r.voet ?? 0, r.hoog - 0.6), rt = Math.min(r.breed, Math.max(0.5, r.hoog - voet - 0.5));
       const y = s > 0 ? r.hoog - rt + rt * Math.sqrt(Math.max(0, 1 - (s / r.breed) ** 2)) : r.hoog;
       const g = gewicht(r) * y;
-      kroon.push([r.x + r.ux * s - ox + leun[0] * g, y, r.z + r.uz * s - oz + leun[1] * g]);
+      kroon.push([r.x + r.ux * (s + waaier * y) - ox + leun[0] * g, y, r.z + r.uz * (s + waaier * y) - oz + leun[1] * g]);
     }
-    for (let k = 3; k >= 0; k--) kroon.push([laatste.x - ox, (laatste.voet ?? 0) + ((laatste.hoog - (laatste.voet ?? 0)) * k) / 4, laatste.z - oz]);
+    for (let k = 3; k >= 0; k--) kroon.push(langsKop(laatste, k));
     geo.userData.kroon = kroon;
     return geo;
   }
@@ -1227,7 +1233,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (b.vorm === 'kuipwand' && b.pad && b.hoogtes) {
       const cxo = b.x + b.b / 2, czo = b.z + b.d / 2;
       const tegelCm = b.textuur ? b.textuurCm ?? 15 : b.weefsel && b.weefsel in WEEFSEL_CM ? WEEFSEL_CM[b.weefsel as Weefsel] : 1;
-      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, b.afronding ?? 0, b.leun, b.binnen);
+      const g = kuipwandGeometrie(b.pad, b.hoogtes, b.dikte ?? 14, b.y, cxo, czo, opties.zetel ? burenVan(b) : [], tegelCm, b.afronding ?? 0, b.leun, b.binnen, b.waaier ?? 0);
       const base = materiaal(b);
       const sleutel = `vc:${base.uuid}`;
       let mat = materialen.get(sleutel);
@@ -2068,7 +2074,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     mee.forEach((b, i) => { const w = wortel(i); groepen.set(w, [...(groepen.get(w) ?? []), b]); });
     return [...groepen.values()];
   }
-  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.schuin, b.vierkant, b.leun, b.as, b.pad, b.hoogtes, b.dikte, b.binnen, b.omtrek, b.profiel, b.uit]));
+  const vormSleutel = (delen: Blok[], buren: Blok[]) => JSON.stringify([...delen, ...buren].map((b) => [b.code, b.vorm, b.x, b.y, b.z, b.b, b.h, b.d, b.afronding, b.kantel, b.schuin, b.vierkant, b.leun, b.as, b.pad, b.hoogtes, b.dikte, b.binnen, b.waaier, b.omtrek, b.profiel, b.uit]));
   /** De zachte vorm als mesh (onze stof, schaduw in de hoeken als hoekpuntkleur), of null als ze nog berekend moet worden. */
   function zachteMesh(delen: Blok[], buren: Blok[]) {
     const v = zachteVormen.get(vormSleutel(delen, buren));

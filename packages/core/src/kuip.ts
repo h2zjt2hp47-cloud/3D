@@ -81,6 +81,13 @@ export interface KuipParameters {
    * de schaal achteruit steekt, en schuift naar voren.
    */
   helling?: number;
+  /**
+   * De schaal waaiert uit: ze staat zoveel graden naar buiten, rondom, vanaf haar onderkant (een tulp: onderaan sluit ze
+   * om de zitting, bovenaan is ze breder; Manon en Sullivan op de foto's van voren). De zetel blijft binnen zijn maten:
+   * het grondvlak van de zitting wordt zoveel smaller en korter als de schaal bovenaan naar buiten steekt. Samen met
+   * `helling` helt de rug achteraan met de som van de twee.
+   */
+  waaier?: number;
   /** Dikte in cm van het houten frame onder de zitting bij poten met een frame (ringframe); standaard 4. */
   frameDik?: number;
   /** Bij poten met een frame (ringframe) ook een kruis tussen de poten (Sullivan: een ring op vier poten met een kruis). */
@@ -138,6 +145,7 @@ export function kuipParameters(tekenVanKeuze: Record<string, unknown> | undefine
     ...(typeof teken.zitInAchter === 'number' && teken.zitInAchter >= 0 ? { zitInAchter: teken.zitInAchter } : {}),
     ...(teken.schaalOp === true ? { schaalOp: true } : {}),
     ...(typeof teken.helling === 'number' && teken.helling > 0 ? { helling: Math.min(20, teken.helling) } : {}),
+    ...(typeof teken.waaier === 'number' && teken.waaier > 0 ? { waaier: Math.min(12, teken.waaier) } : {}),
     ...(typeof teken.frameDik === 'number' ? { frameDik: teken.frameDik } : {}),
     ...(teken.frameKruis === true ? { frameKruis: true } : {}),
     ...(typeof teken.zitNaad === 'number' && teken.zitNaad > 0 ? { zitNaad: teken.zitNaad } : {}),
@@ -183,9 +191,16 @@ export function superellips(cx: number, cy: number, a: number, b: number, n: num
  * naar binnen, achteraan tot in de schaal (nooit voorbij haar binnenkant, anders een kier) en vooraan tot de voorkant.
  * Het onderstel (frame en poten) staat onder dit kader.
  */
-export function trommelKader(B: number, D: number, k: KuipParameters | null, uit = 0): { x: number; y: number; b: number; d: number } {
+export function trommelKader(B: number, D: number, k: KuipParameters | null, uit = 0, zij = 0): { x: number; y: number; b: number; d: number } {
   // `uit` = hoeveel de bovenkant van een hellende schaal achteruit steekt (kuipUit): het grondvlak begint zoveel verder.
   const Dp = D - uit;
+  if (zij) {
+    // Uitwaaierende schaal (kuipVoet): het grondvlak is ook aan elke zijkant zoveel smaller.
+    const Bp = B - 2 * zij;
+    if (!k?.zitTrommel || !k.zitIn) return { x: zij, y: uit, b: Bp, d: Dp };
+    const w = Math.min(k.dikte, Bp / 3, Dp / 3), zi = Math.min(k.zitIn, Bp / 6, Dp / 6), achter = Math.max(0, Math.min(k.zitInAchter ?? 2 * zi, w - 0.5));
+    return { x: zij + zi, y: uit + achter, b: Bp - 2 * zi, d: Dp - achter };
+  }
   if (!k?.zitTrommel || !k.zitIn) return { x: 0, y: uit, b: B, d: Dp };
   const w = Math.min(k.dikte, B / 3, Dp / 3), zi = Math.min(k.zitIn, B / 6, Dp / 6), achter = Math.max(0, Math.min(k.zitInAchter ?? 2 * zi, w - 0.5));
   return { x: zi, y: uit + achter, b: B - 2 * zi, d: Dp - achter };
@@ -202,9 +217,31 @@ function wandOnder(k: KuipParameters, h: { P: number; zithoogte: number }): numb
  * tangens van de hoek. 0 zonder helling. Het grondvlak van de zetel is zoveel korter dan zijn diepte.
  */
 export function kuipUit(k: KuipParameters | null, h: { P: number; zithoogte: number; rugH: number }, D = Infinity): number {
-  if (!k?.helling) return 0;
+  if (!k?.helling && !k?.waaier) return 0;
+  // Een schaal die uitwaaiert, steekt achteraan ook naar buiten: de twee hoeken tellen op.
+  const tan = Math.tan(((k.helling ?? 0) * Math.PI) / 180) + (k.waaier ? Math.tan((k.waaier * Math.PI) / 180) : 0);
   // Nooit meer dan een kwart van de diepte van de zetel (dezelfde grens voor de opbouw, het onderstel en de tekeningen).
-  return Math.min(D / 4, Math.round(Math.max(0, h.rugH - wandOnder(k, h)) * Math.tan((k.helling * Math.PI) / 180) * 10) / 10);
+  return Math.min(D / 4, Math.round(Math.max(0, h.rugH - wandOnder(k, h)) * tan * 10) / 10);
+}
+
+/**
+ * De voet van een schaal die helt of uitwaaiert: hoeveel cm het grondvlak van de zetel achteraan (`uit`, zie kuipUit) en
+ * aan elke zijkant (`zij`) binnen het element ligt. Opzij telt het breedste punt van de wand: waar haar voet staat plus
+ * wat ze daar bovenaan uitsteekt (bij Sullivan de armen, die opzij staan, en niet de hoge rug, die het meest uitsteekt
+ * maar verder naar binnen staat). De ene bron voor de opbouw, de zitting, het onderstel en de tekeningen.
+ */
+export function kuipVoet(k: KuipParameters | null, h: { P: number; zithoogte: number; rugH: number }, B = Infinity, D = Infinity): { uit: number; zij: number } {
+  const uit = kuipUit(k, h, D);
+  if (!k?.waaier || !Number.isFinite(B) || !Number.isFinite(D)) return { uit, zij: 0 };
+  const o = kuipOpbouwRecht(B, D - uit, { ...h, kussenDik: 0 }, k, false), ds = wandDoorsnede(o.wand.pad, o.wand.dikte, o.wand.binnen);
+  const tan = Math.tan((k.waaier * Math.PI) / 180);
+  // Hoe ver elk punt bovenaan voorbij de rand van het (hier nog volle) grondvlak komt, links of rechts.
+  let reik = 0;
+  o.wand.pad.forEach((_, i) => {
+    const nx = ds.normaal[i]![0], buitenX = ds.midden[i]![0] + nx * ds.half[i]!;
+    reik = Math.max(reik, tan * (o.wand.hoogtes[i]! - o.wand.onder) * Math.abs(nx) - (nx < 0 ? buitenX : B - buitenX));
+  });
+  return { uit, zij: Math.min(B / 6, Math.round(reik * 10) / 10) };
 }
 
 /**
@@ -236,8 +273,10 @@ export interface KuipOpbouw {
    * hellende schaal ook `leun`: hoeveel cm de wand per cm hoogte naar achteren (lokale −y) verschuift. Met dikkere
    * armen (`dikteProfiel`) ook `binnen`: per punt hoeveel cm de wand daar dikker is dan `dikte`, naar binnen toe. `pad`
    * blijft de middenlijn van de wand op haar gewone dikte, zodat de buitenkant niet verschuift; zie `wandDoorsnede`.
+   * Met een uitwaaierende schaal ook `waaier`: hoeveel cm de wand per cm hoogte naar buiten (langs haar buitennormaal)
+   * verschuift, rondom.
    */
-  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number; leun?: number; binnen?: number[] };
+  wand: { pad: Punt[]; hoogtes: number[]; dikte: number; onder: number; leun?: number; binnen?: number[]; waaier?: number };
   /** Omtrek van het zitkussen. */
   zit: Punt[];
   /** Onder- en bovenkant van de basis (cm). Bij een trommel (`zitTrommel`) is er geen basis: boven = onder. */
@@ -257,14 +296,49 @@ export interface KuipOpbouw {
  */
 export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
   // Hellende schaal: dezelfde opbouw op een korter grondvlak, naar voren geschoven; de wand helt vanaf haar voet.
-  const uit = kuipUit(k, h, D);
-  if (!uit) return kuipOpbouwRecht(B, D, h, k, losseRug);
-  const o = kuipOpbouwRecht(B, D - uit, h, k, losseRug);
-  const schuif = (p: Punt): Punt => [p[0], Math.round((p[1] + uit) * 10) / 10];
-  const hoog = Math.max(...o.wand.hoogtes) - o.wand.onder;
+  const { uit, zij } = kuipVoet(k, h, B, D);
+  if (!uit && !zij) return kuipOpbouwRecht(B, D, h, k, losseRug);
+  if (!k.waaier) {
+    const o = kuipOpbouwRecht(B, D - uit, h, k, losseRug);
+    const schuif = (p: Punt): Punt => [p[0], Math.round((p[1] + uit) * 10) / 10];
+    const hoog = Math.max(...o.wand.hoogtes) - o.wand.onder;
+    return {
+      ...o, plan: o.plan.map(schuif), zit: o.zit.map(schuif), rugkussens: o.rugkussens.map((r) => ({ ...r, ly: r.ly + uit })),
+      wand: { ...o.wand, pad: o.wand.pad.map(schuif), leun: hoog > 0 ? uit / hoog : 0 },
+    };
+  }
+  // Uitwaaierende schaal: het grondvlak is ook aan elke kant smaller en staat in het midden; de wand staat vanaf haar
+  // voet rondom naar buiten.
+  const o = kuipOpbouwRecht(B - 2 * zij, D - uit, h, k, losseRug);
+  const r1 = (x: number) => Math.round(x * 10) / 10;
+  const schuif = (p: Punt): Punt => [r1(p[0] + zij), r1(p[1] + uit)];
+  const pad = o.wand.pad.map(schuif), n = pad.length;
+  // Een symmetrische schaal exact gespiegeld: door de afronding op 0,1 cm kunnen links en rechts een haar verschillen,
+  // en dan raakt maar één kant de rand van het element.
+  if (!k.scheef && k.boogRechts === undefined && !k.profielRechts)
+    for (let i = 0; i < n / 2; i++) {
+      const j = n - 1 - i, x = (pad[i]![0] + (B - pad[j]![0])) / 2, y = (pad[i]![1] + pad[j]![1]) / 2;
+      pad[i] = [x, y]; pad[j] = [B - x, y];
+    }
+  // De hoek zelf volgt uit de voet, niet omgekeerd: zo groot dat het breedste punt van de wand (voet plus wat ze daar
+  // uitsteekt) precies op de rand van het element komt. Anders zou de afronding van de voet de zetel een millimeter
+  // breder of smaller maken dan de maten van de productpagina.
+  const ds = wandDoorsnede(pad, o.wand.dikte, o.wand.binnen);
+  let waaier = Infinity, achter = 0;
+  pad.forEach((_, i) => {
+    const H = o.wand.hoogtes[i]! - o.wand.onder, [nx, ny] = ds.normaal[i]!;
+    if (ny < ds.normaal[achter]![1]) achter = i;
+    if (H < 1 || Math.abs(nx) < 0.05) return;
+    const buitenX = ds.midden[i]![0] + nx * ds.half[i]!;
+    waaier = Math.min(waaier, (nx < 0 ? buitenX : B - buitenX) / (Math.abs(nx) * H));
+  });
+  if (!Number.isFinite(waaier) || waaier < 0) waaier = 0;
+  // Achteraan dezelfde regel: wat de waaier niet haalt van de diepte, komt van de helling (de rest, zoals `uit / hoog`).
+  const hoogAchter = o.wand.hoogtes[achter]! - o.wand.onder;
+  const leun = hoogAchter > 0 ? (ds.midden[achter]![1] + ds.normaal[achter]![1] * ds.half[achter]!) / hoogAchter - waaier : 0;
   return {
-    ...o, plan: o.plan.map(schuif), zit: o.zit.map(schuif), rugkussens: o.rugkussens.map((r) => ({ ...r, ly: r.ly + uit })),
-    wand: { ...o.wand, pad: o.wand.pad.map(schuif), leun: hoog > 0 ? uit / hoog : 0 },
+    ...o, plan: o.plan.map(schuif), zit: o.zit.map(schuif), rugkussens: o.rugkussens.map((r) => ({ ...r, lx: r.lx + zij, ly: r.ly + uit })),
+    wand: { ...o.wand, pad, leun, waaier },
   };
 }
 
@@ -274,7 +348,7 @@ export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: numb
  * buitennormaal dat naar achteren wijst); haar uiteinden blijven recht staan. Zelfde regel als de 3D.
  */
 export function wandBoven(wand: KuipOpbouw['wand']): Punt[] {
-  if (!wand.leun) return wand.pad;
+  if (!wand.leun && !wand.waaier) return wand.pad;
   const p = wand.pad, n = p.length;
   const normaal = (i: number): [number, number] => {
     const a = p[Math.max(0, i - 1)]!, c = p[Math.min(n - 1, i + 1)]!, tx = c[0] - a[0], ty = c[1] - a[1], l = Math.hypot(tx, ty) || 1;
@@ -284,8 +358,30 @@ export function wandBoven(wand: KuipOpbouw['wand']): Punt[] {
   const buiten = normaal(Math.floor(n / 2))[1] <= 0 ? 1 : -1;
   return p.map(([x, y], i) => {
     const g = Math.max(0, buiten * -normaal(i)[1]);
-    return [x, Math.round((y - wand.leun! * g * (wand.hoogtes[i]! - wand.onder)) * 10) / 10] as Punt;
+    if (!wand.waaier) return [x, Math.round((y - wand.leun! * g * (wand.hoogtes[i]! - wand.onder)) * 10) / 10] as Punt;
+    // Uitwaaierend: bovenaan staat de wand ook langs haar buitennormaal naar buiten.
+    const [nx, ny] = normaal(i), hoog = wand.hoogtes[i]! - wand.onder, uit = buiten * wand.waaier * hoog;
+    return [Math.round((x + nx * uit) * 10) / 10, Math.round((y - (wand.leun ?? 0) * g * hoog + ny * uit) * 10) / 10] as Punt;
   });
+}
+
+/**
+ * Het kader (in het grondvlak) van een wand die helt of uitwaaiert: haar voet en haar bovenrand samen, met de ronde
+ * koppen aan de uiteinden. `leun` = de verschuiving per cm hoogte als vector (gewogen met het deel van de buitennormaal
+ * dat die kant op wijst, zoals in de 3D), `waaier` = cm per cm hoogte langs de buitennormaal.
+ */
+export function wandKader(pad: Punt[], hoogtes: number[], onder: number, dikte: number, binnen: number[] | undefined, leun: Punt = [0, 0], waaier = 0): { x0: number; y0: number; x1: number; y1: number } {
+  const ds = wandDoorsnede(pad, dikte, binnen), n = pad.length, lang = Math.hypot(leun[0], leun[1]);
+  const k = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  const neem = (x: number, y: number, r = 0) => { k.x0 = Math.min(k.x0, x - r); k.x1 = Math.max(k.x1, x + r); k.y0 = Math.min(k.y0, y - r); k.y1 = Math.max(k.y1, y + r); };
+  for (let i = 0; i < n; i++) {
+    const [nx, ny] = ds.normaal[i]!, [mx, my] = ds.midden[i]!, half = ds.half[i]!, hoog = Math.max(0, hoogtes[i]! - onder);
+    const g = lang ? Math.max(0, (nx * leun[0] + ny * leun[1]) / lang) : 0;
+    const dx = (leun[0] * g + nx * waaier) * hoog, dy = (leun[1] * g + ny * waaier) * hoog;
+    for (const s of [1, -1]) { neem(mx + nx * half * s, my + ny * half * s); neem(mx + nx * half * s + dx, my + ny * half * s + dy); }
+    if (i === 0 || i === n - 1) { neem(mx, my, half); neem(mx + dx, my + dy, half); }
+  }
+  return k;
 }
 
 /**

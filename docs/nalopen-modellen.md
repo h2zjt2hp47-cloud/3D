@@ -457,7 +457,59 @@ Sullivan zijn de armen dikke kussens tegen een dunnere rug, met een plooi ertuss
 - **Ongewijzigd:** de maten (66 × 64 × 78 en 72 × 80 × 93), de zitdiepte, de prijs (Ross 866, Sullivan 954) en de
   andere 40 modellen (prijs, tekeningen en 3D identiek; beeldvergelijking 0,00 %).
 - **Wat nog afwijkt:** de arm van Sullivan is op de foto een ronde rol die ook wat naar buiten bolt, en zijn rug is van
-  voren breder dan bij ons (vrije breedte 75 % tegenover 70 %; zie de grenzen van de motor hieronder).
+  voren breder dan bij ons (vrije breedte 75 % tegenover 70 %). Dat laatste is daarna aangepakt: zie hieronder. Het
+  blad hierboven toont Sullivan nog met een rechte schaal.
+
+## De schaal waaiert uit (14/11)
+
+Jonas: "ja ja" (de armen mogen online, en de schaal die naar boven breder wordt mag gebouwd worden). Bij Manon en
+Sullivan is de schaal een tulp: aan haar voet sluit ze om de zitting, naar boven staat ze rondom naar buiten.
+
+![Manon en Sullivan: foto, vroeger en nu](afbeeldingen/fauteuils-waaier.jpg)
+
+- **Nieuw gegeven per model:** `waaier` in `vormgeving.kuip`, in graden. De schaal staat vanaf haar onderkant rondom
+  zoveel naar buiten. Samen met `helling` helt de rug achteraan met de som van de twee.
+- **De maten van de site zijn die van de bovenrand.** De voet van de schaal, de zitting en het onderstel zijn dus
+  smaller en korter dan het element. De motor rekent eerst de voet uit en kiest dan de hoek zo dat het breedste punt
+  van de schaal precies op de rand van het element komt (75 × 70 en 72 × 80 blijven dus exact).
+- **De maten passen nu in elkaar** (opgemeten op de volle foto's met een raster):
+
+  | | Zitting | Voet van de schaal | Waaier | Extra helling achteraan | Bovenrand |
+  |---|---|---|---|---|---|
+  | Manon | rond, ±61 cm | 62,6 cm breed | 5,7° | 1° | 75 × 70 (site) |
+  | Sullivan | rond, 62 cm (zoals de hocker) | 64,8 cm breed | 5,6° | 7,9° | 72 × 80 (site) |
+
+  Bij Manon: op de foto van voren is de schaal 15 cm boven de vloer 86 % zo breed als bovenaan (bij ons 85 %), en de
+  rug helt van opzij ±7° (bij ons 6,7°). Bij Sullivan helt de rug boven de zitting ±14° (bij ons 13,5°).
+- **Sullivan, de rug van voren:** de rug blijft langer op volle hoogte (tot een derde van de schaal in plaats van een
+  vijfde). Zijn breedte tegenover de hele breedte, op vier hoogtes tussen de bovenkant en de armen:
+
+  | | Bijna bovenaan | 40 % lager | 70 % lager | Bij de armen |
+  |---|---|---|---|---|
+  | Foto | 65 % | 75 % | 80 % | 85 % |
+  | Vroeger | 38 % | 52 % | 67 % | 82 % |
+  | Nu | 62 % | 68 % | 76 % | 84 % |
+
+  In het midden van de rug is de schaal nu 8 cm dik (was 10), zodat de zitdiepte op 60 cm blijft (site: 60).
+- **Een fout in het vorige model van Manon, meteen rechtgezet.** De schaal helde 9,5° achterover en week daardoor op
+  zithoogte 6 cm van de zitting weg: van boven zag je een donkere spleet achter de zitting (zie het blad, *van boven,
+  vroeger*). De 12 cm waarop die 9,5° steunde, bevatte ook de ronde onderrand van de schaal. Nu komt de zitting overal
+  tot tegen de schaal, en een test bewaakt dat voor elke schaal die helt of uitwaaiert.
+- **Alles tekent dezelfde vorm:** 3D, boven- en vooraanzicht (het vooraanzicht kan nu een wand tekenen die bovenaan
+  breder is dan aan haar voet), en het onderstel van Sullivan staat onder de smallere voet.
+- **Ongewijzigd:** de prijs (Manon 966, Sullivan 954) en de andere 40 modellen (prijs, tekeningen en 3D identiek;
+  beeldvergelijking 0,00 %), ook de drie Mabels met hun helling.
+- **Zitdiepte:** Sullivan 59,9 (site 60). Manon 60 (site 52): vroeger stond er ±58, maar dat telde de spleet mee; de
+  zitting zelf was 52 cm diep met 6 cm niets erachter. De echte rug is bij de zitting dikker dan aan de rand; dat kan de
+  motor niet (zie de grenzen hieronder).
+- **Wat nog afwijkt:** de rug van Sullivan is bovenaan vlakker dan bij ons (een rechte balk tegenover een boog: van
+  opzij is onze rug bovenaan ±5 cm dieper); de voorrand van de schaal van Manon staat op de foto van opzij ±5° naar
+  voren; en bij allebei plooit de schaal helemaal onderaan rond naar binnen.
+
+**Rechtzetting.** In een eerdere versie van dit document stond dat de schouder van Sullivan van opzij over ±23 cm
+schuin afloopt, en dat geen enkel verloop zowel de foto van voren als die van opzij kon volgen. Die 23 cm was gemeten op
+een verkleinde foto. Op de volle foto, tegen de diepte van 80 cm, is het ±17 cm. Het echte verschil zat in de vorm: de
+schaal is een tulp.
 
 ## Stand van de afwijkingen (14/11)
 
@@ -477,14 +529,19 @@ Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
 | Vier kussens in plaats van drie; dikkere rug | Quin; Tumble |
 | Sierkussens vóór de rugkussens in het vooraanzicht | alle modellen met sierkussens |
 | Bovenaanzicht en 3D op dezelfde hoogtes | alle fauteuils met een helling of losse kussens |
-| Armen dikker dan de rug (zie het blad hieronder) | Ross, Sullivan |
+| Armen dikker dan de rug | Ross, Sullivan |
+| De schaal waaiert uit (een tulp rond een ronde zitting) | Manon, Sullivan |
+| Spleet tussen zitting en schaal op zithoogte | Manon |
 
 **Grens van de motor** (kan nu niet; met de reden)
 
 | Wat | Reden |
 |---|---|
-| De schaal van Sullivan en Manon waaiert ook opzij uit | De helling werkt alleen naar achteren; een schaal die naar boven breder wordt, vraagt een grondvlak per hoogte. Gemeten bij Sullivan (14/11): van voren is de rug bovenaan ±47 cm breed, van opzij loopt de schouder over ±23 cm schuin af. Een rechte schaal op een rond grondvlak kan maar één van de twee: wij volgen de foto van opzij, dus is de rug van voren te smal (±29 cm). |
-| De arm van Sullivan is een ronde rol die ook ±2 cm naar buiten bolt | Het extra van een dikkere arm komt alleen naar binnen; de doorsnede van de schaal is een rechte wand met een ronde bovenkant. |
+| De rug van Sullivan is bovenaan vlak, bij ons een boog | Het grondvlak van de schaal heeft op elke hoogte dezelfde vorm (alleen groter). Van voren klopt de breedte nu op enkele procenten; van opzij is de rug bovenaan ±5 cm dieper dan op de foto. |
+| De rug is bij de zitting dikker dan aan de rand (Manon: zitdiepte 60 tegenover 52 op de site) | De doorsnede van de schaal is van onder tot boven even dik. |
+| De schaal plooit helemaal onderaan rond naar binnen (Manon, Sullivan) | De wand staat van haar voet tot haar rand onder één hoek. |
+| De voorrand van de schaal van Manon staat ±5° naar voren | De waaier werkt langs de buitenkant van de wand; aan haar uiteinde wijst die opzij, niet naar voren. |
+| De arm van Sullivan is een ronde rol | De doorsnede van de schaal is een rechte wand met een ronde bovenkant. Dat de arm buiten de zitting uitkomt, klopt sinds de waaier wel. |
 | De kussens van Quin liggen los door elkaar | Kussens zijn stijve vormen die volgens een regel geplaatst worden. |
 | De arm van Zora loopt rond de rug door | Arm en rug zijn aparte elementen. |
 | De houten band rond de rugschijf van Karl | Een band die de hellende schijf volgt, bestaat niet als bouwsteen. De achterpoten lopen bij ons door de zitting in plaats van erachter. |
@@ -504,10 +561,11 @@ Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
 
 - Details uit de tweede doorgang: de aflopende armlijn van Esmee, de dikkere armen van Fréjus, de kleur van Belize en
   Azar, de arm van Zora die rond de rug doorloopt, de standaardstikking per model.
-- Het frame van Karl (houten band rond de rugschijf); de schaal van Sullivan en Manon die ook opzij uitwaaiert; de
-  kussens van Quin losser. (De dikkere armen van Ross en Sullivan zijn gebouwd op 14/11.)
+- Het frame van Karl (houten band rond de rugschijf); de kussens van Quin losser. (De dikkere armen van Ross en
+  Sullivan en de uitwaaierende schaal van Manon en Sullivan zijn gebouwd op 14/11.)
 - De Fraser hocker, de Mabel hocker en de poefs Stockholm, Kanto en Fez: geen eigen pagina, dus geen maten; Stockholm
   en Kanto lopen op de foto naar boven smaller toe.
-- Een schaal die uitwaaiert (Sullivan, Manon). De helling, de vierkante poten en de dikkere armen zijn gebouwd.
+- De helling, de vierkante poten, de dikkere armen en de uitwaaierende schaal zijn gebouwd. Wat overblijft, staat bij
+  de grenzen van de motor hierboven (een rug die bij de zitting dikker is, zou de zitdiepte van Manon rechtzetten).
 - De maten van de Pebble fauteuil vragen aan de klant (alleen de poef staat op de site).
 - Pas publiceren na goedkeuring.

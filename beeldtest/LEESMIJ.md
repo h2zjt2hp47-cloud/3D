@@ -49,6 +49,7 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `satie-schuin`, `quin-schuin` | trommel tot op de vloer of op een lage voet, met één of vier losse kussens tegen de schaal |
 | `karl-schuin` | zwevende rugschijf boven een vaste zitting, op een houten frame |
 | `tumble-schuin` | dikke rug die op een bolle zitting staat |
+| `manon-voor` | de schaal die uitwaaiert: van voren een tulp rond een ronde zitting (14/11) |
 | `sullivan-zij` | de rug die achterover helt, van opzij (14/11) |
 | `sullivan-schuin` | armen die dikker zijn dan de rug, met de plooi ertussen (14/11) |
 | `pebble-naad` (close-up) | de naad waar de schaal in de zitting duikt |

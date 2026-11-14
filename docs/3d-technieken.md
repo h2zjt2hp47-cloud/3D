@@ -124,9 +124,18 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
     foto's dikke rollen leken. Gemeten op de foto van voren en op ons beeld van voren (de vrije breedte tussen de armen
     tegenover de hele breedte) bleek dat te dik: Ross 9 cm, en bij Sullivan was niet de arm dikker maar de rug ernaast
     dunner. Een verhouding heeft geen schaal in cm nodig en vergelijkt foto en beeld op dezelfde manier.
-24. **Twee foto's die elkaar tegenspreken, tonen een vorm die de motor niet heeft.** De rug van Sullivan is van voren
-    ±47 cm breed en loopt van opzij over ±23 cm schuin af. Geen enkel verloop van de bovenrand geeft beide: de schaal
-    is bovenaan breder dan onderaan. Niet verder schuiven met de getallen, maar de ontbrekende bouwsteen noteren.
+24. **Twee foto's die elkaar tegenspreken, tonen een vorm die de motor niet heeft.** De rug van Sullivan was van voren
+    te smal, en het verloop van de bovenrand kon de foto van voren en die van opzij niet allebei volgen. De schaal is
+    bovenaan breder dan onderaan: een tulp. Niet verder schuiven met de getallen, maar de ontbrekende bouwsteen bouwen
+    (`waaier`). **Wel eerst goed meten:** de eerste meting (±23 cm schuine schouder) kwam van een verkleinde foto; op de
+    volle foto met een raster was het ±17 cm, en het conflict was kleiner dan het leek.
+25. **De juiste vorm doet de maten van de site in elkaar passen.** Manon: een ronde zitting van ±62 cm met een schaal
+    die 5,7° uitwaaiert, geeft bovenaan precies 75 × 70. Sullivan: zitting 62 (zoals de hocker), 5,6° waaier en 7,9°
+    helling geven 72 × 80. Past het niet, zoek dan verder naar de vorm (zie ook les 20).
+26. **Een schaal die van de zitting wegwijkt, laat een spleet.** De rug van Manon helde 9,5° en lag op zithoogte 6 cm
+    achter de rand van de zitting; van voren zag je het niet, van boven wel. Reken voor elke schaal die helt of
+    uitwaaiert na of haar binnenkant op zithoogte nog binnen de zitting ligt (test in `modellen.test.ts`), en bekijk het
+    model ook van boven.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
@@ -237,6 +246,12 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
   zijden staat in `doorlopend.test.ts`.
 - **Een wand die oploopt of zakt:** de helling moet meetellen in de richting van het oppervlak, anders kloppen de
   schaduwen niet. Test de richtingen tegen kleine stapjes in het veld (`zachtevorm.test.ts`).
+- **Een wand die bovenaan breder is dan aan haar voet (`waaier`):** de maten van het element zijn dan die van de
+  bovenrand. Reken eerst de voet uit (`kuipVoet`: één bron voor de opbouw, de zitting, het onderstel en de tekeningen)
+  en leid de hoek daaruit af, zodat het breedste punt precies op de rand van het element komt; omgekeerd mist de
+  afronding van de voet (0,1 cm) de maten met een millimeter. Het breedste punt is waar de voet staat plus wat de wand
+  daar uitsteekt, niet waar ze het meest uitsteekt. Het vooraanzicht tekende een hoogte per plaats en kan zo geen wand
+  tekenen die overhangt: daar is een echte omtrek nodig (boven- én onderkant per plaats).
 - **Een wand die dikker wordt:** verschuif de middenlijn niet. Alles wat de wand tekent, rekent zijn richtingen uit de
   middenlijn; een verschoven lijn draait in de overgang, en dan draait de buitenkant mee. De middenlijn blijft die van
   de gewone dikte, en `wandDoorsnede` (`kuip.ts`) geeft per punt het midden van de doorsnede en haar halve dikte. Elke

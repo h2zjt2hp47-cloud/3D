@@ -7,7 +7,7 @@
 import type { Materiaal } from './materialen.js';
 import { chaiseRugVan, chaiseRugVlak, draagHoogteVan, dragerVan, gekozenOpties, karkasHoogteVan, rugleuningTop, lokaalNaarWereld, hoogtesVan, materiaalVan, poefHoogteVan, voetafdruk, vormgevingVan, type Ontwerp, type OntwerpCatalogus, type OptieKeuze } from './ontwerp.js';
 import type { TekeningResultaat, VormResultaat } from './types.js';
-import { framePoten, kuipOpbouw, kuipParameters, kuipUit, trommelKader, wandDoorsnede } from './kuip.js';
+import { framePoten, kuipOpbouw, kuipParameters, kuipVoet, trommelKader, wandDoorsnede } from './kuip.js';
 import { strakProfiel, uitlopendProfiel } from './ruimtelijk.js';
 
 const rond = (x: number) => Math.round(x * 100) / 100;
@@ -104,7 +104,8 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           const frame = vorm === 'ringframe' ? Math.min(frameDik, P / 3) : 0;
           // Onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
           const hoogFrame = hoogtesVan(ontwerp, catalogus, e);
-          const tk = trommelKader(e.breedte, e.diepte, kuipFrame, kuipUit(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }, e.diepte)), wk = lokaalNaarWereld(e, tk.x, tk.y, tk.b, tk.d), mid = wk.x + wk.b / 2;
+          const voetFrame = kuipVoet(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }, e.breedte, e.diepte);
+          const tk = trommelKader(e.breedte, e.diepte, kuipFrame, voetFrame.uit, voetFrame.zij), wk = lokaalNaarWereld(e, tk.x, tk.y, tk.b, tk.d), mid = wk.x + wk.b / 2;
           if (frame) rect(`${e.id}.ring`, wk.x + 3, -P, wk.b - 6, frame, potKleur);
           // Zelfde poten als in de 3D (framePoten): de bovenkant onder het frame, de voet schuin naar buiten.
           const fp = framePoten(wk.b, wk.h, P - frame, kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : rondePoef ? 2 : null);
@@ -227,14 +228,23 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           // Met dikkere armen (`binnen`) volgt de lijn het midden van de doorsnede, met de halve dikte per punt.
           const ds = wandDoorsnede(opb.wand.pad, opb.wand.dikte, opb.wand.binnen);
           const pw: { x: number; y: number }[] = [], hw: number[] = [], dw: number[] = [];
+          // Uitwaaierende schaal: per punt ook waar het midden van de doorsnede bovenaan staat (langs de buitennormaal
+          // naar buiten, en achteraan met de helling mee naar achteren), zoals in de 3D.
+          const waaier = opb.wand.waaier ?? 0, tw: number[] = [];
+          const boven = ds.midden.map(([lx, ly], i): [number, number] => {
+            if (!waaier) return [lx, ly];
+            const [nx, ny] = ds.normaal[i]!, hoog = opb.wand.hoogtes[i]! - opb.wand.onder;
+            return [lx + nx * waaier * hoog, ly + (ny * waaier - (opb.wand.leun ?? 0) * Math.max(0, -ny)) * hoog];
+          });
           ds.midden.forEach(([lx, ly], i) => {
-            if (i === 0) { pw.push(wereld(lx, ly)); hw.push(opb.wand.hoogtes[0]!); dw.push(ds.half[0]!); return; }
+            if (i === 0) { pw.push(wereld(lx, ly)); hw.push(opb.wand.hoogtes[0]!); dw.push(ds.half[0]!); if (waaier) tw.push(wereld(boven[0]![0], boven[0]![1]).x); return; }
             const [vx, vy] = ds.midden[i - 1]!, n = Math.max(1, Math.ceil(Math.hypot(lx - vx, ly - vy) / 0.5));
             for (let k = 1; k <= n; k++) {
               const f = k / n;
               pw.push(wereld(vx + (lx - vx) * f, vy + (ly - vy) * f));
               hw.push(opb.wand.hoogtes[i - 1]! + (opb.wand.hoogtes[i]! - opb.wand.hoogtes[i - 1]!) * f);
               dw.push(ds.half[i - 1]! + (ds.half[i]! - ds.half[i - 1]!) * f);
+              if (waaier) tw.push(wereld(boven[i - 1]![0] + (boven[i]![0] - boven[i - 1]![0]) * f, boven[i - 1]![1] + (boven[i]![1] - boven[i - 1]![1]) * f).x);
             }
           });
           const midZ = voetafdruk(e).y + voetafdruk(e).h / 2;
@@ -261,7 +271,39 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
             const hMax = Math.max(...top);
             return { d: pts.join(' '), x: x0 + eerste * stap, b: (laatste - eerste) * stap, hMax };
           };
-          const achter = omhullende(false);
+          /**
+           * Zelfde silhouet voor een uitwaaierende schaal. Die is bovenaan breder dan aan haar voet, en dat kan een
+           * hoogte per plaats niet tekenen: opzij hangt de wand over. Daarom per plaats de bovenkant én de onderkant van
+           * wat de wand daar bedekt, en de omtrek ertussen.
+           */
+          const omtrekWaaier = (alleenVoor: boolean) => {
+            const stap = 1, n = Math.ceil(p.b / stap) + 1;
+            const top = new Array<number>(n).fill(-1), bodem = new Array<number>(n).fill(Infinity);
+            pw.forEach((q, i) => {
+              if (alleenVoor && q.y < midZ) return;
+              const hT = hw[i]!, half = dw[i]!, xt = tw[i]!, schuin = xt - q.x, lijf = Math.max(0, hT - half - opb.wand.onder);
+              for (let k = 0; k < n; k++) {
+                const x = x0 + k * stap;
+                // Het deel van de hoogte (0 = voet, 1 = waar de ronding begint) waarover de wand deze plaats bedekt.
+                let t0 = 0, t1 = 1;
+                if (Math.abs(schuin) < 1e-9) { if (Math.abs(x - q.x) > half) t1 = -1; }
+                else { const a = (x - half - q.x) / schuin, b = (x + half - q.x) / schuin; t0 = Math.max(0, Math.min(a, b)); t1 = Math.min(1, Math.max(a, b)); }
+                const rond = Math.abs(x - xt) <= half ? hT - half + Math.sqrt(half * half - (x - xt) * (x - xt)) : -1;
+                if (t1 < t0 && rond < 0) continue;
+                const laag = t1 >= t0 ? opb.wand.onder + t0 * lijf : hT - half, hoog = Math.max(t1 >= t0 ? opb.wand.onder + t1 * lijf : -1, rond);
+                top[k] = Math.max(top[k]!, hoog); bodem[k] = Math.min(bodem[k]!, laag);
+              }
+            });
+            let eerste = -1, laatste = -1;
+            top.forEach((v, k) => { if (v > 0) { if (eerste < 0) eerste = k; laatste = k; } });
+            if (eerste < 0) return null;
+            const pts: string[] = [];
+            for (let k = eerste; k <= laatste; k++) pts.push(`${k === eerste ? 'M' : 'L'}${rond(x0 + k * stap)} ${rond(-Math.max(top[k]!, opb.wand.onder))}`);
+            for (let k = laatste; k >= eerste; k--) pts.push(`L${rond(x0 + k * stap)} ${rond(-Math.min(bodem[k]!, Math.max(top[k]!, opb.wand.onder)))}`);
+            pts.push('Z');
+            return { d: pts.join(' '), x: x0 + eerste * stap, b: (laatste - eerste) * stap, hMax: Math.max(...top) };
+          };
+          const achter = waaier ? omtrekWaaier(false) : omhullende(false);
           if (achter) pad(`${e.id}.rug`, achter.d, achter.x, top(achter.hMax), achter.b, achter.hMax - opb.wand.onder, donker, lijn);
           const xs = (pts: [number, number][]) => { const w = pts.map(([lx, ly]) => wereld(lx, ly).x); return [Math.min(...w), Math.max(...w)] as const; };
           // Losse rugkussens: de achterste eerst (bij Quin staat het middelste achter de twee andere); een gedraaid
@@ -274,7 +316,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           for (const { k, i, xa, xb } of kussens)
             rect(`${e.id}.rugkussen${opb.rugkussens.length > 1 ? i + 1 : ''}`, xa, top(k.y + k.h), xb - xa, k.h, stof, { afronding: 2 + zacht, ...lijn });
           const [bx0, bx1] = xs(kp.zitTrommel ? opb.zit : opb.plan);
-          const voor = kp.zwevend ? null : omhullende(true);
+          const voor = kp.zwevend ? null : waaier ? omtrekWaaier(true) : omhullende(true);
           // Trommel: één zitting van de poten tot de zithoogte, die vóór de uiteinden van de schaal staat (de schaal stopt
           // rond het midden; getekend na de zitting leken haar uiteinden twee palen ervoor). Anders een onderbouw met het
           // kussen erop, en de armen ervoor.
