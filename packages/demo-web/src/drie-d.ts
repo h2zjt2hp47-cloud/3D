@@ -280,7 +280,12 @@ export interface Opties3D {
    * (gevraagd), fout (bestand kon niet geladen worden) of geen (het model heeft geen 3D-bestand of het past niet).
    */
   opEcht?: (getoond: Echt3DPlaatsing | null, toestand: EchtToestand) => void;
+  /** Voorvallen van de weergave zelf, voor het logboek: op welke weg ze tekent, en een herstart na een weggevallen toestel. */
+  opLog?: (tekst: string) => void;
 }
+
+/** De weergave zelf, zoals `maakViewer` ze bouwt: ook te sluiten, en met een proef voor de tests. */
+type EigenViewer = Viewer3D & { sluit(): void; proefVerlies(): void };
 
 /**
  * Vaste toevalsreeks (Park-Miller) voor de getekende texturen van vloer, wand en hout: dezelfde tekening bij elke keer
@@ -291,7 +296,67 @@ function vasteReeks(sleutel: string) {
   return () => (s = (s * 16807) % 2147483647) / 2147483647;
 }
 
+/**
+ * De 3D-weergave in `houder`. Valt het grafische toestel weg (WebGPU: device lost, WebGL2: context lost), dan tekent
+ * three niets meer en blijft het laatste beeld staan, terwijl de rest van de pagina gewoon verder werkt: je koos een
+ * ander model en zag nog de vorige zetel, tot je de pagina herlaadde (melding van Jonas, 14/11). Daarom start deze
+ * functie dan zelf een nieuwe weergave en zet ze er alles weer in wat erin stond (scène, decor, licht, kwaliteit,
+ * instellingen, standpunt, aanduiding). Twee keer kort na elkaar: verder op WebGL2. Blijft het gebeuren, dan stopt ze
+ * met een uitleg in plaats van eindeloos te herstarten.
+ */
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
+  const toestand: { scene?: Scene3D; decor?: DecorNaam; licht?: LichtNaam; kwaliteit?: Kwaliteit; weergave: Partial<Weergave3D>; markeer?: string | null; standpunt?: Standpunt } = { weergave: {} };
+  let verliezen: number[] = [];
+  let huidige: EigenViewer | null = null;
+  const start = (geenWebGPU: boolean) => maakViewer(houder, opties, { geenWebGPU, opVerloren: (reden) => window.setTimeout(() => herstart(reden), 0) });
+  const herstart = (reden: string) => {
+    const nu = performance.now();
+    verliezen = [...verliezen.filter((x) => nu - x < 60000), nu];
+    huidige?.sluit();
+    if (verliezen.length > 4) {
+      huidige = null;
+      houder.textContent = 'De 3D is gestopt: de grafische kaart verbrak telkens de verbinding. Herlaad de pagina om verder te gaan.';
+      opties.opLog?.(`3D gestopt na ${verliezen.length} keer een weggevallen toestel (${reden})`);
+      return;
+    }
+    const opWebGL = verliezen.length >= 2;
+    opties.opLog?.(`3D: het grafische toestel viel weg (${reden}); herstart ${verliezen.length}${opWebGL ? ' op WebGL2' : ''}`);
+    huidige = start(opWebGL);
+    if (!huidige) return;
+    if (toestand.kwaliteit) huidige.kwaliteit?.(toestand.kwaliteit);
+    if (toestand.decor) huidige.decor?.(toestand.decor);
+    if (toestand.licht) huidige.licht?.(toestand.licht);
+    if (Object.keys(toestand.weergave).length) huidige.instellen?.(toestand.weergave);
+    if (toestand.scene) huidige.toon(toestand.scene);
+    if (toestand.standpunt) huidige.standpunt(toestand.standpunt);
+    if (toestand.markeer) huidige.markeer?.(toestand.markeer);
+  };
+  huidige = start(false);
+  if (!huidige) return null;
+  const buiten: Viewer3D & { proefVerlies(): void } = {
+    toon(s) { toestand.scene = s; huidige?.toon(s); },
+    decor(naam) { toestand.decor = naam; huidige?.decor?.(naam); },
+    licht(naam) { toestand.licht = naam; huidige?.licht?.(naam); },
+    kwaliteit(k) { toestand.kwaliteit = k; huidige?.kwaliteit?.(k); },
+    foto: () => huidige?.foto?.() ?? null,
+    beeld: (type, kwaliteit) => huidige?.beeld?.(type, kwaliteit) ?? null,
+    fotoRealistisch: (o) => {
+      // In het logboek: de fotomodus houdt het gewone tekenen tegen tot hij klaar is.
+      opties.opLog?.(`fotomodus gestart (${o.stappen} stappen)`);
+      const klaar = (uitslag: string) => opties.opLog?.(`fotomodus ${uitslag}`);
+      return (huidige?.fotoRealistisch?.(o) ?? Promise.resolve(null)).then((url) => { klaar(url ? 'klaar' : 'gestopt zonder beeld'); return url; }, (fout) => { klaar(`mislukt: ${String(fout).slice(0, 120)}`); throw fout; });
+    },
+    standpunt(naam) { toestand.standpunt = naam; huidige?.standpunt(naam); },
+    instellen(w) { toestand.weergave = { ...toestand.weergave, ...w }; huidige?.instellen?.(w); },
+    markeer(id) { toestand.markeer = id; huidige?.markeer?.(id); },
+    formaat() { huidige?.formaat(); },
+    // Voor de tests: doen alsof het toestel wegvalt (zoals de browser het meldt).
+    proefVerlies() { huidige?.proefVerlies(); },
+  };
+  return buiten;
+}
+
+function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU: boolean; opVerloren: (reden: string) => void }): EigenViewer | null {
   // WebGPU (04-11): WebGPURenderer, op WebGPU waar de browser het heeft (Safari 26+, Chrome), anders op WebGL2. Zonder
   // navigator.gpu kiezen we zelf WebGL2 met een bewaard beeld (preserveDrawingBuffer), zodat een beeld van het canvas
   // ook later te nemen is (tests, oudere browsers). Met WebGPU: beelden altijd via beeld() of foto() (tekenen en lezen
@@ -300,7 +365,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   let webgpu = false;
   try {
     const webgl2 = (canvas: HTMLCanvasElement) => canvas.getContext('webgl2', { antialias: true, alpha: true, depth: true, stencil: false, preserveDrawingBuffer: true });
-    if ('gpu' in navigator) {
+    if ('gpu' in navigator && !intern.geenWebGPU) {
       const parameters: Record<string, unknown> = { antialias: true };
       renderer = new WebGPURenderer(parameters);
       webgpu = true;
@@ -320,6 +385,15 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   }
   /** Pas na init() kan de renderer tekenen; tot dan wordt elk beeld uitgesteld. */
   let klaar = false;
+  /** Gesloten (vervangen door een nieuwe weergave na een weggevallen toestel): niets meer tekenen of plannen. */
+  let gesloten = false;
+  // Three zet zichzelf stil als het toestel wegvalt (alleen een melding in de console). Wij geven het door, zodat
+  // maak3D een nieuwe weergave kan starten.
+  const standaardVerloren = renderer.onDeviceLost;
+  renderer.onDeviceLost = (info: { api?: string; message?: string; reason?: string | null } | undefined) => {
+    try { standaardVerloren?.call(renderer, info); } catch { /* three meldt het zelf in de console */ }
+    if (!gesloten) intern.opVerloren(`${info?.api ?? 'onbekend'}${info?.reason ? ', ' + info.reason : ''}${info?.message ? ': ' + String(info.message).slice(0, 120) : ''}`);
+  };
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   // Zo scherp als de kaart toelaat onder een schuine hoek: weefsel op een zitting of rug wordt zo niet wazig. 16 is het
   // maximum van WebGPU; de WebGL2-weg begrenst zelf op wat de kaart kan.
@@ -1775,7 +1849,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   function pauzeerDraaien() { draaiPauzeTot = performance.now() + 3000; }
   const lensFactor = () => Math.tan((35 * Math.PI) / 360) / Math.tan((weergave.lens * Math.PI) / 360);
   function draaiLus() {
-    if (!weergave.draaien) { draaiLoopt = false; return; }
+    if (!weergave.draaien || gesloten) { draaiLoopt = false; return; }
     draaiLoopt = true;
     if (!bezigMetFoto && performance.now() > draaiPauzeTot && !aanwijzers.size) { hoekH += 0.0035; plaatsCamera(); }
     requestAnimationFrame(draaiLus);
@@ -1892,18 +1966,18 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // Veel aanvragen kort na elkaar (slepen, schuifregelaar) worden samengevoegd tot één beeld per schermverversing.
   let beeldGepland = 0;
   function render(direct = false) {
-    if (bezigMetFoto) return;
+    if (bezigMetFoto || gesloten) return;
     if (direct) { cancelAnimationFrame(beeldGepland); beeldGepland = 0; tekenNu(true); return; }
     if (!beeldGepland) beeldGepland = requestAnimationFrame(() => { beeldGepland = 0; tekenNu(false); });
   }
   function tekenNu(direct: boolean) {
-    if (bezigMetFoto || !klaar) return;
+    if (bezigMetFoto || !klaar || gesloten) return;
     const c = metNabewerking() ? composer : null;
     if (!c) { renderer.render(scene, camera); return; }
     if (direct) { clearTimeout(mooiGepland); c.render(); return; }
     renderer.render(scene, camera);
     clearTimeout(mooiGepland);
-    mooiGepland = window.setTimeout(() => { if (!bezigMetFoto) c.render(); }, 180);
+    mooiGepland = window.setTimeout(() => { if (!bezigMetFoto && !gesloten) c.render(); }, 180);
   }
 
   let kader = { x: 0, z: 0, b: 230, d: 95, h: 80 };
@@ -2176,7 +2250,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   function planZacht(s: Scene3D, taken: { delen: Blok[]; buren: Blok[] }[]) {
     clearTimeout(zachtGepland);
     const volgende = () => {
-      if (laatsteScene !== s) return;
+      if (laatsteScene !== s || gesloten) return;
       const taak = taken.find((t) => !zachteVormen.has(vormSleutel(t.delen, t.buren)));
       if (!taak) { viewer.toon(s); return; }
       const { delen, buren } = taak;
@@ -2195,7 +2269,16 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
   let laatsteBreedte = 0;
-  const viewer: Viewer3D = {
+  const viewer: EigenViewer = {
+    sluit() {
+      gesloten = true;
+      waarnemer.disconnect();
+      cancelAnimationFrame(beeldGepland);
+      cancelAnimationFrame(gepland);
+      for (const x of [mooiGepland, decorGepland, zachtGepland, ...schaduwLater]) clearTimeout(x);
+      try { renderer.dispose?.(); } catch { /* het toestel is al weg */ }
+    },
+    proefVerlies() { renderer.onDeviceLost({ api: 'proef', message: 'toestel weggevallen (test)', reason: 'proef' }); },
     toon(s: Scene3D) {
       for (const c of [...groep.children]) {
         groep.remove(c);
@@ -2423,21 +2506,26 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   // Alleen bij een andere breedte, en pas in de volgende beeldronde: het canvas verandert zelf de hoogte van het
   // vak, en meteen herschalen gaf de browserwaarschuwing "ResizeObserver loop …" (als rode melding op het scherm).
   let gepland = 0;
-  new ResizeObserver(() => {
-    if (gepland || !houder.clientWidth || houder.clientWidth === laatsteBreedte) return;
-    gepland = requestAnimationFrame(() => { gepland = 0; viewer.formaat(); });
-  }).observe(houder);
+  const waarnemer = new ResizeObserver(() => {
+    if (gepland || gesloten || !houder.clientWidth || houder.clientWidth === laatsteBreedte) return;
+    gepland = requestAnimationFrame(() => { gepland = 0; if (!gesloten) viewer.formaat(); });
+  });
+  waarnemer.observe(houder);
   viewer.formaat();
   // WebGPURenderer start asynchroon: pas daarna tekenen (de eerste toon() wacht tot hier).
   renderer.init().then(() => {
+    if (gesloten) return;
     klaar = true;
     webgpu = webgpu && renderer.backend?.isWebGPUBackend === true;
     renderer.domElement.dataset.backend = webgpu ? 'webgpu' : 'webgl2';
+    opties.opLog?.(`3D gestart op ${webgpu ? 'WebGPU' : 'WebGL2'}`);
     schaduwOpnieuw();
     viewer.formaat();
     render(true);
   }).catch((fout: unknown) => {
+    if (gesloten) return;
     console.error('3D kon niet starten:', fout);
+    opties.opLog?.(`3D kon niet starten: ${String(fout).slice(0, 160)}`);
     houder.textContent = '3D kon niet starten in deze browser.';
   });
   return viewer;

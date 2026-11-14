@@ -8,6 +8,7 @@ import { modelOntwerp, startModellen } from './modellen-ui.js';
 import { startCatalogusEditor } from './catalogus-ui.js';
 import { huidigOntwerp, kiesWeergave, laadInOntwerper, startOntwerper, toonOfferte } from './ontwerper.js';
 import { $, bewaar, getKorting, laad, setKorting } from './staat.js';
+import { log, logboekTekst, vanToestelVerlies } from './logboek.js';
 
 const weergaven = ['modellen', 'ontwerp', 'offerte', 'sofa', 'kast', 'materialen', 'catalogus'] as const;
 type Weergave = (typeof weergaven)[number];
@@ -19,6 +20,7 @@ const TITELS: Record<Weergave, string> = {
 };
 
 function toon(w: Weergave) {
+  log(`scherm: ${w}`);
   document.querySelectorAll<HTMLButtonElement>('[data-weergave]').forEach((b) =>
     b.setAttribute('aria-pressed', String(b.dataset.weergave === w || (b.dataset.weergave === 'beheer' && BEHEER.includes(w)))),
   );
@@ -79,10 +81,37 @@ function startKlant() {
   zet(laad(SLEUTEL_KLANTWEERGAVE) === '1');
 }
 
+/** Het logboek op het klembord; lukt dat niet (sommige browsers op een lokaal bestand), dan in een vak om zelf te kopiëren. */
+async function kopieerLogboek(melding: HTMLElement | null) {
+  const tekst = logboekTekst();
+  try {
+    await navigator.clipboard.writeText(tekst);
+    if (melding) melding.textContent = 'Logboek gekopieerd: plak het in je bericht.';
+  } catch {
+    let vak = document.querySelector<HTMLTextAreaElement>('#logboek-tekst');
+    if (!vak) {
+      vak = document.createElement('textarea');
+      vak.id = 'logboek-tekst';
+      vak.readOnly = true;
+      vak.rows = 12;
+      vak.setAttribute('aria-label', 'Logboek');
+      document.querySelector('footer')?.append(vak);
+    }
+    vak.value = tekst;
+    vak.focus();
+    vak.select();
+    if (melding) melding.textContent = 'Kopiëren lukt hier niet vanzelf: de tekst hieronder is geselecteerd, kopieer ze met Ctrl/⌘ + C.';
+  }
+}
+
 function toonFout(waar: string, fout: unknown) {
   const vak = document.getElementById('foutmelding');
   if (!vak) return;
   const tekst = `${waar}: ${fout instanceof Error ? fout.message : String(fout)}`;
+  log(`FOUT ${tekst}${fout instanceof Error && fout.stack ? ' | ' + fout.stack.split('\n').slice(1, 4).map((r) => r.trim()).join(' < ') : ''}`);
+  // Volgt op een weggevallen grafisch toestel: de 3D herstart zelf (zie maak3D), dus geen rode melding; wel in het
+  // logboek en in de console.
+  if (vanToestelVerlies(tekst)) { console.warn(tekst); return; }
   console.error(tekst, fout);
   // Dezelfde melding maar één keer, en een knop om de melding weg te klikken.
   if ([...vak.querySelectorAll('p')].some((p) => p.textContent === tekst)) return;
@@ -92,7 +121,14 @@ function toonFout(waar: string, fout: unknown) {
     sluit.textContent = 'Sluiten';
     sluit.setAttribute('aria-label', 'Melding sluiten');
     sluit.addEventListener('click', () => { vak.hidden = true; for (const p of vak.querySelectorAll('p')) p.remove(); });
-    vak.append(sluit);
+    // Het logboek erbij: wat er voor de fout gebeurde.
+    const logKnop = document.createElement('button');
+    logKnop.type = 'button';
+    logKnop.textContent = 'Kopieer logboek';
+    const logMelding = document.createElement('span');
+    logMelding.setAttribute('role', 'status');
+    logKnop.addEventListener('click', () => void kopieerLogboek(logMelding));
+    vak.append(sluit, ' ', logKnop, ' ', logMelding);
   }
   vak.hidden = false;
   const regel = document.createElement('p');
@@ -124,6 +160,7 @@ veilig('Vrij ontwerp', startOntwerper);
 veilig('Materialen', startMaterialen);
 function openModel(code: string) {
   const o = modelOntwerp(code);
+  log(`model gekozen: ${code}${o ? ` (${o.elementen.length} elementen)` : ' (niet gevonden)'}`);
   if (!o) return;
   toon('ontwerp');
   laadInOntwerper(o);
@@ -142,6 +179,8 @@ $('[data-beheer="stoffen"]').addEventListener('click', () => veilig('Navigatie',
 document.querySelectorAll<HTMLButtonElement>('[data-cat]').forEach((b) => b.addEventListener('click', () => veilig('Navigatie', () => toon('catalogus'))));
 const intern = (w: string) => document.body.classList.contains('klantmodus') && (BEHEER.includes(w as Weergave) || w === 'beheer');
 const start = location.hash.slice(1);
+log(`pagina geopend${start ? ' op #' + start : ''}`);
+$('#logboek-kopieer').addEventListener('click', () => void kopieerLogboek($('#logboek-melding')));
 veilig('Opstarten', () => toon(naarWeergave(start) && !intern(start) ? naarWeergave(start)! : 'modellen'));
 window.addEventListener('hashchange', () => {
   const w = naarWeergave(location.hash.slice(1));

@@ -71,6 +71,9 @@ const ZETELBEELDEN = [
   { naam: 'fraser-schuin', model: 'Fraser', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Trommel tot op de vloer, de schaal steekt errond uit, één los rugkussen tegen de rand (Satie).
   { naam: 'satie-schuin', model: 'Satie', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  // Herstel na een weggevallen grafisch toestel (14/11): de 3D start opnieuw en toont dezelfde zetel. Hetzelfde beeld als
+  // `satie-schuin`, genomen nadat het toestel (nagebootst) wegviel; vroeger bleef het laatste beeld staan tot je herlaadde.
+  { naam: 'satie-na-herstart', model: 'Satie', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', herstart: true },
   // Vier losse kussens tegen de schaal: twee achteraan, twee schuin ervoor (Quin).
   { naam: 'quin-schuin', model: 'Quin', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Zwevende rugschijf boven een vaste zitting, op een houten frame (Karl).
@@ -127,7 +130,8 @@ async function maakBeelden() {
     const p = await browser.newPage({ viewport: { width: 1400, height: 950 }, deviceScaleFactor: 1 });
     p.on('pageerror', (e) => fouten.push(`${pad.split('/').pop()}: ${String(e).slice(0, 200)}`));
     p.on('console', (m) => {
-      if (m.type() === 'error' && !/ERR_FAILED|fonts\.g/.test(m.text())) fouten.push(`${pad.split('/').pop()}: ${m.text().slice(0, 200)}`);
+      // Niet de melding van three bij het nagebootste verlies van het toestel (beeld `satie-na-herstart`): die is de proef zelf.
+      if (m.type() === 'error' && !/ERR_FAILED|fonts\.g|proef Device Lost/.test(m.text())) fouten.push(`${pad.split('/').pop()}: ${m.text().slice(0, 200)}`);
     });
     await p.route('https://fonts.googleapis.com/**', (r) => r.abort());
     return p;
@@ -157,6 +161,12 @@ async function maakBeelden() {
         s.dispatchEvent(new Event('change', { bubbles: true }));
       }, b.zon ?? null);
       await p.click(`[data-standpunt="${b.standpunt}"]`);
+      if (b.herstart) {
+        // Eerst het gewone beeld afwachten, dan het toestel laten wegvallen: het canvas wordt vervangen door een nieuw.
+        await wachtTotStil(p, '#o-3d canvas');
+        await p.evaluate(() => window.__zetel3d.proefVerlies());
+        await p.waitForTimeout(1500);
+      }
       const stil = await wachtTotStil(p, '#o-3d canvas');
       // Close-up: een stuk uit de foto op hoge resolutie.
       beelden.set(b.naam, b.uitsnede ? uitsnede(png(await p.evaluate(() => window.__zetel3d.foto())), b.uitsnede) : png(stil));

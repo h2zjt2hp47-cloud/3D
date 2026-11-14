@@ -146,6 +146,11 @@ th { font-weight: 600; color: var(--zacht); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 td.code { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--zacht); }
 footer { text-align: center; color: var(--zacht); font-size: .8rem; padding: 0 16px 32px; }
+footer .logboek { display: block; margin-top: 6px; }
+body.klantmodus footer .logboek { display: none; }
+@media print { footer .logboek, footer #logboek-tekst { display: none; } }
+footer .tekstknop { background: none; border: 0; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+footer #logboek-tekst { display: block; width: min(100%, 720px); margin: 8px auto 0; font: .75rem/1.4 ui-monospace, monospace; }
 
 /* Header */
 .klant { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: .9rem; }
@@ -726,7 +731,9 @@ main.catalogus { display: block; }
   </section>
 </main>
 
-<footer>Demo van de configurator-motor. Modellen, maten en prijzen zijn verzonnen. Eigen materialen en je laatste ontwerp worden alleen in deze browser bewaard.</footer>
+<footer>Demo van de configurator-motor. Modellen, maten en prijzen zijn verzonnen. Eigen materialen en je laatste ontwerp worden alleen in deze browser bewaard.
+  <span class="logboek">Probleem melden? <button type="button" id="logboek-kopieer" class="tekstknop" title="Zet op het klembord wat er in deze pagina gebeurde (schermen, modellen, de 3D, fouten), om door te sturen. Het logboek blijft in deze browser.">Kopieer logboek</button> <span id="logboek-melding" role="status"></span></span>
+</footer>
 <script>/*BUNDEL*/</script>
 </body>
 </html>

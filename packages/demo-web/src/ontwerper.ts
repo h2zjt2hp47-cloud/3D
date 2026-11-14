@@ -38,6 +38,7 @@ import { DECORS, LICHTEN, maak3D, STANDAARD_WEERGAVE, VLOEREN, type DecorNaam, t
 import { grootSchermKnop, Zoom } from './zoom.js';
 import { maakStalenkaart, materiaalOptiesPerCollectie } from './stalen.js';
 import { bewaarBestand, dataUrlNaarBlob } from './bewaren.js';
+import { log } from './logboek.js';
 import { $, bevestigKnop, bewaar, el, eur, getal, getCatalogus, getKorting, getMaterialen, getModellen, kopieer, laad, opWijziging, svgEl } from './staat.js';
 
 const SLEUTEL = 'configurator-demo.ontwerp.v1';
@@ -849,6 +850,7 @@ export function kiesWeergave(w: typeof weergave) {
   if (w === '3d' && viewer === undefined) {
     viewer = maak3D($('#o-3d'), {
       zetel: true,
+      opLog: log,
       // Klik op een deel van de zetel in 3D: dat element kiezen (eigenschappen, stof per element).
       opKlik: (id) => {
         geselecteerd = id && elementVan(id) ? id : null;
@@ -879,11 +881,19 @@ function toonWeergave() {
     const model = getModellen().find((x) => x.code === ontwerp.model);
     const s = bouw3D(ontwerp, getCatalogus(), getMaterialen(), { echt3d: model?.echt3d });
     scene3D = s;
+    // In het logboek: wat de 3D te tonen kreeg, als het model of het aantal elementen verandert (niet bij elke
+    // sleepbeweging: dat zou het logboek vullen).
+    const sleutel = `${ontwerp.model ?? 'eigen ontwerp'}|${ontwerp.elementen.length}`;
+    if (sleutel !== gelogd3D) {
+      gelogd3D = sleutel;
+      log(`3D toont: model ${ontwerp.model ?? 'eigen ontwerp'}, ${ontwerp.elementen.length} elementen, ${s.kader.b} × ${s.kader.d} × ${s.kader.h} cm, ${s.blokken.length} blokken`);
+    }
     viewer.toon(s);
     toonEchtVak(s);
   }
 }
 
+let gelogd3D = '';
 /** Echt 3D-model (proef): keuze met de benadering, of waarom het niet past of niet geladen kon worden. */
 let echtAan = true;
 let scene3D: Scene3D | null = null;

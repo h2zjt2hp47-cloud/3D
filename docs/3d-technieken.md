@@ -247,6 +247,16 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 
 ## Technische valkuilen (voor wie verder bouwt)
 
+- **Het grafische toestel kan wegvallen, en dan blijft het laatste beeld staan.** Melding van Jonas (14/11): hij koos
+  Doha en zag nog de vorige, aangepaste zetel; titel, prijs en tekeningen waren wel van Doha, en herladen loste het op.
+  Verliest de browser de verbinding met de grafische kaart (WebGPU: *device lost*, WebGL2: *context lost*; bv. na slaap,
+  een ander scherm, te weinig geheugen), dan zet three zichzelf stil met alleen een regel in de console. `maak3D` vangt
+  dat nu op: een nieuwe weergave met dezelfde scène, decor, licht en instellingen; twee keer kort na elkaar verder op
+  WebGL2; na vijf keer in een minuut een uitleg in plaats van eindeloos herstarten. Testen kan zonder echte kaart:
+  `window.__zetel3d.proefVerlies()` (beeld `satie-na-herstart`), of de echte WebGPU-weg in software met
+  `--enable-unsafe-webgpu` (die valt vanzelf weg). Of dit bij Jonas de oorzaak was, is niet bewezen: het logboek
+  (onderaan de pagina, *Kopieer logboek*) zegt het de volgende keer.
+
 - **Een omtrek mag niet plooien.** Schuift een kant naar binnen, maak de hoeken dan kleiner. De test op snijdende
   zijden staat in `doorlopend.test.ts`.
 - **Een wand die oploopt of zakt:** de helling moet meetellen in de richting van het oppervlak, anders kloppen de
