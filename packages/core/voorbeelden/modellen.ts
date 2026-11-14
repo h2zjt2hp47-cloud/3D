@@ -217,7 +217,7 @@ export const zetelModellen: ModelDefinitie[] = [
     vormgeving: { zachtheid: 10 }, elementen: rij([['fauteuil', 85, 85, { kuipvorm: 'organisch' }]]),
   }, 'F-Pebble'),
   model('karl', 'Karl', FAUTEUIL, 'Loungestoel zonder armen: een brede, dikke rugschijf in bouclé die boven een ronde zitting zweeft, op een donker houten frame met hoge poten.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'ringframe', hout: 'eik_zwart', rug: 'vast', zitting: 'vaste_zitting' },
+    hoofdmateriaal: 'boucle_zand', opties: { poten: 'ringframe', hout: 'eik_zwart', rug: 'vast', zitting: 'vaste_zitting' },
     // Productpagina: 68 × 72 × 75; geen zithoogte (42 geschat). Uit de foto's (benadering, 13/11): geen armen; een brede,
     // dikke, ovale rugschijf die een eind boven de zitting zweeft, gedragen door het houten frame; een dikke zitting met
     // sterk afgeronde randen; vier slanke schuine poten (poothoogte 28 geschat). Wat hier niet kan: op de foto lopen de
@@ -230,7 +230,7 @@ export const zetelModellen: ModelDefinitie[] = [
     elementen: rij([['fauteuil', 68, 72, { kuipvorm: 'schelp' }]]),
   }, 'F-Karl', MATEN_WEBSITE),
   model('tumble', 'Tumble', FAUTEUIL, 'Zachte, ronde fauteuil in bouclé: één bolle zitting tot op de vloer met een lage, dikke rugrol erop.', {
-    hoofdmateriaal: 'boucle_belize', opties: { poten: 'verdekt', comfort: 'dons', zitting: 'vaste_zitting' },
+    hoofdmateriaal: 'teddy_ivoor', opties: { poten: 'verdekt', comfort: 'dons', zitting: 'vaste_zitting' },
     // Productpagina: 78 × 86 × 75, zithoogte 45 (ook als sofa van 134 en 160 cm). Uit de foto's (benadering, 13/11): één
     // zachte, bolle zitting tot op de vloer, met sterk afgeronde randen; daarop een lage, dikke rug rond de achterste
     // helft, rondom even hoog, met ronde uiteinden, die aan de buitenkant aansluit op de zijkant van de zitting. Geen
@@ -244,7 +244,7 @@ export const zetelModellen: ModelDefinitie[] = [
     elementen: rij([['fauteuil', 78, 86, { kuipvorm: 'omhullend' }]]),
   }, 'F-Tumble', MATEN_WEBSITE),
   model('ross', 'Ross', FAUTEUIL, 'Compacte fauteuil: een dunne schaal met een hoge rug en lage armen rond een dikke, vaste zitting, op vier houten poten met een kruis.', {
-    hoofdmateriaal: 'katoen_naturel', opties: { poten: 'kruisframe', hout: 'eik_naturel', zitting: 'vaste_zitting', naad: 'bies' },
+    hoofdmateriaal: 'katoen_naturel', opties: { poten: 'kruisframe', hout: 'eik_gerookt', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: 66 × 64 × 78, zithoogte 43. Uit de twee foto's (benadering, 13/11): een dunne schaal met een bies;
     // de rug is bovenaan recht, over ±drie kwart van de breedte, en zakt met een steile schouder naar lage armen (±17 cm
     // boven de zitting), die vooraan in een boog tot op de zitting zakken; één dikke, ronde zitting met een bies onderaan;
@@ -337,7 +337,7 @@ export const zetelModellen: ModelDefinitie[] = [
     elementen: rij([['fauteuil', 61, 61, { kuipvorm: 'rond' }]]),
   }, 'F-Fraser', MATEN_WEBSITE),
   model('milton', 'Milton', FAUTEUIL, 'Ronde fauteuil: een dikke, vaste zitting met een dunne, rechte schaal rond de achterste helft, op een donker houten frame.', {
-    hoofdmateriaal: 'linnen_travertin', opties: { poten: 'ringframe', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
+    hoofdmateriaal: 'wol_havermout', opties: { poten: 'ringframe', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: 70 × 68 × 72, zithoogte 40, zitdiepte 60 (schaal 8 cm = diepte − zitdiepte). Uit de foto's (benadering,
     // 13/11): schaal met een vlakke rand rond de achterste helft, tot onderaan de zitting; zitting van ±22 cm met een bies;
     // houten ring op vier poten (poothoogte 18 geschat).
@@ -365,7 +365,7 @@ export const zetelModellen: ModelDefinitie[] = [
     elementen: rij([['fauteuil', 75, 70, { kuipvorm: 'omhullend' }]]),
   }, 'F-Manon', MATEN_WEBSITE),
   model('mabel-2', 'Mabel 2-zit', FAUTEUIL, 'Kleine tweezit als kuip: dezelfde leuning als de Mabel 1-zit, 150 cm breed, op een donker frame met slanke poten.', {
-    hoofdmateriaal: 'wol_oceaan', opties: { poten: 'ringframe', poothoogte: 'hoog', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
+    hoofdmateriaal: 'velours_petrol', opties: { poten: 'ringframe', poothoogte: 'hoog', hout: 'eik_zwart', zitting: 'vaste_zitting', naad: 'bies' },
     // Productpagina: 150 × 65 × 76, zithoogte 45. Op de foto dezelfde kuip als de 1-zit (vroeger hier arm + zit + arm: een
     // andere zetel, 13/11). Eén element van het type fauteuil; de vorm is een benadering uit de foto.
     vormgeving: {

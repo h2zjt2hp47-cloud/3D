@@ -230,7 +230,10 @@ losse kussens.
   niet helemaal: bij Quin ligt de rand bij een zithoogte van 45 op ±71 cm en de kussens op ±84 cm, dus 78 past bij geen
   van beide; bij Satie (geen zithoogte op de site, 45 geschat) is de rand ±1,46 keer de zithoogte, wat 66 cm geeft.
   Welke hoogte de site bedoelt, is na te vragen bij de klant.
-- **Stof en kleur** zijn die van het model, niet die van de foto.
+- **Stof en kleur:** op 14/11 naar de foto gezet waar het verschil opviel: Karl bouclé zand, Tumble teddy ivoor,
+  Mabel 2-zit velours petrol (1.163 → 1.327), Milton wol havermout, Ross poten in gerookte eik (806 → 866); ook de
+  zetelbedden Zora en Daizy. De andere modellen houden de stof die ze hadden; een exacte kleur van de klant zit niet
+  in de demostoffen.
 
 **Fouten onderweg gevonden en rechtgezet:**
 

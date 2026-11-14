@@ -43,8 +43,12 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
   const pad = (code: string, d: string, x: number, y: number, b: number, h: number, vulling: string, extra: Partial<VormResultaat> = {}) =>
     vormen.push({ code, pad: d, x: rond(x), y: rond(y), breedte: rond(b), hoogte: rond(h), vulling, ...extra });
 
-  // Achterste elementen eerst tekenen, zodat de voorste ervoor komen.
+  // Achterste elementen eerst tekenen, zodat de voorste ervoor komen. Wat op een element ligt (sierkussen, rolkussen,
+  // losse rugleuning) komt na de elementen zelf: een sierkussen staat vóór de rugkussens van de zetel waar het op ligt.
+  // Vroeger verdween het erachter, omdat de voorkant van de zetel verder naar voren ligt dan die van het kussen.
   const volgorde = [...ontwerp.elementen].sort((a, b) => {
+    const oa = typen.get(a.type)?.opzet ? 1 : 0, ob = typen.get(b.type)?.opzet ? 1 : 0;
+    if (oa !== ob) return oa - ob;
     const pa = voetafdruk(a), pb = voetafdruk(b);
     return pa.y + pa.h - (pb.y + pb.h);
   });
