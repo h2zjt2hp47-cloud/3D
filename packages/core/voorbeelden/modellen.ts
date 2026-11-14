@@ -204,7 +204,9 @@ export const zetelModellen: ModelDefinitie[] = [
   model('esmee', 'Esmee', SOFA, 'Lange sofa met lage, uitlopende armen, hoes tot op de grond, vast zitkussen en losse donzen rugkussens.', {
     hoofdmateriaal: 'katoen_kalk',
     opties: { poten: 'housse', rug: 'los', comfort: 'dons' },
-    vormgeving: { rughoogte: 86, armhoogte: 63, karkashoogte: 70, rugdikte: 14, rugkussendikte: 22, rugkussens: 3, kussendikte: 14, zachtheid: 7 },
+    // Op de grote foto's (14/11) zwaait de bovenlijn van de arm in één boog van de hoge rug naar voren: het karkas is
+    // er bijna zo hoog als de rugkussens (82), de arm vooraan 63. Benadering uit de foto; de site geeft geen maten.
+    vormgeving: { rughoogte: 86, armhoogte: 63, karkashoogte: 82, rugdikte: 14, rugkussendikte: 22, rugkussens: 3, kussendikte: 14, zachtheid: 7 },
     elementen: [
       ...rij([['arm', 18, 95, { armstijl: 'uitlopend' }], ['zit', 220, 95], ['arm', 18, 95, { armstijl: 'uitlopend' }]]),
       sierkussen('e4', 24, 34, 'katoen_kalk'), sierkussen('e5', 196, 34, 'katoen_kalk'),
