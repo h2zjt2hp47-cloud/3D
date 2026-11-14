@@ -116,7 +116,7 @@ Zonder die gegevens verandert er niets aan een fauteuil: de bestaande kuipvormen
 |---|---|---|---|---|
 | **Milton** | 75 × 75 × 92, eivormige kuip, los kussen, draaivoet | 70 × 68 × 72, zithoogte 40; vaste ronde zitting; schaal van 8 cm met een vlakke rand en een bies; houten frame op vier poten | 963 | 884 |
 | **Mabel 1-zit** | 75 × 75 × 80, dikke wand met boogrug, los kussen | 68 × 65 × 76, zithoogte 45; leuning van 7 cm die achteraan staat en aan de zijkanten tot op de zitting zakt; vaste zitting met bies; dun frame op vier poten | 990 | 1.007 |
-| **Mabel 2-zit** | 164 × 82 × 80, arm + zit + arm | 150 × 65 × 76: dezelfde kuip als de 1-zit, als één element | 1.552 | 1.163 |
+| **Mabel 2-zit** | 164 × 82 × 80, arm + zit + arm | 150 × 65 × 76: dezelfde kuip als de 1-zit, als één element | 1.552 | 1.163 (sinds 14/11 in velours petrol: 1.327) |
 
 - **Uit de productpagina:** breedte, diepte, hoogte, zithoogte, en de dikte van de schaal van Milton (diepte − zitdiepte).
 - **Benadering uit de foto's:** hoe ver de schaal rondloopt, het verloop van de bovenrand, de poothoogte (Milton 18,
@@ -170,7 +170,7 @@ foto / vroeger / nu naast elkaar, boven- en vooraanzicht bekeken, prijs regel pe
 | **Fraser** | 61 × 61 × 70, zit 44 | Ronde zitting in twee lagen; lage rechte schaal die errond uitsteekt; vier schuine zwarte poten met een kruis. | 842 | 835 | [beeld](afbeeldingen/fauteuils-fraser-na.jpg) |
 | **Satie** | ⌀ 70, hoogte 70 | Trommel tot op de vloer; dunne schaal met bies die errond uitsteekt; **één** los rugkussen (Jonas: "Satie heeft maar 1 kussen"). | 1.018 | 959 | [beeld](afbeeldingen/fauteuils-satie-na.jpg) |
 | **Quin** | 91 × 91 × 78, zit 45 | Grote trommel op een lage ronde voet; dunne schaal; vier losse kussens (de productpagina: "4 kussens inbegrepen"; eerst drie gezet op de foto's). | 1.341 | 1.393 | [beeld](afbeeldingen/fauteuils-quin-na.jpg) |
-| **Ross** | 66 × 64 × 78, zit 43 | Dunne schaal met bies: brede hoge rug, steile schouders, lage armen tot op de zitting; houten poten met kruis. | 768 | 806 | [beeld](afbeeldingen/fauteuils-ross-na.jpg) |
+| **Ross** | 66 × 64 × 78, zit 43 | Dunne schaal met bies: brede hoge rug, steile schouders, lage armen tot op de zitting; houten poten met kruis. | 768 | 806 (sinds 14/11 met poten in gerookte eik: 866) | [beeld](afbeeldingen/fauteuils-ross-na.jpg) |
 | **Sullivan** | 72 × 80 × 93, zit 42 | Hoge smalle rug die naar lage armen zakt; ronde zitting op een zwarte ring met vier poten en een kruis (vroeger een draaivoet). | 998 | 954 | [beeld](afbeeldingen/fauteuils-sullivan-na.jpg) |
 | **Karl** | 68 × 72 × 75 | Geen armen: een dikke rugschijf zweeft boven een ronde zitting, op een donker houten frame. | 990 | 970 | [beeld](afbeeldingen/fauteuils-karl-na.jpg) |
 | **Tumble** | 78 × 86 × 75, zit 45 | Eén bolle zitting tot op de vloer met een dikke rug (24 cm) erop. | 1.084 | 1.081 | [beeld](afbeeldingen/fauteuils-tumble-na.jpg) |
@@ -275,6 +275,11 @@ waarom: de rug staat niet recht, ze helt achterover. De motor kan dat nu (gegeve
 | Mabel | 49 | 58 | ±53 |
 
 De prijzen veranderen hier niet door. Het bovenaanzicht tekent de rand van de schaal waar ze bovenaan staat.
+
+**Fout in de eerste versie, dezelfde dag rechtgezet:** het bovenaanzicht rekende met vaste hoogtes (poten 10, zitting
+45, rug 80) in plaats van die van het model. Omdat de helling van de hoogte afhangt, lag de zitting van de Mabels in de
+tekening 2,7 cm anders dan in de 3D, en het rugkussen van Satie 2,5 cm. Het bovenaanzicht krijgt nu dezelfde hoogtes
+als de 3D en het vooraanzicht; een test vergelijkt beide voor elk model met een helling of losse kussens.
 
 ## Hockers en poefs bij de fauteuils
 

@@ -225,7 +225,7 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         const exp = kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : 2;
         // Het onderstel staat onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
         const hoogFrame = hoogtesVan(ontwerp, catalogus, e);
-        const tk = trommelKader(B, D, kuipFrame, kuipUit(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }));
+        const tk = trommelKader(B, D, kuipFrame, kuipUit(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }, D));
         if (ringH > 0 && rondPlan) {
           const f = Math.max(0.5, 1 - 3 / (Math.min(tk.b, tk.d) / 2));
           omtrekBlok('ring', potSoort, P - ringH, ringH, potKleur, superellips(tk.x + tk.b / 2, tk.y + tk.d / 2, (tk.b / 2) * f, (tk.d / 2) * f, exp, 0, 360, 72).slice(0, -1), { afronding: 1 });

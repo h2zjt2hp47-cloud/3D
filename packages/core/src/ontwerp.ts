@@ -516,7 +516,12 @@ export function chaiseRugVlak(B: number, D: number, R: number, kant: 'achter' | 
   return { rug: { lx: B - R, ly: 0, lb: R, ld: D }, zit: { lx: 0, ly: 0, lb: B - R, ld: D } };
 }
 
-function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, opties: Map<string, OptieKeuze> = new Map(), v: Vormgeving = STANDAARD_VORMGEVING): VormResultaat[] {
+function tekenElement(
+  e: OntwerpElement, stijl: Tekenstijl, kleur: string, opties: Map<string, OptieKeuze> = new Map(), v: Vormgeving = STANDAARD_VORMGEVING,
+  // De echte hoogtes van het element (poten, zitting, rug): de helling van een schaal en de plaats van een leunend
+  // rugkussen hangen ervan af, dus het bovenaanzicht moet met dezelfde hoogtes rekenen als de 3D.
+  hoogtes: { P: number; zithoogte: number; rugH: number; kussenDik: number } = { P: 10, zithoogte: 45, rugH: 80, kussenDik: 12 },
+): VormResultaat[] {
   const B = e.breedte, D = e.diepte;
   const donker = donkerder(kleur);
   const t = (groep: string, veld: string) => opties.get(groep)?.teken?.[veld];
@@ -613,7 +618,7 @@ function tekenElement(e: OntwerpElement, stijl: Tekenstijl, kleur: string, optie
       // Kuip met gebogen wand: grondvlak, zitting en de wand als band met ronde uiteinden (zie kuip.ts).
       const kp = kuipParameters(opties.get('kuipvorm')?.teken, v.kuip);
       if (kp) {
-        const opb = kuipOpbouw(B, D, { P: 10, zithoogte: 45, rugH: 80, kussenDik: 12 }, kp, opties.get('rug')?.teken?.los === true);
+        const opb = kuipOpbouw(B, D, hoogtes, kp, opties.get('rug')?.teken?.los === true);
         const naarW = (lx: number, ly: number) => { const w = lokaalNaarWereld(e, lx, ly, 0, 0); return `${rond(w.x)} ${rond(w.y)}`; };
         const w0 = lokaalNaarWereld(e, 0, 0, B, D);
         const vorm = (code: string, punten: string[], vulling: string): VormResultaat =>
@@ -887,7 +892,13 @@ export function berekenOntwerp(
     kostprijs += frameKost + uren * catalogus.uurloon;
 
     elementen.push({ id: e.id, type: t.code, label: t.label, breedte: e.breedte, diepte: e.diepte, materiaal: t.tekenstijl === 'console' ? '' : m?.code ?? '', groep, prijs, optieBedrag: rond(optieBedrag), stofM: rond(stofM, 2) });
-    (t.opzet ? opzetVormen : vormen).push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc', gekozen, v));
+    // Zelfde hoogtes als de 3D en het vooraanzicht (een plint is 4 cm, een verdekte voet hoogstens 8).
+    const potVorm = String(gekozen.get('poten')?.teken?.vorm ?? 'conisch');
+    const tekenHoogtes = {
+      P: potVorm === 'plint' ? 4 : potVorm === 'verdekt' ? Math.min(hg.poothoogte, 8) : hg.poothoogte,
+      zithoogte: hg.zithoogte, rugH: hg.rughoogte, kussenDik,
+    };
+    (t.opzet ? opzetVormen : vormen).push(...tekenElement(e, t.tekenstijl, m?.kleur ?? '#cccccc', gekozen, v, tekenHoogtes));
   });
 
   // Opties op zetelniveau die eenmalig tellen (bv. houtafwerking).

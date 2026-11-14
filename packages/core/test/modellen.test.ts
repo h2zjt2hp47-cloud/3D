@@ -488,6 +488,27 @@ describe('fauteuils naar de productfoto\'s (13/11)', () => {
     expect(prijsArm(20)).toBe(prijsArm(12) + (prijsArm(22) - prijsArm(12)));
     expect(prijsArm(13)).toBeGreaterThan(prijsArm(12));
   });
+  it('bovenaanzicht en 3D rekenen met dezelfde hoogtes: zitting en losse kussens liggen op dezelfde plaats', () => {
+    // De helling van een schaal en de plaats van een leunend kussen hangen af van de hoogtes van het model. Het
+    // bovenaanzicht rekende met vaste hoogtes (poten 10, zit 45, rug 80): bij de Mabels lag de zitting 2,7 cm verkeerd.
+    const punten = (pad: string) => [...pad.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])] as [number, number]);
+    for (const m of zetelModellen) {
+      const kuip = m.ontwerp.vormgeving?.kuip as Record<string, unknown> | undefined;
+      if (!kuip || (kuip.helling === undefined && kuip.kussens === undefined)) continue;
+      const boven = berekenOntwerp(m.ontwerp, zetelCatalogus, standaardMaterialen).tekening.vormen, b = scene(m.code).blokken;
+      const zitT = punten(boven.find((v) => v.code === 'e1.zit')!.pad!), zit3 = b.find((x) => x.code === 'e1.zitkussen')!;
+      // Achterkant en voorkant van de zitting (de 3D houdt de zitting tot ±1,5 cm binnen de wand).
+      expect(Math.abs(Math.min(...zitT.map((q) => q[1])) - zit3.z), `${m.code} achterkant zitting`).toBeLessThan(2);
+      expect(Math.abs(Math.max(...zitT.map((q) => q[1])) - (zit3.z + zit3.d)), `${m.code} voorkant zitting`).toBeLessThan(2);
+      for (const k of b.filter((x) => x.code.startsWith('e1.rugkussen'))) {
+        const t = boven.find((v) => v.code === k.code)!;
+        const pts = t.pad ? punten(t.pad) : [[t.x, t.y], [t.x + t.breedte!, t.y + t.hoogte!]] as [number, number][];
+        const mx = (Math.min(...pts.map((q) => q[0])) + Math.max(...pts.map((q) => q[0]))) / 2, my = (Math.min(...pts.map((q) => q[1])) + Math.max(...pts.map((q) => q[1]))) / 2;
+        expect(Math.abs(mx - (k.x + k.b / 2)), `${m.code} ${k.code} x`).toBeLessThan(0.6);
+        expect(Math.abs(my - (k.z + k.d / 2)), `${m.code} ${k.code} z`).toBeLessThan(0.6);
+      }
+    }
+  });
   it('Fraser: lage rechte schaal, zitting in twee lagen, vier schuine poten met een kruis', () => {
     const b = scene('fraser').blokken, rug = b.find((x) => x.code === 'e1.rug')!;
     expect(new Set(rug.hoogtes)).toEqual(new Set([70]));

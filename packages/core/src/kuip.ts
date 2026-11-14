@@ -192,9 +192,10 @@ function wandOnder(k: KuipParameters, h: { P: number; zithoogte: number }): numb
  * Hoeveel cm de bovenkant van een hellende schaal (`helling`) achter haar voet steekt: de hoogte van de wand maal de
  * tangens van de hoek. 0 zonder helling. Het grondvlak van de zetel is zoveel korter dan zijn diepte.
  */
-export function kuipUit(k: KuipParameters | null, h: { P: number; zithoogte: number; rugH: number }): number {
+export function kuipUit(k: KuipParameters | null, h: { P: number; zithoogte: number; rugH: number }, D = Infinity): number {
   if (!k?.helling) return 0;
-  return Math.round(Math.max(0, h.rugH - wandOnder(k, h)) * Math.tan((k.helling * Math.PI) / 180) * 10) / 10;
+  // Nooit meer dan een kwart van de diepte van de zetel (dezelfde grens voor de opbouw, het onderstel en de tekeningen).
+  return Math.min(D / 4, Math.round(Math.max(0, h.rugH - wandOnder(k, h)) * Math.tan((k.helling * Math.PI) / 180) * 10) / 10);
 }
 
 /**
@@ -245,7 +246,7 @@ export interface KuipOpbouw {
  */
 export function kuipOpbouw(B: number, D: number, h: { P: number; zithoogte: number; rugH: number; kussenDik: number }, k: KuipParameters, losseRug: boolean): KuipOpbouw {
   // Hellende schaal: dezelfde opbouw op een korter grondvlak, naar voren geschoven; de wand helt vanaf haar voet.
-  const uit = Math.min(kuipUit(k, h), D / 4);
+  const uit = kuipUit(k, h, D);
   if (!uit) return kuipOpbouwRecht(B, D, h, k, losseRug);
   const o = kuipOpbouwRecht(B, D - uit, h, k, losseRug);
   const schuif = (p: Punt): Punt => [p[0], Math.round((p[1] + uit) * 10) / 10];

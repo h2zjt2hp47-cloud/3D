@@ -104,7 +104,7 @@ export function tekenVooraanzicht(ontwerp: Ontwerp, catalogus: OntwerpCatalogus,
           const frame = vorm === 'ringframe' ? Math.min(frameDik, P / 3) : 0;
           // Onder de zitting: bij een trommel die binnen de schaal staat (`zitIn`) onder dat kleinere kader.
           const hoogFrame = hoogtesVan(ontwerp, catalogus, e);
-          const tk = trommelKader(e.breedte, e.diepte, kuipFrame, kuipUit(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte })), wk = lokaalNaarWereld(e, tk.x, tk.y, tk.b, tk.d), mid = wk.x + wk.b / 2;
+          const tk = trommelKader(e.breedte, e.diepte, kuipFrame, kuipUit(kuipFrame, { P, zithoogte: hoogFrame.zithoogte, rugH: hoogFrame.rughoogte }, e.diepte)), wk = lokaalNaarWereld(e, tk.x, tk.y, tk.b, tk.d), mid = wk.x + wk.b / 2;
           if (frame) rect(`${e.id}.ring`, wk.x + 3, -P, wk.b - 6, frame, potKleur);
           // Zelfde poten als in de 3D (framePoten): de bovenkant onder het frame, de voet schuin naar buiten.
           const fp = framePoten(wk.b, wk.h, P - frame, kuipFrame ? kuipFrame.exponent ?? (kuipFrame.plan === 'rond' ? 2 : 3.4) : rondePoef ? 2 : null);
