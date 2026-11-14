@@ -44,6 +44,8 @@ export interface Blok {
   as?: 'x' | 'y' | 'z';
   /** Kegel: verhouding onderste/bovenste straal. */
   taps?: number;
+  /** Kegel of staande cilinder met een vierkante doorsnede (een houten poot die naar onderen smaller wordt), zijden evenwijdig met x en z. */
+  vierkant?: boolean;
   /** Schuine poot (staande kegel of cilinder): hoeveel cm de voet verschoven is tegenover de bovenkant, [x, z] in wereldmaat. */
   schuin?: [number, number];
   /**
@@ -238,7 +240,8 @@ export function bouw3D(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, materialen
         for (const q of fp.poten) {
           const boven = lokaalNaarWereld(e, q.lx, q.ly, 0, 0), voet = lokaalNaarWereld(e, q.lx + q.dx, q.ly + q.dy, 0, 0);
           lokaal(`poot-${q.k}`, potSoort, q.lx - dik / 2, q.ly - dik / 2, dik, dik, 0, P - ringH, potKleur, {
-            vorm: 'kegel', taps: 0.7, ...(fp.spreid ? { schuin: [r2(voet.x - boven.x), r2(voet.y - boven.y)] as [number, number] } : {}),
+            // Vierkante, naar onderen smallere poten, zoals op de foto's (Fraser, Sullivan, Mabel, Karl).
+            vorm: 'kegel', taps: 0.7, vierkant: true, ...(fp.spreid ? { schuin: [r2(voet.x - boven.x), r2(voet.y - boven.y)] as [number, number] } : {}),
           });
         }
         // Geen kruis onder heel korte poten (onder 6 cm is er geen plaats, en bij poothoogte 0 valt er niets te delen).

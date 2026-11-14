@@ -217,7 +217,8 @@ describe('eigen vorm per model: zitting, schaal en onderstel als gegevens (13/11
     const poten = ring.filter((b) => b.code.startsWith('f.poot-'));
     expect(poten).toHaveLength(4);
     for (const p of poten) {
-      expect(p).toMatchObject({ vorm: 'kegel', y: 0, h: 14 });
+      // Vierkante poten die naar onderen smaller worden, zoals op de foto's.
+      expect(p).toMatchObject({ vorm: 'kegel', y: 0, h: 14, vierkant: true, taps: 0.7 });
       // Onder de zitting, niet erbuiten.
       expect(p.x).toBeGreaterThan(zit.x);
       expect(p.x + p.b).toBeLessThan(zit.x + zit.b);

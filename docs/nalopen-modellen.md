@@ -221,8 +221,8 @@ losse kussens.
   achterover helt (zie "De rug helt achterover"); de tabel hierboven is de stand van vóór die wijziging. Ross (+5),
   Fraser (+3), Tumble (+3) en Quin blijven zoals ze zijn: hun foto's tonen geen helling, of er is geen foto van opzij.
 - **Ross en Sullivan:** de armen zijn op de foto dikker en boller dan de schaal; bij ons is de schaal overal even dik.
-- **Poten:** op de foto vierkant en naar onderen smaller; bij ons rond. De houtkleur van Ross (cognac) bestaat niet als
-  keuze; hij staat op eik naturel.
+- **Poten:** sinds 14/11 vierkant en naar onderen smaller, zoals op de foto's. De houtkleur van Ross (cognac) bestaat
+  niet als keuze; hij staat op gerookte eik.
 - **Amusette fauteuil:** de armen zijn 13 cm breed in plaats van 15 (het zitelement begint bij 60 cm); op de foto is de
   zitting één blok tot op de vloer, bij ons een kussen op een onderbouw, zoals bij de Amusette sofa.
 - **Hoogte van Satie en Quin (onzeker):** wij leggen de hoogte van de site (70 en 78 cm) op de rand van de schaal; de
@@ -314,6 +314,28 @@ details.
 | **Zetelbedden** | De opbouw (arm + zit + arm) klopt, maar de **maten niet**: de site heeft voor Ziggy, Zora, Daizy Classic en Daizy Slim een technische tekening. Doorgevoerd op 14/11, zie hieronder. Zora heeft op de foto armen die rond de rug doorlopen; bij ons losse armen met een ronde bovenkant. Ziggy heeft twee rugkussens en rolkussens tegen de armen. |
 | **Poefs** | Stockholm loopt op de foto naar boven smaller toe (bij ons een rechte cilinder) en is donkerblauw. Kanto is een kubus die naar boven smaller wordt. Fez klopt. Geen van de drie heeft een eigen pagina met maten. |
 
+### Tweede doorgang op de grote foto's (14/11)
+
+De zeven sofa's die nog nooit naast een grote foto lagen: Nestor, Belize, Pula, Fréjus, Gozo, Azar en Esmee. Geen
+model gewijzigd.
+
+![Nestor, Belize, Pula en Fréjus naast de grote foto van de productpagina](afbeeldingen/nalopen-sofas-groot-1.jpg)
+
+![Gozo, Azar en Esmee naast de grote foto's](afbeeldingen/nalopen-sofas-groot-2.jpg)
+
+| Model | Opbouw | Wat afwijkt |
+|---|---|---|
+| Nestor | Klopt: hoek rechts, lage rug met losse kussens, blauwe sierkussens. | Niets dat opvalt. |
+| Belize | Klopt: U met twee chaises. | Stof op de foto warmgrijs, bij ons bijna wit; op deze foto staat geen houten tussenstuk (dat komt van een andere foto van de pagina). |
+| Pula | Klopt met de foto uit de demo (olijfgroen, tussenstuk, loungedeel rechts). | De grote foto op de pagina toont een andere opstelling: lichtgrijs met de chaise links. Beide bestaan; het is een modulaire zetel. |
+| Fréjus | Klopt: chaise links, twee zitten, sierkussens. | De armen zijn op de foto dikker en ronder. |
+| Gozo | Klopt: witte blokken tot op de vloer, lage rug. | Niets dat opvalt. |
+| Azar | Klopt: open loungedeel links, twee zitten, hoge blokarm rechts. | Het leder is op de foto donkerder bruin; vijf sierkussens in plaats van drie. |
+| Esmee | Klopt: hoes tot op de vloer, uitlopende armen, één lang zitkussen. | Op de foto loopt de bovenlijn van de arm in een boog af van de rug naar voren; bij ons is ze vlak. |
+
+De standaardstikking uit de paginatekst (Husk: enkele stiksel met bies; Attribute: met boord; Azar, Belize en Nestor:
+enkele stiksel; Gozo: stiksel aan de buitenkant) is nog niet vergeleken met de keuze *Naden* per model.
+
 ### De zetelbedden op de maten van de tekening (doorgevoerd op 14/11)
 
 Eerst als voorstel voorgelegd, omdat het de prijs verhoogt. Jonas (14/11): "Het zijn nog allemaal fictieve prijzen dus
@@ -392,8 +414,10 @@ krijgt ze een (verzonnen) prijs en verandert de offertetekst van die modellen.
 
 ## Nog te doen
 
-- De sofa's en zetelbedden nog eens op de grote foto's van de site, model per model (deze doorgang was op 420 px):
-  Zora (armen die rond de rug doorlopen), Ziggy (twee rugkussens, rolkussens), en de vijf sofa's zonder maten.
+- Details uit de tweede doorgang: de aflopende armlijn van Esmee, de dikkere armen van Fréjus, de kleur van Belize en
+  Azar, de arm van Zora die rond de rug doorloopt, de standaardstikking per model.
+- Het frame van Karl (achterpoten tot achter de rug, houten band rond de rugschijf); dikkere armen dan de schaal bij
+  Ross en Sullivan; de schaal van Sullivan en Manon die ook opzij uitwaaiert; de kussens van Quin losser.
 - De Fraser hocker, de Mabel hocker en de poefs Stockholm, Kanto en Fez: geen eigen pagina, dus geen maten; Stockholm
   en Kanto lopen op de foto naar boven smaller toe.
 - Een schaal die helt of uitwaaiert (Sullivan, Manon), vierkante poten, dikkere armen dan de schaal (Ross, Sullivan).
