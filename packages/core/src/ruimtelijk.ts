@@ -108,6 +108,11 @@ export interface Blok {
    * `plaatsBlokken` draait een prisma niet mee: het staat al in wereldmaat.
    */
   doorsnede?: [number, number][];
+  /**
+   * Voor het oog verborgen, maar werpt wel schaduw (woning, lichtinval): het dak, een verdieping of het stuk muur dat
+   * weggelaten is om binnen te kijken. Zo valt het zonlicht alleen door ramen en lichtkoepels binnen.
+   */
+  alleenSchaduw?: boolean;
   /** Draaiing rond de verticale as in graden (van x naar z), rond het midden; bv. een kussen in een gebogen zetel. */
   draai?: number;
   /**

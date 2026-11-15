@@ -102,6 +102,11 @@ export interface Plattegrond {
   dak?: DakKeuze;
   /** Lichtkoepels en lichtstraten in een plat dak. */
   daklichten?: DakLicht[];
+  /**
+   * Waar het noorden ligt op het plan: graden met de klok mee vanaf de bovenkant van het plan (90 = noord ligt rechts).
+   * Ontbreekt = de bovenkant van het plan is het noorden. Voor de lichtinval (zie zon.ts) en de noordpijl.
+   */
+  noord?: number;
 }
 
 /** Kant van de woning (op de plattegrond): boven, onder, links of rechts. */
@@ -896,6 +901,12 @@ export interface Plan3DOpties {
    * en de muren niet laag staan). false = de bovenste verdieping open laten, om erin te kijken.
    */
   dak?: boolean;
+  /**
+   * Lichtinval: wat hierboven verborgen is (het dak, de verdiepingen erboven, de muren boven de snijhoogte) komt er
+   * toch bij als blokken die alleen schaduw werpen (`alleenSchaduw`). Zo kijk je van boven in de kamers en valt de zon
+   * er toch alleen door de ramen en de lichtkoepels in. Zonder dakkeuze rekent de schaduw met een plat dak.
+   */
+  lichtinval?: boolean;
 }
 
 /** Hele woning: alle verdiepingen op elkaar, met vloerplaten, trapgaten en platte daken. */
@@ -959,6 +970,18 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
       for (const l of lichten) blokken.push(...daklichtBlokken(l, cat.daklichten?.[l.type]?.vorm ?? 'koepel', y0 + H + VLOERDIKTE));
     }
     if (hellendHier) blokken.push(...hellendDak3D(plan, cat, p, opbouw.hellend!, y0 + H, dakAfwerking(cat, opbouw.keuze.bedekking)));
+  }
+  if (opties.lichtinval && plan.ruimtes.length) {
+    // De hele woning, met dak (zonder dakkeuze een plat dak): alles wat daarvan niet getoond wordt, werpt alleen schaduw.
+    // Glas laat het licht door. Het kader (voor de camera) blijft dat van wat je ziet.
+    const vol = plattegrond3D(plan.dak ? plan : { ...plan, dak: standaardDak() }, cat, { meubels: opties.meubels, inhoud: opties.inhoud }).blokken;
+    const getoond = new Set(blokken.map((b) => JSON.stringify(b)));
+    const kader = kaderVan(blokken);
+    for (const b of vol) {
+      if (b.soort === 'glas' || b.soort === 'matglas' || getoond.has(JSON.stringify(b))) continue;
+      blokken.push({ ...b, code: `schaduw_${b.code}`, alleenSchaduw: true });
+    }
+    return { blokken, kader };
   }
   return { blokken, kader: kaderVan(blokken) };
 }

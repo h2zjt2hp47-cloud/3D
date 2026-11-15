@@ -129,12 +129,12 @@ export function toonDak() {
     const dl = el('dl', { class: 'detail' });
     const regels: [string, string][] = [];
     if (opbouw.hellend) {
-      regels.push(['Hellend dak', `${getal(opbouw.m2Hellend, 1)} m² (langs de helling, met oversteek)`]);
+      regels.push(['Hellend dak', `${getal(opbouw.m2Hellend, 1)} m² langs de helling`]);
       regels.push(['Nok', `${getal(opbouw.hellend.nok)} cm boven de dakvoet`]);
     }
-    if (opbouw.m2Plat > 0) regels.push(['Plat dak', `${getal(opbouw.m2Plat, 1)} m² · dakrand ${getal(opbouw.mDakrand, 1)} m`]);
+    if (opbouw.m2Plat > 0) regels.push(['Plat dak', `${getal(opbouw.m2Plat, 1)} m²`], ['Dakrand', `${getal(opbouw.mDakrand, 1)} m`]);
     const lichten = opbouw.daklichten.filter((l) => !l.reden).length;
-    regels.push(['Daklichten', lichten ? `${lichten} ${lichten === 1 ? 'stuk' : 'stuks'}` : 'geen (gereedschap Lichtkoepel)']);
+    regels.push(['Daklichten', lichten ? `${lichten} ${lichten === 1 ? 'stuk' : 'stuks'}` : 'geen']);
     for (const [a, b] of regels) dl.append(el('dt', {}, a), el('dd', {}, b));
     vak.append(dl);
   }

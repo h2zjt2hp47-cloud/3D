@@ -360,10 +360,23 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 .legende { list-style: none; padding: 0; margin: 4px 0; display: grid; gap: 4px; }
 .legende .staal { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; border: 1px solid rgba(0,0,0,.2); }
 @media (pointer: coarse) { .gv-tegel { min-height: 44px; } }
+/* ---------- lichtinval (zon) ---------- */
+.zonblok { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--lijn); }
+.zon-instellingen { margin-top: 10px; max-width: 640px; }
+.zon-instellingen .eig { grid-template-columns: 60px 1fr; }
+.zon-schuif { display: flex; align-items: center; gap: 10px; }
+.zon-schuif input[type="range"] { flex: 1; min-width: 0; }
+.zon-schuif output { min-width: 62px; font-variant-numeric: tabular-nums; font-weight: 600; }
+.zon-tekst { margin: 6px 0 10px; font-weight: 600; }
+.zon-gevels { width: 100%; border-collapse: collapse; font-size: .88rem; margin-bottom: 6px; }
+.zon-gevels caption { text-align: left; font-weight: 600; padding-bottom: 4px; }
+.zon-gevels th, .zon-gevels td { text-align: left; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--lijn); vertical-align: top; }
+.zon-gevels .num { text-align: right; padding-right: 0; }
 /* ---------- dak ---------- */
 #pl-dak .tabs { margin: 4px 0 10px; flex-wrap: wrap; }
 #pl-dak .gv-tegels { margin-bottom: 8px; }
 #pl-dak .gv-rij { margin: 4px 0 10px; }
+#pl-dak dl.detail dd { white-space: normal; }
 .dak-staal { display: block; width: 36px; height: 36px; border-radius: 4px; border: 1px solid rgba(0,0,0,.2); }
 @media (pointer: coarse) { .palet button { min-height: 44px; } #pl-dak .gv-rij .gv-kleur { width: 44px; height: 44px; } #pl-3d-knoppen .schakelaars label { min-height: 44px; } }
 
@@ -616,6 +629,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label id="pl-toon-dak-label" hidden><input type="checkbox" id="pl-toon-dak" checked> Dak tonen</label>
           <span class="klein">slepen = draaien · zoomen met Ctrl (⌘) + scrollen of knijpen</span>
         </div>
+        <div id="pl-zon" class="zonblok"></div>
       </div>
     </section>
     <aside class="rechts">

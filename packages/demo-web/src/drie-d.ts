@@ -52,8 +52,18 @@ export interface Viewer3D {
   instellen?(w: Partial<Weergave3D>): void;
   /** Element in de 3D aanduiden met een kader (null = niets). */
   markeer?(id: string | null): void;
+  /**
+   * Stand van de zon (woning: lichtinval op een dag en uur). `richting` = waar de zon staat, in graden met de klok mee
+   * gezien van boven: 0 = de −z-kant van de scène (de bovenkant van een plattegrond), 90 = +x, 180 = +z, 270 = −x.
+   * `hoogte` = graden boven de horizon; 0 of lager = geen zon. Het zonlicht komt dan met schaduw uit die richting.
+   * null = terug naar het vaste licht van de lichtsfeer (het beeld is dan exact zoals zonder deze functie).
+   */
+  zon?(stand: ZonIn3D | null): void;
   formaat(): void;
 }
+
+/** Stand van de zon voor de kijker, in graden (zie Viewer3D.zon). */
+export interface ZonIn3D { richting: number; hoogte: number }
 
 export type Standpunt = 'schuin' | 'voor' | 'boven' | 'zij' | 'achter' | 'ooghoogte';
 export type EchtToestand = 'getoond' | 'laden' | 'benadering' | 'fout' | 'geen';
@@ -308,6 +318,8 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
   const toestand: { scene?: Scene3D; decor?: DecorNaam; licht?: LichtNaam; kwaliteit?: Kwaliteit; weergave: Partial<Weergave3D>; markeer?: string | null; standpunt?: Standpunt } = { weergave: {} };
   let verliezen: number[] = [];
   let huidige: EigenViewer | null = null;
+  /** Laatst gezette stand van de zon (zie Viewer3D.zon), om na een herstart terug te zetten. */
+  let zonToestand: ZonIn3D | null = null;
   const start = (geenWebGPU: boolean) => maakViewer(houder, opties, { geenWebGPU, opVerloren: (reden) => window.setTimeout(() => herstart(reden), 0) });
   const herstart = (reden: string) => {
     const nu = performance.now();
@@ -330,6 +342,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (toestand.scene) huidige.toon(toestand.scene);
     if (toestand.standpunt) huidige.standpunt(toestand.standpunt);
     if (toestand.markeer) huidige.markeer?.(toestand.markeer);
+    if (zonToestand) huidige.zon?.(zonToestand);
   };
   huidige = start(false);
   if (!huidige) return null;
@@ -349,6 +362,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     standpunt(naam) { toestand.standpunt = naam; huidige?.standpunt(naam); },
     instellen(w) { toestand.weergave = { ...toestand.weergave, ...w }; huidige?.instellen?.(w); },
     markeer(id) { toestand.markeer = id; huidige?.markeer?.(id); },
+    zon(stand) { zonToestand = stand; huidige?.zon?.(stand); },
     formaat() { huidige?.formaat(); },
     // Voor de tests: doen alsof het toestel wegvalt (zoals de browser het meldt).
     proefVerlies() { huidige?.proefVerlies(); },
@@ -442,6 +456,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   scene.add(zon, zon.target);
   const vul = new THREE.DirectionalLight(0xffffff, 0.16 * PI);
   scene.add(vul);
+  /** Stand van de zon, gezet door de aanroeper (zie Viewer3D.zon); null = het vaste licht van de lichtsfeer. */
+  let zonStand: ZonIn3D | null = null;
+  /** Onzichtbaar voor het oog, wel in de schaduwkaart: voor blokken met `alleenSchaduw` (woning, lichtinval). */
+  const schaduwMateriaal = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
   const studioVloer = new THREE.MeshStandardMaterial({ color: 0xdcd8d0, roughness: 1, envMapIntensity: 0.4 });
   const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), studioVloer);
   vloer.rotation.x = -Math.PI / 2;
@@ -1417,6 +1435,17 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   }
 
   function mesh(b: Blok) {
+    // Alleen schaduw (woning, lichtinval): dezelfde vorm, maar niet te zien; ze houdt het zonlicht tegen.
+    if (b.alleenSchaduw) {
+      const m: any = mesh({ ...b, alleenSchaduw: false });
+      m.traverse((o: any) => {
+        if (!o.isMesh) return;
+        o.material = schaduwMateriaal;
+        o.castShadow = true;
+        o.receiveShadow = false;
+      });
+      return m;
+    }
     // Prisma (woning): harde doorsnede, in wereldmaat; de kopse vlakken kunnen een eigen materiaal hebben.
     if (b.vorm === 'prisma' && b.doorsnede && b.doorsnede.length >= 3) {
       const [kMin, kPlus] = b.as === 'z' ? (['z-', 'z+'] as const) : (['x-', 'x+'] as const);
@@ -1884,6 +1913,26 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     const a = (weergave.zonRichting * Math.PI) / 180;
     zon.position.set(doel.x + Math.cos(a) * grootte * 1.25, grootte * h, doel.z + Math.sin(a) * grootte * 1.25);
     zon.target.position.copy(doel);
+    // Stand door de aanroeper gezet (woning, lichtinval): de zon uit die richting en op die hoogte.
+    if (zonStand) {
+      const op = zonStand.hoogte > 0;
+      const r = (zonStand.richting * Math.PI) / 180, hoek = (Math.max(zonStand.hoogte, 1) * Math.PI) / 180, ver = grootte * 2.2;
+      zon.position.set(doel.x + Math.sin(r) * Math.cos(hoek) * ver, doel.y + Math.sin(hoek) * ver, doel.z - Math.cos(r) * Math.cos(hoek) * ver);
+      // Lange schaduwen bij een lage zon: een ruimer schaduwbereik.
+      sc.left = sc.bottom = -bereik * 1.5;
+      sc.right = sc.top = bereik * 1.5;
+      sc.far = bereik * 6;
+      sc.updateProjectionMatrix();
+      // Veel sterker zonlicht tegenover het vullicht en het hemellicht, zodat een zonnevlek binnen duidelijk afsteekt
+      // (ook van een lage winterzon, die de vloer maar scheef raakt), en het geheel iets donkerder belicht. Vlak boven
+      // de horizon is de zon zwakker, en onder ±25° warmer van kleur; onder de horizon is er geen zon.
+      const laag = Math.min(1, Math.max(0, zonStand.hoogte / 25));
+      zon.intensity = op ? LICHTEN[lichtNaam].zonSterkte * PI * 2.6 * Math.min(1, Math.max(0.35, zonStand.hoogte / 8)) : 0;
+      zon.color.set(LICHTEN[lichtNaam].zon).lerp(new THREE.Color('#ffc890'), (1 - laag) * 0.55);
+      vul.intensity = 0.16 * PI * 0.3;
+      hemel.intensity = LICHTEN[lichtNaam].hemel * PI * (op ? 0.72 : 0.5);
+      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * (op ? 0.8 : 0.9);
+    }
   }
 
   // ---------- camera (eenvoudige orbit) ----------
@@ -2618,6 +2667,15 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       // Ooghoogte: recht van voren, zoals een staande klant (camera op 155 cm), iets dichterbij.
       if (naam === 'ooghoogte') { hoekH = -0.25; afstand *= 0.85; hoekV = Math.asin(Math.max(-0.2, Math.min(0.95, (155 - doel.y) / afstand))); }
       plaatsCamera();
+    },
+    zon(stand) {
+      if (!stand && !zonStand) return;
+      zonStand = stand ? { richting: Number(stand.richting) || 0, hoogte: Number(stand.hoogte) || 0 } : null;
+      // Terug naar het vaste licht: belichting, vullicht, zon en hemel zoals de lichtsfeer ze zet.
+      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
+      vul.intensity = 0.16 * PI;
+      zetLicht();
+      render();
     },
     instellen(w) {
       // Alleen opnieuw opbouwen wat veranderd is: een schuifregelaar mag het decor niet bij elke stap herbouwen.

@@ -41,6 +41,7 @@ import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
 import { dakLijnen, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
+import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 
 export { gevelSvgs } from './gevel-ui.js';
@@ -189,7 +190,7 @@ export function render() {
   const houder = $('#pl-canvas');
   const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   viewBox = zoom ? zoom.kijkvak() : passendKader();
-  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(), dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN });
+  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(), dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN, noordpijl: true });
   zoom?.bijwerken();
   const zi = document.getElementById('pl-zoomhint');
   if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
@@ -273,10 +274,13 @@ function plan3D() {
   wachtend3D = true;
   requestAnimationFrame(() => {
     wachtend3D = false;
+    // Lichtinval: de zon uit de gekozen richting, en wat verborgen is werpt nog schaduw.
+    viewer?.zon?.(zonVoorKijker());
     viewer?.toon(plattegrond3D(toestand().plan, cat, {
       laag: laag ? 110 : undefined,
       meubels: toonMeubels,
       dak: toonDakIn3D,
+      lichtinval: lichtinvalAan(),
       totNiveau: alleNiveaus && !laag ? undefined : niveau,
       inhoud: (o) => {
         const p = positieVan(o);
@@ -881,8 +885,13 @@ function toonEigenschappen() {
       getalVeld('Muurhoogte', pl.muurhoogte, (w) => zet((p) => { p.muurhoogte = Math.min(400, Math.max(200, w)); }), { min: 200, max: 400, stap: 5, eenheid: 'cm' }),
       getalVeld('Buitenmuur', pl.buitenmuur, (w) => zet((p) => { p.buitenmuur = Math.min(60, Math.max(15, w)); }), { min: 15, max: 60, eenheid: 'cm' }),
       getalVeld('Binnenmuur', pl.binnenmuur, (w) => zet((p) => { p.binnenmuur = Math.min(30, Math.max(5, w)); }), { min: 5, max: 30, eenheid: 'cm' }),
+      // Oriëntatie: waar het noorden ligt (0 = de bovenkant van het plan; dan blijft het veld uit het plan weg).
+      getalVeld('Noord', pl.noord ?? 0, (w) => zet((p) => {
+        const hoek = ((Math.round(w) % 360) + 360) % 360;
+        if (hoek) p.noord = hoek; else delete p.noord;
+      }), { min: 0, max: 359, stap: 15, eenheid: '°' }),
     );
-    vak.append(maten);
+    vak.append(maten, el('p', { class: 'klein' }, 'Noord: graden met de klok mee vanaf de bovenkant van het plan (0 = boven, 90 = rechts, 180 = onder). De noordpijl staat linksboven; de lichtinval in de 3D rekent ermee.'));
     // Gevel: materialen kies je in de gevel-editor (tab Gevels).
     const st = toestand().plan.gevelOntwerp?.standaard;
     const mat = st ? gevelCatalogus[st.materiaal] : undefined;
@@ -897,6 +906,7 @@ function toonEigenschappen() {
 
 function toonOverzicht() {
   toonDak();
+  toonZon();
   const pl = plan();
   const muren = murenVan(pl);
   const tb = $('#pl-ruimtes tbody');
@@ -1069,6 +1079,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-dak').addEventListener('change', (e) => { toonDakIn3D = (e.target as HTMLInputElement).checked; plan3D(); });
+  // Lichtinval: aan of uit bouwt de 3D opnieuw op (verborgen delen als schaduwwerper); dag en uur verzetten alleen de zon.
+  startZon({ opnieuw: () => plan3D(), zon: () => viewer?.zon?.(zonVoorKijker()) });
   $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
   $('#pl-ongedaan').addEventListener('click', () => ongedaan());
   $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());

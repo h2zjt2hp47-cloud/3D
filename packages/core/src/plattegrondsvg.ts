@@ -25,6 +25,8 @@ export interface PlanSvgOpties {
   dakLijnen?: { omtrek: { x: number; y: number; b: number; d: number }; nok: { x1: number; y1: number; x2: number; y2: number }; tekst: string };
   /** Lichtstraten krijgen een nok in de tekening: de codes (`type`) die een lichtstraat zijn. */
   lichtstraten?: Set<string>;
+  /** Noordpijl tekenen, ook als het plan geen noordrichting heeft (dan wijst ze naar boven). Met `plan.noord` staat ze er altijd. */
+  noordpijl?: boolean;
   /** Rechthoek die getekend wordt (nieuwe ruimte). */
   voorbeeld?: { x: number; y: number; b: number; d: number };
   /** Voorbeeld van een nieuwe opening op een muur. */
@@ -209,6 +211,15 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
       lijn(cx, af.y0, cx, v.y, af.boven);
       lijn(cx, v.y + v.d, cx, af.y1, af.onder);
     }
+  }
+
+  // Noordpijl linksboven naast het plan (rechts en onder staan de totale maten).
+  if ((opties.noordpijl || plan.noord !== undefined) && plan.ruimtes.length) {
+    const delen = plan.ruimtes.flatMap(delenVan);
+    const cx = Math.min(...delen.map((r) => r.x)) - 78, cy = Math.min(...delen.map((r) => r.y)) - 78, hoek = plan.noord ?? 0;
+    uit.push(`<g data-soort="noordpijl" pointer-events="none" transform="translate(${n(cx)} ${n(cy)}) rotate(${n(hoek)})">`
+      + '<circle r="30" fill="#fbfbf9" stroke="#4b5753" stroke-width="1.5"/><path d="M 0 -26 L 11 12 L 0 5 Z" fill="#2c2f2d"/><path d="M 0 -26 L -11 12 L 0 5 Z" fill="#fbfbf9" stroke="#2c2f2d" stroke-width="1.2" stroke-linejoin="round"/>'
+      + `<text transform="translate(0 -40) rotate(${n(-hoek)})" font-size="17" font-weight="700" fill="#2c2f2d" text-anchor="middle" dominant-baseline="central">N</text></g>`);
   }
 
   if (opties.voorbeeldWand) {
