@@ -75,3 +75,5 @@ export * from './offerte.js';
 export * from './gevels.js';
 export * from './werf.js';
 export * from './pakket3d.js';
+export * from './opbouw.js';
+export * from './bouwdelen.js';
