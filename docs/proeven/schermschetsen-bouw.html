@@ -47,7 +47,7 @@ body { margin: 0; background: #cfd4d7; font: 14px/1.4 system-ui, -apple-system, 
 .wissel span.aan { background: var(--a); color: #fff; }
 .pil { padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,.93); border: 1px solid var(--l); font-weight: 600; white-space: nowrap; }
 .noot { position: absolute; left: 12px; bottom: 10px; background: rgba(255,255,255,.93); border: 1px solid var(--l); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: var(--z); z-index: 2; max-width: 70%; }
-.tegels { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 22px 26px; }
+.tegels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; padding: 22px 26px; }
 .tegel { background: #fff; border: 1px solid var(--l); border-radius: 10px; padding: 12px; height: 205px; position: relative; }
 .tegel svg { width: 100%; height: 128px; display: block; }
 .tegel b { display: block; margin-top: 6px; font-size: 15px; }
@@ -69,7 +69,7 @@ body { margin: 0; background: #cfd4d7; font: 14px/1.4 system-ui, -apple-system, 
 
 <section class="blad" id="b1">
   <h2>1 · Start: waarmee begin je?</h2>
-  <p class="uit">Eén scherm om te kiezen wat je ontwerpt. Een woning teken je vrij; al de rest is een vast model waar je maten en opties van kiest. Geen prijzen.</p>
+  <p class="uit">Eén scherm om te kiezen wat je ontwerpt. Een woning teken je vrij; al de rest is een vast model waar je maten en opties van kiest (de aanbouw is zo'n eigen vorm). Geen prijzen.</p>
   <div class="scherm">
     <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap aan">1 · Ontwerp</span><span class="stap">2 · Bekijk</span><span class="stap">3 · Overzicht</span></div><div class="rechts"><span class="knop">Mijn ontwerpen</span><span class="knop">Klantweergave</span></div></div>
     <div class="tegels" id="tegels"></div>
@@ -438,13 +438,20 @@ function doorsnede(svg) {
 // ---- De bladen vullen ----
 const HUIS = { W: 100, D: 80, H: 30, R: 28 };
 { // 1: tegels
-  const soorten = [['Woning', 'Vrij tekenen op een plattegrond', 'huis'], ['Raam of deur', 'Eén raam, deur of schuifraam', 'raam'], ['Carport', 'Maten, dak, wanden, berging', 'carport'], ['Tuinhuis of poolhouse', 'Maten, dakvorm, wanden in hout of glas', 'tuinhuis'],
+  const soorten = [['Woning', 'Vrij tekenen op een plattegrond', 'huis'], ['Aanbouw', 'Tegen de woning: maten, raampartij, gevel, dak', 'aanbouw'], ['Raam of deur', 'Eén raam, deur of schuifraam', 'raam'], ['Carport', 'Maten, dak, wanden, berging', 'carport'], ['Tuinhuis of poolhouse', 'Maten, dakvorm, wanden in hout of glas', 'tuinhuis'],
     ['Pergola of terrasoverkapping', 'Los of tegen de woning', 'pergola'], ['Loods of hal', 'Staalbouw met platen en poorten', 'loods'], ['Trap en balustrade', 'Steektrap, kwartdraai, bordes, spiltrap', 'trap'], ['Garagepoort', 'Sectionaal, met belijning en vensters', 'poort']];
   for (const [naam, uitleg, soort] of soorten) {
     const t = document.createElement('div'); t.className = 'tegel'; $('tegels').append(t);
     const svg = S('svg', { viewBox: '0 0 280 128' }, t); S('rect', { x: 0, y: 0, width: 280, height: 128, fill: '#e6edf1', rx: 6 }, svg);
     const P = iso(140, 62, 1.25);
     if (soort === 'huis') huisAf(svg, iso(132, 58, .82), { ...HUIS, dak: 'zadel' });
+    else if (soort === 'aanbouw') {
+      const Q = iso(150, 40, .62), D = HUIS.D; huisAf(svg, Q, { ...HUIS, dak: 'zadel' });
+      V(svg, Q, [[24, D + 34, 0], [72, D + 34, 0], [72, D + 34, 24], [24, D + 34, 24]], '#ece7dc'); V(svg, Q, [[72, D, 0], [72, D + 34, 0], [72, D + 34, 24], [72, D, 24]], '#d8d2c5');
+      V(svg, Q, [[29, D + 34, 1], [67, D + 34, 1], [67, D + 34, 20], [29, D + 34, 20]], '#bcd9e8', { s: '#2f3437', w: 1.6 }); L(svg, Q, [48, D + 34, 1], [48, D + 34, 20], '#2f3437', 1.4);
+      V(svg, Q, [[23, D, 24], [73, D, 24], [73, D + 35, 24], [23, D + 35, 24]], '#454b50');
+      V(svg, Q, [[40, D + 10, 24.2], [56, D + 10, 24.2], [56, D + 24, 24.2], [40, D + 24, 24.2]], '#cfe6f2', { s: '#6c7479' });
+    }
     else if (soort === 'carport') { const Q = iso(140, 58, 1.15); for (const [x, y] of [[0, 0], [60, 0], [0, 50], [60, 50]]) L(svg, Q, [x, y, 0], [x, y, 24], '#8a6233', 5); V(svg, Q, [[-3, -3, 25], [63, -3, 25], [63, 53, 25], [-3, 53, 25]], '#454b50'); }
     else if (soort === 'tuinhuis') huisAf(svg, iso(140, 66, 1.3), { W: 50, D: 36, H: 22, R: 10, dak: 'zadel' });
     else if (soort === 'pergola') { const Q = iso(140, 58, 1.15); for (const [x, y] of [[0, 0], [60, 0], [0, 44], [60, 44]]) L(svg, Q, [x, y, 0], [x, y, 24], '#b98a52', 5); for (let x = 0; x <= 60; x += 6) L(svg, Q, [x, -3, 25], [x, 47, 25], '#8a6233', 3); }

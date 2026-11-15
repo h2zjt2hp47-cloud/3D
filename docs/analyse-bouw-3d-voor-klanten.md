@@ -124,6 +124,16 @@ Vaste modellen met maten en opties: **carport, tuinhuis, poolhouse, pergola, ter
 
 Werk: de bouwdelen eerst (M), daarna ±S per model.
 
+### 4.3b De aanbouw als eigen vorm [beslist, 15/11: "aanbouw is specifieke vorm, mag ook toegevoegd worden"]
+
+De aanbouw is een vast model dat **al bestaat** [code]: tegen de woning, met breedte, diepte en hoogte, een raampartij
+(schuifraam 2-, 3- of 4-delig, hef-schuif, vouwdeur, deur met zijpanelen), 3 gevels voor de zijmuren, 4 bekledingen boven de
+raampartij en een plat dak met EPDM, lichtstraat of lichtkoepel. Hij krijgt een eigen tegel op het startscherm (schets 1).
+
+Wat erbij moet: hij wordt opgebouwd uit dezelfde bouwdelen als de rest (zodat hij ook een constructieweergave en een
+doorsnede krijgt), hij neemt de gevel- en dakcatalogus van de woning over in plaats van zijn eigen korte lijstjes, en je
+kunt hem **tegen een getekende woning** zetten in plaats van alleen los. Werk: M.
+
 ### 4.4 Houtskelet, dakconstructie en de constructieweergave [beslist: eerst]
 
 Dit is de **tweede weergave** van de woning: één knop wisselt tussen *Afgewerkt* en *Constructie*.
@@ -230,7 +240,7 @@ niets hiervan is gebouwd. Bron: `docs/proeven/schermschetsen-bouw.html` (één p
 
 | # | Schets | Wat ze toont |
 |---|---|---|
-| 1 | ![Start](afbeeldingen/schermschetsen/blad-01.jpg) | Kiezen waarmee je begint: woning, raam, carport, tuinhuis, pergola, loods, trap, garagepoort |
+| 1 | ![Start](afbeeldingen/schermschetsen/blad-01.jpg) | Kiezen waarmee je begint: woning, aanbouw, raam, carport, tuinhuis, pergola, loods, trap, garagepoort |
 | 2 | ![Ontwerp woning](afbeeldingen/schermschetsen/blad-02.jpg) | Links de keuzes per tabblad, midden het plan, rechts altijd de 3D |
 | 3 | ![Vast model](afbeeldingen/schermschetsen/blad-03.jpg) | Een vast model (carport): maten en opties, de 3D volgt |
 | 4 | ![Afgewerkt](afbeeldingen/schermschetsen/blad-04.jpg) | De 3D groot en mooier: lucht, gras, schaduw, zon op dag en uur, maten, zonwering |
@@ -278,7 +288,7 @@ Na de schetsen kwamen er nog wensen bij (15/11): **zonneschermen, ventilatie, st
 | 3 | **Bouwdelen en opbouw als gegevens** (hoofdstuk 3): de basis voor rondes 4, 6, 7 en 8 | M |
 | 4 | **Constructieweergave** van de woning (jouw eerste keuze): houtskelet, balklaag, dakconstructie, vloeropbouw, de knop *Afgewerkt / Constructie* | L |
 | 5 | **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
-| 6 | **Bijgebouwen in hout:** carport eerst, dan tuinhuis, poolhouse, pergola | M–L |
+| 6 | **Aanbouw en bijgebouwen in hout:** de bestaande aanbouw op bouwdelen en tegen de woning; carport, dan tuinhuis, poolhouse, pergola | M–L |
 | 7 | **Staalbouw:** loods of hal | M–L |
 | 8 | **Staal in en rond de woning:** trap, balustrade, luifel | M |
 | 9 | **Meegeven:** kijkbestand, blad zonder prijzen, maten in de 3D, varianten naast elkaar | M |
