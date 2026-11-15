@@ -220,7 +220,7 @@ describe('vloervlak, dakvlak en losse stukken', () => {
     const eerste = stukken(d, 'keper')[0]!.blok;
     expect(eerste.doorsnede![0]![1]).toBeCloseTo(3.47 / cos, 1);
     expect(eerste.doorsnede![1]![1]).toBeCloseTo(300 * tan + 3.47 / cos, 1);
-    // Hoogte van het geheel: de stijging over 3 m plus de dikte van de opbouw, loodrecht afgesneden.
+    // Hoogte van het geheel: de stijging over 3 m plus de dikte van de opbouw, te lood (verticaal) doorgesneden.
     expect(d.maten.h).toBeCloseTo(300 * tan + 30.54 / cos, 1);
     expect([d.maten.b, d.maten.d]).toEqual([400, 300]);
   });
@@ -231,7 +231,7 @@ describe('vloervlak, dakvlak en losse stukken', () => {
     expect(s.stukken.map((x) => x.rol)).toEqual(['trekbalk', 'spantbeen', 'spantbeen']);
     expect(s.stukken[0]!.lengte).toBe(600);
     expect(s.stukken[1]!.lengte).toBeCloseTo(300 / cos, 2);
-    // Hoogte: trekbalk (22) + stijging tot de nok (300 × tan 40°) + het been loodrecht doorgesneden (22 / cos 40°).
+    // Hoogte: trekbalk (22) + stijging tot de nok (300 × tan 40°) + het been te lood (verticaal) doorgesneden (22 / cos 40°).
     expect(s.maten.h).toBeCloseTo(22 + 300 * tan + 22 / cos, 1);
     expect([s.maten.b, s.maten.d]).toEqual([600, 7]);
     // De twee benen raken elkaar in de nok, in het midden.
@@ -495,6 +495,30 @@ describe('meetstaat', () => {
     expect(regel(m, 'platen', 'osb')).toMatchObject({ m2: 8.84 });
     // De latten op 120 en 180 cm hoogte lopen door het raam en verliezen daar 1,2 m: 24 − 2 × 1,2 = 21,6 m.
     expect(regel(m, 'latten', 'vuren', '45 × 45')).toMatchObject({ lengte: 21.6 });
+  });
+
+  it('een lat die half over de rand van een opening valt, wordt daar helemaal doorgezaagd', () => {
+    // Staande latten (steenstrips), 45 mm breed om de 600 mm over 4 m: harten op 60 … 360 cm (zes) en één tegen elk
+    // einde = 8 latten van 2,6 m. Een deur van 240 tot 335 cm (215 cm hoog) raakt er twee: de lat op 237,75–242,25 cm
+    // ligt half over de rand, die op 297,75–302,25 cm er middenin. Van beide blijft alleen 45 cm boven de deur.
+    const strips = wand([{ ...deur, x: 240 }], 400, O.hsb_steenstrips!);
+    expect(regel(meetstaat(strips, M), 'latten', 'vuren', '28 × 45')).toMatchObject({ lengte: 16.5 }); // 6 × 2,6 + 2 × 0,45
+    // Liggende latten (leidingspouw) op 0, 57,75, 117,75, 177,75, 237,75 en 255,5 cm hoogte, elk 4 m. Een raam van
+    // 120 tot 220 cm hoog en 1,2 m breed: de lat op 117,75–122,25 ligt half over de onderrand, die op 177,75 er
+    // middenin. Beide verliezen 1,2 m: 6 × 4 − 2 × 1,2 = 21,6 m.
+    const hoog = wand([{ ...raam, x: 250, borstwering: 120, hoogte: 100 }]);
+    expect(hoog.meldingen).toEqual([]);
+    expect(regel(meetstaat(hoog, M), 'latten', 'vuren', '45 × 45')).toMatchObject({ lengte: 21.6 });
+    // In de 3D (met een breed staal, zodat de opening erin valt): geen lat steekt in een opening en er blijft
+    // nergens een smalle strook lat naast een opening staan (elke lat is 4,5 cm breed).
+    for (const w of [strips, hoog]) {
+      const latten = bouwdeelBlokken(w, 'constructie', { stap: 80 }).filter((b) => b.code.startsWith('lat.'));
+      expect(latten.length).toBeGreaterThan(8);
+      for (const b of latten) {
+        expect(Math.min(b.b, b.h), b.code).toBeGreaterThanOrEqual(4.49);
+        for (const o of w.vlak!.openingen) expect(b.x + b.b <= o.u0 + 0.01 || b.x >= o.u1 - 0.01 || b.y + b.h <= o.v0 + 0.01 || b.y >= o.v1 - 0.01, b.code).toBe(true);
+      }
+    }
   });
 
   it('hellend dak: kepers en oppervlaktes langs de helling', () => {

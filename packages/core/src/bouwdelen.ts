@@ -19,7 +19,7 @@
  *   vloervlak  x = lengte, z = breedte, y = dikte (0 = onderkant van de opbouw).
  *   dakvlak    plat: zoals een vloer. Hellend: x = langs de dakvoet, z = horizontaal van de dakvoet (z = 0) naar de nok
  *              (z = d), y = hoogte; de onderkant van de opbouw gaat bij de dakvoet door y = 0 en stijgt met de helling.
- *              De randen zijn loodrecht afgesneden, zoals het dak in dak.ts.
+ *              De randen zijn te lood (verticaal) afgesneden, zoals het dak in dak.ts.
  *   paal       x en z = de doorsnede, y = hoogte.
  *   ligger     x = lengte, y = hoogte van de doorsnede, z = breedte van de doorsnede.
  *   spant      x = overspanning (voet links op x = 0, nok in het midden), y = hoogte, z = dikte van het spant.
@@ -164,7 +164,7 @@ function doos(v: BouwdeelVlak, code: string, t: Teken, r: VlakRechthoek, w0: num
   if (v.ligging === 'liggend') {
     return { code, soort: t.soort, vorm: 'blok', kleur: t.kleur, x: r2(r.u0), y: r2(w0), z: r2(r.v0), b: r2(r.u1 - r.u0), h: r2(w1 - w0), d: r2(r.v1 - r.v0), ...extra };
   }
-  // Hellend: een prisma langs x. De lagen liggen evenwijdig met de helling en zijn loodrecht afgesneden.
+  // Hellend: een prisma langs x. De lagen liggen evenwijdig met de helling en zijn te lood (verticaal) afgesneden.
   const tan = Math.tan(rad(v.helling)), cos = Math.cos(rad(v.helling));
   const y = (p: number, w: number) => p * tan + w / cos;
   return prisma(code, t.soort, t.kleur, 'x', r.u0, r.u1, [[r.v0, y(r.v0, w0)], [r.v1, y(r.v1, w0)], [r.v1, y(r.v1, w1)], [r.v0, y(r.v0, w1)]], extra);
@@ -233,18 +233,24 @@ function zichtGrenzen(grenzen: number[], dragend: number): number[] {
 /** De stroken van een laag latten in het vlak (zonder de openingen). */
 function latStroken(v: BouwdeelVlak, hout: LaagHout): VlakRechthoek[] {
   const t = getal(hout.breedte) / 10, hoh = getal(hout.hoh) / 10;
-  const cos = Math.cos(rad(v.helling));
-  // Het skelet loopt langs v (stijlen, kepers, balken langs z) of langs u (balken langs x); latten lopen mee of dwars.
-  const skeletLangsV = v.ligging !== 'liggend' || v.richting === 'z';
-  const langsV = (hout.richting === 'mee') === skeletLangsV;
+  const cos = Math.cos(rad(v.helling)), langsV = lattenLangsV(v, hout);
   const stroken: VlakRechthoek[] = langsV
     ? raster(v.lengte, t, hoh).map((u) => ({ u0: u, u1: Math.min(v.lengte, u + t), v0: 0, v1: v.breedte }))
     // Dwars op een helling: de afstanden gelden langs de helling, het vlak rekent horizontaal.
     : raster(v.breedte / cos, t, hoh).map((s) => ({ u0: 0, u1: v.lengte, v0: s * cos, v1: Math.min(v.breedte, (s + t) * cos) }));
-  return stroken.flatMap((s) => zonderOpeningen(s, v.openingen));
+  // Een lat die maar half over de rand van een opening valt, wordt daar over haar hele breedte doorgezaagd: anders
+  // bleef er naast de opening een smalle strook lat staan, die als een volle lat geteld en getekend werd.
+  const raakt = (a0: number, a1: number, b0: number, b1: number) => a1 > b0 + EPS && a0 < b1 - EPS;
+  return stroken.flatMap((s) => zonderOpeningen(s, v.openingen.map((o) => {
+    if (langsV) return raakt(o.u0, o.u1, s.u0, s.u1) ? { ...o, u0: Math.min(o.u0, s.u0), u1: Math.max(o.u1, s.u1) } : o;
+    return raakt(o.v0, o.v1, s.v0, s.v1) ? { ...o, v0: Math.min(o.v0, s.v0), v1: Math.max(o.v1, s.v1) } : o;
+  })));
 }
 
-/** Lopen de latten van deze laag langs v (staand, of langs de helling)? */
+/**
+ * Lopen de latten van deze laag langs v (staand in een wand, langs de helling op een dak)? Het skelet loopt langs v
+ * (stijlen, kepers, balken langs z) of langs u (balken langs x); latten lopen mee met het skelet of dwars erop.
+ */
 function lattenLangsV(v: BouwdeelVlak, hout: LaagHout): boolean {
   return (hout.richting === 'mee') === (v.ligging !== 'liggend' || v.richting === 'z');
 }
@@ -553,7 +559,7 @@ export interface SpantInvoer {
 
 /**
  * Eenvoudig spant: een driehoek van twee spantbenen op een trekbalk. De benen staan met hun onderkant op de bovenkant
- * van de trekbalk (bij x = 0 en x = overspanning) en komen samen in de nok; ze zijn loodrecht afgesneden.
+ * van de trekbalk (bij x = 0 en x = overspanning) en komen samen in de nok; ze zijn te lood (verticaal) afgesneden.
  * De lengte van een been is gemeten langs de helling. Geen verbindingen, geen makelaar, geen schoren.
  */
 export function spant(invoer: SpantInvoer, materialen: Record<string, BouwMateriaal>): Bouwdeel {
@@ -662,7 +668,11 @@ export function bouwdeelBlokken(deel: Bouwdeel, weergave: BouwWeergave, opties: 
   const schaal = Math.min(1, (v.lengte * 0.9) / totaal);
   const laag = (l: BouwdeelLaag, begin: number) => {
     if (l.rol === 'latten' && l.hout) {
-      latStroken(v, l.hout).flatMap((s) => vanaf(s, begin)).forEach((s, i) => uit.push(doos(v, `lat.${l.index}.${i + 1}`, teken(l), s, l.getekend[0], l.getekend[1])));
+      // Latten die langs de trede lopen, worden op de trede afgekort; latten die er dwars op staan, blijven heel.
+      const heel = lattenLangsV(v, l.hout);
+      latStroken(v, l.hout)
+        .flatMap((s) => (heel ? (s.u0 >= begin - EPS ? [s] : []) : vanaf(s, begin)))
+        .forEach((s, i) => uit.push(doos(v, `lat.${l.index}.${i + 1}`, teken(l), s, l.getekend[0], l.getekend[1])));
       if (l.vulling) plaat(`vulling.${l.index}`, l.vulling, vanaf(vol, begin), l.getekend[0] + terug(l), l.getekend[1] - terug(l), terug(l));
     } else plaat(`laag.${l.index}`, teken(l), vanaf(vol, begin), l.getekend[0], l.getekend[1]);
   };
