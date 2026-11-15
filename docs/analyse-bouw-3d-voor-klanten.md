@@ -18,7 +18,7 @@ Dit is alleen een analyse. Ze bouwt voort op `docs/analyse-bouw-3d-missing-link.
 4. **Het zwaarste stuk is niet de 3D maar het beheer.** Je koos dat de aannemer zelf zijn modellen, kleuren en materialen beheert. Dat kan voor materialen, kleuren, maten en welke opties hij toont. Een **nieuwe vorm** (een ander soort carport) blijft programmeerwerk. En beheren vraagt bewaren buiten de browser.
 5. **Volgorde** (jouw keuze: eerst de constructieweergave): zie hoofdstuk 8. Het zijn een tiental rondes; elke ronde eindigt met een testbestand en een test op tablet en groot scherm.
 
-Wat ik nog van je nodig heb, staat in hoofdstuk 13. Later op 15/11 kwamen erbij: de toets aan twee echte offertes (hoofdstuk 10), alles voor de installateur (hoofdstuk 11) en het oordeel over de schetsen (hoofdstuk 12).
+Wat ik nog van je nodig heb, staat in hoofdstuk 14. **Het belangrijkste is gebruiksgemak: zie hoofdstuk 13 (de kortste weg naar een resultaat).** Later op 15/11 kwamen erbij: de toets aan twee echte offertes (hoofdstuk 10), alles voor de installateur (hoofdstuk 11) en het oordeel over de schetsen (hoofdstuk 12).
 
 ---
 
@@ -299,7 +299,7 @@ Na de schetsen kwamen er nog wensen bij (15/11): **zonneschermen, ventilatie, st
 | Ronde | Wat | Werk [inschatting] |
 |---|---|---|
 | 1 | *(loopt)* Dak, lichtkoepels, lichtinval; 3D doorsturen | – |
-| 2 | **Zonder prijzen en gebruiksgemak:** Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld, de drie stappen; test als nieuwe gebruiker op tablet en groot scherm | M |
+| 2 | **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
 | 3 | **Bouwdelen en opbouw als gegevens** (hoofdstuk 3): de basis voor rondes 4, 6, 7 en 8 | M |
 | 4 | **Constructieweergave** van de woning (jouw eerste keuze): houtskelet, balklaag, dakconstructie, vloeropbouw, de knop *Afgewerkt / Constructie* | L |
 | 5 | **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
@@ -434,7 +434,47 @@ Dit is een eigen ronde, na de constructieweergave: de leidingen lopen door de op
 
 ---
 
-## 13. Wat ik nog van je nodig heb
+## 13. De kortste weg naar een resultaat (15/11)
+
+Jonas: *"Belangrijkste is gebruiksgemak, een verkoper moet zo snel mogelijk een resultaat krijgen, kijk voor een manier
+om dit te stroomlijnen."* Dit gaat vóór alles in dit document.
+
+**Waar de tijd vandaag in zit** [code, gemeten op 1/11 in `docs/analyse-gebruiksgemak.md`]: van niets tot een afdrukbaar
+resultaat met **één ruimte en één raam** zijn 13 handelingen nodig. De verkoper begint met een leeg blad en bouwt alles
+zelf op. Voor de uitbouw uit hoofdstuk 10 (wanden, drie koepels, een groot raam, screens, techniek) schat ik meer dan
+60 handelingen **[inschatting]**.
+
+**Het principe keert om: eerst volledig, dan verbeteren.** De verkoper begint nooit leeg. Na drie antwoorden staat er
+een volledig ontwerp dat er goed uitziet; daarna past hij alleen aan wat bij deze klant anders is.
+
+| # | Maatregel | Wat het doet | Bestaat al? |
+|---|---|---|---|
+| 1 | **Snelstart in drie vragen** | *Wat* (een tegel: woning, aanbouw, carport …), *hoe groot* (drie maten met grote − en +, gangbare maten al ingevuld), *welke stijl* (één van vier beelden). Dan staat de 3D er, met ramen, dak en afwerking. | Nee |
+| 2 | **Stijlen** | Een stijl is een volledige set keuzes in één tik: gevel, kleur van het schrijnwerk, dak, vloer, binnenkleur. De aannemer legt zijn eigen stijlen vast (zijn typische werk). | Nee |
+| 3 | **Tik op het ding zelf** | Tik in de 3D op het dak, een raam of een wand: alleen de keuzes van dat ding verschijnen. Geen menu's zoeken. | De kijker meldt al waar je tikt (bij de zetels) [code] |
+| 4 | **Uitrusting in één tik** | "Basisuitrusting" plaatst per ruimte de stopcontacten, schakelaars, lichtpunten en ventilatie volgens vaste regels; "screens op zuid en west" in één tik. Daarna verplaats of schrap je wat niet past. | Het principe bestaat: een raam krijgt nu al keuzes volgens de ruimte [code] |
+| 5 | **Beginnen van eigen werk** | De laatste ontwerpen en de eigen sjablonen van de aannemer als start: "zoals bij de vorige klant, maar een meter breder". | Sjablonen en kopiëren bestaan [code] |
+| 6 | **Niets is verplicht** | Geen stappen die je moet doorlopen, geen velden die je moet invullen. *Bekijk*, *Overzicht* en *Meegeven* zijn altijd één tik ver. | Deels |
+| 7 | **Onthouden** | De configurator onthoudt wat deze verkoper meestal kiest en stelt dat voor. | Nee |
+| 8 | **Uit Missing Link vertrekken** | Het project en de klant komen uit Missing Link; niets overtypen. | Later |
+
+**Doelen, te meten in een echte browser bij elke ronde** (zelfde methode als op 1/11):
+
+| Taak | Vandaag | Doel |
+|---|---|---|
+| Een eerste 3D die je aan de klant kunt tonen | 13 handelingen (één ruimte, één raam) | hoogstens 5 tikken, onder de minuut |
+| De uitbouw uit de twee offertes, volledig | meer dan 60 **[inschatting]** | hoogstens 25 |
+| Een variant maken (ander dak of andere kleur) | ± 8 (project kopiëren en wijzigen) **[inschatting]** | 2 |
+| Meegeven aan de klant | 2 (afdrukken, met prijzen) | 1 |
+
+**Gevolg voor de volgorde** (hoofdstuk 8): ronde 2 wordt *"snel resultaat"*: snelstart, stijlen, tik op het ding, prijzen
+uit beeld, Overzicht. Ze komt meteen na het samenvoegen van dak, koepels en lichtinval, op de bestaande configurator, met
+de uitbouw uit hoofdstuk 10 als proef. Elke latere ronde moet de doelen hierboven halen of verbeteren; een functie die
+het trager maakt, gaat achter *Meer opties*.
+
+---
+
+## 14. Wat ik nog van je nodig heb
 
 1. **Eén aannemer per productsoort** die een recept wil nalezen (houtbouw, staalbouw). Zonder vakman blijven het benaderingen.
 2. **Waar wordt bewaard?** Voor de link naar de klant en voor het beheer: in Missing Link, of op een eigen server van de configurator?
