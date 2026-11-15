@@ -13,7 +13,7 @@ import { controles, inbegrepen } from './positie-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
-import { maakPakket3D } from './doorsturen.js';
+import { maakPakket3D, maakZending } from './doorsturen.js';
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
 const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'inrichting'] as const;
@@ -284,9 +284,9 @@ function offertetekst(): string {
 }
 
 /** Export als JSON (structuur zoals een koppeling met het ERP ze zou doorsturen). */
-function exportJson(): string {
+function exportGegevens(): Record<string, unknown> {
   const t = toestand(), o = berekenHuidigeOfferte();
-  return JSON.stringify({
+  return {
     offerte: { nummer: t.meta.nummer, datum: t.meta.datum, klant: t.meta.klant, adres: t.meta.adres, project: t.meta.project, btw_procent: o.btwProcent, korting_procent: o.kortingProcent },
     regels: [
       ...t.posities.map((p) => {
@@ -301,7 +301,11 @@ function exportJson(): string {
       ...o.regels.map((r) => ({ positie: r.groep, omschrijving: r.omschrijving, aantal: r.hoeveelheid, eenheid: r.eenheid, eenheidsprijs: r.eenheidsprijs, kostprijs: r.kostprijs })),
     ],
     totaal: { excl: o.excl, btw: o.btw, incl: o.incl },
-  }, null, 2);
+  };
+}
+
+function exportJson(): string {
+  return JSON.stringify(exportGegevens(), null, 2);
 }
 
 function download(naam: string, inhoud: string, type: string) {
@@ -399,4 +403,17 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
   $('#o-export').addEventListener('click', () => download(`${toestand().meta.nummer}.json`, exportJson(), 'application/json'));
   // 3D doorsturen: de 3D van woning en posities als pakket (gewone gegevens) voor de losse kijker, bv. in Missing Link.
   $('#o-3d').addEventListener('click', () => download(`3D ${toestand().meta.nummer}.json`, JSON.stringify(maakPakket3D(omschrijving)), 'application/json'));
+  // Zending: wat Missing Link in één keer ontvangt: de offerteregels, een beeld per regel en het 3D-pakket voor de kijker.
+  $('#o-zending').addEventListener('click', async () => {
+    const knop = $<HTMLButtonElement>('#o-zending'), melding = $('#o-melding');
+    knop.disabled = true;
+    try {
+      const z = await maakZending(exportGegevens(), omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
+      const n = Object.keys(z.beelden.posities).length + (z.beelden.woning ? 1 : 0);
+      download(`Zending ${toestand().meta.nummer}.json`, JSON.stringify(z), 'application/json');
+      melding.textContent = n ? `Zending klaar: ${z.pakket3d.posities.length} regels, ${n} beelden en de 3D.` : 'Zending klaar, zonder beelden: de 3D werkt niet op dit toestel.';
+    } finally {
+      knop.disabled = false;
+    }
+  });
 }

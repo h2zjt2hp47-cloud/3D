@@ -38,6 +38,36 @@ export interface Pakket3D {
   posities: Pakket3DPositie[];
 }
 
+export const ZENDING_SOORT = 'bouw-zending';
+export const ZENDING_VERSIE = 1;
+
+/**
+ * Zending: alles wat een ander systeem (bv. Missing Link) in één keer van een project ontvangt (beslissing van Jonas op
+ * 15/11/2026: een beeld bij elke offerteregel én de draaibare 3D in het project).
+ *   - `offerte`: de regels zoals de export voor het ERP ze geeft (positie, omschrijving, aantal, prijs, configuratie, stuklijst);
+ *   - `beelden`: per positie (op haar code) een beeld van de 3D, en één van de hele woning, als data-URL;
+ *   - `pakket3d`: het 3D-pakket voor de kijker.
+ */
+export interface Zending {
+  soort: typeof ZENDING_SOORT;
+  versie: number;
+  gemaakt: string;
+  offerte: Record<string, unknown>;
+  beelden: { woning?: string; posities: Record<string, string> };
+  pakket3d: Pakket3D;
+}
+
+/**
+ * Dezelfde scène met een kader waarin een hoog, smal stuk (een raam, een deur) helemaal in beeld komt. De kijker
+ * kadreert op breedte en diepte en mikt op een derde van de hoogte: goed voor een zetel, te krap voor een deur van
+ * 2,3 m. Alleen om te tonen: het pakket zelf bewaart het echte kader.
+ */
+export function passendKader(s: Scene3D): Scene3D {
+  const k = s.kader;
+  const b = Math.max(k.b, k.h * 1.3);
+  return { ...s, kader: { ...k, x: k.x - (b - k.b) / 2, b, h: k.h / 0.7 } };
+}
+
 function isScene(s: unknown): s is Scene3D {
   const x = s as Scene3D | null;
   return !!x && Array.isArray(x.blokken) && !!x.kader && typeof x.kader.b === 'number' && typeof x.kader.h === 'number';
@@ -53,6 +83,12 @@ export function leesPakket3D(bron: unknown): Pakket3D {
     p = typeof bron === 'string' ? JSON.parse(bron) : (bron as Partial<Pakket3D>);
   } catch {
     throw new Error('Dit bestand is geen 3D-pakket: het kan niet gelezen worden.');
+  }
+  // Een zending draagt het pakket in zich: de kijker toont dan dat pakket.
+  if (p && (p as { soort?: string }).soort === ZENDING_SOORT) {
+    const z = p as unknown as Partial<Zending>;
+    if (typeof z.versie === 'number' && z.versie > ZENDING_VERSIE) throw new Error(`Deze zending is gemaakt met een nieuwere versie (${z.versie}) dan deze kijker kent (${ZENDING_VERSIE}).`);
+    return leesPakket3D(z.pakket3d);
   }
   if (!p || p.soort !== PAKKET3D_SOORT) throw new Error('Dit bestand is geen 3D-pakket van de bouwconfigurator.');
   if (typeof p.versie !== 'number' || p.versie < 1) throw new Error('Dit 3D-pakket heeft geen geldige versie.');

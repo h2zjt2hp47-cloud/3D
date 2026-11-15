@@ -15,7 +15,7 @@
  *                     { soort: 'bouw-kijker', huisstijl: { accent, achtergrond } } kleuren van de insluitende pagina
  * Met ?oorsprong=<adres> in het adres van de kijker luistert en antwoordt hij alleen naar dat adres.
  */
-import { leesPakket3D, PAKKET3D_VERSIE, type Pakket3D, type Scene3D } from '../../core/src/index.js';
+import { leesPakket3D, passendKader, PAKKET3D_VERSIE, type Pakket3D, type Scene3D } from '../../core/src/index.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -23,6 +23,8 @@ const adres = new URLSearchParams(location.search);
 const oorsprong = adres.get('oorsprong');
 let viewer: Viewer3D | null | undefined;
 let pakket: Pakket3D | null = null;
+/** Wat er nu in beeld staat ('woning' of de code van een positie), om het standpunt alleen bij een andere keuze te zetten. */
+let getoond = '';
 
 function naarPagina(bericht: Record<string, unknown>) {
   if (window.parent !== window) window.parent.postMessage({ soort: 'bouw-kijker', ...bericht }, oorsprong ?? '*');
@@ -42,7 +44,8 @@ function scene(): Scene3D | null {
     if (!n) return null;
     return $<HTMLInputElement>('#laag').checked ? n.laag : n.scene;
   }
-  return pakket.posities.find((p) => p.code === keuze)?.scene ?? null;
+  const positie = pakket.posities.find((p) => p.code === keuze)?.scene;
+  return positie ? passendKader(positie) : null;
 }
 
 function teken() {
@@ -60,6 +63,9 @@ function teken() {
   if (!viewer) { fout('De 3D kan op dit toestel niet getoond worden.'); return; }
   viewer.formaat();
   viewer.toon(s);
+  // Een positie van voren (het hele raam in beeld), de woning schuin van boven; alleen bij een andere keuze, niet bij elke klik.
+  if (keuze !== getoond) viewer.standpunt(woning ? 'schuin' : 'voor');
+  getoond = keuze;
 }
 
 function toon(bron: unknown) {
@@ -82,6 +88,7 @@ function toon(bron: unknown) {
   niveau.replaceChildren(...pakket.woning.map((n, i) => new Option(i === pakket!.woning.length - 1 && i > 0 ? `${n.naam} (hele woning)` : n.naam, String(i))));
   niveau.value = String(Math.max(0, pakket.woning.length - 1));
   $<HTMLInputElement>('#laag').checked = false;
+  getoond = '';
   $('#leeg').hidden = true;
   $('#balk').hidden = false;
   $('#drie-d').hidden = false;
