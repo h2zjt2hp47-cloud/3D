@@ -223,6 +223,28 @@ Drie stappen in plaats van vier:
 
 De klantweergave blijft: één knop die alles verbergt wat de klant niet hoeft te zien.
 
+### Schermschetsen (15/11, op vraag van Jonas: "maak eerst een aantal tekeningen")
+
+Tien schetsen van hoe de schermen, de 3D en de doorsnede eruit zouden zien. Het zijn tekeningen, geen schermafdrukken:
+niets hiervan is gebouwd. Bron: `docs/proeven/schermschetsen-bouw.html` (één pagina die zichzelf tekent).
+
+| # | Schets | Wat ze toont |
+|---|---|---|
+| 1 | ![Start](afbeeldingen/schermschetsen/blad-01.jpg) | Kiezen waarmee je begint: woning, raam, carport, tuinhuis, pergola, loods, trap, garagepoort |
+| 2 | ![Ontwerp woning](afbeeldingen/schermschetsen/blad-02.jpg) | Links de keuzes per tabblad, midden het plan, rechts altijd de 3D |
+| 3 | ![Vast model](afbeeldingen/schermschetsen/blad-03.jpg) | Een vast model (carport): maten en opties, de 3D volgt |
+| 4 | ![Afgewerkt](afbeeldingen/schermschetsen/blad-04.jpg) | De 3D groot en mooier: lucht, gras, schaduw, zon op dag en uur, maten, zonwering |
+| 5 | ![Constructie](afbeeldingen/schermschetsen/blad-05.jpg) | Hetzelfde ontwerp als houtskelet: stijlen, lateien, balklaag, kepers, nok |
+| 6 | ![Doorsnede](afbeeldingen/schermschetsen/blad-06.jpg) | Snede door het gebouw met de opbouw van dak, wand en vloer |
+| 7 | ![Techniek](afbeeldingen/schermschetsen/blad-07.jpg) | Zonwering, ventilatie, stopcontacten en verlichting: tekens in het plan, echte dingen in de 3D, avondbeeld |
+| 8 | ![Overzicht](afbeeldingen/schermschetsen/blad-08.jpg) | Overzicht zonder prijzen, met meegeven en doorsturen |
+| 9 | ![Varianten](afbeeldingen/schermschetsen/blad-09.jpg) | Twee voorstellen naast elkaar, met wat verschilt |
+| 10 | ![Tablet](afbeeldingen/schermschetsen/blad-10.jpg) | Dezelfde stap op een tablet |
+
+Na de schetsen kwamen er nog wensen bij (15/11): **zonneschermen, ventilatie, stopcontacten, verlichting** (schets 7) en
+**"maak onze 3D mooier"** (schets 4: lucht, gras, zachte schaduw, avondbeeld). Ze horen bij de rondes *techniek* en
+*de 3D mooier*, die nog in de volgorde van hoofdstuk 8 moeten komen na het oordeel van Jonas over de schetsen.
+
 ---
 
 ## 6. Wat dit niet is
