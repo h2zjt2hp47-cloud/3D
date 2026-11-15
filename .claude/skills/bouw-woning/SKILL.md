@@ -151,6 +151,11 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - "Muren laag" knipt muren en openingen op 110 cm (meubels niet).
 - **Ramen echter maken (advies 4/11, nog niet gebouwd):** zie `docs/3d-technieken.md`. Geen zachte vormen (te grof en te zwaar voor harde profielen met mm-details). Wel een eigen doorsnede per profielsysteem, langs het kader getrokken met verstek (hout: stomp), dezelfde doorsnede voor een doorsnedetekening, rondboog met hetzelfde profiel langs een boog; doorsnedes als DXF van de systeemleverancier, met dezelfde maten als `raam.ts` (dagmaat, glasmaat, aftrekken). Echte 3D-bestanden (GLB, zoals `echt3d.ts`) voor krukken, trekbeugels, scharnieren en brievenbussen.
 
+## Inbouwen in Missing Link en extra afwerkingen (analyse 15/11, nog niet gebouwd)
+- Lees `docs/analyse-bouw-3d-missing-link.md` vóór je hieraan begint: de drie lagen (motor → scène als gegevens → kijker), de gemeten bundel (92 % is three.js; de fotomodus van 615 kB is in de bouw overbodig), de dertien punten om klaar te maken, de 24 afwerkingen met een top 5, en de vragen voor de ontwikkelaar van Missing Link.
+- Principe: een afwerking is gegevens (zoals `gevelCatalogus`), geen programma; catalogus en prijzen komen van buiten.
+- Er wordt niets gebouwd vóór Jonas de vijf beslissingen in hoofdstuk 10 nam.
+
 ## Uitbreiden
 - **Nieuw raamtype of optie:** kenmerk + afgeleide + regel + stuklijstregel in `raam.ts`; tekening (`vormen`, eventueel `symbool`); 3D in `raam3d.ts`; controlekaart in `positie-ui.ts` (`raamControles`); test in `core/test/woning.test.ts`.
 - **Nieuw meubel:** `planCatalogus.meubels` (+ vorm in `meubelBlokken` en `meubelSvg` als het een nieuwe vorm is).

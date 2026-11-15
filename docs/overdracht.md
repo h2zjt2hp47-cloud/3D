@@ -95,6 +95,7 @@ Niet opgenomen: Stoelen/Barstoelen, Tafels en de bedden (Bedding & Beyond).
 4. **Bedden ("Bedding & Beyond"):** hoofdborden, bedbodems, matrassen en linnen zijn nog niet opgenomen.
 5. **Fase 3:** server met opslag (gedeelde materialen en ontwerpen), offerte-PDF met tekening en koppeling met Missing Link (eerst de betekenis van de offerteregelvelden `keuzegroep`/`optie_sleutel`/`vereist_sleutel`/`berekening` laten bevestigen).
 6. Vraag aan de gebruiker die nog openstaat: ontwerpt een interieurinrichter later zelf vrij, of alleen de verkoper in de showroom?
+7. **Latere fase, bouw (vraag van Jonas op 15/11):** de 3D van de bouw klaarmaken om in te bouwen in Missing Link, en meer afwerkingen. Eerst een analyse gevraagd: `docs/analyse-bouw-3d-missing-link.md` (drie niveaus van inbouwen, advies ingesloten pagina, dertien punten om klaar te maken, 24 afwerkingen met een top 5, vragen voor de ontwikkelaar van Missing Link). **Niets gebouwd**; wacht op de vijf beslissingen van Jonas in hoofdstuk 10 van dat document.
 
 ## Bekende beperkingen
 - 3D is schematisch (eenvoudige vormen), geen fotorealistisch model.

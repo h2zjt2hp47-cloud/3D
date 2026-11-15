@@ -138,6 +138,8 @@ Beperking: alles staat in de browser van één toestel. Om kantoor en werf **teg
 
 ## 3. Wat we nog kunnen toevoegen
 
+> Vervolg op 15/11: de afwerkingen (dak, kleuren, per wand, plinten, buitenaanleg …) en het inbouwen van de 3D in Missing Link zijn uitgewerkt in `docs/analyse-bouw-3d-missing-link.md`.
+
 Telkens met het nut voor de klant en een ruwe inschatting van het werk: **S** = enkele dagen, **M** = één à twee weken, **L** = meer.
 
 ### A. Plattegrond en woning
