@@ -124,6 +124,7 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
   - meter, y omhoog, voorkant naar +z; delen met `stof` en `poot` in de naam; één stofmateriaal en één vel stof op één schaal; `occlusionTexture` ingesloten; geen compressie;
   - het proefmodel is een apart model in `voorbeelden/proefmodellen.ts` dat het ontwerp van het gewone model overneemt: prijs, tekeningen en blokken blijven die van het gewone model (test in `echt3d.test.ts`, ook op het bestand zelf);
   - vergelijken met de foto's doe je met `scripts/blender/overlay.py` en een teruggerekende camera, niet met verhoudingen in pixels (de foto's zijn van dichtbij genomen).
+  - een bestand voor één element (`elementen: ['fauteuil']`) mag verplaatst en gedraaid staan: `echt3dPlaatsing` geeft dan `draai` en het kader vóór het draaien, `echtGroep` draait het model rond het midden (zelfde zin als `Blok.draai`). Een rij van meerdere elementen moet recht staan. Eén bestand per ontwerp: een tweede fauteuil toont de benadering.
 
 ## Zachte vormen (proef 4/11, `core/src/zachtevorm.ts`)
 - **`zachteVorm(blokken, { raster 2, overgang 4, overgangBinnen 10, minAfronding 1,25 × raster, buren, tegelCm })`**: maakt van gestoffeerde blokken één dichte vorm. Werkwijze:

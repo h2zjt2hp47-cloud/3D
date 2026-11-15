@@ -18,6 +18,7 @@ import {
   materiaalVan,
   vormEffect,
   vormgevingVan,
+  voetafdruk,
   type Ontwerp,
   type OntwerpCatalogus,
   type OntwerpElement,
@@ -58,6 +59,11 @@ export interface Echt3DPlaatsing {
   stof: { kleur: string; weefsel?: string; textuur?: string; textuurCm?: number };
   /** Poten in onze afwerking; de vorm komt uit het bestand. */
   poten: { soort: 'metaal' | 'hout'; kleur: string };
+  /**
+   * Draaiing in graden rond het midden van het kader, zoals bij de blokken (90 = rug naar rechts). Alleen bij een
+   * bestand voor één element (een fauteuil mag gedraaid staan); x, z, b en d zijn dan het kader vóór het draaien.
+   */
+  draai?: number;
 }
 
 export type Echt3DUitkomst = { past: true; plaatsing: Echt3DPlaatsing } | { past: false; reden: string };
@@ -80,7 +86,9 @@ export function echt3dPlaatsing(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, m
   const nee = (reden: string): Echt3DUitkomst => ({ past: false, reden });
 
   // 1. Opstelling: de types van het bestand aansluitend naast elkaar, niet gedraaid, op één lijn.
-  const kandidaten = ontwerp.elementen.filter((e) => !typen.get(e.type)?.opzet && e.rotatie === 0);
+  //    Een bestand voor één element (een fauteuil) mag wel gedraaid staan: het draait dan mee rond zijn midden.
+  const enkel = echt.elementen.length === 1;
+  const kandidaten = ontwerp.elementen.filter((e) => !typen.get(e.type)?.opzet && (e.rotatie === 0 || enkel));
   let rij: OntwerpElement[] | undefined;
   for (const start of kandidaten.filter((e) => e.type === echt.elementen[0])) {
     const stuk = [start];
@@ -93,7 +101,11 @@ export function echt3dPlaatsing(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, m
     }
     if (stuk.length === echt.elementen.length) { rij = stuk; break; }
   }
-  if (!rij) return nee(`Het 3D-bestand toont ${echt.elementen.map(label).join(' + ')} naast elkaar (rug achteraan); deze opstelling is anders.`);
+  if (!rij) {
+    return nee(enkel
+      ? `Het 3D-bestand toont een ${label(echt.elementen[0]!).toLowerCase()}; die staat niet in dit ontwerp.`
+      : `Het 3D-bestand toont ${echt.elementen.map(label).join(' + ')} naast elkaar (rug achteraan); deze opstelling is anders.`);
+  }
   const ids = new Set(rij.map((e) => e.id));
 
   // 2. Losse delen (rugleuning, kussens) op deze elementen zitten niet in het bestand.
@@ -151,13 +163,20 @@ export function echt3dPlaatsing(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, m
   const zetel = gekozenOpties(ontwerp, catalogus);
   const poot = gekozenOpties(ontwerp, catalogus, rij[0]).get('poten')?.teken;
   const kleur = m?.kleur ?? '#cccccc';
+  // Gedraaid (alleen een bestand voor één element): het kader vóór het draaien, met hetzelfde midden als de voetafdruk.
+  const eerste = rij[0]!;
+  const voet = voetafdruk(eerste);
+  const gedraaid = enkel && eerste.rotatie !== 0;
   return {
     past: true,
     plaatsing: {
       bestand: echt.bestand,
       vermelding: echt.vermelding,
-      elementen: rij.map((e) => ({ id: e.id, x0: e.x, x1: e.x + e.breedte })),
-      x: rij[0]!.x, z: rij[0]!.y, b: W, d: D, h: Math.round(echt.maat.h * sy * 10) / 10,
+      elementen: gedraaid ? [{ id: eerste.id, x0: voet.x, x1: voet.x + voet.b }] : rij.map((e) => ({ id: e.id, x0: e.x, x1: e.x + e.breedte })),
+      x: gedraaid ? voet.x + voet.b / 2 - W / 2 : eerste.x,
+      z: gedraaid ? voet.y + voet.h / 2 - D / 2 : eerste.y,
+      b: W, d: D, h: Math.round(echt.maat.h * sy * 10) / 10,
+      ...(gedraaid ? { draai: eerste.rotatie } : {}),
       stof: m?.textuur ? { kleur, textuur: m.textuur, textuurCm: m.textuurCm ?? 15 } : { kleur, ...(m ? { weefsel: weefselVan(m) } : {}) },
       poten: poot?.metaal
         ? { soort: 'metaal', kleur: String(poot.kleur ?? zetel.get('metaal')?.teken?.kleur ?? '#2b2b2b') }

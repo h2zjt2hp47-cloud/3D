@@ -30,6 +30,8 @@ de 3D-weergave zodra het model in beeld is.
 - **Bron:** de vier productfoto's en de maten van de productpagina (72 × 80 × 93 cm, zithoogte 42, zitdiepte 60). Al de
   rest (de vorm van rug en armen, het onderstel, de naden) is afgeleid uit de foto's: **een benadering, geen bestand
   van de fabrikant.** Die vermelding staat ook in de 3D-weergave.
+- **Onderstel:** iets groter dan in onze bouwstenen (ring 58 cm in plaats van 56, poten verder uit elkaar), zodat het
+  op de foto's past; een benadering (zie de twee lezingen in `docs/echte-3d-modellen.md`).
 - **Inhoud:** één deel `stof_bekleding` (zitting en schaal, 3.100 punten) en één deel `poot_onderstel` (ring, vier
   poten, kruis), met een schaduwtextuur van 1024 px (plooien en naden). 251 kB.
 - **Opnieuw maken:** zie `scripts/blender/LEESMIJ.md`. Niet met de hand bewerken: pas het script aan.

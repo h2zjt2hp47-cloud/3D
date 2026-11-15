@@ -1903,7 +1903,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       // Echt 3D-model: het stuk van dit element.
       const p = c.userData?.echt as Echt3DPlaatsing | undefined;
       const e = p?.elementen.find((x) => x.id === markeerId);
-      if (p && e) box.union(new THREE.Box3(new THREE.Vector3(e.x0, 0, p.z), new THREE.Vector3(e.x1, p.h, p.z + p.d)));
+      if (p && e) { const v = echtGrondvlak(p); box.union(new THREE.Box3(new THREE.Vector3(e.x0, 0, v.z0), new THREE.Vector3(e.x1, p.h, v.z1))); }
       // Zachte vorm: de delen van dit element.
       for (const d of (c.userData?.delen ?? []) as { id: string; box: any }[]) if (d.id === markeerId) box.union(d.box);
     }
@@ -2127,7 +2127,23 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       m.castShadow = m.receiveShadow = true;
       g.add(m);
     }
-    return g;
+    if (!p.draai) return g;
+    // Gedraaid (een fauteuil): rond het midden van het kader, in dezelfde zin als de blokken.
+    const as = new THREE.Group();
+    as.name = 'echt3d';
+    as.userData.echt = p;
+    as.position.set(p.x + p.b / 2, 0, p.z + p.d / 2);
+    as.rotation.y = -(p.draai * Math.PI) / 180;
+    g.position.x -= as.position.x;
+    g.position.z -= as.position.z;
+    as.add(g);
+    return as;
+  }
+  /** Het grondvlak van het model na het draaien (een kwartslag wisselt breedte en diepte). */
+  function echtGrondvlak(p: Echt3DPlaatsing) {
+    const dwars = p.draai === 90 || p.draai === 270;
+    const hb = (dwars ? p.d : p.b) / 2, hd = (dwars ? p.b : p.d) / 2, mx = p.x + p.b / 2, mz = p.z + p.d / 2;
+    return { z0: mz - hd, z1: mz + hd, x0: mx - hb, x1: mx + hb };
   }
 
   // ---------- zachte vormen (proef, zie core/src/zachtevorm.ts) ----------

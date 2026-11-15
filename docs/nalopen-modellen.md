@@ -532,8 +532,9 @@ Twee dingen uit die proef gelden ook voor de modellen in onze bouwstenen:
   ±74 % van de hele breedte (in de foto 65 %), op zijn breedst ±90 % (in de foto 85 %). De verhoudingen uit één foto in
   de hoofdstukken hierboven zijn dus ondergrenzen voor wat achteraan staat. Met een teruggerekende camera (zie
   `scripts/blender/LEESMIJ.md`) meet je het juist.
-- **Van opzij helt de rug op de foto verder achterover dan 80 cm diepte toelaat** (±5 cm bovenaan). De maten van de
-  website gaan voor; het staat bij de vragen voor de klant.
+- **De foto's passen niet op alle maten van de website tegelijk.** Houden we 72 breed en 93 hoog, dan is de zetel op
+  de foto ±85 cm diep (website 80) en het onderstel ±9 % groter dan bij ons. Houden we ons onderstel en 80 diep, dan
+  is hij op de foto ±66 breed en ±85 hoog. De maten van de website gaan voor; het staat bij de vragen voor de klant.
 
 ## Stand van de afwijkingen (14/11)
 
@@ -580,8 +581,9 @@ Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
 - Maten van Fréjus, Gozo, Azar, Husk en Esmee; maten van de poefs Stockholm, Kanto en Fez.
 - Wat de standaardstikking per model is in onze keuzes ("single stitching", "external stitching").
 - De echte stoffen en kleuren (Belize en Azar wijken in tint af; de demostoffen zijn geen stoffen van de klant).
-- Sullivan: klopt de diepte van 80 cm? Op de foto van opzij staat de bovenkant van de rug ±5 cm verder naar achter dan
-  die maat toelaat (gemeten met een teruggerekende camera, 15/11; een foto blijft een foto).
+- Sullivan: de drie maten 72 × 80 × 93 bevestigen, en de doormeter van het onderstel. De foto's passen niet op alle
+  drie tegelijk (zie de proef in Blender, 15/11): ofwel is de zetel ±85 cm diep, ofwel ±66 breed en ±85 hoog. Een
+  foto blijft een foto; alleen de klant kan het zeggen.
 - Bestaan er 3D-bestanden of CAD-tekeningen van de modellen? Dat is de beste bron voor echte 3D-modellen (zie
   [Echte 3D-modellen](echte-3d-modellen.md)).
 

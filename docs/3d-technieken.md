@@ -144,9 +144,13 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 28. **Een productfoto van dichtbij is geen tekening: reken de camera terug.** De foto's van Sullivan zijn op ±3 m
     genomen. De voorste poten staan in beeld verder uit elkaar en lager dan de achterste, en de rug (ver weg) lijkt
     smaller dan hij is: in de foto van voren is hij net onder de bovenkant 65 % van de hele breedte, met de camera
-    erbij ±74 %. De camera volgt uit het onderstel: de poten staan op een vierkant, dus uit hun onderlinge afstanden en
-    hoogtes in beeld volgen afstand, hoogte en lens (`scripts/blender/LEESMIJ.md`). Leg daarna de omtrek van het model
-    over de foto (`scripts/blender/overlay.py`): dan zie je de afwijking in plaats van ze te schatten.
+    erbij ±74 %. Een eerste camera volgt uit het onderstel: de poten staan op een vierkant, dus uit hun onderlinge
+    afstanden en hoogtes in beeld volgen richting, afstand, hoogte en lens (`scripts/blender/LEESMIJ.md`). Leg daarna
+    de omtrek van het model over de foto (`scripts/blender/overlay.py`): dan zie je de afwijking in plaats van ze te
+    schatten. **Wees eerlijk over wat je daarna bijstelt:** bij Sullivan paste de eerste camera niet op alle maten van
+    de website tegelijk (de bekleding was ±9 % te groot), en zijn de camera's verder gezet tot breedte en hoogte
+    klopten. Dat is een keuze tussen twee lezingen, geen meting; ze staat in
+    [Echte 3D-modellen](echte-3d-modellen.md) en als vraag voor de klant.
 29. **Een vast model dat de motor niet haalt, bouw je als bestand.** De vier grenzen van de motor bij Sullivan (vlakke
     rugbovenkant, rolarm, dikkere rug bij de zitting, ronde onderrand) verdwijnen in één 3D-bestand uit Blender, zonder
     de motor uit te breiden. De prijs is dat het bestand vastligt: het rekt maar 5 % mee, en prijs en tekeningen

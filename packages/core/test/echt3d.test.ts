@@ -142,6 +142,29 @@ describe('proef: Sullivan gebouwd in Blender', () => {
     expect(toon((o) => { o.opties = { ...o.opties, hout: 'eik_naturel' }; }).echt?.poten.soort).toBe('hout');
   });
 
+  it('een fauteuil mag verplaatst en gedraaid staan: het bestand draait mee rond het midden van zijn voetafdruk', () => {
+    expect(toon((o) => { o.elementen[0]!.x = 150; o.elementen[0]!.y = 40; }).echt).toMatchObject({ x: 150, z: 40, b: 72, d: 80 });
+    expect(toon().echt?.draai).toBeUndefined();
+    // Een kwartslag: de voetafdruk is 80 × 72 vanaf (0, 0); het kader vóór het draaien heeft hetzelfde midden (40, 36).
+    const kwart = toon((o) => { o.elementen[0]!.rotatie = 90; }).echt!;
+    expect(kwart).toMatchObject({ draai: 90, b: 72, d: 80, x: 4, z: -4, elementen: [{ id: 'e1', x0: 0, x1: 80 }] });
+    expect(toon((o) => { o.elementen[0]!.rotatie = 180; }).echt).toMatchObject({ draai: 180, x: 0, z: 0, elementen: [{ id: 'e1', x0: 0, x1: 72 }] });
+    // Het proefmodel met een rij van drie elementen (Glam Velvet) blijft de benadering tonen als er iets gedraaid staat.
+    const rij = structuredClone(proef.ontwerp);
+    rij.elementen[2]!.rotatie = 90;
+    expect(scene(rij).echtNiet).toMatch(/deze opstelling is anders/);
+  });
+
+  it('twee fauteuils: het bestand staat op de eerste, de tweede blijft de benadering', () => {
+    const s = toon((o) => { o.elementen.push({ ...o.elementen[0]!, id: 'e2', x: 100 }); });
+    expect(s.echt?.elementen).toEqual([{ id: 'e1', x0: 0, x1: 72 }]);
+    expect(s.blokken.some((b) => b.code.startsWith('e2.'))).toBe(true);
+  });
+
+  it('zonder fauteuil in het ontwerp: de reden in gewone taal', () => {
+    expect(toon((o) => { o.elementen[0]!.type = 'poef'; o.elementen[0]!.opties = {}; }).echtNiet).toBe('Het 3D-bestand toont een fauteuil; die staat niet in dit ontwerp.');
+  });
+
   it('wat het bestand niet toont, geeft de benadering met de reden', () => {
     expect(toon((o) => { o.elementen[0]!.opties = { kuipvorm: 'rond' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
     expect(toon((o) => { o.opties = { ...o.opties, zitting: 'losse_kussens' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);

@@ -140,20 +140,37 @@ Sullivan, zijn prijs (954 euro, verzonnen) en zijn tekeningen zijn niet aangeraa
 | Een plooi waar de arm tegen de rug ligt; naden rond de armkop, de rug en de zitting | Een plooi in de dikte; een naadlijn | Plooi aan de binnenkant; naden als fijne lijnen in de schaduw |
 
 **Hoe het gemeten is.** Niet op het oog en niet met verhoudingen in pixels: de foto's zijn van dichtbij genomen (±3 m),
-waardoor wat dichterbij staat groter lijkt. Uit de poten van het onderstel is per foto de camera teruggerekend
-(afstand, hoogte, lens). Blender legt het model dan met dezelfde camera over de foto. De gele lijn is de omtrek van het
-model:
+waardoor wat dichterbij staat groter lijkt. Per foto is een camera gezocht waarmee het model op de foto past; Blender
+legt het model dan met die camera over de foto. De gele lijn is de omtrek van het model:
 
 ![De omtrek van het Blender-model op de vier productfoto's](afbeeldingen/sullivan-blender-omtrek.jpg)
 
 Van voren en schuin valt de omtrek bijna overal samen met de foto. Van opzij helt de rug op de foto iets verder
-achterover: daar staat het model ±3 cm (onderaan) tot ±5 cm (bovenaan) naar voren. De maten van de website (80 cm diep)
-laten niet meer toe, en die maten gaan voor.
+achterover: daar staat het model ±3 cm (onderaan) tot ±5 cm (bovenaan) naar voren.
+
+**Eerlijk over die camera's.** De poten van het onderstel gaven de kijkrichting, de lens (±50 mm) en een eerste
+afstand. Met die eerste camera's was de bekleding van het model ±9 % groter dan op de foto. Daarna zijn de camera's
+±10 % verder gezet tot breedte en hoogte pasten, en is het onderstel in het bestand wat groter gemaakt (ring 58 cm in
+plaats van 56, poten verder uit elkaar) zodat het mee past. **De foto's passen dus niet op alle maten tegelijk.** Twee
+lezingen:
+
+| Lezing | Dan klopt | En wijkt af |
+|---|---|---|
+| A (gevolgd voor de vorm) | 72 breed, 93 hoog, zithoogte 42 (website) | De zetel is op de foto ±85 cm diep (website 80), en het onderstel is ±9 % groter dan in onze bouwstenen |
+| B | Het onderstel van onze bouwstenen en 80 diep | De zetel is op de foto ±66 cm breed en ±85 cm hoog (website 72 en 93) |
+
+Het bestand heeft de maten van de website (72 × 80 × 93): die gaan voor. De vraag voor de klant is dus niet één maat,
+maar de drie maten bevestigen. Het grotere onderstel is een benadering die afwijkt van het gewone model.
 
 **Wat het bestand kan en niet kan**
 
 - Elke stof en elke houtkleur: ja (de stof ligt op ware grootte, de schaduw in de plooien komt uit het bestand).
-- Klikken om te kiezen, schaduw op de vloer, de fotorealistische modus: zoals bij de andere modellen.
+- Klikken om te kiezen en de schaduw op de vloer: zoals bij de andere modellen. De fotorealistische modus rekent het
+  bestand mee uit (getest met een snelle proef van 6 stappen).
+- **Verplaatsen en draaien: ja.** Een bestand voor één element (een fauteuil) draait mee rond zijn midden; dat is op
+  15/11 toegevoegd, de rij van de eerste proef mag nog altijd niet gedraaid staan.
+- **Twee fauteuils in één ontwerp:** het bestand staat alleen op de eerste; de tweede toont de benadering. Dat is nog
+  een grens (één bestand per ontwerp).
 - Breedte en diepte: tot 5 % rekken (een ronde zitting wordt anders ovaal). Daarbuiten toont de configurator de
   benadering en zegt hij waarom.
 - Een andere vorm van fauteuil, losse kussens, een ander onderstel, een bies: zit niet in het bestand. Ook dan de
@@ -172,7 +189,7 @@ laten niet meer toe, en die maten gaan voor.
 
 **Wat nog afwijkt van de foto**
 
-- De helling van de rug van opzij (zie hierboven).
+- De helling van de rug van opzij en het grotere onderstel (zie de twee lezingen hierboven).
 - De armkop is op de foto boller; de stof spant en plooit er. Ons bestand is glad.
 - De stof: het model staat in grijze wol; op de foto is het een groengrijze bouclé (een keuze van stof, geen vorm).
 - De naden staan waar de foto's ze laten vermoeden; de echte naadverdeling moet van de klant komen.

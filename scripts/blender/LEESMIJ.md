@@ -81,4 +81,10 @@ hoogte in beeld. Verhoudingen meten in pixels klopt daardoor niet; een camera we
    voor alle foto's van dezelfde reeks.
 4. Leg het model erover en stel bij tot onderstel, breedte en hoogte passen. Pas dan de vorm beoordelen.
 
+**Voorbehoud bij Sullivan.** Met de camera's uit stap 2 was de bekleding van het model ±9 % groter dan op de foto. De
+camera's in `cameras-sullivan.json` staan daarom ±10 % verder (zodat 72 breed en 93 hoog passen), en het onderstel in
+het script is wat groter dan in onze bouwstenen (ring 58 cm in plaats van 56). De foto's passen niet op alle maten van
+de website tegelijk; welke maat afwijkt, moet de klant zeggen (zie `docs/echte-3d-modellen.md`). Schrijf zo'n
+bijstelling altijd op: het is een keuze, geen meting.
+
 Let op het teken van `az`: schuiven de achterste poten in beeld naar links, dan is `az` negatiever.
