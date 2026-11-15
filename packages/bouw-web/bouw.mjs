@@ -26,4 +26,20 @@ const offline = html
 if (/cdnjs\.cloudflare|fonts\.googleapis/.test(offline)) throw new Error('offline-versie verwijst nog naar internet');
 writeFileSync('dist/bouw-configurator-offline.html', offline);
 if (!lettertypen) console.log('Let op: geen lettertypes gevonden; de offline-versie gebruikt systeemletters.');
-console.log(`dist/bouw-configurator.html (${Math.round(html.length / 1024)} kB) en dist/bouw-configurator-offline.html (${Math.round(offline.length / 1024)} kB)`);
+
+// Losse 3D-kijker (alleen kijken): toont een 3D-pakket uit de configurator, bv. ingesloten in een scherm van Missing Link.
+// Zonder de fotomodus van de zetels (path tracer en ontruiser): die wordt hier niet gebruikt en weegt ±600 kB.
+const zonderFotomodus = {
+  name: 'zonder-fotomodus',
+  setup(b) {
+    b.onResolve({ filter: /^three-gpu-pathtracer$|fotomodus-webgpu\.js$/ }, (a) => ({ path: a.path, namespace: 'leeg' }));
+    b.onLoad({ filter: /.*/, namespace: 'leeg' }, () => ({
+      contents: 'export class WebGLPathTracer {}\nexport const fotoWebGPU = async () => null;\nexport const heeftWebGPU = () => false;',
+      loader: 'js',
+    }));
+  },
+};
+const k = await build({ entryPoints: ['src/kijker.ts'], bundle: true, format: 'iife', target: 'es2020', minify: true, write: false, legalComments: 'none', plugins: [zonderFotomodus] });
+const kijker = readFileSync('src/kijker.html', 'utf8').replace('/*BUNDEL*/', () => k.outputFiles[0].text.replace(/<\/script/gi, '<\\/script'));
+writeFileSync('dist/bouw-kijker.html', kijker);
+console.log(`dist/bouw-configurator.html (${Math.round(html.length / 1024)} kB), dist/bouw-configurator-offline.html (${Math.round(offline.length / 1024)} kB) en dist/bouw-kijker.html (${Math.round(kijker.length / 1024)} kB)`);

@@ -13,6 +13,7 @@ import { controles, inbegrepen } from './positie-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
+import { maakPakket3D } from './doorsturen.js';
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
 const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'inrichting'] as const;
@@ -396,4 +397,6 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
   });
   $('#o-kopieer').addEventListener('click', () => void kopieer(offertetekst(), $('#o-melding')));
   $('#o-export').addEventListener('click', () => download(`${toestand().meta.nummer}.json`, exportJson(), 'application/json'));
+  // 3D doorsturen: de 3D van woning en posities als pakket (gewone gegevens) voor de losse kijker, bv. in Missing Link.
+  $('#o-3d').addEventListener('click', () => download(`3D ${toestand().meta.nummer}.json`, JSON.stringify(maakPakket3D(omschrijving)), 'application/json'));
 }

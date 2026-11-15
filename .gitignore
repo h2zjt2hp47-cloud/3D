@@ -9,3 +9,6 @@ obsidian-export/
 packages/demo-web/lettertypen/
 doorsturen/
 beeldtest/uitslag/
+
+# Tijdelijke werkkopieën van hulpagenten
+.claude/worktrees/

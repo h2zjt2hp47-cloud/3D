@@ -285,10 +285,57 @@ Volgens de afspraak spreek ik geen andere sessie of ontwikkelaar aan: deze lijst
 
 ---
 
-## 10. Beslissingen voor jou
+## 10. Beslissingen (antwoorden van Jonas op 15/11)
+
+> **Beslist op 15/11/2026:**
+> - **Aparte app, met de mogelijkheid om de 3D door te sturen naar Missing Link.** De beslissing van 31/10 blijft dus
+>   gelden; Missing Link ontvangt de 3D, het hoeft de configurator niet zelf te draaien. Gebouwd: zie hoofdstuk 11.
+> - **De bouwconfigurator mag een stuk uitgebreid worden**, "bvb ook met dak en zonnekoepels" (gelezen als
+>   lichtkoepels) en "ook lichtinval simuleren enzo". De bouw krijgt voorrang op de fauteuils.
+> - Nog open: wat Missing Link precies ontvangt (een beeld bij de offerteregel, een draaibare 3D in het project, of
+>   beide) en de vragenlijst van hoofdstuk 8.
+
+De oorspronkelijke vragen:
 
 1. **Wat bedoel je met inbouwen als eerste doel:** kijken (A), configureren (B) of de hele ketting (C)? Mijn advies: A en B, via een ingesloten pagina; C daarna.
 2. **Blijft "aparte app, koppelbaar" (31/10) gelden?** Mijn advies: ja, één pakket dat op zichzelf draait én in Missing Link getoond wordt.
 3. **Welke afwerkingen eerst?** Mijn advies: de top 5 uit 6.4. Zeg gerust welke sector of klant je voor ogen hebt; dat verschuift de volgorde (een dakwerker wil het dak, een schrijnwerker de kleuren en profielen).
 4. **De vragenlijst van hoofdstuk 8:** geef jij ze door aan de ontwikkelaar van Missing Link? Een andere weg: je geeft deze sessie leestoegang tot de broncode van Missing Link. Dan haal ik een deel van de antwoorden (techniek van de schermen, velden, opladen van beelden) uit de code zelf. Ik koppel niets aan zonder jouw vraag.
 5. **Mag stap 1 (klaarmaken) beginnen na de fauteuils**, zonder te wachten op Missing Link?
+
+---
+
+## 11. Gebouwd op 15/11: de 3D doorsturen (pakket en kijker)
+
+Wat er staat, zonder dat er iets aan Missing Link moest gebeuren:
+
+| Onderdeel | Waar | Wat |
+|---|---|---|
+| **3D-pakket** | `packages/core/src/pakket3d.ts` | De 3D van een project als gewone gegevens (JSON): de woning per verdieping (met volle en met lage muren) en elke positie van de offerte. Met een soort en een versienummer; **zonder prijzen**. `leesPakket3D` controleert een pakket en weigert met een uitleg in gewone taal. |
+| **Knop "3D doorsturen (pakket)"** | Offerte van de bouwdemo (`bouw-web/src/doorsturen.ts`) | Maakt het pakket van het huidige project en bewaart het als bestand. Staat bij de interne knoppen: in de klantweergave is ze verborgen. |
+| **Losse kijker** | `bouw-web/src/kijker.ts` → `dist/bouw-kijker.html` | Eén pagina die een pakket toont en niets kan wijzigen: de woning, tot en met een verdieping, muren laag, elke positie, drie standpunten, beeld bewaren. 1,5 MB (de fotomodus van de zetels zit er niet in). |
+
+**Hoe een ander systeem de kijker gebruikt** (dit is de afspraak uit hoofdstuk 4, in het klein):
+
+| Richting | Bericht | Inhoud |
+|---|---|---|
+| kijker → pagina | `{ soort: 'bouw-kijker', bericht: 'klaar', versie }` | de kijker is geladen |
+| pagina → kijker | het pakket zelf (`soort: 'bouw-3d-pakket'`) | toon dit project |
+| pagina → kijker | `{ soort: 'bouw-kijker', huisstijl: { accent, achtergrond } }` | de kleuren van de pagina eromheen |
+| kijker → pagina | `{ soort: 'bouw-kijker', bericht: 'getoond', project }` | het pakket staat in beeld |
+| pagina → kijker | `{ soort: 'bouw-kijker', vraag: 'beeld' }` | geef het beeld zoals het nu staat |
+| kijker → pagina | `{ soort: 'bouw-kijker', bericht: 'beeld', png }` | het beeld als PNG, bv. voor `beeld_id` op een offerteregel |
+| kijker → pagina | `{ soort: 'bouw-kijker', bericht: 'fout', tekst }` | wat misliep, in gewone taal |
+
+Een pakket kan ook via het adres van de kijker (`?pakket=<adres>`), of door een bestand te kiezen of te slepen. Met
+`?oorsprong=<adres>` luistert en antwoordt de kijker alleen naar dat adres.
+
+**Getest in een echte browser** (15/11): pakket van de voorbeeldwoning 396 kB (2 verdiepingen, 14 posities); de kijker
+toont woning, gelijkvloers met lage muren en een positie; een fout bestand geeft een uitleg en laat de vorige 3D staan;
+ingesloten in een nagespeelde pagina komen de berichten *klaar*, *getoond* en *beeld* aan; geen fouten, geen verkeer naar
+buiten.
+
+**Wat nog niet bestaat:** het versturen zelf. Het pakket wordt nu een bestand; waar Missing Link het bewaart en hoe
+het een beeld ontvangt, hangt af van de antwoorden op hoofdstuk 8 (vragen 4 en 5). Er is niets naar Missing Link
+geschreven.
+
