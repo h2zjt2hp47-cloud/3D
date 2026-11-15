@@ -60,6 +60,32 @@ body { margin: 0; background: #cfd4d7; font: 14px/1.4 system-ui, -apple-system, 
 .rij em { margin-left: auto; font-style: normal; font-weight: 700; color: var(--a); white-space: nowrap; }
 .kaart { background: #fff; border: 1px solid var(--l); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
 .kaart h4 { margin: 0 0 6px; font-size: 14px; }
+.rail { width: 96px; background: var(--v); border-right: 1px solid var(--l); padding: 10px 8px; display: flex; flex-direction: column; gap: 8px; flex: none; }
+.rail div { height: 78px; border-radius: 10px; border: 1px solid var(--l); background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; gap: 3px; color: var(--z); }
+.rail div.aan { background: var(--a); color: #fff; border-color: var(--a); }
+.rail div i { font-style: normal; font-size: 24px; line-height: 1; }
+.strook { position: absolute; left: 12px; right: 12px; bottom: 12px; background: rgba(255,255,255,.97); border: 1px solid var(--l); border-radius: 14px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; z-index: 2; box-shadow: 0 4px 14px rgba(0,0,0,.12); }
+.keuze { width: 112px; height: 96px; border-radius: 10px; border: 2px solid var(--l); background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 6px; font-weight: 700; flex: none; }
+.keuze.aan { border-color: var(--a); background: #e3ecf0; }
+.strook svg { position: static; width: 92px; height: 50px; }
+.strook.smal { gap: 6px; padding: 8px; }
+.strook.smal .keuze { width: 92px; height: 88px; font-size: 12.5px; }
+.strook.smal svg { width: 76px; height: 42px; }
+.streep { width: 1px; height: 70px; background: var(--l); flex: none; }
+.stip { width: 42px; height: 42px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #9aa3a8; flex: none; }
+.stip.aan { box-shadow: 0 0 0 3px var(--a); }
+.stapper { display: flex; align-items: center; border: 1px solid var(--l); border-radius: 12px; overflow: hidden; background: #fff; flex: none; }
+.stapper span { width: 56px; height: 62px; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: var(--a); background: #eef2f4; }
+.stapper b { padding: 0 16px; min-width: 150px; text-align: center; font-size: 19px; }
+.stapper b small { display: block; font-weight: 700; color: var(--z); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.meer { margin-left: auto; color: var(--a); font-weight: 700; white-space: nowrap; }
+.hoekkaart { position: absolute; right: 12px; top: 64px; width: 236px; background: rgba(255,255,255,.96); border: 1px solid var(--l); border-radius: 10px; padding: 6px 8px 4px; z-index: 2; }
+.hoekkaart svg { position: static; width: 100%; height: 168px; display: block; }
+.schaduw { filter: blur(7px); }
+.rij.open { display: block; }
+.rij.open .hoofd { display: flex; gap: 14px; align-items: center; }
+.rij .detail { margin: 8px 0 2px 100px; padding: 8px 12px; background: #f3f5f6; border-radius: 6px; font-size: 13px; color: #3a4146; }
+.rij .pijl { color: var(--z); font-weight: 700; margin-left: 10px; }
 .verschil { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; border-top: 1px solid var(--l); background: var(--v); flex: none; }
 .verschil div { padding: 8px 14px; border-right: 1px solid var(--l); font-size: 13px; }
 .verschil b { color: var(--a); }
@@ -78,47 +104,32 @@ body { margin: 0; background: #cfd4d7; font: 14px/1.4 system-ui, -apple-system, 
 </section>
 
 <section class="blad" id="b2">
-  <h2>2 · Ontwerp van een woning: links de keuzes, midden het plan, rechts altijd de 3D</h2>
-  <p class="uit">Wat je links kiest, zie je meteen in het plan en in de 3D. De tabbladen volgen de volgorde van het werk: ruimtes, openingen, afwerking, dak, techniek.</p>
+  <h2>2 · Ontwerp van een woning: de 3D groot, één rij grote keuzes</h2>
+  <p class="uit">Links vijf onderwerpen. Onderaan alleen de keuzes van het gekozen onderwerp, als beeld. Geen materiaalnamen, geen lijsten: die staan in het overzicht. "Meer opties" opent de rest voor wie ze nodig heeft.</p>
   <div class="scherm">
-    <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap aan">1 · Ontwerp</span><span class="stap">2 · Bekijk</span><span class="stap">3 · Overzicht</span></div><div class="rechts">Nieuwbouw woning · Fam. Peeters <span class="knop">Ongedaan</span><span class="knop">Klantweergave</span></div></div>
+    <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap aan">1 · Ontwerp</span><span class="stap">2 · Bekijk</span><span class="stap">3 · Overzicht</span></div><div class="rechts">Nieuwbouw woning · Fam. Peeters <span class="knop">Klantweergave</span></div></div>
     <div class="inhoud">
-      <div class="paneel">
-        <div class="tabs"><span class="tab">Ruimtes</span><span class="tab">Openingen</span><span class="tab">Afwerking</span><span class="tab aan">Dak</span><span class="tab">Techniek</span></div>
-        <div class="groep"><label>Dakvorm</label><div class="chips"><span class="chip">Plat</span><span class="chip">Lessenaar</span><span class="chip aan">Zadeldak</span></div></div>
-        <div class="groep"><label>Helling</label><div class="schuif"><i style="--p:55%"></i><b>35°</b></div></div>
-        <div class="groep"><label>Nok loopt</label><div class="chips"><span class="chip aan">Langs de voorgevel</span><span class="chip">Dwars</span></div></div>
-        <div class="groep"><label>Oversteek</label><div class="schuif"><i style="--p:40%"></i><b>40 cm</b></div></div>
-        <div class="groep"><label>Bedekking</label><div class="chips"><span class="chip aan">Pannen</span><span class="chip">Leien</span><span class="chip">Zink</span></div></div>
-        <div class="groep"><label>Kleur</label><div class="stalen"><span class="staal aan" style="background:#4b5158"></span><span class="staal" style="background:#7a3f33"></span><span class="staal" style="background:#2c2c2e"></span><span class="staal" style="background:#8a8f92"></span></div></div>
-        <div class="groep"><label>Op het dak</label><div class="chips"><span class="chip">+ Dakraam</span><span class="chip">+ Lichtkoepel</span></div></div>
+      <div class="rail"><div class=""><i>▦</i>Vorm</div><div class=""><i>▯</i>Ramen</div><div class=""><i>◧</i>Stijl</div><div class="aan"><i>⌂</i>Dak</div><div class=""><i>☼</i>Techniek</div></div>
+      <div class="vak"><svg id="huis2" viewBox="0 0 1184 708"></svg>
+        <div class="balk"><span class="pil">↶ Ongedaan</span><span class="pil" style="margin-left:auto">Groot scherm</span></div>
+        <div class="hoekkaart"><b>Plan</b><svg id="plan2" viewBox="0 0 230 176"></svg></div>
+        <div class="strook"><div class="keuze"><svg viewBox="0 0 96 52"><rect x="14" y="20" width="68" height="26" fill="#d9d3c7" stroke="#2b2f33"/><rect x="10" y="14" width="76" height="7" fill="#454b50"/></svg>Plat</div><div class="keuze"><svg viewBox="0 0 96 52"><polygon points="14,46 82,46 82,14 14,26" fill="#d9d3c7" stroke="#2b2f33"/><polygon points="8,24 88,9 88,15 8,30" fill="#454b50"/></svg>Lessenaar</div><div class="keuze aan"><svg viewBox="0 0 96 52"><polygon points="14,46 82,46 82,26 48,6 14,26" fill="#d9d3c7" stroke="#2b2f33"/><polygon points="6,28 48,2 90,28 86,32 48,9 10,32" fill="#454b50"/></svg>Zadeldak</div><span class="streep"></span><span class="stip aan" style="background:#4b5158"></span><span class="stip" style="background:#7a3f33"></span><span class="stip" style="background:#2c2c2e"></span><span class="stip" style="background:#8a8f92"></span><span class="meer">Meer opties ›</span></div>
       </div>
-      <div class="vak" style="background:#fff;border-right:1px solid var(--l)"><svg id="plan2" viewBox="0 0 520 708"></svg></div>
-      <div class="vak" style="flex:1.15"><svg id="huis2" viewBox="0 0 520 708"></svg><div class="noot">3D volgt elke keuze · sleep om te draaien</div></div>
     </div>
   </div>
 </section>
 
 <section class="blad" id="b3">
-  <h2>3 · Ontwerp van een vast model: maten en opties, de 3D volgt</h2>
-  <p class="uit">Zo werkt elk bijgebouw, elke loods en elke trap: geen tekenwerk, alleen kiezen. Hier een carport.</p>
+  <h2>3 · Ontwerp van een vast model: drie maten en klaar</h2>
+  <p class="uit">Zo werkt elk bijgebouw, elke aanbouw, loods en trap. Grote knoppen om een maat te verhogen of te verlagen; de 3D volgt meteen. De rest zit achter de andere onderwerpen links.</p>
   <div class="scherm">
-    <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap aan">1 · Ontwerp</span><span class="stap">2 · Bekijk</span><span class="stap">3 · Overzicht</span></div><div class="rechts">Carport · Fam. Peeters <span class="knop">Ongedaan</span><span class="knop">Klantweergave</span></div></div>
+    <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap aan">1 · Ontwerp</span><span class="stap">2 · Bekijk</span><span class="stap">3 · Overzicht</span></div><div class="rechts">Carport · Fam. Peeters <span class="knop">Klantweergave</span></div></div>
     <div class="inhoud">
-      <div class="paneel" style="width:330px">
-        <h3>Carport</h3>
-        <div class="groep"><label>Breedte</label><div class="schuif"><i style="--p:60%"></i><b>6,00 m</b></div></div>
-        <div class="groep"><label>Diepte</label><div class="schuif"><i style="--p:50%"></i><b>5,50 m</b></div></div>
-        <div class="groep"><label>Doorrijhoogte</label><div class="schuif"><i style="--p:35%"></i><b>2,30 m</b></div></div>
-        <div class="groep"><label>Dak</label><div class="chips"><span class="chip aan">Plat</span><span class="chip">Lessenaar</span><span class="chip">Zadel</span></div></div>
-        <div class="groep"><label>Wanden</label><div class="chips"><span class="chip aan">Achter dicht</span><span class="chip">Links dicht</span><span class="chip">Rechts dicht</span></div></div>
-        <div class="groep"><label>Hout</label><div class="stalen"><span class="staal aan" style="background:#b98a52"></span><span class="staal" style="background:#8a6233"></span><span class="staal" style="background:#2c2c2e"></span><span class="staal" style="background:#9c968c"></span></div></div>
-        <div class="groep"><label>Extra</label><div class="chips"><span class="chip aan">Berging achteraan</span><span class="chip">Poort</span><span class="chip">Lichtkoepel</span></div></div>
-        <div class="groep"><label>Plaats</label><div class="chips"><span class="chip aan">Los</span><span class="chip">Tegen de woning</span></div></div>
+      <div class="rail"><div class="aan"><i>↔</i>Maten</div><div class=""><i>⌂</i>Dak</div><div class=""><i>▥</i>Wanden</div><div class=""><i>●</i>Kleur</div><div class=""><i>+</i>Extra</div></div>
+      <div class="vak"><svg id="carport3" viewBox="0 0 1184 708"></svg>
+        <div class="balk"><span class="pil">↶ Ongedaan</span><span class="pil" style="margin-left:auto">Groot scherm</span></div>
+        <div class="strook"><div class="stapper"><span>−</span><b><small>Breedte</small>6,00 m</b><span>+</span></div><div class="stapper"><span>−</span><b><small>Diepte</small>5,50 m</b><span>+</span></div><div class="stapper"><span>−</span><b><small>Doorrijhoogte</small>2,30 m</b><span>+</span></div><span class="meer">Meer opties ›</span></div>
       </div>
-      <div class="vak"><svg id="carport3" viewBox="0 0 950 708"></svg>
-        <div class="balk"><span class="wissel"><span class="aan">Afgewerkt</span><span>Constructie</span></span><span class="pil">Maten aan</span></div>
-        <div class="noot">Voorstelling, geen berekening: doorsneden en afstanden zijn richtwaarden.</div></div>
     </div>
   </div>
 </section>
@@ -146,55 +157,42 @@ body { margin: 0; background: #cfd4d7; font: 14px/1.4 system-ui, -apple-system, 
 </section>
 
 <section class="blad" id="b6">
-  <h2>6 · Doorsnede: de opbouw van dak, wand en vloer, laag per laag</h2>
-  <p class="uit">Je schuift een snede door het gebouw. Rechts staat de opbouw in gewone taal; die lagen zijn gegevens die de aannemer zelf beheert.</p>
+  <h2>6 · Doorsnede: je ziet de opbouw, zonder opsomming</h2>
+  <p class="uit">Je schuift een snede door het gebouw. Op het scherm staan alleen de vier namen. Welke lagen erin zitten, lees je in het overzicht.</p>
   <div class="scherm">
     <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap">1 · Ontwerp</span><span class="stap aan">2 · Bekijk</span><span class="stap">3 · Overzicht</span></div><div class="rechts">Nieuwbouw woning · Fam. Peeters <span class="knop">Klantweergave</span></div></div>
-    <div class="inhoud">
-      <div class="vak" style="background:#fff"><svg id="snede6" viewBox="0 0 950 708"></svg>
-        <div class="balk"><span class="pil">Snede A–A</span><span class="pil" style="min-width:300px"><span class="schuif"><i style="--p:45%"></i><b>4,20 m</b></span></span><span class="pil">Maten aan</span></div></div>
-      <div class="paneel r" style="width:330px">
-        <div class="kaart"><h4>Dak</h4>Keramische pannen op panlatten · onderdak · kepers 6 × 20 cm met isolatie · dampscherm · gipsplaat</div>
-        <div class="kaart"><h4>Buitenwand (houtskelet)</h4>Gevelbekleding · latten en luchtspouw · houtvezelplaat · stijlen 4,5 × 14 cm om de 60 cm met isolatie · dampscherm · gipsplaat</div>
-        <div class="kaart"><h4>Verdiepingsvloer</h4>Parket · onderplaat · balklaag 6 × 22 cm om de 45 cm · plafond in gipsplaat</div>
-        <div class="kaart"><h4>Vloer gelijkvloers</h4>Tegels · chape 7 cm · isolatie 10 cm · betonplaat</div>
-        <span class="knop">Opbouw wijzigen</span>
-      </div>
-    </div>
+    <div class="vak" style="background:#fff"><svg id="snede6" viewBox="0 0 1280 708"></svg>
+      <div class="balk"><span class="wissel"><span>Afgewerkt</span><span>Constructie</span><span class="aan">Doorsnede</span></span><span class="pil" style="min-width:320px"><span class="schuif"><i style="--p:45%"></i><b>4,20 m</b></span></span><span class="pil">Maten aan</span><span class="pil" style="margin-left:auto">Groot scherm</span></div>
+      <div class="noot">Voorstelling, geen berekening. De lagen van dak, wand en vloer staan in het overzicht.</div></div>
   </div>
 </section>
 
 <section class="blad" id="b7">
-  <h2>7 · Techniek in beeld: zonwering, ventilatie, stopcontacten en verlichting</h2>
-  <p class="uit">In het plan met eenvoudige tekens, in de 3D als echte dingen. Met <i>Avond</i> gaat de verlichting aan en zie je waar het licht valt.</p>
+  <h2>7 · Techniek: tik op wat je wil plaatsen, tik in het plan</h2>
+  <p class="uit">Vijf grote knoppen: stopcontact, schakelaar, lichtpunt, ventilatie, zonwering. Rechts zie je het meteen in de kamer; met <i>Avond</i> gaat het licht aan.</p>
   <div class="scherm">
     <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap aan">1 · Ontwerp</span><span class="stap">2 · Bekijk</span><span class="stap">3 · Overzicht</span></div><div class="rechts">Nieuwbouw woning · Fam. Peeters <span class="knop">Klantweergave</span></div></div>
     <div class="inhoud">
-      <div class="paneel" style="width:250px">
-        <div class="tabs"><span class="tab">Ruimtes</span><span class="tab">Openingen</span><span class="tab">Afwerking</span><span class="tab">Dak</span><span class="tab aan">Techniek</span></div>
-        <div class="groep"><label>Plaats in het plan</label><div class="chips"><span class="chip">+ Stopcontact</span><span class="chip">+ Schakelaar</span><span class="chip aan">+ Lichtpunt</span><span class="chip">+ Afvoermond</span><span class="chip">+ Raamrooster</span></div></div>
-        <div class="groep"><label>Lichtpunt</label><div class="chips"><span class="chip aan">Inbouwspot</span><span class="chip">Pendel</span><span class="chip">Wandlamp</span><span class="chip">Ledstrip</span></div></div>
-        <div class="groep"><label>Zonwering op dit raam</label><div class="chips"><span class="chip aan">Screen</span><span class="chip">Rolluik</span><span class="chip">Lamellen</span></div></div>
-        <div class="groep"><label>Stand</label><div class="schuif"><i style="--p:55%"></i><b>half neer</b></div></div>
-      </div>
-      <div class="vak" style="background:#fff;border-right:1px solid var(--l);flex:.9"><svg id="plan7" viewBox="0 0 470 708"></svg></div>
-      <div class="vak" style="flex:1.1"><svg id="kamer7" viewBox="0 0 560 708"></svg>
+      <div class="rail"><div class=""><i>▦</i>Vorm</div><div class=""><i>▯</i>Ramen</div><div class=""><i>◧</i>Stijl</div><div class=""><i>⌂</i>Dak</div><div class="aan"><i>☼</i>Techniek</div></div>
+      <div class="vak" style="background:#fff;border-right:1px solid var(--l);flex:.9"><svg id="plan7" viewBox="0 0 530 708"></svg>
+        <div class="strook smal"><div class="keuze"><svg viewBox="0 0 96 52"><rect x="30" y="8" width="36" height="36" rx="6" fill="#f2f2ee" stroke="#55595c" stroke-width="2"/><circle cx="42" cy="26" r="3" fill="#22262a"/><circle cx="54" cy="26" r="3" fill="#22262a"/></svg>Stopcontact</div><div class="keuze"><svg viewBox="0 0 96 52"><rect x="30" y="8" width="36" height="36" rx="6" fill="#f2f2ee" stroke="#55595c" stroke-width="2"/><rect x="42" y="14" width="12" height="24" rx="3" fill="#cfd4d7" stroke="#55595c"/></svg>Schakelaar</div><div class="keuze aan"><svg viewBox="0 0 96 52"><polygon points="48,10 22,48 74,48" fill="#ffe7a3" opacity=".7"/><ellipse cx="48" cy="11" rx="12" ry="5" fill="#fff3c4" stroke="#b8860b" stroke-width="2"/></svg>Lichtpunt</div><div class="keuze"><svg viewBox="0 0 96 52"><circle cx="48" cy="26" r="17" fill="#e9e9e4" stroke="#55595c" stroke-width="2"/><path d="M36 26h24M48 14v24M40 18l16 16M56 18L40 34" stroke="#55595c" stroke-width="2"/></svg>Ventilatie</div><div class="keuze"><svg viewBox="0 0 96 52"><rect x="26" y="6" width="44" height="42" fill="#bcd9e8" stroke="#2f3437" stroke-width="3"/><rect x="26" y="6" width="44" height="22" fill="#3a3e40"/></svg>Zonwering</div></div></div>
+      <div class="vak" style="flex:1.1"><svg id="kamer7" viewBox="0 0 650 708"></svg>
         <div class="balk"><span class="wissel"><span>Dag</span><span class="aan">Avond</span></span><span class="pil">Leefruimte</span></div></div>
     </div>
   </div>
 </section>
 
 <section class="blad" id="b8">
-  <h2>8 · Overzicht: wat er in het ontwerp zit, zonder prijzen</h2>
-  <p class="uit">Vervangt de offerte. Elk onderdeel met een beeld en een hoeveelheid. Rechts wat je ermee doet: meegeven aan de klant of doorsturen naar Missing Link.</p>
+  <h2>8 · Overzicht: hier staan de materialen en de details</h2>
+  <p class="uit">Vervangt de offerte, zonder prijzen. Elke regel klapt open: dan zie je de materialen en de opbouw. Rechts wat je ermee doet: meegeven aan de klant of doorsturen naar Missing Link.</p>
   <div class="scherm">
     <div class="kop"><span class="merk">Bouwconfigurator 3D</span><div class="stappen"><span class="stap">1 · Ontwerp</span><span class="stap">2 · Bekijk</span><span class="stap aan">3 · Overzicht</span></div><div class="rechts">Nieuwbouw woning · Fam. Peeters <span class="knop">Klantweergave</span></div></div>
     <div class="inhoud">
       <div class="lijst" id="lijst8"></div>
       <div class="paneel r" style="width:340px">
-        <div class="kaart"><h4>Meegeven aan de klant</h4><p style="margin:0 0 8px;color:var(--z)">De klant bekijkt en draait zelf, zonder iets te wijzigen.</p><span class="knop hoofd">Link naar de draaibare 3D</span><p style="margin:8px 0"></p><span class="knop">Blad met beelden (PDF)</span></div>
-        <div class="kaart"><h4>Doorsturen naar Missing Link</h4><p style="margin:0 0 8px;color:var(--z)">Een beeld per regel en de draaibare 3D bij het project.</p><span class="knop hoofd">Stuur door</span></div>
-        <div class="kaart"><h4>Varianten</h4><p style="margin:0 0 8px;color:var(--z)">A · Zadeldak met pannen<br>B · Plat dak met lichtkoepels</p><span class="knop">Naast elkaar bekijken</span></div>
+        <div class="kaart"><h4>Meegeven aan de klant</h4><span class="knop hoofd">Link naar de draaibare 3D</span><p style="margin:8px 0"></p><span class="knop">Blad met beelden (PDF)</span></div>
+        <div class="kaart"><h4>Doorsturen naar Missing Link</h4><span class="knop hoofd">Stuur door</span></div>
+        <div class="kaart"><h4>Varianten</h4><p style="margin:0 0 8px;color:var(--z)">A · Zadeldak<br>B · Plat dak met lichtkoepels</p><span class="knop">Naast elkaar bekijken</span></div>
       </div>
     </div>
   </div>
@@ -233,7 +231,7 @@ const NS = 'http://www.w3.org/2000/svg';
 const S = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.append(e); return e; };
 const iso = (ox, oy, s) => (x, y, z) => [ox + (x - y) * 0.866 * s, oy + (x + y) * 0.5 * s - z * s];
 const pp = (P, a) => a.map((q) => P(...q).map((v) => v.toFixed(1)).join(',')).join(' ');
-const V = (g, P, a, fill, o = {}) => S('polygon', { points: pp(P, a), fill, stroke: o.s ?? '#2b2f33', 'stroke-width': o.w ?? 1, 'stroke-linejoin': 'round', opacity: o.o ?? 1 }, g);
+const V = (g, P, a, fill, o = {}) => S('polygon', { points: pp(P, a), fill, stroke: o.s ?? 'rgba(25,30,35,.55)', 'stroke-width': o.w ?? .9, 'stroke-linejoin': 'round', opacity: o.o ?? 1 }, g);
 const L = (g, P, a, b, stroke, w, o = {}) => { const [x1, y1] = P(...a), [x2, y2] = P(...b); return S('line', { x1, y1, x2, y2, stroke, 'stroke-width': w, 'stroke-linecap': 'round', ...o }, g); };
 const T = (g, x, y, t, o = {}) => { const e = S('text', { x, y, 'font-size': o.f ?? 12, fill: o.c ?? '#22262a', 'text-anchor': o.a ?? 'start', 'font-weight': o.b ? 700 : 400, 'font-family': 'system-ui, sans-serif' }, g); e.textContent = t; return e; };
 const $ = (id) => document.getElementById(id);
@@ -256,7 +254,7 @@ function omgeving(svg, w, h, o = {}) {
 function huisAf(g, P, o) {
   const { W, D, H, R } = o, m = D / 2, zadel = o.dak !== 'plat', He = H - 4 * R / m;
   const muur = o.avond ? '#6d5a52' : '#b8694f', muur2 = o.avond ? '#5d4c46' : '#a65d45', glas = o.avond ? '#ffd97a' : '#bcd9e8', kader = '#2f3437';
-  V(g, P, [[0, D, 0], [W, D, 0], [W, 0, 0], [W + 26, 8, 0], [W + 26, D + 16, 0], [16, D + 16, 0]], o.avond ? 'rgba(0,0,0,.35)' : 'rgba(40,60,40,.22)', { s: 'none' });
+  V(g, P, [[0, D, 0], [W, D, 0], [W, 0, 0], [W + 26, 8, 0], [W + 26, D + 16, 0], [16, D + 16, 0]], o.avond ? 'rgba(0,0,0,.4)' : 'rgba(30,50,30,.32)', { s: 'none' }).setAttribute('class', 'schaduw');
   // Terras voor het schuifraam.
   V(g, P, [[30, D, 0], [70, D, 0], [70, D + 20, 0], [30, D + 20, 0]], o.avond ? '#55585a' : '#c9c5bb', { s: '#8d8a83' });
   if (zadel) V(g, P, [[-3, -4, He], [W + 3, -4, He], [W + 3, m, H + R], [-3, m, H + R]], o.avond ? '#2f3338' : '#3f454b');
@@ -351,7 +349,7 @@ function plan(svg, ox, oy, s, o = {}) {
   S('rect', { x: X(0), y: Y(0), width: 62 * s, height: 46 * s, fill: '#ecdcc0', stroke: 'none' }, svg);
   lijn(62, 0, 62, 46, muur, 3.5); lijn(0, 46, 100, 46, muur, 3.5); lijn(40, 46, 40, 80, muur, 3.5); lijn(72, 46, 72, 80, muur, 3.5);
   for (const [x1, y1, x2, y2] of [[8, 80, 22, 80], [44, 80, 66, 80], [76, 80, 92, 80], [100, 12, 100, 30], [100, 62, 100, 72], [14, 0, 40, 0], [0, 14, 0, 34]]) lijn(x1, y1, x2, y2, '#5aa7d6', 7);
-  const naam = (x, y, t, m2) => { T(svg, X(x), Y(y), t, { f: 13, b: 1, a: 'middle' }); T(svg, X(x), Y(y) + 15, m2, { f: 11, c: '#5f676d', a: 'middle' }); };
+  const naam = (x, y, t, m2) => { if (o.klein) return; T(svg, X(x), Y(y), t, { f: 13, b: 1, a: 'middle' }); T(svg, X(x), Y(y) + 15, m2, { f: 11, c: '#5f676d', a: 'middle' }); };
   naam(31, 22, 'Leefruimte', '27,6 m²'); naam(81, 22, 'Keuken', '16,9 m²'); naam(20, 68, 'Slaapkamer', '13,2 m²'); naam(56, 68, 'Hal', '10,5 m²'); naam(86, 68, 'Badkamer', '9,2 m²');
   if (o.dak) { lijn(-4, 40, 104, 40, '#c0392b', 2, { 'stroke-dasharray': '10 6' }); T(svg, X(50), Y(40) - 6, 'nok', { f: 12, c: '#c0392b', a: 'middle', b: 1 }); S('rect', { x: X(-4), y: Y(-4), width: 108 * s, height: 88 * s, fill: 'none', stroke: '#c0392b', 'stroke-width': 1.5, 'stroke-dasharray': '4 5' }, svg); T(svg, X(-4), Y(-4) - 6, 'dakrand met oversteek', { f: 11, c: '#c0392b' }); }
   // Noordpijl.
@@ -406,9 +404,9 @@ function kamer(svg, P, gloed) {
 
 /** Doorsnede met de opbouw van dak, wand en vloer. */
 function doorsnede(svg) {
-  const s = 62, ox = 205, grond = 610, X = (m) => ox + m * s, Y = (m) => grond - m * s, B = 8, wand = .32, H = 2.9, nok = H + (B / 2) * Math.tan(35 * Math.PI / 180);
+  const s = 62, ox = 390, grond = 600, X = (m) => ox + m * s, Y = (m) => grond - m * s, B = 8, wand = .32, H = 2.9, nok = H + (B / 2) * Math.tan(35 * Math.PI / 180);
   const r = (x, y, w, h, fill, extra = {}) => S('rect', { x: X(x), y: Y(y + h), width: w * s, height: h * s, fill, stroke: '#2b2f33', 'stroke-width': .8, ...extra }, svg);
-  S('rect', { x: 0, y: grond, width: 950, height: 100, fill: '#d9cfbd' }, svg); S('line', { x1: 0, y1: grond, x2: 950, y2: grond, stroke: '#2b2f33', 'stroke-width': 2 }, svg);
+  S('rect', { x: 0, y: grond, width: 1280, height: 110, fill: '#d9cfbd' }, svg); S('line', { x1: 0, y1: grond, x2: 1280, y2: grond, stroke: '#2b2f33', 'stroke-width': 2 }, svg);
   r(-.15, -.9, .6, .9, '#b9bcbc'); r(B - .45, -.9, .6, .9, '#b9bcbc');
   // Vloer gelijkvloers.
   r(wand, -.02, B - 2 * wand, .15, '#c4c7c7'); r(wand, .13, B - 2 * wand, .10, '#f1d98a'); r(wand, .23, B - 2 * wand, .07, '#dcdcd6'); r(wand, .30, B - 2 * wand, .025, '#a9825a');
@@ -429,10 +427,10 @@ function doorsnede(svg) {
   maat(-.9, 0, H, 'goot 2,90 m'); maat(-1.7, 0, nok + .35, 'nok 5,85 m');
   S('line', { x1: X(0), y1: grond + 34, x2: X(B), y2: grond + 34, stroke: '#1d4f7a', 'stroke-width': 1.5 }, svg); T(svg, X(B / 2), grond + 52, '8,00 m', { f: 13, c: '#1d4f7a', b: 1, a: 'middle' });
   // Wijzers naar de kaarten rechts.
-  const wijs = (x, y, tekst, ty) => { S('line', { x1: X(x), y1: Y(y), x2: 806, y2: ty, stroke: '#22262a', 'stroke-width': 1 }, svg); S('circle', { cx: X(x), cy: Y(y), r: 3, fill: '#22262a' }, svg); T(svg, 812, ty + 4, tekst, { f: 13, b: 1 }); };
-  wijs(6.6, H + (nok - H) * .32 + .15, 'dakopbouw', 150); wijs(B - .16, 1.5, 'wandopbouw', 300); wijs(6.9, 2.72, 'verdiepingsvloer', 420); wijs(7.0, .2, 'vloeropbouw', 560);
+  const wijs = (x, y, tekst, ty) => { S('line', { x1: X(x), y1: Y(y), x2: 1000, y2: ty, stroke: '#22262a', 'stroke-width': 1 }, svg); S('circle', { cx: X(x), cy: Y(y), r: 3, fill: '#22262a' }, svg); T(svg, 1008, ty + 6, tekst, { f: 19, b: 1 }); };
+  wijs(6.6, H + (nok - H) * .32 + .15, 'Dak', 170); wijs(B - .16, 1.5, 'Buitenwand', 320); wijs(6.9, 2.72, 'Verdiepingsvloer', 430); wijs(7.0, .2, 'Vloer', 560);
   // Klein plan met de snedelijn.
-  S('rect', { x: 24, y: 70, width: 92, height: 74, fill: '#f5f1e8', stroke: '#2b2f33', 'stroke-width': 3 }, svg); S('line', { x1: 66, y1: 60, x2: 66, y2: 154, stroke: '#c0392b', 'stroke-width': 2, 'stroke-dasharray': '7 4' }, svg); T(svg, 60, 56, 'A', { f: 12, c: '#c0392b', b: 1 }); T(svg, 60, 168, 'A', { f: 12, c: '#c0392b', b: 1 });
+  S('rect', { x: 24, y: 90, width: 92, height: 74, fill: '#f5f1e8', stroke: '#2b2f33', 'stroke-width': 3 }, svg); S('line', { x1: 66, y1: 80, x2: 66, y2: 174, stroke: '#c0392b', 'stroke-width': 2, 'stroke-dasharray': '7 4' }, svg);
 }
 
 // ---- De bladen vullen ----
@@ -462,26 +460,28 @@ const HUIS = { W: 100, D: 80, H: 30, R: 28 };
     t.insertAdjacentHTML('beforeend', `<b>${naam}</b><span>${uitleg}</span>`);
   }
 }
-plan($('plan2'), 36, 110, 4.5, { dak: true });
-{ const svg = $('huis2'); omgeving(svg, 520, 708); huisAf(svg, iso(250, 330, 2.55), { ...HUIS, dak: 'zadel' }); }
-{ const svg = $('carport3'); omgeving(svg, 950, 708, { horizon: .46 }); carport(svg, iso(470, 330, 5.0), { W: 60, D: 55, H: 23 }); }
+plan($('plan2'), 22, 30, 1.72, { klein: true });
+{ const svg = $('huis2'); omgeving(svg, 1184, 708, { horizon: .5 }); huisAf(svg, iso(560, 215, 3.35), { ...HUIS, dak: 'zadel' }); }
+{ const svg = $('carport3'); omgeving(svg, 1184, 708, { horizon: .46 }); carport(svg, iso(590, 250, 4.9), { W: 60, D: 55, H: 23 }); }
 { const svg = $('huis4'); const gloed = omgeving(svg, 1280, 708, { horizon: .5 }); S('circle', { cx: 1130, cy: 120, r: 34, fill: '#fff6cf', opacity: .95 }, svg); huisAf(svg, iso(630, 300, 3.55), { ...HUIS, dak: 'zadel', maten: true, schermen: true, gloed }); }
 { const svg = $('huis5'); S('rect', { x: 0, y: 0, width: 1280, height: 708, fill: '#f3f1ec' }, svg); huisSkelet(svg, iso(630, 300, 3.55), HUIS); }
 doorsnede($('snede6'));
-plan($('plan7'), 30, 100, 4.1, { techniek: true });
-{ const svg = $('kamer7'); const gloed = omgeving(svg, 560, 708, { avond: true, horizon: 0 }); kamer(svg, iso(268, 300, 5.0), gloed); }
+plan($('plan7'), 52, 70, 4.2, { techniek: true });
+{ const svg = $('kamer7'); const gloed = omgeving(svg, 650, 708, { avond: true, horizon: 0 }); kamer(svg, iso(312, 290, 5.4), gloed); }
 { // 8: overzicht
-  const rijen = [['Woning', '2 verdiepingen · 152 m² vloer · gevelsteen rood-bruin', '1', 'huis'], ['Dak', 'Zadeldak 35° · keramische pannen antraciet · oversteek 40 cm', '118 m²', 'dak'], ['Ramen en deuren', '14 stuks · aluminium antraciet · 3 met screen', '14 st', 'raam'],
-    ['Zonwering', 'Screens op zuid en west, antraciet', '3 st', 'scherm'], ['Vloeren', 'Parket eik in leefruimte en slaapkamers · tegels 60 × 60 in keuken en badkamer', '152 m²', 'vloer'], ['Techniek', '11 lichtpunten · 9 stopcontacten · 4 schakelaars · ventilatie met raamroosters', '', 'licht'], ['Carport', '6,00 × 5,50 m · plat dak · berging achteraan', '1', 'carport']];
-  for (const [naam, tekst, aantal, soort] of rijen) {
-    const r = document.createElement('div'); r.className = 'rij'; $('lijst8').append(r);
-    const d = document.createElement('div'); d.className = 'duim'; r.append(d); const svg = S('svg', { viewBox: '0 0 86 58' }, d);
+  const rijen = [['Woning', '2 verdiepingen · 152 m²', '', 'huis'], ['Dak', 'Zadeldak', '118 m²', 'dak', 'Keramische pannen antraciet · panlatten · onderdak · kepers 6 × 20 cm met isolatie · helling 35° · oversteek 40 cm'], ['Ramen en deuren', '14 stuks', '', 'raam'],
+    ['Zonwering', 'Screens op zuid en west', '3 st', 'scherm'], ['Vloeren', 'Parket en tegels', '152 m²', 'vloer'], ['Techniek', 'Licht, stopcontacten, ventilatie', '', 'licht'], ['Carport', '6,00 × 5,50 m', '', 'carport']];
+  for (const [naam, tekst, aantal, soort, detail] of rijen) {
+    const r = document.createElement('div'); r.className = 'rij' + (detail ? ' open' : ''); $('lijst8').append(r);
+    const hoofd = detail ? r.appendChild(Object.assign(document.createElement('div'), { className: 'hoofd' })) : r;
+    const d = document.createElement('div'); d.className = 'duim'; hoofd.append(d); const svg = S('svg', { viewBox: '0 0 86 58' }, d);
     if (soort === 'huis' || soort === 'dak') huisAf(svg, iso(42, 27, .26), { ...HUIS, dak: 'zadel' });
     else if (soort === 'carport') { const Q = iso(43, 24, .42); for (const [x, y] of [[0, 0], [60, 0], [0, 50], [60, 50]]) L(svg, Q, [x, y, 0], [x, y, 24], '#8a6233', 2.5); V(svg, Q, [[-3, -3, 25], [63, -3, 25], [63, 53, 25], [-3, 53, 25]], '#454b50'); }
     else if (soort === 'raam' || soort === 'scherm') { S('rect', { x: 22, y: 8, width: 42, height: 42, fill: '#bcd9e8', stroke: '#2f3437', 'stroke-width': 3 }, svg); if (soort === 'scherm') S('rect', { x: 22, y: 8, width: 42, height: 22, fill: '#3a3e40' }, svg); }
     else if (soort === 'vloer') { for (let i = 0; i < 6; i++) S('rect', { x: 6 + (i % 3) * 25, y: 8 + Math.floor(i / 3) * 21, width: 24, height: 20, fill: i % 2 ? '#b08a5c' : '#c49a6c', stroke: '#8a6233' }, svg); }
     else { S('circle', { cx: 43, cy: 29, r: 14, fill: '#fff3c4', stroke: '#b8860b', 'stroke-width': 3 }, svg); }
-    r.insertAdjacentHTML('beforeend', `<div><b>${naam}</b><span>${tekst}</span></div><em>${aantal}</em>`);
+    hoofd.insertAdjacentHTML('beforeend', `<div><b>${naam}</b><span>${tekst}</span></div><em>${aantal}<span class="pijl">${detail ? '⌃' : '⌄'}</span></em>`);
+    if (detail) r.insertAdjacentHTML('beforeend', `<div class="detail"><b>Materialen en opbouw</b><br>${detail}</div>`);
   }
 }
 { const a = $('varA'); omgeving(a, 640, 590); huisAf(a, iso(300, 290, 3.0), { ...HUIS, dak: 'zadel' });

@@ -238,16 +238,31 @@ De klantweergave blijft: één knop die alles verbergt wat de klant niet hoeft t
 Tien schetsen van hoe de schermen, de 3D en de doorsnede eruit zouden zien. Het zijn tekeningen, geen schermafdrukken:
 niets hiervan is gebouwd. Bron: `docs/proeven/schermschetsen-bouw.html` (één pagina die zichzelf tekent).
 
+**Oordeel van Jonas op de eerste versie (15/11):** *"de kwaliteit is wel subpar nu, ik zou ook minder detail van
+materialen meteen zichtbaar, dit enkel in de samenvatting. Moet snel en duidelijk zijn voor een verkoper."* Daaruit
+volgen twee regels voor het ontwerp van de schermen:
+
+1. **Snel en duidelijk voor een verkoper.** De 3D is het grootste vlak. Links hoogstens vijf onderwerpen; onderaan één
+   rij grote keuzes als beeld (bv. drie dakvormen en vier kleuren), maten met grote − en + knoppen. Alles wat minder
+   vaak nodig is, zit achter *Meer opties*.
+2. **Geen materiaaldetail tijdens het ontwerpen.** Geen namen van lagen, geen lijsten van materialen, geen opbouw in
+   tekst: de 3D toont het. De materialen en de opbouw staan alleen in het **overzicht** (schets 8), waar elke regel
+   openklapt.
+
+De schetsen 2, 3, 6, 7 en 8 zijn daarop hertekend. Over de **kwaliteit van het beeld**: een schets kan die niet tonen.
+De echte 3D van de bouw is vandaag kaal (voor gebouwen tekent de kijker een effen achtergrond en eenvoudige schaduw
+[code]); "mooier" moet bewezen worden met echte beelden uit de 3D, als eerste stap na het dak.
+
 | # | Schets | Wat ze toont |
 |---|---|---|
 | 1 | ![Start](afbeeldingen/schermschetsen/blad-01.jpg) | Kiezen waarmee je begint: woning, aanbouw, raam, carport, tuinhuis, pergola, loods, trap, garagepoort |
-| 2 | ![Ontwerp woning](afbeeldingen/schermschetsen/blad-02.jpg) | Links de keuzes per tabblad, midden het plan, rechts altijd de 3D |
-| 3 | ![Vast model](afbeeldingen/schermschetsen/blad-03.jpg) | Een vast model (carport): maten en opties, de 3D volgt |
+| 2 | ![Ontwerp woning](afbeeldingen/schermschetsen/blad-02.jpg) | De 3D groot, links vijf onderwerpen, onderaan één rij grote keuzes, het plan als kaartje |
+| 3 | ![Vast model](afbeeldingen/schermschetsen/blad-03.jpg) | Een vast model (carport): drie maten met grote − en + knoppen, de 3D volgt |
 | 4 | ![Afgewerkt](afbeeldingen/schermschetsen/blad-04.jpg) | De 3D groot en mooier: lucht, gras, schaduw, zon op dag en uur, maten, zonwering |
 | 5 | ![Constructie](afbeeldingen/schermschetsen/blad-05.jpg) | Hetzelfde ontwerp als houtskelet: stijlen, lateien, balklaag, kepers, nok |
-| 6 | ![Doorsnede](afbeeldingen/schermschetsen/blad-06.jpg) | Snede door het gebouw met de opbouw van dak, wand en vloer |
-| 7 | ![Techniek](afbeeldingen/schermschetsen/blad-07.jpg) | Zonwering, ventilatie, stopcontacten en verlichting: tekens in het plan, echte dingen in de 3D, avondbeeld |
-| 8 | ![Overzicht](afbeeldingen/schermschetsen/blad-08.jpg) | Overzicht zonder prijzen, met meegeven en doorsturen |
+| 6 | ![Doorsnede](afbeeldingen/schermschetsen/blad-06.jpg) | Snede door het gebouw; op het scherm alleen vier namen, de lagen staan in het overzicht |
+| 7 | ![Techniek](afbeeldingen/schermschetsen/blad-07.jpg) | Vijf grote knoppen (stopcontact, schakelaar, lichtpunt, ventilatie, zonwering): tik en plaats in het plan; rechts de kamer, met avondbeeld |
+| 8 | ![Overzicht](afbeeldingen/schermschetsen/blad-08.jpg) | Overzicht zonder prijzen: hier staan de materialen en de opbouw (regel klapt open), met meegeven en doorsturen |
 | 9 | ![Varianten](afbeeldingen/schermschetsen/blad-09.jpg) | Twee voorstellen naast elkaar, met wat verschilt |
 | 10 | ![Tablet](afbeeldingen/schermschetsen/blad-10.jpg) | Dezelfde stap op een tablet |
 
