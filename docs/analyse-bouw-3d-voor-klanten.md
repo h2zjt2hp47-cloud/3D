@@ -490,6 +490,15 @@ een volledig ontwerp dat er goed uitziet; daarna past hij alleen aan wat bij dez
 | Een variant maken (ander dak of andere kleur) | ± 8 (project kopiëren en wijzigen) **[inschatting]** | 2 |
 | Meegeven aan de klant | 2 (afdrukken, met prijzen) | 1 |
 
+**Referentie van Jonas (15/11):** de video *"App voor houtskeletbouw"* van Carpentier (YouTube, `CYrOsKgC-ZA`). Wat ik
+ervan kon nagaan: de titel, het kanaal en vier stilstaande beelden; de video zelf en de gesproken tekst kon ik niet
+bekijken. Het is een getekende uitlegfilm, geen opname van de app. Op de beelden: een vakman tekent met de vinger een
+plan op een tablet, toont het op de tablet aan een koppel ("en kan u eender waar en wanneer uw plannen raadplegen") en
+"spaart bijzonder veel tijd, werkuren én geld uit". Volgens het onderzoek gaat het om een app voor de vakman bij de
+klant: maten, wanden en ramen op een grondplan, dan 3D met zoninval **[niet zelf gezien]**. Wat dit bevestigt voor ons:
+de tablet en de vinger eerst, tekenen ter plaatse, het resultaat meteen tonen, en de plannen daarna overal kunnen
+raadplegen (bij ons: meegeven en bewaren in Missing Link).
+
 **Gevolg voor de volgorde** (hoofdstuk 8): ronde 2 wordt *"snel resultaat"*: snelstart, stijlen, tik op het ding, prijzen
 uit beeld, Overzicht. Ze komt meteen na het samenvoegen van dak, koepels en lichtinval, op de bestaande configurator, met
 de uitbouw uit hoofdstuk 10 als proef. Elke latere ronde moet de doelen hierboven halen of verbeteren; een functie die
