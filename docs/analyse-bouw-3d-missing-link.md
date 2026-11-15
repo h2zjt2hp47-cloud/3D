@@ -26,11 +26,11 @@ Onderaan staan vijf beslissingen voor jou.
 
 ## 1. Wat is "de 3D van de bouw" vandaag? [code]
 
-Er zijn twee 3D-beelden: **de woning** (alle verdiepingen, gevels, ramen, vloeren, wanden, meubels) en **één raam of deur** in een stuk gevel.
+Er zijn drie 3D-beelden: **de woning** (alle verdiepingen, gevels, ramen, vloeren, wanden, meubels), **één raam of deur** in een stuk gevel, en **de aanbouw** (het eerste bouwmodel: een aanbouw met raampartij, gevel en plat dak).
 
 | Laag | Waar | Wat ze doet | Klaar om in te bouwen? |
 |---|---|---|---|
-| **Motor** | `packages/core` (`plattegrond3D`, `raamScene`) | Rekent uit het plan en de keuzes een lijst *blokken* uit: plaats, maat, materiaal, kleur. Gewone gegevens, geen 3D-bibliotheek. | Ja. Weet niets van schermen of van Missing Link. |
+| **Motor** | `packages/core` (`plattegrond3D`, `raamScene`, `bouwAanbouw3D`) | Rekent uit het plan en de keuzes een lijst *blokken* uit: plaats, maat, materiaal, kleur. Gewone gegevens, geen 3D-bibliotheek. | Ja. Weet niets van schermen of van Missing Link. |
 | **Kijker** | `packages/demo-web/src/drie-d.ts` (2 548 regels) | `maak3D(plaats)` geeft een kijker met `toon(scène)`, standpunten, kwaliteit, een beeld als PNG, een element aanduiden. Dezelfde kijker als bij de zetels. | Bijna. Hij staat in de map van de zeteldemo en sleept de fotomodus mee. |
 | **Schermen** | `packages/bouw-web/src` | Plattegrond, configurator, offerte, werf. Bewaren in de browser. | Nee. Gebouwd als demo in één bestand. |
 
@@ -46,7 +46,7 @@ Er zijn twee 3D-beelden: **de woning** (alle verdiepingen, gevels, ramen, vloere
 | waarvan alle schermen van de bouw samen | ± 110 kB |
 | **Enkel de kijker met de opbouw van woning en raam** | 2 276 kB, verpakt 630 kB |
 
-Wat dit zegt: 92 % van het gewicht is de 3D-bibliotheek. De schermen zijn klein. De fotomodus (615 kB) wordt in de bouwdemo niet gebruikt en kan eruit of pas geladen worden als iemand erop klikt; dan blijft er ± 1,7 MB over.
+Wat dit zegt: three.js is 60 % van het programma, en samen met de fotomodus 85 %. Alle schermen van de bouw samen zijn nog geen 5 %. Wie alleen de 3D wil inbouwen, haalt dus bijna de hele demo binnen (92 %). De fotomodus (615 kB) wordt in de bouwdemo nergens opgeroepen; ze kan eruit of pas geladen worden als iemand erop klikt. Dan blijft er ± 1,7 MB over.
 
 **Wat de 3D toont:** muren met een ander materiaal buiten en binnen, sokkel, dakrand, vloerplaten met trapgat, plat dak, ramen en deuren met kader, vleugels, glas, afstandhouder, greep, zonwering, vensterbank en dorpel, binnendeuren (open), vloeren en wanden per ruimte, meubels, trap. "Muren laag" en "tot verdieping" om binnen te kijken.
 
@@ -63,7 +63,7 @@ Opnieuw nagekeken op 15/11 (de vorige keer was 31/10). Nieuw of nu pas gezien:
 | Onderdeel | Wat ik zag | Nut voor het inbouwen |
 |---|---|---|
 | **Modules** | Projecten, planning, kansen, calculaties, offertes, orders, backorders, leveringsbonnen, werkbonnen, bestellingen, aankoopfacturen, facturen, creditnota's, betalingen, artikels, uurtarieven, samengestelde artikels, machines, voorraad | De hele ketting na de offerte bestaat: order, bestelling, planning, werkbon. |
-| **Project** | werfadres en werfcontact, fase, hoofdproject en deelprojecten, btw-regime, projectleider, eerste planning, cijfers (geoffreerd, aanvaard, besteld, geleverd, gefactureerd) | Een woning of een ramenproject **is** een project. Meerwerk past als deelproject. |
+| **Project** | werfadres en werfcontact, fase, hoofdproject en deelprojecten, btw-regime, projectleider, eerste planning, cijfers (geofferteerd, aanvaard, besteld, geleverd, gefactureerd) | Een woning of een ramenproject **is** een project. Meerwerk past als deelproject. |
 | **Offerte** | `toestand`, versies (`versie_van_id`), `fotos_bij_regels`, `prijzen_tonen`, `subtotaal_per_titel`, `verkoopwijze`, voorschrijver, `kans_id`, `standaard_project_id`, voorschotschema, `etag` | Alles wat onze offerte doet (versies, voorschot, beelden bij de regels) heeft een plaats. |
 | **Offerteregel** | `kop`, `niveaunummer`, `tekst`, `tekst_opmaak`, `beeld_id`, `optioneel`, `keuzegroep`, `optie_sleutel`, `vereist_sleutel`, `berekening`, `maat`, `stuks`, `lengte`, `breedte`, `hoogte`, `afrondingsstap`, `minimum_aangerekend`, `project_id`, `herkomst_prijsberekening_id`, `onderdelen_tonen`, `klantprijs`, `nieuwe_bladzijde` | Een positie (raam P1) wordt een kop met regels eronder; het beeld gaat in `beeld_id`; een variant wordt een optionele regel in een keuzegroep. |
 | **Wie ben ik** | geeft ook de huisstijl van de firma (kleuren voor actie en zijbalk) en het logo | De ingebouwde 3D kan de kleuren van de firma overnemen zonder instelwerk. |
@@ -120,7 +120,7 @@ Het huidige "Export voor het ERP" in de offerte van de bouwdemo bevat al het gro
 
 ## 5. Wat moet er klaargemaakt worden?
 
-Dit is het antwoord op "klaar maken om in te bouwen". De eerste acht punten kunnen zonder dat er iets aan Missing Link moet gebeuren.
+Dit is het antwoord op "klaar maken om in te bouwen". De eerste negen punten kunnen zonder dat er iets aan Missing Link moet gebeuren.
 
 | # | Wat | Waarom | Werk | Heeft Missing Link nodig? |
 |---|---|---|---|---|
@@ -131,7 +131,7 @@ Dit is het antwoord op "klaar maken om in te bouwen". De eerste acht punten kunn
 | 5 | **Het formaat van de configuratie vastleggen.** Een bewaard bestand heeft al een soort en een versie (`woningconfigurator-project`, versie 1). Erbij: wat er bij een nieuwe versie met oude projecten gebeurt, en een test dat oude bestanden blijven openen. | Een offerte van vorig jaar moet over twee jaar nog openen. | S | Nee |
 | 6 | **Een modus "alleen kijken".** Zonder paletten en knoppen om te wijzigen. | Voor niveau A, voor de werkbon en voor de klant. | S | Nee |
 | 7 | **Kleuren van buiten.** De schermen gebruiken al vaste kleurnamen; die laten we invullen door wie de pagina opent. | De ingebouwde pagina ziet eruit als Missing Link, of als de huisstijl van de klant. | S | Nee |
-| 8 | **Beelden leveren op vraag.** `beeld()` bestaat in de kijker; erbij: een beeld per positie en van de woning, en de tekeningen als PNG. | Voor `beeld_id` op de offerteregel en voor de werkbon. | S | Nee |
+| 8 | **Beelden leveren op vraag.** `beeld()` bestaat in de kijker, maar de bouwdemo gebruikt ze nog niet. Erbij: een beeld per positie en van de woning, en de tekeningen als PNG. | Voor `beeld_id` op de offerteregel en voor de werkbon. | S | Nee |
 | 9 | **De ingesloten pagina met de afspraken** uit hoofdstuk 4, met een voorbeeldpagina die Missing Link naspeelt. | Zo kan de ontwikkelaar van Missing Link ertegen bouwen en testen. | M | Nee (wel zijn antwoorden op de vragen) |
 | 10 | **Catalogus en prijzen van buiten.** Nu staan materialen, artikelcodes en prijzen vast in `inrichting.ts` en `raam.ts`. Ze worden gegevens die bij `open` meekomen. | Verzonnen prijzen mogen nooit in een echte offerte belanden. Een afwerking toevoegen wordt een artikel toevoegen. | M–L | Ja: artikels, samengestelde artikels |
 | 11 | **Offerte wegschrijven:** van de export naar echte offerteregels, met een unieke sleutel per poging (geen dubbele offertes) en de controle op "intussen gewijzigd" (`etag`). | Niveau B. | M | Ja: betekenis van de velden |
@@ -152,9 +152,10 @@ Dit is het antwoord op "klaar maken om in te bouwen". De eerste acht punten kunn
 | **Vloer** (per ruimte) | 2 tegels, 2 parketten, PVC, gietvloer, tapijt |
 | **Wand** (per ruimte, niet per wand) | 6 verfkleuren, 2 wandtegels |
 | **Binnendeur** | Schilderdeur, eik, glas, staal zwart, schuifdeur in de wand |
-| **Raam en deur** | 5 profielen (PVC, alu, alu hoog geïsoleerd, hout, hout-alu), 6 kleuren buiten, 3 binnen, 6 glassoorten, 3 afstandhouders, 2 roeden, 3 deurpanelen, 3 grepen, dorpel, 3 vensterbanken, 2 dorpels buiten |
+| **Raam en deur** | 5 profielen (PVC, alu, alu hoog geïsoleerd, hout, hout-alu), 6 kleuren buiten, 3 binnen, 6 glassoorten, 3 afstandhouders, 2 roeden, 3 deurpanelen, 3 grepen, dorpel, 3 vensterbanken, 2 dorpels buiten; bij renovatie "dagkanten binnen afwerken" (ja of nee) |
 | **Zonwering en opties** | Screen (4 doekkleuren), rolluik, buitenjaloezie; bediening; vliegenraam; rooster; inbraakwerend beslag |
-| **Dak** | Alleen plat, één donkere kleur, met een donkere dakrand |
+| **Dak** (woning) | Alleen plat, één donkere kleur, met een donkere dakrand |
+| **Aanbouw** (eerste bouwmodel, los van de woning) | 7 raampartijen (schuif, hef-schuif, vouwdeur, deur met zijpanelen), 3 aluminium profielen, 5 kleuren (met brons geanodiseerd en bicolor), 5 glassoorten, 3 gevels voor de zijmuren, 4 bekledingen boven de raampartij, plat dak met EPDM, lichtstraat of lichtkoepel |
 
 ### 6.2 Wat erbij kan
 
@@ -164,7 +165,7 @@ De kolom **Offerte** zegt of de keuze ook een regel met een hoeveelheid geeft (m
 
 | # | Uitbreiding | Nut | Offerte | Werk |
 |---|---|---|---|---|
-| 1 | **Dakafwerking plat dak:** EPDM, roofing, grind, groendak; dakrand in aluminium in een kleur; lichtkoepel | Nu is het dak één zwart vlak | m², lm, stuk | S |
+| 1 | **Dakafwerking plat dak:** EPDM, roofing, grind, groendak; dakrand in aluminium in een kleur; lichtkoepel en lichtstraat (bestaan nu alleen in het aanbouwmodel) | Nu is het dak van de woning één zwart vlak | m², lm, stuk | S |
 | 2 | **Hellend dak:** zadeldak en lessenaarsdak, met pannen (model en kleur), leien of zink; dakoversteek; dakramen | Grootste gat in het beeld van een woning. Stond al in de lijst van 1/11. | m², stuk | M–L |
 | 3 | **Goten en afvoeren:** hanggoot of bakgoot, regenpijp, in zink, koper of aluminium in een kleur | Klein in beeld, vast op de offerte | lm, stuk | S |
 | 4 | **Metselwerk verfijnen:** metselverband (halfsteens, wild, tegelverband), voegtype (verdiept, platvol, dunbed), steenformaat | Bepaalt sterk hoe een bakstenen gevel oogt | m² (meerprijs) | S–M |
@@ -181,19 +182,19 @@ De kolom **Offerte** zegt of de keuze ook een regel met een hoeveelheid geeft (m
 | 10 | **Volledige kleurwaaier:** de gangbare RAL-kleuren plus een vrije RAL-code, met afwerking (mat, structuur, glans, anodisatie); houtsoorten met beits | Nu 6 kleuren. Kleur is de meest gestelde vraag bij schrijnwerk. | meerprijs | S |
 | 11 | **Echte profieldoorsnede** per systeem, met verstek in de hoeken (advies van 4/11) | Het grootste verschil voor het beeld van één raam | – | M per systeem; doorsnedes van de leverancier nodig |
 | 12 | **Beslag als echt 3D-bestand:** krukken, trekbeugels, brievenbus, huisnummer, in inox, zwart of messing | Voordeuren worden op uitzicht gekocht | stuk | M |
-| 13 | **Meer voordeuren:** panelen met inleg, zijlicht, glas in de deur (mat, figuurglas) | Nu 3 panelen | stuk | S–M |
+| 13 | **Meer voordeuren:** panelen met inleg, zijlicht, glas in de deur (mat, figuurglas) | Nu 3 panelen. Het zijlicht stond al in de lijst van 1/11. | stuk | S–M |
 | 14 | **Glas en roeden:** figuurglas, getint zonwerend glas, Wiener sprossen, glasdelende roeden | Renovatie van oudere woningen | m², lm | S |
-| 15 | **Zonwering verder:** meer doekkleuren, kleur van kast en geleiders, kleur van de rolluiklamel; in 3D op en neer | Verkoopargument | meerprijs | S |
-| 16 | **Afwerking binnen rond het raam:** omlijsting, gordijnkast, uitgepleisterde dagkant | Vaak vergeten op de offerte | lm | S |
+| 15 | **Zonwering verder:** meer doekkleuren, kleur van kast en geleiders, kleur van de rolluiklamel; in 3D op en neer | Verkoopargument. Op en neer stond al in de lijst van 1/11. | meerprijs | S |
+| 16 | **Afwerking binnen rond het raam:** omlijsting, gordijnkast; de dagkant als keuze van afwerking in plaats van ja of nee | Vaak vergeten op de offerte | lm | S |
 
 **C. Binnen**
 
 | # | Uitbreiding | Nut | Offerte | Werk |
 |---|---|---|---|---|
-| 17 | **Afwerking per wand** in plaats van per ruimte: accentmuur, tegels tot een hoogte, behang, houten latten | Nu één afwerking per ruimte | m² per wand | M |
-| 18 | **Vloeren verfijnen:** legpatroon (recht, halfsteens, visgraat), tegelformaat, plankbreedte, voegkleur, met het juiste snijverlies per patroon | Correcte hoeveelheden; visgraat vraagt meer | m² | M |
+| 17 | **Afwerking per wand** in plaats van per ruimte: accentmuur, tegels tot een hoogte, behang, houten latten | Nu één afwerking per ruimte. Het tegelplan per wand stond al in de lijst van 1/11. | m² per wand | M |
+| 18 | **Vloeren verfijnen:** legpatroon (recht, halfsteens, visgraat), tegelformaat, plankbreedte, voegkleur, met het juiste snijverlies per patroon | Correcte hoeveelheden; visgraat vraagt meer. Legpatroon en snijverlies stonden al in de lijst van 1/11 (badkamer). | m² | M |
 | 19 | **Plinten** (hoogte, materiaal, kleur) | Staat op elke offerte van een vloerder | lm | S |
-| 20 | **Plafonds:** kleur, verlaagd plafond, spots; hoogte per ruimte | Nu geen plafond in beeld | m², stuk | S–M |
+| 20 | **Plafonds:** kleur, verlaagd plafond, spots; hoogte per ruimte | Nu geen plafond in beeld. Plafonds stonden al in de lijst van 1/11 (verflijst). | m², stuk | S–M |
 | 21 | **Binnendeuren verfijnen:** meer modellen (paneeldeur, staallook met verdeling), kruk, omlijsting of blokkader, schuifdeur voor de wand | Nu 5 deuren zonder beslag | stuk | S–M |
 | 22 | **Trap:** model (open, dicht, kwartdraai), materiaal, leuning (glas, staal, hout) | Nu één rechte trap | stuk | S–M |
 
@@ -289,5 +290,5 @@ Volgens de afspraak spreek ik geen andere sessie of ontwikkelaar aan: deze lijst
 1. **Wat bedoel je met inbouwen als eerste doel:** kijken (A), configureren (B) of de hele ketting (C)? Mijn advies: A en B, via een ingesloten pagina; C daarna.
 2. **Blijft "aparte app, koppelbaar" (31/10) gelden?** Mijn advies: ja, één pakket dat op zichzelf draait én in Missing Link getoond wordt.
 3. **Welke afwerkingen eerst?** Mijn advies: de top 5 uit 6.4. Zeg gerust welke sector of klant je voor ogen hebt; dat verschuift de volgorde (een dakwerker wil het dak, een schrijnwerker de kleuren en profielen).
-4. **De vragenlijst van hoofdstuk 8:** geef jij ze door aan de ontwikkelaar van Missing Link?
+4. **De vragenlijst van hoofdstuk 8:** geef jij ze door aan de ontwikkelaar van Missing Link? Een andere weg: je geeft deze sessie leestoegang tot de broncode van Missing Link. Dan haal ik een deel van de antwoorden (techniek van de schermen, velden, opladen van beelden) uit de code zelf. Ik koppel niets aan zonder jouw vraag.
 5. **Mag stap 1 (klaarmaken) beginnen na de fauteuils**, zonder te wachten op Missing Link?
