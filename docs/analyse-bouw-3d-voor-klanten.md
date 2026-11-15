@@ -54,7 +54,7 @@ Wat ik nog van je nodig heb, staat in hoofdstuk 10.
 | **Maten in de 3D** | Bestaan alleen voor de zetels (breedte, diepte, hoogte van het geheel). De gevelaanzichten van de woning hebben wel kettingmaten. |
 | **Beheer** | De zeteldemo heeft een beheerscherm (stoffen, elementen, opties, modellen). **De bouwdemo heeft er geen.** |
 | **Bewaren** | Alleen in de browser van één toestel, of als bestand. |
-| **Techniek van de 3D** | Alles is opgebouwd uit blokken (balk, cilinder, kegel, bol, gebogen wand, profiel langs een lijn; een blok kan kantelen). Elk blok is een apart getekend stuk: er is geen techniek om duizend gelijke stijlen in één keer te tekenen. |
+| **Techniek van de 3D** | Alles is opgebouwd uit blokken (balk, cilinder, kegel, bol, gebogen wand, profiel langs een lijn; een blok kan kantelen). Elk blok is een apart getekend stuk: er is geen techniek om duizend gelijke stijlen in één keer te tekenen. Gemeten op de voorbeeldwoning: 697 blokken geven ±2 000 tekenopdrachten na één klik (schaduw inbegrepen). |
 
 ---
 
@@ -178,7 +178,7 @@ Ook hier: **geen berekening**. De profielen zijn een voorstelling; de staalbouwe
 |---|---|
 | Stap *Offerte* wordt *Overzicht* | Lijst van wat er in het ontwerp zit en hoeveel, met een beeld per onderdeel, en de knoppen om mee te geven en door te sturen. |
 | *Werf* verdwijnt uit het menu | Inmeting, akkoord en meerwerkbon blijven in de code, uit beeld. |
-| Alle bedragen uit beeld | Prijs per positie, totalen, korting, kostprijs en marge. In de code staan bedragen op ±50 plaatsen in 7 schermbestanden [code]. |
+| Alle bedragen uit beeld | Prijs per positie, totalen, korting, kostprijs en marge. In de code staan bedragen op 51 plaatsen in 7 schermbestanden [code]. |
 | De rekenmotor blijft | Formules, stuklijst en prijslijsten blijven bestaan en getest; ze worden alleen niet getoond. |
 | De zending | Gaat al zonder prijzen, totalen en stuklijst (15/11). |
 
@@ -277,5 +277,5 @@ Niets verandert aan de beslissing: een aparte app die de 3D doorstuurt. Elk nieu
 
 1. **Eén aannemer per productsoort** die een recept wil nalezen (houtbouw, staalbouw). Zonder vakman blijven het benaderingen.
 2. **Waar wordt bewaard?** Voor de link naar de klant en voor het beheer: in Missing Link, of op een eigen server van de configurator?
-3. **Ronde 3 vóór ronde 4:** akkoord dat ik eerst de bouwdelen en de opbouw leg, en dan pas de constructieweergave?
+3. **De volgorde wijkt af van jouw keuze.** Jij koos de constructieweergave als eerste na het dak. Ik zet er twee rondes vóór: ronde 2 (prijzen uit beeld en gebruiksgemak) en ronde 3 (bouwdelen en opbouw als gegevens). Akkoord, of wil je de constructieweergave meteen, ook als het skelet dan later opnieuw gemaakt moet worden voor carport en loods?
 4. **Welk bijgebouw en welk soort loods eerst?** Een concrete klant of een voorbeeld (foto, folder) helpt meer dan een algemene beschrijving.
