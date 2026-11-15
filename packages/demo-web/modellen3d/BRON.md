@@ -51,4 +51,5 @@ de 3D-weergave zodra het model in beeld is.
 Welk model welk bestand gebruikt, staat in `packages/core/voorbeelden/bestanden3d.ts`. Quin, Tumble, Karl, Pebble en de
 Amusette fauteuil hebben er geen: daar was het bestand niet beter dan de bouwstenen (zie `docs/echte-3d-modellen.md`).
 
-Alle bestanden zitten alleen in de gewone demo, niet in de versie in de huisstijl van de klant.
+De negen bestanden die we zelf bouwden, zitten in de gewone demo en (sinds 15/11, akkoord van Jonas) ook in de versie in de
+huisstijl van de klant. `glam_velvet.glb` komt van een externe bron en zit alleen in de gewone demo (`VREEMD` in `bouw.mjs`).

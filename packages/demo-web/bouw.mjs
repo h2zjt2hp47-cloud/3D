@@ -27,8 +27,10 @@ const omgevingScript = `window.__OMGEVINGEN = ${JSON.stringify(omgevingen)};`;
 // Gewichten van de ontruiser voor de fotomodus op WebGPU (Open Image Denoise, Apache 2.0, zie ontruiser/BRON.md).
 const ontruiser = existsSync('ontruiser/rt_hdr_alb_nrm_small.tza') ? readFileSync('ontruiser/rt_hdr_alb_nrm_small.tza').toString('base64') : '';
 const ontruiserScript = ontruiser ? `window.__ONTRUISER = ${JSON.stringify(ontruiser)};` : '';
-// Echte 3D-modellen (proef): modellen3d/<sleutel>.glb met een beeld <sleutel>.jpg voor de modelkaart (zie modellen3d/BRON.md).
-// Alleen in de gewone demo: het zijn geen modellen van de klant, dus niet in de versie in zijn huisstijl.
+// 3D-bestanden: modellen3d/<sleutel>.glb, met eventueel een beeld <sleutel>.jpg voor de modelkaart (zie modellen3d/BRON.md).
+// De bestanden die we zelf in Blender bouwden van de modellen van de klant gaan in beide versies (akkoord Jonas 15/11).
+// Een bestand van een externe bron (VREEMD) is geen model van de klant en blijft uit de versie in zijn huisstijl.
+const VREEMD = new Set(['glam_velvet']);
 const modellen3d = {}, beelden3d = {};
 if (existsSync('modellen3d')) {
   for (const f of readdirSync('modellen3d')) {
@@ -37,10 +39,11 @@ if (existsSync('modellen3d')) {
   }
 }
 const modelScript = `window.__MODELLEN3D = ${JSON.stringify(modellen3d)}; Object.assign(window.__FOTOS, ${JSON.stringify(beelden3d)});`.replace(/</g, '\\u003c');
+const eigen3d = Object.fromEntries(Object.entries(modellen3d).filter(([sleutel]) => !VREEMD.has(sleutel)));
+const eigenScript = `window.__MODELLEN3D = ${JSON.stringify(eigen3d)};`.replace(/</g, '\\u003c');
 let html = readFileSync('src/index.html', 'utf8').replace('/*BUNDEL*/', () => `${fotoScript}\n${omgevingScript}\n${ontruiserScript}\n/*MODELLEN3D*/\n${js}`);
 mkdirSync('dist', { recursive: true });
 writeFileSync('dist/configurator-demo.html', html.replace('<!--MERK-->', '').replace('/*HUISSTIJL*/', '').replace('/*MODELLEN3D*/', () => modelScript));
-html = html.replace('/*MODELLEN3D*/', '');
 
 // Variant in de huisstijl van de klant (alleen als bestand, niet om publiek te publiceren).
 html = html
@@ -48,6 +51,7 @@ html = html
   .replace('<title>Configurator demo</title>', '<title>Corneille &amp; Silence · Configurator</title>')
   .replace('<!--MERK-->', '<div class="merk">Corneille &amp; Silence</div>')
   .replace('/*HUISSTIJL*/', () => readFileSync('src/huisstijl-cs.css', 'utf8'))
+  .replace('/*MODELLEN3D*/', () => eigenScript)
   .replace('family=Figtree:wght@400;500;600', 'family=Figtree:wght@400;500;600&family=Montserrat:wght@300;400;500;600&family=Raleway:wght@400;500');
 writeFileSync('dist/configurator-corneille-silence.html', html);
 
@@ -63,4 +67,4 @@ function offline(bron) {
 writeFileSync('dist/configurator-demo-offline.html', offline(readFileSync('dist/configurator-demo.html', 'utf8')));
 writeFileSync('dist/configurator-corneille-silence-offline.html', offline(html));
 if (!lettertypen) console.log('Let op: geen lettertypen/lettertypen.css (scripts/haal_lettertypes.py); offline-versie gebruikt systeemletters.');
-console.log(`dist/configurator-demo.html en dist/configurator-corneille-silence.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's, ${Object.keys(modellen3d).length} echt 3D-model in de demo)`);
+console.log(`dist/configurator-demo.html en dist/configurator-corneille-silence.html (${Math.round(html.length / 1024)} kB, ${Object.keys(fotos).length} foto's, ${Object.keys(modellen3d).length} 3D-bestanden in de demo, ${Object.keys(eigen3d).length} in de huisstijlversie)`);

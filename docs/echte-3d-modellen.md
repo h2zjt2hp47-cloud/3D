@@ -72,7 +72,7 @@ Een losse poef ernaast mag wel: die wordt zoals altijd met blokken getekend.
 | `packages/core/src/echt3d.ts` | Beschrijving van een 3D-bestand bij een model (`ModelDefinitie.echt3d`). Ze legt vast:<br>• welk bestand;<br>• welke elementtypes, van links naar rechts;<br>• de maten in het bestand;<br>• hoeveel het mag rekken;<br>• welke keuzes het kan tonen (`toont`);<br>• welke vormgeving vastligt (`vast`).<br>`echt3dPlaatsing()` beslist of het past en geeft anders de reden. |
 | `packages/core/src/ruimtelijk.ts` | `bouw3D(ontwerp, catalogus, materialen, { echt3d })` zet `scene.echt` (waar, hoe groot, welke stof en poten) of `scene.echtNiet` (de reden). De blokken blijven altijd in de scène: voor de terugval, de schakelaar en de schaduw. |
 | `packages/demo-web/src/drie-d.ts` | De weergave laadt het GLB-bestand en schaalt het per richting tot het kader van de elementen. Ze legt onze stof op de delen met *fabric* of *stof* in de naam, en onze pootafwerking op de delen met *leg* of *poot*. Andere delen blijven zoals in het bestand, en ook de schaduw in plooien en naden (AO) uit het bestand blijft. Klikken op het model kiest het element op die plaats. |
-| `packages/demo-web/modellen3d/` | De 3D-bestanden (`.glb`) met een beeld voor de modelkaart (`.jpg`) en `BRON.md`. `bouw.mjs` sluit ze in de **gewone demo** in. De versie in de huisstijl van de klant krijgt ze niet: het zijn geen modellen van de klant. |
+| `packages/demo-web/modellen3d/` | De 3D-bestanden (`.glb`) met een beeld voor de modelkaart (`.jpg`) en `BRON.md`. `bouw.mjs` sluit ze in de **gewone demo** in. De versie in de huisstijl van de klant krijgt alleen de bestanden die we zelf in Blender bouwden van zijn eigen modellen (sinds 15/11); het proefmodel Glam Velvet komt van een externe bron en blijft eruit (`VREEMD` in `bouw.mjs`). |
 | `packages/core/voorbeelden/proefmodellen.ts` | Het proefmodel en zijn beschrijving. Tests: `packages/core/test/echt3d.test.ts`. |
 
 ## Wat we nodig hebben van Corneille & Silence (of van een 3D-ontwerper)
@@ -249,9 +249,11 @@ bouwstenen. Alleen Sullivan is met camera's op de foto's nagemeten.
   bouwstenen. Bij de modellen met een gewone naad is het een fijne lijn in de schaduw.
 - De negen bestanden wegen samen 2,2 MB; de gewone demo gaat van 6,41 naar 9,3 MB (+2,9 MB).
 - Een ontwerp dat in de browser nog naar het verdwenen proefmodel van Sullivan verwijst, opent als het gewone model.
-- **De versie in de huisstijl van de klant heeft geen 3D-bestanden** en toont overal stil de bouwstenen. Of de
-  bestanden daar ook in mogen, is een beslissing voor Jonas: het zijn benaderingen van de eigen modellen van de klant,
-  geen bestanden van hem.
+- **De versie in de huisstijl van de klant heeft de negen bestanden ook** (akkoord van Jonas op 15/11, na het bekijken
+  van het testbestand). Het zijn benaderingen van de eigen modellen van de klant, geen bestanden van hem; dat blijft zo
+  vermeld onder de 3D. Het proefmodel Glam Velvet (externe bron) zit er niet in. De huisstijlversie gaat daardoor van
+  6,18 naar 9,07 MB (offline 6,65 naar 9,54 MB) en blijft alleen een bestand, niet gepubliceerd.
+- **Online** staan de negen bestanden sinds 15/11 (akkoord van Jonas, versie `1794770295-23d1`).
 
 ## Volgende stap
 

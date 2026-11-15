@@ -1012,7 +1012,7 @@ function toonWeergave() {
     viewer.formaat();
     // Heeft het model een echt 3D-bestand, dan beslist de motor of het past bij het ontwerp zoals het nu is.
     const model = getModellen().find((x) => x.code === ontwerp.model);
-    // Zit het bestand niet in deze versie (de versie in de huisstijl heeft er geen), dan gewoon de bouwstenen.
+    // Zit het bestand niet in deze versie, dan gewoon de bouwstenen.
     const bestanden = (window as unknown as { __MODELLEN3D?: Record<string, string> }).__MODELLEN3D ?? {};
     const s = bouw3D(ontwerp, getCatalogus(), getMaterialen(), { echt3d: model?.echt3d && model.echt3d.bestand in bestanden ? model.echt3d : undefined });
     scene3D = s;
