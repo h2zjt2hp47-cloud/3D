@@ -389,9 +389,11 @@ opbouw van wand en dak in gewone zinnen. Die volgorde is een goed voorbeeld voor
 Vraag van Jonas: *"voeg ook alles wat een installateur kan nodig hebben toe, airco, leidingen, meterkasten etc."* Eerder
 die dag: zonneschermen, ventilatie, stopcontacten, verlichting.
 
-Dit hoofdstuk is een **eerste indeling** uit algemene kennis **[inschatting]**. Het online onderzoek naar wat
-installateurs en hun software tonen, loopt nog en komt in `docs/onderzoek-bouw-constructies.md`; daarna wordt dit
-hoofdstuk bijgewerkt. Alle maten, hoogtes en afstanden die erbij komen, zijn richtwaarden **[te bevestigen]** door een
+Dit hoofdstuk is een **eerste indeling** uit algemene kennis **[inschatting]**. Het online onderzoek staat in
+`docs/onderzoek-bouw-constructies.md` (hoofdstukken 5 en 6: zonwering, ventilatie, elektriciteit, verlichting, en wat een
+installateur vast plaatst). Let op: dat onderzoek kon geen enkele pagina zelf openen; alles komt uit samenvattingen van
+de zoekmachine en elk getal moet nog op de pagina zelf nagekeken worden. Het vond geen hulpmiddel voor installateurs
+dat bedoeld is om aan een klant te tonen: hun software is gemaakt om te rekenen. Alle maten, hoogtes en afstanden die erbij komen, zijn richtwaarden **[te bevestigen]** door een
 installateur.
 
 ### 11.1 Wat een installateur wil plaatsen en tonen

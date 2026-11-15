@@ -40,6 +40,7 @@ NOTITIES = {
     'docs/analyse-gebruiksgemak.md': ('Analyse gebruiksgemak', ['configurator', 'bouw', 'analyse', 'gebruiksgemak'], BOUW),
     'docs/analyse-bouw-3d-missing-link.md': ('Analyse bouw - 3D in Missing Link en afwerkingen', ['configurator', 'bouw', 'analyse', 'missing-link', '3d'], BOUW),
     'docs/analyse-bouw-3d-voor-klanten.md': ('Analyse bouw - 3D tonen aan klanten, los van prijzen', ['configurator', 'bouw', 'analyse', '3d', 'gebruiksgemak'], BOUW),
+    'docs/onderzoek-bouw-constructies.md': ('Onderzoek bouw - constructeurs, techniek en installateur', ['configurator', 'bouw', 'onderzoek'], BOUW),
     '.claude/skills/bouw-woning/SKILL.md': ('Skill - woningconfigurator bouw', ['configurator', 'bouw', 'skill', '3d'], BOUW),
 }
 TITEL_VAN = {os.path.basename(k): v[0] for k, v in NOTITIES.items()}
