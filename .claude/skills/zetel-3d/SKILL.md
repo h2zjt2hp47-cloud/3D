@@ -128,7 +128,7 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
   - Voor het Sullivan-script gelden nog deze punten:
   - de vorm staat als gegevens bovenaan het script (buitenkant per hoogte, rand per hoek, dikte); het script stelt de maten bij tot die van de website en bakt de schaduw in de plooien met de naden erin;
   - meter, y omhoog, voorkant naar +z; delen met `stof` en `poot` in de naam; één stofmateriaal en één vel stof op één schaal; `occlusionTexture` ingesloten; geen compressie;
-  - het proefmodel is een apart model in `voorbeelden/proefmodellen.ts` dat het ontwerp van het gewone model overneemt: prijs, tekeningen en blokken blijven die van het gewone model (test in `echt3d.test.ts`, ook op het bestand zelf);
+  - het bestand hoort bij het gewone model Sullivan (`bestanden3d.ts`, `hand: true`); het aparte proefmodel van de eerste dag bestaat niet meer (een bewaard ontwerp met die code gaat in `laadOntwerp()` naar `sullivan`). Prijs, tekeningen en blokken veranderen niet (test in `echt3d.test.ts`, ook op het bestand zelf);
   - vergelijken met de foto's doe je met `scripts/blender/overlay.py` en een teruggerekende camera, niet met verhoudingen in pixels (de foto's zijn van dichtbij genomen).
   - een bestand voor één element (`elementen: ['fauteuil']`) mag verplaatst en gedraaid staan: `echt3dPlaatsing` geeft dan `draai` en het kader vóór het draaien, `echtGroep` draait het model rond het midden (zelfde zin als `Blok.draai`). Een rij van meerdere elementen moet recht staan. Eén bestand per ontwerp: een tweede fauteuil toont de benadering.
 

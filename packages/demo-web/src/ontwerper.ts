@@ -82,9 +82,16 @@ function verhuisKinderen(e: OntwerpElement, kinderen: Kind[]) {
 let kijkvak = { x: -40, y: -40, b: 480, h: 360 };
 
 function laadOntwerp(): Ontwerp {
+  // Modelcodes die niet meer bestaan, naar het model dat ze vervangt. Het proefmodel van Sullivan uit Blender (15/11) is
+  // opgegaan in het gewone model: een ontwerp dat er in de browser nog naar verwijst, hoort daar nu bij.
+  // (Hier in de functie: ze loopt al bij het laden van dit bestand, vóór de constanten verderop bestaan.)
+  const vervangen: Record<string, string> = { proef_sullivan_blender: 'sullivan' };
   try {
     const o = JSON.parse(laad(SLEUTEL) ?? '') as Ontwerp;
-    if (o && Array.isArray(o.elementen) && typeof o.hoofdmateriaal === 'string') return o;
+    if (o && Array.isArray(o.elementen) && typeof o.hoofdmateriaal === 'string') {
+      if (o.model && vervangen[o.model]) o.model = vervangen[o.model];
+      return o;
+    }
   } catch {
     /* geen opgeslagen ontwerp */
   }
@@ -1632,7 +1639,7 @@ export function toonOfferte() {
   if (viewer && canvas) {
     // Staat er een echt 3D-model in beeld, dan hoort de naamsvermelding (licentie) bij het beeld.
     const bron = $('#o-3d-bron');
-    const titel = bron.hidden ? '3D' : `3D, echt 3D-model (proef). ${bron.textContent}`;
+    const titel = bron.hidden ? '3D' : `3D. ${bron.textContent}`;
     // Tekenen en meteen lezen: met WebGPU kan het canvas niet later gelezen worden.
     const url = viewer.beeld?.('image/jpeg', 0.9);
     if (url) figuur(titel, el('img', { src: url, alt: '3D-beeld van de zetel' }));

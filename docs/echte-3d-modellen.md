@@ -220,7 +220,7 @@ bouwstenen. Alleen Sullivan is met camera's op de foto's nagemeten.
 | Sullivan | 3D-bestand (met de hand gemeten) | Zie het vorige hoofdstuk. |
 | Manon, Ross, Fraser, Milton | 3D-bestand | Zachter en ronder dan de bouwstenen; de vorm is dezelfde. |
 | Mabel 1-zit, Mabel 2-zit, Mabel Meridienne | 3D-bestand | Idem. Van de 2-zit en de méridienne is er maar één foto: het bestand is de opbouw van de motor met een rondere huid. Het sierkussen van de méridienne tekent de configurator zelf op het bestand. |
-| Satie | 3D-bestand | Idem, met een zacht rugkussen in plaats van een plat. |
+| Satie | 3D-bestand | Idem, met een zacht rugkussen met bies in plaats van een plat. |
 | Quin | bouwstenen | De vier losse kussens werden in het bestand niet beter dan in de bouwstenen. |
 | Tumble | bouwstenen | In de bouwstenen loopt de rug over in de zitting; in het bestand kwam er een harde naad tussen. |
 | Karl | bouwstenen | De zwevende rugschijf kreeg in het bestand een rafelige onderrand; de bouwstenen zijn beter. |
@@ -240,10 +240,15 @@ bouwstenen. Alleen Sullivan is met camera's op de foto's nagemeten.
   nog Glam Velvet (het model van een ander merk).
 - Linksboven in de 3D staat de keuze **3D-bestand / Bouwstenen** (vroeger *Echt 3D-model / Benadering*): beide zijn
   benaderingen, de woorden zeggen nu waar het beeld vandaan komt.
-- Prijs, tekeningen en offerte komen uit de bouwstenen, zoals voordien. De tests lopen elk model met een bestand af:
-  het standaardontwerp toont het bestand, een andere vorm of een ander onderstel geeft de bouwstenen, de blokken en de
-  prijs veranderen niet.
-- De negen bestanden wegen samen 1,8 MB; de gewone demo gaat van 6,41 naar 8,84 MB (+2,4 MB).
+- Prijs, tekeningen en de tekst van de offerte komen uit de bouwstenen, zoals voordien. Het 3D-beeld in de offerte is
+  wat de 3D op dat moment toont (het bestand, met zijn vermelding eronder). De tests lopen elk model met een bestand
+  af: het standaardontwerp toont het bestand, een andere vorm of een ander onderstel geeft de bouwstenen, de blokken en
+  de prijs veranderen niet.
+- **De bies** (Manon, Ross, Milton, de Mabels, Satie: ze zit in de prijs en staat op de foto's) is in het bestand een
+  echt koord langs de twee kanten van de rand van de schaal, rond de zitting en rond het rugkussen, zoals in de
+  bouwstenen. Bij de modellen met een gewone naad is het een fijne lijn in de schaduw.
+- De negen bestanden wegen samen 2,2 MB; de gewone demo gaat van 6,41 naar 9,3 MB (+2,9 MB).
+- Een ontwerp dat in de browser nog naar het verdwenen proefmodel van Sullivan verwijst, opent als het gewone model.
 - **De versie in de huisstijl van de klant heeft geen 3D-bestanden** en toont overal stil de bouwstenen. Of de
   bestanden daar ook in mogen, is een beslissing voor Jonas: het zijn benaderingen van de eigen modellen van de klant,
   geen bestanden van hem.

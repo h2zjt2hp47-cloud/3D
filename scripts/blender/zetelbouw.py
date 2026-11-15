@@ -76,10 +76,57 @@ class Net:
 
 
 # ----------------------------------------------------------------------------------------------------------------
+# Bies: een dun koord langs een naad
+# ----------------------------------------------------------------------------------------------------------------
+def koord(net, punten, uit, naam, straal=0.45, zijden=6, gesloten=False, stuk=110.0, stap_min=3.5):
+    """
+    Een bies: een koord langs de lijn `punten` (m, 3), dat voor twee derde boven het oppervlak uitkomt. `uit` (m, 3) wijst
+    per punt van het oppervlak weg. De stof ligt in stukken van hoogstens `stuk` cm op het vel (lange dunne repen passen slecht).
+    Met zes zijden is elke knik 60 graden: schrijf weg met `hoek_scherp` boven 60, anders wordt elk vlakje apart bewaard.
+    """
+    Q, U = np.asarray(punten, float), eenheid(np.asarray(uit, float))
+    # Punten die dicht op elkaar liggen overslaan (een koord vraagt minder punten dan de wand), behalve waar de lijn knikt.
+    houd, vorig = [0], 0
+    for j in range(1, len(Q) - 1):
+        knik = np.dot(eenheid(Q[j] - Q[j - 1]), eenheid(Q[j + 1] - Q[j])) < 0.94
+        if knik or np.linalg.norm(Q[j] - Q[vorig]) >= stap_min:
+            houd.append(j); vorig = j
+    houd.append(len(Q) - 1)
+    Q, U = Q[houd], U[houd]
+    if gesloten:
+        Q, U = np.vstack([Q, Q[:1]]), np.vstack([U, U[:1]])
+    m = len(Q)
+    T = eenheid(np.gradient(Q, axis=0))
+    if gesloten:
+        T[0] = T[-1] = eenheid(Q[1] - Q[-2])
+    U = eenheid(U - T * np.sum(U * T, -1, keepdims=True))            # haaks op de lijn
+    B = np.cross(T, U)
+    C = Q + U * (straal * 0.35)
+    hoeken = [2 * math.pi * a / zijden for a in range(zijden)]
+    ring = [[net.punt(C[j] + straal * (math.cos(a) * U[j] + math.sin(a) * B[j])) for a in hoeken] for j in range(m - 1 if gesloten else m)]
+    if gesloten:
+        ring.append(ring[0])
+    langs = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(Q, axis=0), axis=1))])
+    rond = 2 * math.pi * straal / zijden
+    for j in range(m - 1):
+        deel = int(langs[j] // stuk)
+        u0, u1 = langs[j] - deel * stuk, langs[j + 1] - deel * stuk
+        for a in range(zijden):
+            a2 = (a + 1) % zijden
+            net.vlak((ring[j][a], ring[j + 1][a], ring[j + 1][a2], ring[j][a2]), f'{naam}_{deel}', [(u0, a * rond), (u1, a * rond), (u1, (a + 1) * rond), (u0, (a + 1) * rond)])
+    if not gesloten:                                                 # de twee uiteinden dichten
+        for j, volgorde in ((0, range(zijden - 1, -1, -1)), (m - 1, range(zijden))):
+            midden = net.punt(C[j])
+            vv = list(volgorde)
+            for a in range(zijden):
+                net.vlak((ring[j][vv[a]], ring[j][vv[(a + 1) % zijden]], midden), f'{naam}_0', [(0, 0), (rond, 0), (rond / 2, rond)])
+
+
+# ----------------------------------------------------------------------------------------------------------------
 # Dikke wand: een gestoffeerde schaal (rug en armen) met een ronde rand en ronde koppen
 # ----------------------------------------------------------------------------------------------------------------
 def dikke_wand(net, buiten, onder, top, dikte_rand, dikte, *, raak=None, naar_buiten=None, groef=None, rijen=RIJEN,
-               naam='schaal', naden=True, naad_rand=True, rand_vorm=2.0, rand_hoog=1.0):
+               naam='schaal', naden=True, naad_rand=True, rand_vorm=2.0, rand_hoog=1.0, bies=0.0):
     """
     Een wand als dik vel: de buitenkant is gegeven, de binnenkant is de buitenkant min de dikte, en de vrije rand
     (bovenkant en de twee uiteinden) is overal een halve rol.
@@ -93,7 +140,8 @@ def dikke_wand(net, buiten, onder, top, dikte_rand, dikte, *, raak=None, naar_bu
       naar_buiten(O)   richting die naar buiten wijst per punt (om de normaal de goede kant op te zetten);
       groef            (n,) diepte van een plooi in de binnenkant (waar een arm tegen de rug ligt);
       rand_vorm        vorm van de rand in doorsnede: 2 = halve cirkel, hoger = vlakker bovenaan met rondere schouders;
-      rand_hoog        hoogte van de rand tegenover een halve cirkel (1 = even hoog als de halve dikte).
+      rand_hoog        hoogte van de rand tegenover een halve cirkel (1 = even hoog als de halve dikte);
+      bies             straal van een bies (koord) langs de twee kanten van de rand en de koppen, in plaats van een naadlijn.
 
     Geeft het rooster terug (O, I, Z) voor wie wil meten.
     """
@@ -154,6 +202,10 @@ def dikke_wand(net, buiten, onder, top, dikte_rand, dikte, *, raak=None, naar_bu
     # Ronde kop aan elk uiteinde: de laatste ring krimpt rond zijn hartlijn en schuift verder langs de wand.
     Teind = eenheid(Tg)
     straal_ring = np.linalg.norm(uit, axis=-1)
+    if rand_hoog != 1.0 or rand_vorm != 2.0:
+        # Bij een vlakkere rand is de uitwijking bovenaan kleiner dan de halve dikte: de kop zou daar minder ver naar voren
+        # komen en een deuk krijgen. De kop steekt overal een halve dikte uit.
+        straal_ring[:, K + 1:K + 1 + ROL_STAPPEN] = (D[:, K] / 2)[:, None]
 
     def kop(i, teken):
         t = np.zeros((L, 3))
@@ -189,9 +241,17 @@ def dikke_wand(net, buiten, onder, top, dikte_rand, dikte, *, raak=None, naar_bu
             else:                                                    # binnenkant: hoogte gemeten vanaf haar onderrand, zodat de stof rechtop staat
                 w = lambda a, b: v[a][L - 1] - v[a][b]
                 net.vlak(hoeken, f'{naam}_binnen', [(u_i[i], w(i, r)), (u_i[i + 1], w(i + 1, r)), (u_i[i + 1], w(i + 1, r2)), (u_i[i], w(i, r2))])
+    # Bies: een koord langs de buitenkant en langs de binnenkant van de rand, dat aan elk uiteinde langs de kop naar
+    # beneden loopt (zoals de bies rond de schaal van Satie of Manon).
+    eerste, laatste = len(links), len(links) + n - 1
+    if bies:
+        harten = [hart[0]] * len(links) + [hart[i] for i in range(n)] + [hart[n - 1]] * len(rechts)
+        weg = lambda i, r: alle[i][r] - harten[i][r]
+        for kant, rij_van in (('buiten', lambda k: k), ('binnen', lambda k: L - 1 - k)):
+            pad = [(eerste, rij_van(k)) for k in range(1, K)] + [(i, rij_van(K)) for i in range(eerste, laatste + 1)] + [(laatste, rij_van(k)) for k in range(K - 1, 0, -1)]
+            koord(net, [alle[i][r] for i, r in pad], [weg(i, r) for i, r in pad], f'{naam}_bies_{kant}', straal=bies)
     # Naden (lijnen op het vel stof): rond de rug waar de rol begint, en rond de kop van elk uiteinde.
-    if naden:
-        eerste, laatste = len(links), len(links) + n - 1
+    if naden and not bies:
         if naad_rand:
             net.naden.append((f'{naam}_buiten', [(u_b[i], v[i][K]) for i in range(eerste, laatste + 1)]))
         for i in (eerste, laatste):
@@ -271,7 +331,7 @@ def omtreklichaam(net, omtrek, profiel, eiland_zij, eiland_boven=None, boven_van
         for s in range(m):
             net.vlak((ring[0][s + 1], ring[0][s], midden), f'{eiland_zij}_onder', [(0, 0), (1, 0), (0.5, 1)])
     if eiland_boven is None:
-        return
+        return P, nrm
     # Bovenvlak: ringen naar het zwaartepunt toe, met de bolling.
     rand = P - nrm * pr[-1, 0]
     z0 = pr[-1, 1]
@@ -292,6 +352,7 @@ def omtreklichaam(net, omtrek, profiel, eiland_zij, eiland_boven=None, boven_van
                 hoeken = (vorige[s], vorige[s + 1], rij[s + 1], rij[s])
                 net.vlak(hoeken, eiland_boven, [(net.punten[h][0], net.punten[h][1]) for h in hoeken])
             vorige = rij
+    return P, nrm
 
 
 def balk(net, onder, boven, eiland):
@@ -326,7 +387,7 @@ def staaf(net, onder, boven, straal_onder, straal_boven, eiland, zijden=14):
         net.vlak((b[s], b[t], mb), eiland, vier[:3])
 
 
-def kussen(net, hart, breed, hoog, dik, naam, *, hoekig=5.0, rand_dik=0.16, kantel=0.0, draai=0.0, ringen=5, segmenten=28):
+def kussen(net, hart, breed, hoog, dik, naam, *, hoekig=5.0, rand_dik=0.16, kantel=0.0, draai=0.0, ringen=5, segmenten=28, bies=0.0):
     """
     Los kussen: een lens met een afgerond vierkante omtrek en een naad rondom.
 
@@ -377,6 +438,12 @@ def kussen(net, hart, breed, hoog, dik, naam, *, hoekig=5.0, rand_dik=0.16, kant
     # De naadrand tussen voor- en achterkant sluiten (anders zijn het twee losse vellen).
     for q in range(segmenten):
         net.vlak((randen['voor'][q], randen['voor'][q + 1], randen['achter'][q + 1], randen['achter'][q]), f'{naam}_rand', [(0, 0), (1, 0), (1, 1), (0, 1)])
+    if bies:                                                         # bies rond de naad van het kussen
+        buiten = eenheid(rand)
+        koord(net, [plaats(rand[q, 0], rand[q, 1], 0.0) for q in range(segmenten)],
+              [np.array(plaats(rand[q, 0] + buiten[q, 0], rand[q, 1] + buiten[q, 1], 0.0)) - np.array(plaats(rand[q, 0], rand[q, 1], 0.0)) for q in range(segmenten)],
+              f'{naam}_bies', straal=bies, gesloten=True)
+        return
     net.naden.append((f'{naam}_voor', [(rand[q % segmenten, 0] * 0.985, rand[q % segmenten, 1] * 0.985) for q in range(segmenten + 1)]))
 
 

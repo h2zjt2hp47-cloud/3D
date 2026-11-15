@@ -17,7 +17,9 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from zetelbouw import Net, balk, dikke_wand, eenheid, kussen, omtreklichaam, pchip, rechthoek, schrijf_glb, staaf, zacht  # noqa: E402
+from zetelbouw import Net, balk, dikke_wand, eenheid, koord, kussen, omtreklichaam, pchip, rechthoek, schrijf_glb, staaf, zacht  # noqa: E402
+
+BIES = 0.45             # straal van een bies (koord) in cm, waar het model een bies heeft
 
 HIER = os.path.dirname(os.path.abspath(__file__))
 
@@ -91,7 +93,7 @@ def wand(net, b, naar, zit_top, aan):
 
     return dikke_wand(net, buiten, onder, top, dikte_rand, dikte, naar_buiten=lambda O: nrm3,
                       naden=aan.get('naden', True), naad_rand=aan.get('naad_rand', True), naam=b['code'].replace('.', '_'),
-                      rand_vorm=aan.get('rand_vorm', 2.0), rand_hoog=aan.get('rand_hoog', 1.0))
+                      rand_vorm=aan.get('rand_vorm', 2.0), rand_hoog=aan.get('rand_hoog', 1.0), bies=BIES if b.get('naad') == 'bies' else 0.0)
 
 
 def zitting(net, b, naar, aan, zichtbaar_onder, bovenste=True):
@@ -112,8 +114,13 @@ def zitting(net, b, naar, aan, zichtbaar_onder, bovenste=True):
     naad = len(profiel)
     profiel += [(r * (1 - math.cos(a)), top - r + r * math.sin(a)) for a in np.linspace(0, math.pi / 2, 6)]
     naam = b['code'].replace('.', '_')
-    omtreklichaam(net, omtrek, profiel, f'{naam}_zij', f'{naam}_boven', boven_vanaf=naad + 2, bol=kroon, onder_dicht=True)
-    if aan.get('naden', True):
+    P, nrm = omtreklichaam(net, omtrek, profiel, f'{naam}_zij', f'{naam}_boven', boven_vanaf=naad + 2, bol=kroon, onder_dicht=True)
+    if b.get('naad') == 'bies' and bovenste:
+        # Bies rond de zitting, waar de ronde bovenrand begint.
+        inw, z = profiel[naad]
+        schuin = np.concatenate([nrm * 0.75, np.full((len(P), 1), 0.66)], -1)
+        koord(net, np.concatenate([P - nrm * inw, np.full((len(P), 1), z)], -1), schuin, f'{naam}_bies', straal=BIES, gesloten=True)
+    elif aan.get('naden', True):
         pr = np.array(profiel)
         v = float(np.linalg.norm(np.diff(pr[:naad + 1], axis=0), axis=1).sum())
         P = np.array(omtrek + omtrek[:1])
@@ -178,7 +185,8 @@ def netten_uit_motor(g, aan=None):
             cx, cy = naar(b['x'] + b['b'] / 2, b['z'] + b['d'] / 2)
             achter = {'z-': 1.0, 'z+': -1.0}.get((b.get('kantel') or {}).get('richting', 'z-'), 1.0)
             kussen(net, (cx, cy, b['y'] + b['h'] / 2), b['b'], b['h'], min(18.0, b['d'] + 2 * b.get('bol', 2.0)) * deel.get('kussen_dik', 1.0), b['code'].replace('.', '_'),
-                   kantel=achter * (b.get('kantel') or {}).get('graden', 0.0), draai=-b.get('draai', 0.0))
+                   kantel=achter * (b.get('kantel') or {}).get('graden', 0.0), draai=-b.get('draai', 0.0), bies=BIES if b.get('naad') == 'bies' else 0.0,
+                   segmenten=40 if b.get('naad') == 'bies' else 28)
             stof.append(net)
         elif b['soort'] in ('hout', 'metaal'):
             hard(hout, b, naar)
@@ -196,7 +204,7 @@ def bouw(code, uit, ao_px=512, met_ao=True):
     if over:
         print('niet omgezet (blijven weg uit het bestand):', ', '.join(over))
     eigen = [('plint', (0.02, 0.02, 0.02), [donker])] if donker.punten else []
-    maat = schrijf_glb(uit, stof, [hout] if hout.punten else [], eigen, maat=None, ao_px=ao_px, met_ao=met_ao,
+    maat = schrijf_glb(uit, stof, [hout] if hout.punten else [], eigen, maat=None, ao_px=ao_px, met_ao=met_ao, hoek_scherp=65,
                        bron=f"{g['naam']}: opbouw uit de configurator, afgewerkt in Blender; vorm naar de productfoto's (benadering, geen bestand van de fabrikant).")
     print('maten van het bestand (cm):', np.round(maat, 1), '| kader van het model:', g['maat']['b'], g['maat']['d'], g['maat']['h'])
     return maat
