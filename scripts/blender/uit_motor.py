@@ -90,7 +90,8 @@ def wand(net, b, naar, zit_top, aan):
         return D
 
     return dikke_wand(net, buiten, onder, top, dikte_rand, dikte, naar_buiten=lambda O: nrm3,
-                      naden=aan.get('naden', True), naad_rand=aan.get('naad_rand', True), naam=b['code'].replace('.', '_'))
+                      naden=aan.get('naden', True), naad_rand=aan.get('naad_rand', True), naam=b['code'].replace('.', '_'),
+                      rand_vorm=aan.get('rand_vorm', 2.0), rand_hoog=aan.get('rand_hoog', 1.0))
 
 
 def zitting(net, b, naar, aan, zichtbaar_onder, bovenste=True):
@@ -157,7 +158,11 @@ def netten_uit_motor(g, aan=None):
     zit_top = max((b['y'] + b['h'] for b in zittingen), default=None)
     laagste_zit = min((b['y'] for b in zittingen), default=0)
     stof, hout, donker, over = [], Net(), Net(), []
+    # Alleen de fauteuil zelf: losse delen erop (een sierkussen) tekent de configurator zelf.
+    stoel = next(b['code'].split('.')[0] for b in g['blokken'] if b['vorm'] == 'kuipwand')
     for b in g['blokken']:
+        if b['code'].split('.')[0] != stoel:
+            continue
         eigen = aan.get(b['code'].split('.', 1)[1], {})
         deel = {**aan, **eigen}
         if deel.get('weg'):

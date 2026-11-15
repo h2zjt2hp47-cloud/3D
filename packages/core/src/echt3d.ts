@@ -33,14 +33,22 @@ export interface Echt3D {
   vermelding: string;
   /** Elementtypes die het bestand toont, van links naar rechts, aansluitend naast elkaar met de rug achteraan. */
   elementen: string[];
-  /** Maten van het 3D-model in cm (breedte, diepte, hoogte), met zithoogte en poothoogte. */
-  maat: { b: number; d: number; h: number; zithoogte: number; poothoogte: number };
+  /**
+   * Maten van het 3D-model in cm (breedte, diepte, hoogte), met zithoogte en poothoogte. `rug` = de hoogte van de rug
+   * of arm als die lager is dan het hoogste punt van het bestand (losse kussens die boven de rug uitsteken).
+   */
+  maat: { b: number; d: number; h: number; zithoogte: number; poothoogte: number; rug?: number };
   /** Hoeveel het bestand mag uitrekken of krimpen per richting (0,15 = 15 %). Standaard 0,15. */
   rek?: number;
   /** Per optiegroep de keuzes die het bestand kan tonen; een andere keuze in zo'n groep geeft de benadering. */
   toont?: Record<string, string[]>;
   /** Vormgeving die het bestand vastlegt (bv. geen houten frame); een andere waarde geeft de benadering. */
   vast?: Partial<Pick<Vormgeving, 'houtframe' | 'rugvorm'>>;
+  /**
+   * Losse delen (types van opzet-elementen, bv. een sierkussen) die op de zetel mogen liggen: ze zitten niet in het
+   * bestand, de weergave tekent ze zelf erbovenop. Andere losse delen geven de benadering.
+   */
+  los?: string[];
 }
 
 /** Waar en hoe het 3D-bestand in de scène komt (in cm, wereldcoördinaten zoals de blokken). */
@@ -112,7 +120,7 @@ export function echt3dPlaatsing(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, m
   for (const o of ontwerp.elementen) {
     if (!typen.get(o.type)?.opzet) continue;
     const d = dragerVan(ontwerp, catalogus, o);
-    if (d && ids.has(d.id)) return nee(`${label(o.type)} op de zetel zit niet in het 3D-bestand.`);
+    if (d && ids.has(d.id) && !echt.los?.includes(o.type)) return nee(`${label(o.type)} op de zetel zit niet in het 3D-bestand.`);
   }
 
   // 3. Eén stof voor de hele rij (het bestand heeft één stofdeel).
@@ -156,7 +164,7 @@ export function echt3dPlaatsing(ontwerp: Ontwerp, catalogus: OntwerpCatalogus, m
     if (t?.tekenstijl === 'arm') return h.armhoogte;
     return t && vormEffect(t.tekenstijl, gekozenOpties(ontwerp, catalogus, e)).rug ? h.rughoogte : h.zithoogte;
   }));
-  const hoogte = binnen(top, echt.maat.h * sy, 'Hoogte van rug en arm');
+  const hoogte = binnen(top, (echt.maat.rug ?? echt.maat.h) * sy, 'Hoogte van rug en arm');
   if (hoogte) return nee(hoogte);
 
   // Plaatsing: stof zoals op de blokken, poten in onze afwerking.

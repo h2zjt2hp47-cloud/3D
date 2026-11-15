@@ -8,6 +8,7 @@
  * BENADERING op basis van de foto's en moeten met de klant bevestigd worden.
  */
 import type { ModelDefinitie, Ontwerp, OntwerpElement, Rotatie, Vormgeving } from '../src/index.js';
+import { bestand3DVan } from './bestanden3d.js';
 
 const BRON = "Benadering op basis van de productfoto op de website; maten en opties nog te bevestigen.";
 const BRON_ZONDER_FOTO = 'Benadering zonder foto (staat zonder beeld op de website); nog te bevestigen.';
@@ -59,7 +60,7 @@ const strakLaag = { armstijl: 'strak', armhoogte: 'laag' };
 const metRug = { chaise_rug: 'achter' };
 const zonderRug = { chaise_rug: 'geen' };
 
-export const zetelModellen: ModelDefinitie[] = [
+const collectie: ModelDefinitie[] = [
   // ---------------- Sofa's ----------------
   model('kotor', 'Kotor', SOFA, 'Diepe, lage sofa met chaise longue rechts, losse rugkussens, slanke arm op karkashoogte en een lage houten bank aan de zijkant.', {
     hoofdmateriaal: 'linnen_travertin',
@@ -499,5 +500,14 @@ export const zetelModellen: ModelDefinitie[] = [
     hoofdmateriaal: 'velours_petrol', opties: { poten: 'cilinder', poothoogte: 'hoog', hout: 'eik_zwart' }, elementen: rij([['poef', 50, 50, { poefvorm: 'rond' }]]),
   }, null),
 ];
+
+/**
+ * De collectie. Een model met een 3D-bestand uit Blender (voorbeelden/bestanden3d.ts) toont dat bestand in de 3D zolang
+ * het ontwerp is wat het bestand toont; prijs, tekeningen en offerte blijven uit de bouwstenen komen.
+ */
+export const zetelModellen: ModelDefinitie[] = collectie.map((m) => {
+  const echt3d = bestand3DVan(m);
+  return echt3d ? { ...m, echt3d } : m;
+});
 
 export const modelFamilies = [SOFA, FAUTEUIL, ZETELBED, POEF];

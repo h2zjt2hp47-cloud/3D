@@ -47,6 +47,7 @@ const alleen = alleenIdx >= 0 ? args[alleenIdx + 1].split(',') : null;
 
 /**
  * De vaste reeks. Zetel: model, familie (filterknop), standpunt, decor, licht en eventueel de zonrichting.
+ * `bouwstenen: true` zet in de 3D de keuze Bouwstenen (bij een model met een 3D-bestand uit Blender).
  * Gekozen om de onderdelen te dekken die al eens stuk gingen: doorlopende zetel (Doha, Montego), hoeksofa met chaise
  * (Kotor), kuipfauteuil (Pebble), ronde poef (Stockholm), strakke arm (Husk), slagschaduw (Doha van boven, daglicht),
  * decor met raam en glas (Kotor in de woonkamer), en de woning en het raam in de bouwdemo.
@@ -65,31 +66,36 @@ const ZETELBEELDEN = [
   { naam: 'pebble-schuin', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'stockholm-schuin', model: 'Stockholm pouf', familie: 'Poufs', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   // Fauteuils met de opbouw van de klant (vaste ronde zitting, dunne schaal met bies, houten frame), sinds 13/11.
-  { naam: 'milton-schuin', model: 'Milton', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
-  { naam: 'mabel2-schuin', model: 'Mabel 2-zit', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'milton-schuin', model: 'Milton', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
+  { naam: 'mabel2-schuin', model: 'Mabel 2-zit', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Vier schuine poten met een kruis en een zitting in twee lagen (Fraser).
-  { naam: 'fraser-schuin', model: 'Fraser', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'fraser-schuin', model: 'Fraser', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Trommel tot op de vloer, de schaal steekt errond uit, één los rugkussen tegen de rand (Satie).
-  { naam: 'satie-schuin', model: 'Satie', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'satie-schuin', model: 'Satie', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Herstel na een weggevallen grafisch toestel (14/11): de 3D start opnieuw en toont dezelfde zetel. Hetzelfde beeld als
   // `satie-schuin`, genomen nadat het toestel (nagebootst) wegviel; vroeger bleef het laatste beeld staan tot je herlaadde.
-  { naam: 'satie-na-herstart', model: 'Satie', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', herstart: true },
+  { naam: 'satie-na-herstart', model: 'Satie', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', herstart: true, bouwstenen: true },
   // Vier losse kussens tegen de schaal: twee achteraan, twee schuin ervoor (Quin).
-  { naam: 'quin-schuin', model: 'Quin', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'quin-schuin', model: 'Quin', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Zwevende rugschijf boven een vaste zitting, op een houten frame (Karl).
-  { naam: 'karl-schuin', model: 'Karl', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'karl-schuin', model: 'Karl', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Dikke rug die op een bolle zitting staat, tot op de vloer (Tumble).
-  { naam: 'tumble-schuin', model: 'Tumble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'tumble-schuin', model: 'Tumble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Rug die achterover helt, van opzij (Sullivan).
-  { naam: 'sullivan-zij', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'zij', decor: 'studio', licht: 'studio' },
+  { naam: 'sullivan-zij', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'zij', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Schaal die uitwaaiert (14/11): van voren een tulp, smal aan de voet rond de ronde zitting en breed bovenaan (Manon).
-  { naam: 'manon-voor', model: 'Manon', familie: 'Fauteuils', standpunt: 'voor', decor: 'studio', licht: 'studio' },
+  { naam: 'manon-voor', model: 'Manon', familie: 'Fauteuils', standpunt: 'voor', decor: 'studio', licht: 'studio', bouwstenen: true },
   // Armen dikker dan de rug (14/11): de dikke armkussens tegen de dunnere rug, met de plooi ertussen.
-  { naam: 'sullivan-schuin', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
-  // Proef 15/11: Sullivan als 3D-bestand uit Blender (scripts/blender/sullivan.py), met onze stof en ons hout.
-  { naam: 'sullivan-blender-schuin', model: 'Sullivan (proef: gebouwd in Blender)', familie: 'Proef: echt 3D-model', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'sullivan-schuin', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', bouwstenen: true },
+  // 3D-bestanden uit Blender (15/11, scripts/blender): het gewone model toont zijn bestand, met onze stof en afwerking.
+  // De beelden hierboven met `bouwstenen: true` blijven de opbouw van de motor bewaken (de keuze Bouwstenen in de 3D).
+  { naam: 'sullivan-blender-schuin', model: 'Sullivan', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  // Vertrokken van de opbouw van de motor: een schaal tot op de vloer (Manon) en een fauteuil met een los sierkussen dat de
+  // configurator zelf op het bestand tekent (Mabel Meridienne).
+  { naam: 'manon-blender-schuin', model: 'Manon', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
+  { naam: 'meridienne-blender-schuin', model: 'Mabel Meridienne', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio' },
   { naam: 'pebble-naad', model: 'Pebble', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.42, 0.17, 0.57, 0.45] },
-  { naam: 'ross-kop', model: 'Ross', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.3, 0.3, 0.5, 0.82] },
+  { naam: 'ross-kop', model: 'Ross', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.3, 0.3, 0.5, 0.82], bouwstenen: true },
   { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.04, 0.2, 0.32, 0.8] },
 ];
 const BOUWBEELDEN = [{ naam: 'bouw-woning' }, { naam: 'bouw-raam' }];
@@ -162,6 +168,9 @@ async function maakBeelden() {
         s.dispatchEvent(new Event('input', { bubbles: true }));
         s.dispatchEvent(new Event('change', { bubbles: true }));
       }, b.zon ?? null);
+      // Heeft het model een 3D-bestand, dan de keuze vastzetten: `bouwstenen` bewaakt de opbouw van de motor, anders het bestand.
+      const keuze = p.locator(`#o-3d-echt-keuze:not([hidden]) [data-echt="${b.bouwstenen ? 'uit' : 'aan'}"]`);
+      if (await keuze.count()) { await keuze.click(); await p.waitForTimeout(300); }
       await p.click(`[data-standpunt="${b.standpunt}"]`);
       if (b.herstart) {
         // Eerst het gewone beeld afwachten, dan het toestel laten wegvallen: het canvas wordt vervangen door een nieuw.

@@ -158,6 +158,12 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
 30. **Zet een proef eerst met een dummy door de hele weg.** Voor er iets gemodelleerd was, ging een blok met een arm
     aan één kant van Blender tot in de configurator: richting, maten, stof, poten, de schakelaar met de benadering.
     Zo bleek meteen dat een fauteuil langs dezelfde weg kan als de rij van de eerste proef.
+31. **Vertrek voor een 3D-bestand van wat de motor al weet, en koppel alleen wat beter is.** Na Sullivan zijn de andere
+    fauteuils niet opnieuw opgemeten: het Blender-script neemt de opbouw van de motor over (schaal, zitting, onderstel)
+    en geeft ze een gestoffeerde huid. Dat ging in één keer voor dertien modellen, maar het wint alleen afwerking, geen
+    vorm. Daarom per model op één blad: foto, bouwstenen, bestand. Negen bestanden zijn gekoppeld; bij Quin, Tumble en
+    Karl was het bestand niet beter en houden we de bouwstenen. Een bestand dat de bouwstenen niet verslaat, is alleen
+    gewicht in de pagina.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 

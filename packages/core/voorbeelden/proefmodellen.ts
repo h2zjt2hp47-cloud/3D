@@ -1,16 +1,14 @@
 /**
- * Proefmodellen met een echt 3D-bestand (zie src/echt3d.ts): tonen hoe een 3D-bestand werkt in de configurator, met onze
- * stoffen en poten, terwijl prijzen, tekeningen en offerte op de elementen gebaseerd blijven.
+ * Proefmodel met een 3D-bestand van een ander merk (zie src/echt3d.ts): toont hoe een bestand van een fabrikant werkt in
+ * de configurator, met onze stoffen en poten, terwijl prijzen, tekeningen en offerte op de elementen gebaseerd blijven.
  *
- * Twee proeven:
- * - Glam Velvet: GEEN model van de pilootklant. Het 3D-bestand is een gratis model van een ander merk (zie de
- *   vermelding); de elementen, maten en opties zijn een benadering van dat bestand.
- * - Sullivan, gebouwd in Blender: het model Sullivan van de klant, nagebouwd als 3D-bestand op basis van de
- *   productfoto's en de maten van de website. Een benadering, geen bestand van de fabrikant.
- * De prijzen zijn verzonnen, zoals overal in de demo.
+ * GEEN model van de pilootklant. Het 3D-bestand is een gratis model van een ander merk (zie de vermelding); de
+ * elementen, maten en opties zijn een benadering van dat bestand en de prijzen zijn verzonnen, zoals overal in de demo.
+ *
+ * De 3D-bestanden van de eigen modellen (gebouwd in Blender) staan niet hier: die horen bij het gewone model, zie
+ * voorbeelden/bestanden3d.ts.
  */
 import type { Echt3D, ModelDefinitie } from '../src/index.js';
-import { zetelModellen } from './modellen.js';
 
 export const PROEF_FAMILIE = 'Proef: echt 3D-model';
 
@@ -41,32 +39,6 @@ export const glamVelvet3D: Echt3D = {
   vast: { houtframe: 'geen', rugvorm: 'recht' },
 };
 
-/**
- * Sullivan, nagebouwd in Blender (proef 15/11/2026): `packages/demo-web/modellen3d/sullivan_blender.glb`, gemaakt met
- * `scripts/blender/sullivan.py` op basis van de productfoto's en de maten van de website. Een benadering, geen bestand
- * van de fabrikant. Het bestand heeft de maten van de site (72 × 80 × 93, zitting op 42) en toont de vaste zitting op de
- * zwarte ring met vier poten; kiest de klant iets anders, dan toont de configurator de benadering met blokken.
- */
-export const sullivanBlender3D: Echt3D = {
-  bestand: 'sullivan_blender',
-  vermelding: "Proef: Sullivan nagebouwd in Blender op basis van de productfoto's en de maten van de website (benadering, geen bestand van de fabrikant).",
-  elementen: ['fauteuil'],
-  maat: { b: 72, d: 80, h: 93, zithoogte: 42, poothoogte: 22 },
-  // Een ronde zitting wordt ovaal als ze rekt: maar een paar procent.
-  rek: 0.05,
-  toont: {
-    poten: ['ringframe'],
-    zitting: ['vaste_zitting'],
-    rug: ['vast'],
-    nekrol: ['geen'],
-    naad: ['gewoon', 'plat'],
-    kuipvorm: ['afgerond'],
-  },
-};
-
-/** Het ontwerp van het gewone model Sullivan, onder een eigen code: prijs, tekeningen en offerte zijn dus dezelfde. */
-const sullivan = zetelModellen.find((m) => m.code === 'sullivan')!;
-
 export const proefModellen: ModelDefinitie[] = [
   {
     code: 'proef_glam_velvet',
@@ -91,15 +63,5 @@ export const proefModellen: ModelDefinitie[] = [
       ],
     },
     echt3d: glamVelvet3D,
-  },
-  {
-    code: 'proef_sullivan_blender',
-    naam: 'Sullivan (proef: gebouwd in Blender)',
-    familie: PROEF_FAMILIE,
-    omschrijving: "Dezelfde fauteuil als Sullivan, maar de 3D-weergave toont een 3D-bestand dat in Blender is gebouwd naar de productfoto's: een brede rug met een vlakke bovenkant, lage dikke armen met een plooi tegen de rug, een rug die dikker is bij de zitting en een ronde onderrand. Linksboven in de 3D wissel je tussen dit bestand en de benadering.",
-    bron: "Maten van de productpagina op de website; de vorm is een benadering op basis van de productfoto's, gebouwd in Blender (proef 15/11/2026). Prijs, tekeningen en offerte zijn die van het gewone model Sullivan.",
-    ...(sullivan.foto ? { foto: sullivan.foto } : {}),
-    ontwerp: { ...structuredClone(sullivan.ontwerp), model: 'proef_sullivan_blender' },
-    echt3d: sullivanBlender3D,
   },
 ];

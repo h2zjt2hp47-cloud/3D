@@ -33,8 +33,22 @@ de 3D-weergave zodra het model in beeld is.
 - **Onderstel:** iets groter dan in onze bouwstenen (ring 58 cm in plaats van 56, poten verder uit elkaar), zodat het
   op de foto's past; een benadering (zie de twee lezingen in `docs/echte-3d-modellen.md`).
 - **Inhoud:** één deel `stof_bekleding` (zitting en schaal, 3.100 punten) en één deel `poot_onderstel` (ring, vier
-  poten, kruis), met een schaduwtextuur van 1024 px (plooien en naden). 251 kB.
+  poten, kruis), met een schaduwtextuur van 512 px (plooien en naden). 206 kB.
 - **Opnieuw maken:** zie `scripts/blender/LEESMIJ.md`. Niet met de hand bewerken: pas het script aan.
-- Geen eigen beeld voor de modelkaart: het proefmodel gebruikt de productfoto van Sullivan.
+- Het bestand hoort bij het gewone model Sullivan (geen apart proefmodel meer).
 
-Zoals het andere proefmodel zit het alleen in de gewone demo, niet in de versie in de huisstijl van de klant.
+## manon, ross, fraser, milton, mabel-1, mabel-2, mabel-meridienne, satie (.glb)
+
+- **Modellen:** fauteuils van Corneille & Silence, op 15/11/2026 gebouwd met `scripts/blender/uit_motor.py`.
+- **Bron:** de opbouw van elk model in de configurator (`scripts/blender/gegevens/<code>.json`, uit de motor), in Blender
+  afgewerkt (ronde rand, onderrand, bolle zitting, schaduw, naden), met per model wat de productfoto's anders tonen
+  (`scripts/blender/aanpassingen.py`). **Benaderingen, geen bestanden van de fabrikant.** Die vermelding staat ook in
+  de 3D-weergave.
+- **Inhoud per bestand:** één deel `stof_bekleding`, zo nodig `poot_onderstel` (hout) en `plint` (de donkere voet), met
+  een schaduwtextuur van 512 px. 186 tot 234 kB.
+- **Opnieuw maken:** zie `scripts/blender/LEESMIJ.md`. Niet met de hand bewerken: pas `aanpassingen.py` aan.
+
+Welk model welk bestand gebruikt, staat in `packages/core/voorbeelden/bestanden3d.ts`. Quin, Tumble, Karl, Pebble en de
+Amusette fauteuil hebben er geen: daar was het bestand niet beter dan de bouwstenen (zie `docs/echte-3d-modellen.md`).
+
+Alle bestanden zitten alleen in de gewone demo, niet in de versie in de huisstijl van de klant.

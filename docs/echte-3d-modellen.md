@@ -123,9 +123,9 @@ tekenen, in één bestand en zonder internet. Wat Blender wél kan: een vast mod
 configurator dan toont met onze stoffen en afwerkingen, langs de weg van de proef hierboven.
 
 **De proef:** Sullivan, de fauteuil die het meest van de foto afweek, gebouwd met een script in Blender
-(`scripts/blender/sullivan.py`, uitleg in `scripts/blender/LEESMIJ.md`). Het staat als apart proefmodel in de gewone
-demo: *1 · Modellen* > filter *Proef: echt 3D-model* > *Sullivan (proef: gebouwd in Blender)*. Het gewone model
-Sullivan, zijn prijs (954 euro, verzonnen) en zijn tekeningen zijn niet aangeraakt.
+(`scripts/blender/sullivan.py`, uitleg in `scripts/blender/LEESMIJ.md`). Eerst als apart proefmodel naast het gewone
+model; na het akkoord van Jonas ("Ja ga maar los!") hoort het bestand bij het gewone model Sullivan (zie het volgende
+hoofdstuk). Prijs (954 euro, verzonnen) en tekeningen zijn niet aangeraakt.
 
 ![Sullivan: foto, huidige versie en de versie uit Blender](afbeeldingen/sullivan-blender.jpg)
 
@@ -169,8 +169,8 @@ maar de drie maten bevestigen. Het grotere onderstel is een benadering die afwij
   bestand mee uit (getest met een snelle proef van 6 stappen).
 - **Verplaatsen en draaien: ja.** Een bestand voor één element (een fauteuil) draait mee rond zijn midden; dat is op
   15/11 toegevoegd, de rij van de eerste proef mag nog altijd niet gedraaid staan.
-- **Twee fauteuils in één ontwerp:** het bestand staat alleen op de eerste; de tweede toont de benadering. Dat is nog
-  een grens (één bestand per ontwerp).
+- **Twee fauteuils in één ontwerp:** het bestand staat alleen op de eerste; de tweede komt uit de bouwstenen. Dat is
+  nog een grens (één bestand per ontwerp).
 - Breedte en diepte: tot 5 % rekken (een ronde zitting wordt anders ovaal). Daarbuiten toont de configurator de
   benadering en zegt hij waarom.
 - Een andere vorm van fauteuil, losse kussens, een ander onderstel, een bies: zit niet in het bestand. Ook dan de
@@ -180,8 +180,8 @@ maar de drie maten bevestigen. Het grotere onderstel is een benadering die afwij
 
 **Wat het kost**
 
-- Het bestand weegt 251 kB; de gewone demo wordt er 337 kB zwaarder door (6,41 → 6,75 MB). Voor veertien fauteuils is
-  dat ±4,7 MB erbij.
+- Het bestand woog 251 kB bij de proef (de gewone demo werd er 337 kB zwaarder door); met een kleinere schaduwtextuur
+  is het nu 206 kB. De negen bestanden van het volgende hoofdstuk samen: +2,4 MB.
 - Bouwen en bijstellen van dit eerste model: ±1 uur, het gereedschap inbegrepen (het script, de camera's, de
   vergelijking met de foto's). Een volgend model in dezelfde familie (ronde zitting met een schaal: Manon, Ross,
   Fraser, Milton, de Mabels) kan van hetzelfde script vertrekken en vraagt vooral meten en bijstellen.
@@ -194,8 +194,59 @@ maar de drie maten bevestigen. Het grotere onderstel is een benadering die afwij
 - De stof: het model staat in grijze wol; op de foto is het een groengrijze bouclé (een keuze van stof, geen vorm).
 - De naden staan waar de foto's ze laten vermoeden; de echte naadverdeling moet van de klant komen.
 
-**Beslissing voor Jonas:** volgen de andere fauteuils deze weg? De beste bron blijft een bestand van de klant zelf
-(CAD of van de ontwerper); dit is de weg als die er niet zijn.
+**Beslist door Jonas (15/11): "Ja ga maar los!"** De proef is gepubliceerd en de andere fauteuils volgen deze weg. De
+beste bron blijft een bestand van de klant zelf (CAD of van de ontwerper); dit is de weg als die er niet zijn.
+
+## De andere fauteuils langs dezelfde weg (15/11)
+
+**Anders aangepakt dan Sullivan.** Dertien fauteuils opnieuw opmeten zou dagen kosten, en hun vorm in onze bouwstenen
+is op 13 en 14/11 naast de foto's gelegd en goedgekeurd. Het script vertrekt daarom van wat de motor al weet:
+
+1. `scripts/blender/exporteer.mjs` schrijft per fauteuil de opbouw uit de motor weg: de middenlijn en de hoogtes van
+   de schaal, haar dikte, helling en waaier, de omtrek van de zitting, het onderstel, de losse kussens.
+2. `scripts/blender/uit_motor.py` bouwt daar in Blender een gestoffeerd model van: de schaal als één dik vel met een
+   ronde rand en ronde koppen, een ronde onderrand, een bolle zitting met een ronde rand, zachte kussens, de schaduw in
+   de plooien en de naden.
+3. `scripts/blender/aanpassingen.py` zet per model wat de foto's anders tonen: bij Manon een bredere rand (8 cm in
+   plaats van 6) en een rondere zitting, bij Fraser en Milton een vlakke bovenkant van de rug met ronde schouders.
+
+Wat zo'n bestand wint, is dus de **afwerking** (zacht, rond, gestoffeerd), niet de vorm: die blijft de vorm uit de
+bouwstenen. Alleen Sullivan is met camera's op de foto's nagemeten.
+
+**Per model beslist: alleen koppelen wat beter is dan de bouwstenen.**
+
+| Model | 3D in de configurator | Waarom |
+|---|---|---|
+| Sullivan | 3D-bestand (met de hand gemeten) | Zie het vorige hoofdstuk. |
+| Manon, Ross, Fraser, Milton | 3D-bestand | Zachter en ronder dan de bouwstenen; de vorm is dezelfde. |
+| Mabel 1-zit, Mabel 2-zit, Mabel Meridienne | 3D-bestand | Idem. Van de 2-zit en de méridienne is er maar één foto: het bestand is de opbouw van de motor met een rondere huid. Het sierkussen van de méridienne tekent de configurator zelf op het bestand. |
+| Satie | 3D-bestand | Idem, met een zacht rugkussen in plaats van een plat. |
+| Quin | bouwstenen | De vier losse kussens werden in het bestand niet beter dan in de bouwstenen. |
+| Tumble | bouwstenen | In de bouwstenen loopt de rug over in de zitting; in het bestand kwam er een harde naad tussen. |
+| Karl | bouwstenen | De zwevende rugschijf kreeg in het bestand een rafelige onderrand; de bouwstenen zijn beter. |
+| Pebble | bouwstenen | De zachte vorm is op 5/11 goedgekeurd; de omzetting was slechter. |
+| Amusette fauteuil | bouwstenen | Drie elementen (arm, zitting, arm) en een hoekige vorm: de bouwstenen volstaan. |
+
+![Manon, Ross, Fraser en Milton: foto, bouwstenen en 3D-bestand](afbeeldingen/fauteuils-blender-1.jpg)
+
+![De drie Mabels en Satie: foto, bouwstenen en 3D-bestand](afbeeldingen/fauteuils-blender-2.jpg)
+
+![Niet gekoppeld: Quin, Tumble en Karl](afbeeldingen/fauteuils-blender-niet.jpg)
+
+**Wat er in de configurator veranderd is**
+
+- Het bestand hoort nu bij het **gewone model** (`packages/core/voorbeelden/bestanden3d.ts`): wie Manon of Sullivan
+  opent, ziet in 3D het bestand. Het aparte proefmodel van Sullivan is weg; onder *Proef: echt 3D-model* staat alleen
+  nog Glam Velvet (het model van een ander merk).
+- Linksboven in de 3D staat de keuze **3D-bestand / Bouwstenen** (vroeger *Echt 3D-model / Benadering*): beide zijn
+  benaderingen, de woorden zeggen nu waar het beeld vandaan komt.
+- Prijs, tekeningen en offerte komen uit de bouwstenen, zoals voordien. De tests lopen elk model met een bestand af:
+  het standaardontwerp toont het bestand, een andere vorm of een ander onderstel geeft de bouwstenen, de blokken en de
+  prijs veranderen niet.
+- De negen bestanden wegen samen 1,8 MB; de gewone demo gaat van 6,41 naar 8,84 MB (+2,4 MB).
+- **De versie in de huisstijl van de klant heeft geen 3D-bestanden** en toont overal stil de bouwstenen. Of de
+  bestanden daar ook in mogen, is een beslissing voor Jonas: het zijn benaderingen van de eigen modellen van de klant,
+  geen bestanden van hem.
 
 ## Volgende stap
 

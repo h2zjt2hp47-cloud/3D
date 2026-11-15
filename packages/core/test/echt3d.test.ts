@@ -1,8 +1,9 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, blokkenVan, bouw3D, tekenVooraanzicht, type Ontwerp, type OntwerpElement } from '../src/index.js';
 import { zetelModellen } from '../voorbeelden/modellen.js';
-import { glamVelvet3D, proefModellen, sullivanBlender3D } from '../voorbeelden/proefmodellen.js';
+import { BLENDER_BESTANDEN } from '../voorbeelden/bestanden3d.js';
+import { glamVelvet3D, proefModellen } from '../voorbeelden/proefmodellen.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -97,108 +98,119 @@ describe('proefmodel met echt 3D-bestand', () => {
 });
 
 /**
- * Proef 15/11: Sullivan als 3D-bestand, gebouwd in Blender naar de productfoto's (scripts/blender/sullivan.py).
- * Het is een apart proefmodel: het gewone model Sullivan, zijn prijs en zijn tekeningen blijven wat ze waren.
+ * 3D-bestanden uit Blender bij de gewone modellen (voorbeelden/bestanden3d.ts, scripts/blender). Het bestand vervangt
+ * alleen het beeld in 3D: prijs, tekeningen en blokken blijven wat ze zijn.
  */
-describe('proef: Sullivan gebouwd in Blender', () => {
-  const blender = proefModellen.find((m) => m.code === 'proef_sullivan_blender')!;
+describe('3D-bestanden uit Blender bij de modellen van de collectie', () => {
+  const met = zetelModellen.filter((m) => m.echt3d);
   const sullivan = zetelModellen.find((m) => m.code === 'sullivan')!;
-  const toon = (aanpassen?: (o: Ontwerp) => void) => {
-    const o = structuredClone(blender.ontwerp);
+  const toon = (m: (typeof zetelModellen)[number], aanpassen?: (o: Ontwerp) => void) => {
+    const o = structuredClone(m.ontwerp);
     aanpassen?.(o);
-    return bouw3D(o, zetelCatalogus, standaardMaterialen, { echt3d: sullivanBlender3D });
+    return bouw3D(o, zetelCatalogus, standaardMaterialen, { echt3d: m.echt3d });
   };
+  const map = new URL('../../demo-web/modellen3d/', import.meta.url);
 
-  it('is hetzelfde ontwerp als Sullivan: zelfde prijs, tekening en blokken', () => {
-    expect({ ...blender.ontwerp, model: 'sullivan' }).toEqual(sullivan.ontwerp);
-    const a = berekenOntwerp(blender.ontwerp, zetelCatalogus, standaardMaterialen);
-    const b = berekenOntwerp(sullivan.ontwerp, zetelCatalogus, standaardMaterialen);
-    expect(a.meldingen.filter((m) => m.ernst === 'fout')).toEqual([]);
-    expect(a.prijs).toEqual(b.prijs);
-    expect(Math.round(a.prijs.brutoprijsExcl)).toBe(954);
-    expect(tekenVooraanzicht(blender.ontwerp, zetelCatalogus, standaardMaterialen)).toEqual(tekenVooraanzicht(sullivan.ontwerp, zetelCatalogus, standaardMaterialen));
-    expect(toon().blokken).toEqual(bouw3D(sullivan.ontwerp, zetelCatalogus, standaardMaterialen).blokken);
+  it('de tabel en de modellen kloppen met elkaar', () => {
+    expect(met.map((m) => m.code).sort()).toEqual(Object.keys(BLENDER_BESTANDEN).sort());
+    expect(sullivan.echt3d?.bestand).toBe('sullivan_blender');
+    for (const m of met) expect(m.echt3d!.vermelding).toMatch(/benadering, geen bestand van de fabrikant/);
+    // Geen losse bestanden in de map: elk GLB hoort bij een model (of is het proefmodel van een ander merk).
+    const verwacht = [...Object.values(BLENDER_BESTANDEN).map((b) => b.bestand), glamVelvet3D.bestand].sort();
+    expect(readdirSync(map).filter((f) => f.endsWith('.glb')).map((f) => f.slice(0, -4)).sort()).toEqual(verwacht);
   });
 
-  it('het gewone model Sullivan blijft de benadering: het heeft geen 3D-bestand', () => {
-    expect(sullivan.echt3d).toBeUndefined();
-    expect(blender.bron).toMatch(/benadering op basis van de productfoto's, gebouwd in Blender/);
-    expect(sullivanBlender3D.vermelding).toMatch(/benadering, geen bestand van de fabrikant/);
+  it('elk model toont zijn bestand in het standaardontwerp, in zijn eigen maten, stof en afwerking', () => {
+    for (const m of met) {
+      const s = toon(m);
+      expect(s.echtNiet, m.code).toBeUndefined();
+      const stoel = m.ontwerp.elementen.find((e) => e.type === 'fauteuil')!;
+      expect(s.echt, m.code).toMatchObject({ bestand: m.echt3d!.bestand, x: stoel.x, z: stoel.y, b: stoel.breedte, d: stoel.diepte, h: m.echt3d!.maat.h });
+    }
   });
 
-  it('past: het bestand komt in de maten van de website, in de stof en het hout van het ontwerp', () => {
-    const s = toon();
-    expect(s.echtNiet).toBeUndefined();
-    expect(s.echt).toMatchObject({
+  it('het bestand verandert niets aan de blokken, de prijs of de tekening', () => {
+    for (const m of met) {
+      expect(toon(m).blokken, m.code).toEqual(bouw3D(m.ontwerp, zetelCatalogus, standaardMaterialen).blokken);
+      const r = berekenOntwerp(m.ontwerp, zetelCatalogus, standaardMaterialen);
+      expect(r.meldingen.filter((x) => x.ernst === 'fout'), m.code).toEqual([]);
+    }
+    expect(Math.round(berekenOntwerp(sullivan.ontwerp, zetelCatalogus, standaardMaterialen).prijs.brutoprijsExcl)).toBe(954);
+    expect(tekenVooraanzicht(sullivan.ontwerp, zetelCatalogus, standaardMaterialen).vormen.length).toBeGreaterThan(1);
+  });
+
+  it('Sullivan: het bestand komt in de maten van de website, in de stof en het hout van het ontwerp', () => {
+    expect(toon(sullivan).echt).toMatchObject({
       bestand: 'sullivan_blender', x: 0, z: 0, b: 72, d: 80, h: 93,
       elementen: [{ id: 'e1', x0: 0, x1: 72 }],
       stof: { kleur: '#86888a', weefsel: 'wol' },
       poten: { soort: 'hout', kleur: '#2f2a26' },
     });
-  });
-
-  it('een andere stof of een ander hout gaat mee', () => {
-    expect(toon((o) => { o.hoofdmateriaal = 'velours_petrol'; }).echt).toMatchObject({ stof: { kleur: '#1f6b75', weefsel: 'velours' } });
-    expect(toon((o) => { o.opties = { ...o.opties, hout: 'eik_naturel' }; }).echt?.poten.soort).toBe('hout');
+    expect(toon(sullivan, (o) => { o.hoofdmateriaal = 'velours_petrol'; }).echt).toMatchObject({ stof: { kleur: '#1f6b75', weefsel: 'velours' } });
+    expect(toon(sullivan, (o) => { o.opties = { ...o.opties, hout: 'eik_naturel' }; }).echt?.poten.soort).toBe('hout');
   });
 
   it('een fauteuil mag verplaatst en gedraaid staan: het bestand draait mee rond het midden van zijn voetafdruk', () => {
-    expect(toon((o) => { o.elementen[0]!.x = 150; o.elementen[0]!.y = 40; }).echt).toMatchObject({ x: 150, z: 40, b: 72, d: 80 });
-    expect(toon().echt?.draai).toBeUndefined();
+    expect(toon(sullivan, (o) => { o.elementen[0]!.x = 150; o.elementen[0]!.y = 40; }).echt).toMatchObject({ x: 150, z: 40, b: 72, d: 80 });
+    expect(toon(sullivan).echt?.draai).toBeUndefined();
     // Een kwartslag: de voetafdruk is 80 × 72 vanaf (0, 0); het kader vóór het draaien heeft hetzelfde midden (40, 36).
-    const kwart = toon((o) => { o.elementen[0]!.rotatie = 90; }).echt!;
-    expect(kwart).toMatchObject({ draai: 90, b: 72, d: 80, x: 4, z: -4, elementen: [{ id: 'e1', x0: 0, x1: 80 }] });
-    expect(toon((o) => { o.elementen[0]!.rotatie = 180; }).echt).toMatchObject({ draai: 180, x: 0, z: 0, elementen: [{ id: 'e1', x0: 0, x1: 72 }] });
+    expect(toon(sullivan, (o) => { o.elementen[0]!.rotatie = 90; }).echt).toMatchObject({ draai: 90, b: 72, d: 80, x: 4, z: -4, elementen: [{ id: 'e1', x0: 0, x1: 80 }] });
+    expect(toon(sullivan, (o) => { o.elementen[0]!.rotatie = 180; }).echt).toMatchObject({ draai: 180, x: 0, z: 0, elementen: [{ id: 'e1', x0: 0, x1: 72 }] });
     // Het proefmodel met een rij van drie elementen (Glam Velvet) blijft de benadering tonen als er iets gedraaid staat.
     const rij = structuredClone(proef.ontwerp);
     rij.elementen[2]!.rotatie = 90;
     expect(scene(rij).echtNiet).toMatch(/deze opstelling is anders/);
   });
 
-  it('twee fauteuils: het bestand staat op de eerste, de tweede blijft de benadering', () => {
-    const s = toon((o) => { o.elementen.push({ ...o.elementen[0]!, id: 'e2', x: 100 }); });
+  it('twee fauteuils: het bestand staat op de eerste, de tweede blijft uit de bouwstenen', () => {
+    const s = toon(sullivan, (o) => { o.elementen.push({ ...o.elementen[0]!, id: 'e2', x: 100 }); });
     expect(s.echt?.elementen).toEqual([{ id: 'e1', x0: 0, x1: 72 }]);
     expect(s.blokken.some((b) => b.code.startsWith('e2.'))).toBe(true);
   });
 
-  it('zonder fauteuil in het ontwerp: de reden in gewone taal', () => {
-    expect(toon((o) => { o.elementen[0]!.type = 'poef'; o.elementen[0]!.opties = {}; }).echtNiet).toBe('Het 3D-bestand toont een fauteuil; die staat niet in dit ontwerp.');
-  });
-
-  it('wat het bestand niet toont, geeft de benadering met de reden', () => {
-    expect(toon((o) => { o.elementen[0]!.opties = { kuipvorm: 'rond' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
-    expect(toon((o) => { o.opties = { ...o.opties, zitting: 'losse_kussens' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
-    expect(toon((o) => { o.opties = { ...o.opties, poten: 'draaivoet' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
-    // Een ronde zitting mag maar een paar procent rekken (anders wordt ze ovaal).
-    expect(toon((o) => { o.elementen[0]!.breedte = 74; }).echt).toMatchObject({ b: 74 });
-    expect(toon((o) => { o.elementen[0]!.breedte = 80; }).echtNiet).toMatch(/Breedte 80 cm/);
-  });
-
-  it('het 3D-bestand zelf: maten van de website, delen voor stof en hout, schaduwtextuur, niets wat de weergave niet leest', () => {
-    const b = readFileSync(new URL('../../demo-web/modellen3d/sullivan_blender.glb', import.meta.url));
-    expect(b.readUInt32LE(0)).toBe(0x46546c67);
-    const json = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'));
-    // De weergave rekt het kader van het bestand per richting tot de maten van het element: het kader moet dus kloppen.
-    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
-    for (const mesh of json.meshes) for (const p of mesh.primitives) {
-      const acc = json.accessors[p.attributes.POSITION];
-      for (let i = 0; i < 3; i++) { min[i] = Math.min(min[i]!, acc.min[i]); max[i] = Math.max(max[i]!, acc.max[i]); }
-      expect(Object.keys(p.attributes)).toEqual(expect.arrayContaining(['POSITION', 'NORMAL', 'TEXCOORD_0']));
+  it('wat het bestand niet toont, geeft de bouwstenen met de reden', () => {
+    for (const m of met) {
+      // Een andere vorm van fauteuil en een ander onderstel zitten in geen enkel bestand.
+      const andereVorm = m.ontwerp.elementen.find((e) => e.type === 'fauteuil')!.opties?.kuipvorm === 'rond' ? 'schelp' : 'rond';
+      expect(toon(m, (o) => { o.elementen.find((e) => e.type === 'fauteuil')!.opties = { kuipvorm: andereVorm }; }).echtNiet, m.code).toMatch(/zit niet in het 3D-bestand/);
+      expect(toon(m, (o) => { o.opties = { ...o.opties, poten: o.opties?.poten === 'slede' ? 'blok' : 'slede' }; }).echtNiet, m.code).toMatch(/zit niet in het 3D-bestand/);
+      // Een ronde zitting mag maar een paar procent rekken (anders wordt ze ovaal).
+      expect(toon(m, (o) => { o.elementen.find((e) => e.type === 'fauteuil')!.breedte *= 1.12; }).echtNiet, m.code).toMatch(/Breedte/);
     }
-    const { b: breed, d: diep, h: hoog } = sullivanBlender3D.maat;
-    expect((max[0]! - min[0]!) * 100).toBeCloseTo(breed, 0);
-    expect((max[1]! - min[1]!) * 100).toBeCloseTo(hoog, 0);
-    expect((max[2]! - min[2]!) * 100).toBeCloseTo(diep, 0);
-    expect(min[1]).toBeCloseTo(0, 3);
-    // Geen verschuiving of schaal op de delen (de weergave neemt de vorm zoals ze in het bestand staat).
-    for (const n of json.nodes) expect(Object.keys(n).sort()).toEqual(['mesh', 'name']);
-    const namen = json.nodes.map((n: { name: string }) => n.name);
-    expect(namen.some((n: string) => /stof/.test(n))).toBe(true);
-    expect(namen.some((n: string) => /poot/.test(n))).toBe(true);
-    const stof = json.materials.find((m: { name: string }) => /stof/.test(m.name));
-    expect(stof.occlusionTexture).toEqual({ index: 0 });
-    expect(json.images[0].mimeType).toBe('image/jpeg');
-    expect(json.extensionsRequired).toBeUndefined();
-    expect(b.length).toBeLessThan(400_000);
+    expect(toon(sullivan, (o) => { o.opties = { ...o.opties, zitting: 'losse_kussens' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
+    expect(toon(sullivan, (o) => { o.elementen[0]!.breedte = 74; }).echt).toMatchObject({ b: 74 });
+    expect(toon(sullivan, (o) => { o.elementen[0]!.type = 'poef'; o.elementen[0]!.opties = {}; }).echtNiet).toBe('Het 3D-bestand toont een fauteuil; die staat niet in dit ontwerp.');
+  });
+
+  it('elk bestand zelf: maten van het model, delen voor stof en afwerking, schaduwtextuur, licht genoeg', () => {
+    let totaal = 0;
+    for (const m of met) {
+      const b = readFileSync(new URL(`${m.echt3d!.bestand}.glb`, map));
+      totaal += b.length;
+      expect(b.readUInt32LE(0), m.code).toBe(0x46546c67);
+      const json = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'));
+      // De weergave rekt het kader van het bestand per richting tot de maten van het element: het kader moet dus kloppen.
+      const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+      for (const mesh of json.meshes) for (const p of mesh.primitives) {
+        const acc = json.accessors[p.attributes.POSITION];
+        for (let i = 0; i < 3; i++) { min[i] = Math.min(min[i]!, acc.min[i]); max[i] = Math.max(max[i]!, acc.max[i]); }
+        expect(Object.keys(p.attributes), m.code).toEqual(expect.arrayContaining(['POSITION', 'NORMAL', 'TEXCOORD_0']));
+      }
+      const { b: breed, d: diep, h: hoog } = m.echt3d!.maat;
+      expect(Math.abs(((max[0]! - min[0]!) * 100) / breed - 1), `${m.code} breedte`).toBeLessThan(0.03);
+      expect(Math.abs(((max[2]! - min[2]!) * 100) / diep - 1), `${m.code} diepte`).toBeLessThan(0.03);
+      expect(Math.abs((max[1]! - min[1]!) * 100 - hoog), `${m.code} hoogte`).toBeLessThan(0.6);
+      expect(min[1], m.code).toBeCloseTo(0, 3);
+      // Geen verschuiving of schaal op de delen (de weergave neemt de vorm zoals ze in het bestand staat).
+      for (const n of json.nodes) expect(Object.keys(n).sort(), m.code).toEqual(['mesh', 'name']);
+      expect(json.nodes.some((n: { name: string }) => /stof/.test(n.name)), m.code).toBe(true);
+      const stof = json.materials.find((x: { name: string }) => /stof/.test(x.name));
+      expect(stof.occlusionTexture, m.code).toEqual({ index: 0 });
+      expect(json.images[0].mimeType, m.code).toBe('image/jpeg');
+      expect(json.extensionsRequired, m.code).toBeUndefined();
+      expect(b.length, m.code).toBeLessThan(330_000);
+    }
+    // Alle bestanden samen: ruim onder 3 MB (ze zitten als tekst in de pagina, dat is een derde meer).
+    expect(totaal).toBeLessThan(3_000_000);
   });
 });

@@ -4,8 +4,8 @@ Blender is hier een **werkplaats naast de configurator**: een script bouwt een v
 configurator toont dat bestand met onze stoffen en afwerkingen (zie `docs/echte-3d-modellen.md`). Blender draait niet in
 de pagina en is geen onderdeel van de bouw: het GLB-bestand staat in de repo, het script dient om het opnieuw te maken.
 
-Eerste proef (15/11/2026): **Sullivan**, op basis van de productfoto's en de maten van de website. Een benadering, geen
-bestand van de fabrikant.
+Eerste proef (15/11/2026): **Sullivan**, met de hand gemeten op de productfoto's. Daarna de andere fauteuils, vertrokken
+van de opbouw die de motor al heeft. Alles is een benadering, geen bestand van de fabrikant.
 
 ## Installeren (eenmalig, ook in een cloudsessie zonder scherm)
 
@@ -22,32 +22,45 @@ die compressie niet (de weergave in de configurator leest ze niet).
 
 | Bestand | Wat |
 |---|---|
-| `sullivan.py` | Bouwt `packages/demo-web/modellen3d/sullivan_blender.glb`: zitting, schaal (rug en armen als één gestoffeerd lichaam), onderstel, stof verdeeld over één vel, schaduw in de plooien (AO) met de naden erin, export. |
-| `overlay.py` | Legt het model met een passende camera over de productfoto's: de omtrek als lijn op de foto, en het model in grijs vanuit hetzelfde standpunt. |
-| `cameras-sullivan.json` | De vier camera's bij de foto's van Sullivan (van voren, schuin, opzij, schuin van achter). |
+| `zetelbouw.py` | De bouwstenen: een dikke wand met ronde rand en ronde koppen (rug en armen als één gestoffeerd vel), draailichaam, lichaam rond een omtrek (zitting, ring, plint), balken en poten, losse kussens, de stof verdeeld over één vel, de schaduw in de plooien (AO) met de naden erin, de export. |
+| `exporteer.mjs` | Schrijft per fauteuil de opbouw uit de motor (de blokken van `bouw3D`) naar `gegevens/<code>.json`. |
+| `uit_motor.py` | Bouwt een fauteuil vanuit die gegevens. De middenlijn, hoogtes, dikte, helling en waaier van de schaal, de omtrek van de zitting, het onderstel en de losse kussens komen uit de motor; Blender voegt de ronde rand, de onderrand, de bolle zitting, de schaduw en de naden toe. |
+| `aanpassingen.py` | Per model wat de productfoto's anders tonen dan de motor (dikte van de rand, vorm van de rand, de zitting ...). Alles wat daar staat, is een benadering uit foto's. |
+| `sullivan.py` | Sullivan, met de hand gemeten op de foto's (de eerste proef): alleen de vorm, de bouwstenen komen uit `zetelbouw.py`. |
+| `overlay.py`, `cameras-sullivan.json` | Legt een bestand met een passende camera over de productfoto's: de omtrek als lijn op de foto, en het model in grijs vanuit hetzelfde standpunt. |
 | `raster.py` | Uitsnede van een foto met een raster in fotopixels, om punten af te lezen (gewone Python met Pillow, zonder Blender). |
 
-## Het model opnieuw maken
+## Een bestand (opnieuw) maken
+
+```bash
+node scripts/blender/exporteer.mjs
+```
+
+```bash
+/tmp/blender-omgeving/bin/python scripts/blender/uit_motor.py manon packages/demo-web/modellen3d/manon.glb
+```
 
 ```bash
 /tmp/blender-omgeving/bin/python scripts/blender/sullivan.py packages/demo-web/modellen3d/sullivan_blender.glb
 ```
 
-Duurt ±20 seconden (het meeste is het bakken van de schaduw). `--zonder-ao` slaat dat over (±2 s, om de vorm te
-proberen), `--ao 2048` maakt de schaduwtextuur fijner. Daarna `npm run build -w @configurator/demo-web`: de bouw sluit
-elk `.glb` uit `modellen3d/` in de gewone demo in.
+Eerst de gegevens uit de motor (alleen nodig als het model in `modellen.ts` veranderd is), dan het bestand. Een bestand
+duurt ±10 seconden (het meeste is het bakken van de schaduw). `--zonder-ao` slaat dat over (±2 s, om de vorm te
+proberen), `--ao 1024` maakt de schaduwtextuur fijner (standaard 512). Daarna `npm run build -w @configurator/demo-web`:
+de bouw sluit elk `.glb` uit `modellen3d/` in de gewone demo in. **Zet geen half afgewerkt bestand in die map.**
 
-De vorm staat bovenaan het script als gegevens, niet als code:
+Welk model welk bestand heeft, staat in `packages/core/voorbeelden/bestanden3d.ts` (met de hoogte van het bestand: het
+script meldt ze). De test `packages/core/test/echt3d.test.ts` loopt elk model met een bestand af: het standaardontwerp
+toont het bestand, de maten kloppen, er ligt geen los bestand in de map, alles samen blijft onder 3 MB.
 
-- `B_ACHTER`, `A_OPZIJ`, `HOEKIG`: de buitenkant van de schaal per hoogte (hoe ver naar achter, hoe ver opzij, hoe
-  vierkant de plattegrond);
-- `RAND`: de hoogte van de rand per hoek, van het midden van de rug (0°) tot de kop van de arm;
-- `DIKTE`, `RUG_DIKKER`, `PLOOI`: de dikte van rug en armen, de rug die dikker is bij de zitting, de plooi waar de arm
-  tegen de rug ligt;
-- `ZIT_PROFIEL`, `RING`, `POOT`, `KRUIS`: de zitting en het onderstel.
+**Een model bijsturen.** Vertrek van wat de motor geeft en zet in `aanpassingen.py` alleen wat de foto's anders tonen:
+per model, of per blok onder de naam na de punt (`rug`, `zitkussen`). De sleutels staan bovenaan dat bestand. Leg het
+resultaat naast de foto's (`overlay.py`, of gewoon naast elkaar) en koppel een bestand alleen als het duidelijk beter is
+dan de bouwstenen.
 
-Het script stelt de maten op het einde bij tot precies de maten van de website (het meldt met welke factor: die hoort
-binnen 1 % te blijven). De test `packages/core/test/echt3d.test.ts` bewaakt het bestand: maten, delen, schaduwtextuur.
+**Sullivan** is anders gemaakt: zijn vorm staat bovenaan `sullivan.py` als gegevens (`B_ACHTER`, `A_OPZIJ`, `HOEKIG` voor
+de buitenkant per hoogte, `RAND` voor de hoogte van de rand per hoek, `DIKTE`, `RUG_DIKKER`, `PLOOI`, `ZIT_PROFIEL`,
+`RING`, `POOT`, `KRUIS`). Het script stelt de maten op het einde bij tot precies de maten van de website.
 
 ## Regels voor een bestand dat de configurator kan tonen
 

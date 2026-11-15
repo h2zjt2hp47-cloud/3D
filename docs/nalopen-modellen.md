@@ -532,6 +532,10 @@ Twee dingen uit die proef gelden ook voor de modellen in onze bouwstenen:
   ±74 % van de hele breedte (in de foto 65 %), op zijn breedst ±90 % (in de foto 85 %). De verhoudingen uit één foto in
   de hoofdstukken hierboven zijn dus ondergrenzen voor wat achteraan staat. Met een teruggerekende camera (zie
   `scripts/blender/LEESMIJ.md`) meet je het juist.
+- **Sinds 15/11 hebben negen fauteuils een 3D-bestand** (Sullivan, Manon, Ross, Fraser, Milton, de drie Mabels en
+  Satie): in de 3D zie je het bestand, met de keuze *Bouwstenen* om de opbouw van de motor te zien. De andere acht
+  bestanden vertrekken van die opbouw en winnen alleen afwerking; Quin, Tumble, Karl, Pebble en de Amusette fauteuil
+  houden de bouwstenen. Tabel en bladen: [Echte 3D-modellen](echte-3d-modellen.md), hoofdstuk *De andere fauteuils*.
 - **De foto's passen niet op alle maten van de website tegelijk.** Houden we 72 breed en 93 hoog, dan is de zetel op
   de foto ±85 cm diep (website 80) en het onderstel ±9 % groter dan bij ons. Houden we ons onderstel en 80 diep, dan
   is hij op de foto ±66 breed en ±85 hoog. De maten van de website gaan voor; het staat bij de vragen voor de klant.

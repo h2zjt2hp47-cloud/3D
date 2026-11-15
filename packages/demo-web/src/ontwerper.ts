@@ -1005,7 +1005,9 @@ function toonWeergave() {
     viewer.formaat();
     // Heeft het model een echt 3D-bestand, dan beslist de motor of het past bij het ontwerp zoals het nu is.
     const model = getModellen().find((x) => x.code === ontwerp.model);
-    const s = bouw3D(ontwerp, getCatalogus(), getMaterialen(), { echt3d: model?.echt3d });
+    // Zit het bestand niet in deze versie (de versie in de huisstijl heeft er geen), dan gewoon de bouwstenen.
+    const bestanden = (window as unknown as { __MODELLEN3D?: Record<string, string> }).__MODELLEN3D ?? {};
+    const s = bouw3D(ontwerp, getCatalogus(), getMaterialen(), { echt3d: model?.echt3d && model.echt3d.bestand in bestanden ? model.echt3d : undefined });
     scene3D = s;
     // In het logboek: wat de 3D te tonen kreeg, als het model of het aantal elementen verandert (niet bij elke
     // sleepbeweging: dat zou het logboek vullen).
@@ -1025,10 +1027,10 @@ let echtAan = true;
 let scene3D: Scene3D | null = null;
 let echtToestand: EchtToestand = 'geen';
 const ECHT_UITLEG: Record<EchtToestand, string> = {
-  getoond: 'Proef: echt 3D-bestand, met onze stof en poten.',
-  laden: 'Echt 3D-model wordt geladen …',
-  benadering: 'Onze benadering met blokken, zoals bij de andere modellen.',
-  fout: 'Het 3D-bestand kon niet geladen worden: we tonen de benadering.',
+  getoond: '3D uit een 3D-bestand, met onze stof en afwerking.',
+  laden: '3D-bestand wordt geladen …',
+  benadering: '3D uit onze bouwstenen, zoals bij de andere modellen.',
+  fout: 'Het 3D-bestand kon niet geladen worden: we tonen de bouwstenen.',
   geen: '',
 };
 function toonEchtVak(s: Scene3D) {
@@ -1037,7 +1039,7 @@ function toonEchtVak(s: Scene3D) {
   document.querySelectorAll<HTMLButtonElement>('[data-echt]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.echt === 'aan') === echtAan)));
   $('#o-3d-echt-tekst').textContent = s.echt
     ? ECHT_UITLEG[echtToestand]
-    : s.echtNiet ? `Echt 3D-model niet getoond: ${s.echtNiet} We tonen de benadering.` : '';
+    : s.echtNiet ? `3D-bestand niet getoond: ${s.echtNiet} We tonen de bouwstenen.` : '';
 }
 
 // ---------- vooraanzicht: klikken, grepen slepen en tekenen ----------
