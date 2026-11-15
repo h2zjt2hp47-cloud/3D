@@ -42,7 +42,7 @@ export interface Ruimte {
 
 export interface Rechthoek { x: number; y: number; b: number; d: number }
 
-export type OpeningSoort = 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang';
+export type OpeningSoort = 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'garagepoort';
 
 export interface Opening {
   id: string;
@@ -540,7 +540,7 @@ export interface PlanMelding {
   opening?: string;
 }
 
-const BUITEN: OpeningSoort[] = ['raam', 'buitendeur', 'schuifraam'];
+const BUITEN: OpeningSoort[] = ['raam', 'buitendeur', 'schuifraam', 'garagepoort'];
 
 export function controleerPlan(plan: Plattegrond): PlanMelding[] {
   const uit: PlanMelding[] = [];
@@ -598,7 +598,7 @@ function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], in
   // Openingen: op een muur, juiste soort muur, niet over elkaar.
   for (const o of plan.openingen) {
     const m = muurVanOpening(o, muren);
-    const wat = o.soort === 'binnendeur' ? 'Binnendeur' : o.soort === 'doorgang' ? 'Doorgang' : o.soort === 'raam' ? 'Raam' : o.soort === 'schuifraam' ? 'Schuifraam' : 'Buitendeur';
+    const wat = o.soort === 'binnendeur' ? 'Binnendeur' : o.soort === 'doorgang' ? 'Doorgang' : o.soort === 'raam' ? 'Raam' : o.soort === 'schuifraam' ? 'Schuifraam' : o.soort === 'garagepoort' ? 'Garagepoort' : 'Buitendeur';
     if (!m) {
       uit.push({ ernst: 'fout', opening: o.id, melding: `${pre}${wat} staat niet (volledig) op een muur. Verschuif of verklein de opening.` });
       continue;
@@ -608,7 +608,7 @@ function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], in
     const vrij = Math.min(o.midden - o.breedte / 2 - m.van, m.tot - o.midden - o.breedte / 2);
     if (vrij < 10) uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${pre}${wat} staat tegen een hoek (minder dan 10 cm muur): moeilijk te plaatsen en af te werken.` });
     if (o.borstwering + o.hoogte > plan.muurhoogte - 15) uit.push({ ernst: 'fout', opening: o.id, melding: `${pre}${wat} is te hoog voor de muur (latei nodig boven de opening).` });
-    if ((o.soort === 'buitendeur' || o.soort === 'schuifraam') && m.soort === 'buiten') ingang.add((m.min ?? m.plus)!);
+    if ((o.soort === 'buitendeur' || o.soort === 'schuifraam' || o.soort === 'garagepoort') && m.soort === 'buiten') ingang.add((m.min ?? m.plus)!);
     if ((o.soort === 'binnendeur' || o.soort === 'doorgang') && m.plus && m.min) verbind(m.plus, m.min);
   }
   for (let i = 0; i < plan.openingen.length; i++) {

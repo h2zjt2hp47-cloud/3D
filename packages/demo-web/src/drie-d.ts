@@ -668,6 +668,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     steen: STEEN, planken: PLANK, tegel: TEGEL, parket: PARKET,
     planken_h: LIGGEND, leien: LEIEN, zink: ZINK, natuursteen: NATUURSTEEN, pleister: PLEISTER,
   };
+  // Structuurlak: de korrel van de pleister, vier keer fijner (korrels van ruim een millimeter).
+  textuurMaat.lak_structuur = { b: 16, h: 16 };
 
   /**
    * UV in wereldmaat (cm) per vlak, zodat stenen en planken hun echte maat houden.
@@ -743,6 +745,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       else if (b.soort === 'tegel') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, map: tegels(b.kleur) });
       else if (b.soort === 'parket') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, map: parket(b.kleur) });
       else if (b.soort === 'kunststof') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.35 });
+      // Gelakt schrijnwerk: mat (dof), structuurlak (dof met een fijne korrel die licht vangt) of glanzend (blanke laklaag die spiegelt).
+      else if (b.soort === 'lak_mat') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 1 });
+      else if (b.soort === 'lak_structuur') { const korrel = pleister(b.kleur); m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, map: korrel, bumpMap: korrel, bumpScale: 0.6 }); }
+      else if (b.soort === 'lak_glans') m = new THREE.MeshPhysicalMaterial({ color: kleur(b.kleur), roughness: 0.1, metalness: 0.55, clearcoat: 1, clearcoatRoughness: 0.03 });
       else if (b.soort === 'dak') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.85 });
       else if (b.soort === 'gevel') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.97 });
       else if (b.soort === 'donker') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.9 });

@@ -15,7 +15,9 @@ export type BlokSoort =
   | 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken'
   | 'tegel' | 'parket' | 'kunststof' | 'matglas'
   // Gevelbekleding: liggende planken, leien, zink met staande naad, natuursteen, sierpleister.
-  | 'planken_h' | 'leien' | 'zink' | 'natuursteen' | 'pleister';
+  | 'planken_h' | 'leien' | 'zink' | 'natuursteen' | 'pleister'
+  // Gelakt schrijnwerk (ramen, deuren): mat, structuurlak met een fijne korrel, of glanzend.
+  | 'lak_mat' | 'lak_structuur' | 'lak_glans';
 
 /** Zijde van een blok (balk), voor een ander materiaal op één zijvlak (bv. baksteen buiten, verf binnen). */
 export type BlokZijde = 'x+' | 'x-' | 'z+' | 'z-' | 'y+';

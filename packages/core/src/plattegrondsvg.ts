@@ -268,6 +268,12 @@ function openingSvg(o: Opening, m: Muur | undefined, opties: PlanSvgOpties, geko
   } else if (o.soort === 'doorgang') {
     delen.push(lijn(a, a, 0, ''), rect(a - 1, a + 1, -half, half, `fill="${kleur}"`), rect(b - 1, b + 1, -half, half, `fill="${kleur}"`));
     delen.push(lijn(a, b, -half, `${stijl} stroke-dasharray="6 6" stroke-width="1.2"`), lijn(a, b, half, `${stijl} stroke-dasharray="6 6" stroke-width="1.2"`));
+  } else if (o.soort === 'garagepoort') {
+    // Sectionale poort: het blad in de opening (buitenkant) en, gestippeld, waar het geopend onder het plafond hangt.
+    delen.push(rect(a, a + 4, -half, half, `fill="${kleur}"`), rect(b - 4, b, -half, half, `fill="${kleur}"`));
+    delen.push(lijn(a + 4, b - 4, -s * Math.max(0, half - 12), `${stijl} stroke-width="4"`));
+    const diep = Math.min(o.hoogte, 240);
+    delen.push(rect(a + 6, b - 6, s > 0 ? half : -half - diep, s > 0 ? half + diep : -half, `fill="none" ${stijl} stroke-dasharray="8 6" stroke-opacity="0.7" stroke-width="1.4"`));
   } else {
     // Deur: kader in de muur, blad en draaicirkel naar de draaikant.
     const k = o.soort === 'buitendeur' && info?.vakken?.[0] ? info.vakken[0] : undefined;

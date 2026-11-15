@@ -44,6 +44,8 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `pebble-schuin` | kuipfauteuil met verdekte voet |
 | `stockholm-schuin` | ronde poef |
 | `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
+| `bouw-stolp`, `bouw-deur-zijlicht`, `bouw-hefschuif`, `bouw-vouwwand`, `bouw-steellook` | de raamtypes van 15/11: een raam van de voorbeeldwoning krijgt met één tegel een andere indeling (stolp, deur met zij- en bovenlicht, hef-schuif 3-delig, vouwwand 4-delig, steellook) |
+| `bouw-garagepoort` | sectionale garagepoort met cassettes en vensters (eigen model, 15/11) |
 | `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame op schuine poten (13/11) |
 | `fraser-schuin` | vier schuine poten met een kruis, zitting in twee lagen, schaal die rond de zitting uitsteekt |
 | `satie-schuin`, `quin-schuin` | trommel tot op de vloer of op een lage voet, met één of vier losse kussens tegen de schaal |
