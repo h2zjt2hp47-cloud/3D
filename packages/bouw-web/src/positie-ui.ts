@@ -12,7 +12,7 @@ import { raamKeuzes } from '../../core/voorbeelden/woning.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
 import { positieScene } from './positie-3d.js';
-import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, wijzig, type Positie } from './staat.js';
+import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, vrijeMuur, wijzig, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -248,7 +248,16 @@ function kiesIndeling(i: Indeling) {
     const p = t.posities.find((x) => x.id === huidigId);
     if (!p || p.model !== 'RAAM') return;
     const oud = String(p.keuzes.type ?? 'raam');
-    p.keuzes = pasIndelingToe(p.keuzes, i);
+    let nieuweKeuzes = pasIndelingToe(p.keuzes, i);
+    // Staat de positie in de plattegrond en is de nieuwe indeling breder dan de vrije muur, dan zo breed als er plaats is
+    // (als de indeling dat toelaat). De opening schuift zelf op tot ze weer op haar muur staat (staat.ts).
+    const opening = t.plan.openingen.find((x) => x.positie === p.id);
+    const vrij = opening ? vrijeMuur(opening) : undefined;
+    if (vrij && typeof nieuweKeuzes.breedte === 'number' && nieuweKeuzes.breedte > (vrij.tot - vrij.van) * 10) {
+      const smaller = { ...nieuweKeuzes, breedte: Math.floor(vrij.tot - vrij.van) * 10 };
+      if (!berekenRaam(smaller).meldingen.some((m) => m.ernst === 'fout')) nieuweKeuzes = smaller;
+    }
+    p.keuzes = nieuweKeuzes;
     // Een naam die met de oude soort begint ("Raam leefruimte") volgt de nieuwe soort; een eigen naam blijft.
     const nieuw = String(p.keuzes.type ?? 'raam');
     const kop = Object.values(SOORTNAAM).find((n) => p.naam === n || p.naam.startsWith(`${n} `));
@@ -347,7 +356,8 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
       if (k.code === 'roeden') tegel.append(roedenBeeld(num(kz.eigenschappen?.kol) || 1, num(kz.eigenschappen?.rij) || 1));
       const reden = el('span', { class: 'reden' });
       const ral = /RAL (\d{4})/.exec(kz.label)?.[1];
-      if (waaier && metKleur) tegel.append(el('span', { class: 'ral', 'aria-hidden': 'true' }, ral ?? ''), el('span', { class: 'verborgen' }, kz.label), reden);
+      // Onder het staal: het RAL-nummer, of bij een houtkleur het eerste woord van de naam.
+      if (waaier && metKleur) tegel.append(el('span', { class: 'ral', 'aria-hidden': 'true' }, ral ?? kz.label.split(' ')[0]!.toLowerCase()), el('span', { class: 'verborgen' }, kz.label), reden);
       else tegel.append(el('span', {}, kz.label), reden);
       groep.append(tegel);
       knoppen.set(kz.code, { knop, tegel, reden });
@@ -363,6 +373,7 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
         kn.knop.checked = w === ks.code;
         kn.tegel.classList.toggle('onbeschikbaar', !ks.beschikbaar);
         kn.reden.textContent = ks.beschikbaar ? '' : ks.reden ?? 'niet mogelijk';
+        kn.tegel.title = ks.beschikbaar ? ks.label : `${ks.label} (${ks.reden ?? 'niet mogelijk'})`;
       }
       gekozen.textContent = `Gekozen: ${s.weergave}`;
     };
@@ -469,6 +480,12 @@ export function herbereken() {
   if (weergave === '3d' && viewer) viewer.toon(scene(p, r));
 
   const lijst = controles(p, r);
+  // Staat de positie in de plattegrond: past de opening nog op haar muur, tussen de hoeken en de openingen ernaast?
+  const opening = openingVan(p), vrij = opening ? vrijeMuur(opening) : undefined;
+  if (opening && vrij) {
+    const plaats = vrij.tot - vrij.van, past = opening.breedte <= plaats + 0.05;
+    lijst.push({ titel: 'Past op de muur in de plattegrond', toestand: past ? 'ok' : 'fout', waarde: `${getal(opening.breedte)} cm / vrije muur ${getal(plaats)} cm`, uitleg: past ? undefined : 'Maak de opening smaller, of maak plaats in de plattegrond.' });
+  }
   $('#p-controles').replaceChildren(...lijst.map(controleLi));
   const nF = lijst.filter((c) => c.toestand === 'fout').length, nL = lijst.filter((c) => c.toestand === 'let-op').length;
   const cs = $('#p-controle-status');

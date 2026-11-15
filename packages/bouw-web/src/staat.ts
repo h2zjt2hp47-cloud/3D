@@ -481,18 +481,43 @@ export function openingNaarPositie(o: Opening, p: Positie) {
   }
 }
 
+/**
+ * De vrije plaats voor een opening op haar muur (cm langs de muur): van 10 cm voorbij de hoek, of 5 cm voorbij de
+ * opening ernaast, tot hetzelfde aan de andere kant. Zo weet de configurator of een bredere indeling nog past.
+ */
+export function vrijeMuur(o: Opening): { van: number; tot: number } | undefined {
+  const m = murenVan(niveauPlan(t.plan, niveauVan(o))).find((x) => x.as === o.as && Math.abs(x.lijn - o.lijn) < 0.5 && x.van <= o.midden && x.tot >= o.midden);
+  if (!m) return undefined;
+  let van = m.van + 10, tot = m.tot - 10;
+  for (const b of t.plan.openingen) {
+    if (b.id === o.id || b.as !== o.as || Math.abs(b.lijn - o.lijn) > 0.5 || niveauVan(b) !== niveauVan(o)) continue;
+    if (b.midden < o.midden) van = Math.max(van, b.midden + b.breedte / 2 + 5);
+    else tot = Math.min(tot, b.midden - b.breedte / 2 - 5);
+  }
+  return { van, tot };
+}
+
+/** Een opening die breder of smaller werd, schuift op tot ze weer op haar muur staat (als ze erop past). */
+function houdOpMuur(o: Opening) {
+  const vrij = vrijeMuur(o);
+  if (vrij && vrij.tot - vrij.van >= o.breedte) o.midden = Math.min(vrij.tot - o.breedte / 2, Math.max(vrij.van + o.breedte / 2, o.midden));
+}
+
 /** Zet maten, soort en draairichting van de positie over naar de opening. */
 export function positieNaarOpening(p: Positie, o: Opening) {
+  const breedteVoor = o.breedte;
   if (p.model === 'POORT') {
     if (typeof p.keuzes.breedte === 'number') o.breedte = p.keuzes.breedte / 10;
     if (typeof p.keuzes.hoogte === 'number') o.hoogte = p.keuzes.hoogte / 10;
     o.soort = 'garagepoort';
     o.borstwering = 0;
+    if (Math.abs(o.breedte - breedteVoor) > 0.05) houdOpMuur(o);
     return;
   }
   if (p.model !== 'RAAM') return;
   const k = p.keuzes;
   if (typeof k.breedte === 'number') o.breedte = k.breedte / 10;
+  if (Math.abs(o.breedte - breedteVoor) > 0.05) houdOpMuur(o);
   if (typeof k.hoogte === 'number') o.hoogte = k.hoogte / 10;
   const type = String(k.type);
   // Schuivende en vouwende delen tekent de plattegrond als schuifraam; een vaste glaswand is een raam tot op de vloer.

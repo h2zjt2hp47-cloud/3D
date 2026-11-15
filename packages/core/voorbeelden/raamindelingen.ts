@@ -76,6 +76,8 @@ const veilig: Record<string, string> = { dubbel: 'dubbel_gelaagd', triple: 'trip
  */
 export function pasIndelingToe(keuzes: Keuzes, indeling: Indeling): Keuzes {
   const k: Keuzes = { ...keuzes, ...INDELING_BASIS, ...indeling.keuzes };
+  // De versterking van de tussenstijl hoort bij de vorige indeling: opnieuw beginnen bij standaard (hieronder zwaarder als het moet).
+  if (k.tussenstijl !== undefined) k.tussenstijl = 'standaard';
   const fouten = (x: Keuzes) => berekenRaam(x).meldingen.filter((m) => m.ernst === 'fout');
   // Maat: eerst de huidige, dan alleen de breedte of de hoogte van de indeling, dan allebei. Wordt een raam een deur of
   // omgekeerd (tot op de vloer of niet), dan geldt de hoogte van de indeling: een deurhoogte is geen raamhoogte.
@@ -91,6 +93,8 @@ export function pasIndelingToe(keuzes: Keuzes, indeling: Indeling): Keuzes {
     k.hoogte = h;
     if (!fouten(k).some((m) => MAATFOUT.test(m.code))) break;
   }
+  // Van een deur (tot op de vloer) naar een raam: een gewone borstwering, niet 0.
+  if (k.type === 'raam' && totVloer(keuzes.type) && !(typeof k.borstwering === 'number' && k.borstwering >= 300)) k.borstwering = 900;
   for (let ronde = 0; ronde < 4; ronde++) {
     const f = fouten(k);
     if (!f.length) break;

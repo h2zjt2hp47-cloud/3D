@@ -414,6 +414,24 @@ describe('kant-en-klare indelingen', () => {
     }
   });
 
+  it('wat de vorige indeling automatisch aanpaste, blijft niet hangen: versterkte stijl en borstwering', () => {
+    const basis = raamKeuzes({ rooster: true, profiel: 'alu_hi' });
+    // Een glaswand vraagt een versterkte stijl; een driedelig raam daarna begint weer bij de standaard stijl.
+    const wand = pasIndelingToe(basis, indeling('glaswand'));
+    expect(wand.tussenstijl).not.toBe('standaard');
+    const daarna = pasIndelingToe(wand, indeling('driedelig'));
+    const rechtstreeks = pasIndelingToe(basis, indeling('driedelig'));
+    expect(daarna.tussenstijl).toBe(rechtstreeks.tussenstijl);
+    expect(raamBlokken(berekenRaam(daarna)).blokken).toEqual(raamBlokken(berekenRaam(rechtstreeks)).blokken);
+    // Een terrasdeur uit de plattegrond heeft borstwering 0; wordt ze een raam, dan staat dat raam niet op de vloer.
+    const deur = raamKeuzes({ type: 'terrasdeur', breedte: 900, hoogte: 2300, borstwering: 0, vak1: 'draai_l', ...gelaagd });
+    const venster = pasIndelingToe(deur, indeling('enkel_dk'));
+    expect([venster.type, venster.borstwering, venster.hoogte]).toEqual(['raam', 900, 1400]);
+    expect(berekenRaam(venster).afgeleid.borst).toBe(900);
+    // Een raam met een eigen borstwering houdt die.
+    expect(pasIndelingToe(raamKeuzes({ borstwering: 1100 }), indeling('driedelig')).borstwering).toBe(1100);
+  });
+
   it('de symbolen van de belangrijkste indelingen (zicht van binnen, punt = scharnierzijde)', () => {
     const symbolen = (code: string) => berekenRaam(pasIndelingToe(raamKeuzes({ rooster: true }), indeling(code))).tekening!.vormen.filter((v) => v.symbool).map((v) => `${v.code}:${v.symbool}`);
     expect(symbolen('enkel_dk')).toEqual(['vak:draaikip_l']);
