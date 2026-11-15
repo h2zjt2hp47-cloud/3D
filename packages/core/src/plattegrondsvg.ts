@@ -20,7 +20,11 @@ import {
 } from './plattegrond.js';
 
 export interface PlanSvgOpties {
-  selectie?: { soort: 'ruimte' | 'opening' | 'meubel'; id: string };
+  selectie?: { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht'; id: string };
+  /** Hellend dak boven deze verdieping: de rand met de oversteek (stippellijn) en de nok of de hoge kant. */
+  dakLijnen?: { omtrek: { x: number; y: number; b: number; d: number }; nok: { x1: number; y1: number; x2: number; y2: number }; tekst: string };
+  /** Lichtstraten krijgen een nok in de tekening: de codes (`type`) die een lichtstraat zijn. */
+  lichtstraten?: Set<string>;
   /** Rechthoek die getekend wordt (nieuwe ruimte). */
   voorbeeld?: { x: number; y: number; b: number; d: number };
   /** Voorbeeld van een nieuwe opening op een muur. */
@@ -120,6 +124,24 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   // Openingen.
   for (const o of plan.openingen) uit.push(openingSvg(o, muurVanOpening(o, muren), opties, sel?.soort === 'opening' && sel.id === o.id, fouten.has(o.id)));
   if (opties.voorbeeldOpening) uit.push(`<g opacity="0.6">${openingSvg(opties.voorbeeldOpening, muurVanOpening(opties.voorbeeldOpening, muren), opties, true, false)}</g>`);
+
+  // Daklichten (boven het snijvlak, dus gestreept): een koepel met een kruis, een lichtstraat met haar nok.
+  for (const l of plan.daklichten ?? []) {
+    const gekozen = sel?.soort === 'daklicht' && sel.id === l.id, fout = fouten.has(l.id);
+    const kleur = fout ? '#c0392b' : gekozen ? '#2f6fd0' : '#3f6d86';
+    const lijn = `stroke="${kleur}" stroke-width="${gekozen || fout ? 2.5 : 1.6}" stroke-dasharray="9 5"`;
+    const binnen = opties.lichtstraten?.has(l.type)
+      ? (l.b >= l.d ? `<line x1="${n(l.x)}" y1="${n(l.y + l.d / 2)}" x2="${n(l.x + l.b)}" y2="${n(l.y + l.d / 2)}" ${lijn}/>` : `<line x1="${n(l.x + l.b / 2)}" y1="${n(l.y)}" x2="${n(l.x + l.b / 2)}" y2="${n(l.y + l.d)}" ${lijn}/>`)
+      : `<line x1="${n(l.x)}" y1="${n(l.y)}" x2="${n(l.x + l.b)}" y2="${n(l.y + l.d)}" ${lijn}/><line x1="${n(l.x + l.b)}" y1="${n(l.y)}" x2="${n(l.x)}" y2="${n(l.y + l.d)}" ${lijn}/>`;
+    uit.push(`<g data-soort="daklicht" data-id="${esc(l.id)}" style="cursor:move"><rect x="${n(l.x)}" y="${n(l.y)}" width="${n(l.b)}" height="${n(l.d)}" fill="#bfe0ee" fill-opacity="${gekozen ? 0.5 : 0.3}" ${lijn}/>${binnen}</g>`);
+  }
+  // Hellend dak: de dakrand met de oversteek en de nok (of de hoge kant van een lessenaar).
+  if (opties.dakLijnen && !opties.afdruk) {
+    const d = opties.dakLijnen, o = d.omtrek, q = d.nok;
+    uit.push(`<g pointer-events="none" fill="none" stroke="#8a5a3c"><rect x="${n(o.x)}" y="${n(o.y)}" width="${n(o.b)}" height="${n(o.d)}" stroke-width="1.4" stroke-dasharray="14 8"/>`
+      + `<line x1="${n(q.x1)}" y1="${n(q.y1)}" x2="${n(q.x2)}" y2="${n(q.y2)}" stroke-width="2" stroke-dasharray="22 6 4 6"/></g>`
+      + `<text x="${n(q.x1 + (q.y1 === q.y2 ? 18 * k : 8 * k))}" y="${n(q.y1 + (q.y1 === q.y2 ? -8 * k : 24 * k))}" font-size="${n(15 * k)}" fill="#8a5a3c" pointer-events="none">${esc(d.tekst)}</text>`);
+  }
 
   // Namen en oppervlaktes.
   for (const r of plan.ruimtes) {

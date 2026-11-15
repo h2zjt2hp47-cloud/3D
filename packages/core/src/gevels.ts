@@ -3,8 +3,11 @@
  * en deuren (gezien van buiten), zonweringskasten, dakranden en kettingmaten (maten tussen de ramen).
  * Resultaat als TekeningResultaat, zodat tekenSvg ze tekent (scherm en afdruk).
  */
+import { DAK_BEDEKKING, DAK_OPBOUW, OPSTAND_HOOGTE, OPSTAND_RAND, dakHoogte, gevelOnderDak, oppervlakOnderDak } from './dak.js';
 import {
   buitenKant,
+  dakAfwerking,
+  dakOpbouw,
   delenVan,
   gevelAfwerking,
   gevelKeuzeVan,
@@ -95,6 +98,10 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
   const t = plan.buitenmuur / 2;
   const sokkel = plan.gevelOntwerp?.sokkel && plan.gevelOntwerp.sokkel.hoogte > 0 ? plan.gevelOntwerp.sokkel : undefined;
   const sokkelAfw = sokkel ? gevelAfwerking(plan, cat, sokkel) : undefined;
+  // Dak: het hellende dak op de bovenste verdieping, en de daklichten op de platte daken.
+  const dak = dakOpbouw(plan);
+  const hellend = dak?.hellend;
+  const dakAfw = dak ? dakAfwerking(cat, dak.keuze.bedekking) : undefined;
 
   // Van planpositie langs de muur naar x in het aanzicht (gezien van buiten, links → rechts).
   const naarU: Record<GevelKant, (v: number) => number> = {
@@ -137,6 +144,28 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
           vormen.push({ code: `sokkel.${n}.${m.id}`, x: r1(u0), y: sy(sokkel.hoogte), breedte: r1(u1 - u0), hoogte: sokkel.hoogte, vulling: sokkelAfw.kleur, lijn: '#55524c', ...patroonVan(sokkelAfw) });
           vlakken.push({ code: `sokkel.${n}.${m.id}`, sleutel: vlakSleutel(m), niveau: n, muur: m.id, ruimte, sokkel: true });
         }
+        // Onder een hellend dak loopt de muur door tot tegen het dak: de topgevel hoort bij hetzelfde muurvlak.
+        if (hellend && dak && n === dak.top) {
+          const code = `topgevel.${n}.${m.id}`;
+          if ((m.as === 'h') !== (hellend.nokAs === 'x')) {
+            const punten = gevelOnderDak(hellend, Math.max(m.van - t, hellend.p0), Math.min(m.tot + t, hellend.p1)).map(([a, h]) => [naarU[kant](a), sy(y0 + H + h)] as const);
+            if (punten.length) {
+              const us = punten.map((q) => q[0]), ys = punten.map((q) => q[1]);
+              vormen.push({
+                code, x: r1(Math.min(...us)), y: Math.min(...ys), breedte: r1(Math.max(...us) - Math.min(...us)), hoogte: r1(Math.max(...ys) - Math.min(...ys)),
+                pad: `M ${punten.map(([u, y]) => `${r1(u)} ${y}`).join(' L ')} Z`, vulling: afw.kleur, lijn: '#55524c', ...patroonVan(afw),
+              });
+              vlakken.push({ code, sleutel: vlakSleutel(m), niveau: n, muur: m.id, ruimte });
+            }
+          } else {
+            // Muur langs de nok: alleen de hoge gevel van een lessenaar komt boven de dakvoet uit.
+            const h = Math.max(0, dakHoogte(hellend, m.lijn + (m.plus ? -1 : 1) * (m.dikte / 2)));
+            if (h > 0.5) {
+              vormen.push({ code, x: r1(u0), y: sy(y0 + H + h), breedte: r1(u1 - u0), hoogte: r1(h), vulling: afw.kleur, lijn: '#55524c', ...patroonVan(afw) });
+              vlakken.push({ code, sleutel: vlakSleutel(m), niveau: n, muur: m.id, ruimte });
+            }
+          }
+        }
         // Ramen en deuren in deze muur.
         for (const o of p.openingen.filter((x) => muurVanOpening(x, [m]) === m)) {
           const i = info(o) ?? {};
@@ -163,6 +192,8 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
 
     // Dakrand boven elk stuk dat niet onder een hogere verdieping ligt.
     segmentenPerNiveau.forEach((segs, n) => {
+      // Onder een hellend dak staat geen dakrand.
+      if (hellend && dak && n === dak.top) return;
       const boven = segmentenPerNiveau[n + 1] ?? [];
       for (const [u0, u1] of segs) {
         let vrij: [number, number][] = [[u0, u1]];
@@ -176,6 +207,54 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
         for (const [a, b] of vrij) vormen.push({ code: `dakrand.${n}.${a}`, x: r1(a - 3), y: sy(vloerHoogte(plan, n) + H + VLOERDIKTE), breedte: r1(b - a + 6), hoogte: VLOERDIKTE, vulling: '#2b2b2b' });
       }
     });
+    // Daklichten op de platte daken: opstand en glas boven de dakrand (niet als een hogere verdieping ervoor staat).
+    for (const { licht: l, reden } of dak?.daklichten ?? []) {
+      if (reden) continue;
+      const n = niveauVan(l);
+      const [a0, a1] = as === 'h' ? [l.x, l.x + l.b] : [l.y, l.y + l.d];
+      const ervoor = plan.ruimtes.filter((r) => niveauVan(r) > n).flatMap(delenVan).some((q) => {
+        const [q0, q1] = as === 'h' ? [q.x, q.x + q.b] : [q.y, q.y + q.d];
+        if (Math.min(q1, a1) - Math.max(q0, a0) < 1) return false;
+        return kant === 'boven' ? q.y < l.y : kant === 'onder' ? q.y + q.d > l.y + l.d : kant === 'links' ? q.x < l.x : q.x + q.b > l.x + l.b;
+      });
+      if (ervoor) continue;
+      const u0 = Math.min(naarU[kant](a0), naarU[kant](a1)), b = a1 - a0;
+      const yd = vloerHoogte(plan, n) + H + VLOERDIKTE;
+      const bol = cat?.daklichten?.[l.type]?.vorm === 'lichtstraat' ? 24 : Math.min(30, Math.max(16, Math.min(l.b, l.d) * 0.28));
+      vormen.push({ code: `daklicht.${l.id}.opstand`, x: r1(u0 - OPSTAND_RAND), y: sy(yd + OPSTAND_HOOGTE), breedte: r1(b + 2 * OPSTAND_RAND), hoogte: OPSTAND_HOOGTE, vulling: '#cfcdc7', lijn: '#55524c' });
+      vormen.push({ code: `daklicht.${l.id}.glas`, x: r1(u0 - OPSTAND_RAND + 1), y: sy(yd + OPSTAND_HOOGTE + bol), breedte: r1(b + 2 * OPSTAND_RAND - 2), hoogte: r1(bol), afronding: Math.min(12, bol / 2), vulling: '#cfe0e6', lijn: '#55524c' });
+    }
+    // Hellend dak: in doorsnede aan de kant van de topgevel, als vlak aan de kant van de dakvoet.
+    if (hellend && dak && dakAfw && segmentenPerNiveau[dak.top]?.length) {
+      const yb = vloerHoogte(plan, dak.top) + H, o = hellend.oversteek;
+      const dikte = (DAK_OPBOUW + DAK_BEDEKKING) / Math.cos((hellend.helling * Math.PI) / 180);
+      const pa = hellend.p0 - o, pb = hellend.p1 + o;
+      const patroon = ['pannen', 'leien', 'zink'].includes(dakAfw.soort) ? { patroon: dakAfw.soort, patroonKleur: donker(dakAfw.kleur, 0.62) } : {};
+      if ((as === 'h') !== (hellend.nokAs === 'x')) {
+        const onder: [number, number][] = hellend.vorm === 'zadel'
+          ? [[pa, dakHoogte(hellend, pa)], [hellend.nokP, hellend.nok], [pb, dakHoogte(hellend, pb)]]
+          : [[pa, dakHoogte(hellend, pa)], [pb, dakHoogte(hellend, pb)]];
+        const punten = [
+          ...onder.map(([p, h]) => [naarU[kant](p), sy(yb + h)] as const),
+          ...[...onder].reverse().map(([p, h]) => [naarU[kant](p), sy(yb + h + dikte)] as const),
+        ];
+        const us = punten.map((q) => q[0]), ys = punten.map((q) => q[1]);
+        vormen.push({
+          code: 'dak.doorsnede', x: r1(Math.min(...us)), y: Math.min(...ys), breedte: r1(Math.max(...us) - Math.min(...us)), hoogte: r1(Math.max(...ys) - Math.min(...ys)),
+          pad: `M ${punten.map(([u, y]) => `${r1(u)} ${y}`).join(' L ')} Z`, vulling: dakAfw.kleur, lijn: '#2b2b28',
+        });
+      } else {
+        const u0 = Math.min(naarU[kant](hellend.q0 - o), naarU[kant](hellend.q1 + o)), b = hellend.q1 - hellend.q0 + 2 * o;
+        if (hellend.vorm === 'zadel' || dak.keuze.richting === kant) {
+          // Kant van de dakvoet: je kijkt op het dakvlak, van de onderkant van de oversteek tot de nok.
+          vormen.push({ code: 'dak.vlak', x: r1(u0), y: sy(yb + hellend.top), breedte: r1(b), hoogte: r1(hellend.top + o * hellend.tan), vulling: dakAfw.kleur, lijn: '#2b2b28', ...patroon });
+        } else {
+          // Hoge kant van een lessenaar: alleen de rand van het dak is te zien.
+          const onder = yb + dakHoogte(hellend, hellend.nokP + (hellend.nokP > hellend.voetP ? o : -o));
+          vormen.push({ code: 'dak.rand', x: r1(u0), y: sy(onder + dikte), breedte: r1(b), hoogte: r1(dikte), vulling: '#3f3e3b', lijn: '#2b2b28' });
+        }
+      }
+    }
     // Maaiveld.
     vormen.push({ code: 'maaiveld', x: r1(umin - 80), y: sy(0), breedte: r1(umax - umin + 160), hoogte: 4, vulling: '#6b6862' });
 
@@ -208,7 +287,12 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
     maatlijnen.push({ code: 'totaal', x1: r1(umax), y1: sy(0), x2: r1(umin), y2: sy(0), afstand, tekst: `${Math.round(umax - umin)}` });
     // Hoogtes rechts: vloer per verdieping en de dakrand.
     const hoogtes = [0];
-    for (let n = 0; n < niveaus; n++) if (segmentenPerNiveau[n]?.length) hoogtes.push(vloerHoogte(plan, n) + H + VLOERDIKTE);
+    for (let n = 0; n < niveaus; n++) {
+      if (!segmentenPerNiveau[n]?.length) continue;
+      // Onder een hellend dak: tot de dakvoet (bovenkant muur) en dan tot de nok.
+      if (hellend && dak && n === dak.top) hoogtes.push(vloerHoogte(plan, n) + H, vloerHoogte(plan, n) + H + Math.round(hellend.top));
+      else hoogtes.push(vloerHoogte(plan, n) + H + VLOERDIKTE);
+    }
     for (let i = 0; i + 1 < hoogtes.length; i++) {
       maatlijnen.push({ code: `hoogte.${i}`, x1: r1(umax), y1: sy(hoogtes[i + 1]!), x2: r1(umax), y2: sy(hoogtes[i]!), afstand: 70, tekst: `${Math.round(hoogtes[i + 1]! - hoogtes[i]!)}` });
     }
@@ -243,6 +327,11 @@ export interface GevelOppervlak {
   netto: number;
   /** Netto m² sokkel (alleen gelijkvloers). */
   sokkel: number;
+  /**
+   * Het deel van `netto` boven de dakvoet, onder een hellend dak (m²): de topgevel, of de hoge gevel van een
+   * lessenaarsdak. Ontbreekt zonder hellend dak.
+   */
+  topgevel?: number;
 }
 
 /**
@@ -266,13 +355,25 @@ export function gevelOppervlaktes(plan: Plattegrond): GevelOppervlak[] {
   const uit: GevelOppervlak[] = [];
   const H = plan.muurhoogte;
   const sokkelH = plan.gevelOntwerp?.sokkel?.hoogte ?? 0;
+  const dak = dakOpbouw(plan);
   verdiepingenVan(plan).forEach((_, n) => {
     const p = niveauPlan(plan, n);
     const muren = murenVan(p);
+    const hellend = dak?.hellend && n === dak.top ? dak.hellend : undefined;
     for (const m of muren) {
       const kant = buitenKant(m);
       if (!kant) continue;
       const lengte = buitenLengte(m, muren);
+      // Onder een hellend dak loopt de gevel door tot tegen het dak (cm²).
+      let top = 0;
+      if (hellend && (m.as === 'h') !== (hellend.nokAs === 'x')) {
+        // Topgevel: van buitenhoek tot buitenhoek, tot onder het schuine dak.
+        const hoek = (q: number) => muren.some((x) => x.as !== m.as && x.soort === 'buiten' && Math.abs(x.lijn - q) < 0.5 && (Math.abs(x.van - m.lijn) < 0.5 || Math.abs(x.tot - m.lijn) < 0.5));
+        top = oppervlakOnderDak(hellend, m.van - (hoek(m.van) ? m.dikte / 2 : 0), m.tot + (hoek(m.tot) ? m.dikte / 2 : 0));
+      } else if (hellend) {
+        // Muur langs de nok: alleen de hoge gevel van een lessenaar komt boven de dakvoet uit.
+        top = lengte * Math.max(0, dakHoogte(hellend, m.lijn + (m.plus ? -1 : 1) * (m.dikte / 2)));
+      }
       const h = H + (n > 0 ? VLOERDIKTE : 0);
       const sh = n === 0 ? Math.min(sokkelH, h) : 0;
       let open = 0, openSokkel = 0;
@@ -283,8 +384,9 @@ export function gevelOppervlaktes(plan: Plattegrond): GevelOppervlak[] {
       const bruto = lengte * h, sokkelBruto = lengte * sh;
       uit.push({
         sleutel: vlakSleutel(m), niveau: n, kant, keuze: gevelKeuzeVan(plan, m), lengte: lengte / 100,
-        netto: Math.max(0, bruto - sokkelBruto - (open - openSokkel)) / 10000,
+        netto: Math.max(0, bruto + top - sokkelBruto - (open - openSokkel)) / 10000,
         sokkel: Math.max(0, sokkelBruto - openSokkel) / 10000,
+        ...(top > 0 ? { topgevel: top / 10000 } : {}),
       });
     }
   });

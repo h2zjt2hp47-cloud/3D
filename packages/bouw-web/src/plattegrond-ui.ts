@@ -4,6 +4,8 @@
  */
 import {
   controleerPlan,
+  DAKLICHT_GLAS,
+  dakOpbouw,
   delenVan,
   meubelAfstanden,
   openingAfstanden,
@@ -22,6 +24,7 @@ import {
   ruimteMaten,
   ruimteOp,
   tekenPlattegrond,
+  type DakLicht,
   type Keuzes,
   type Meubel,
   type Opening,
@@ -37,6 +40,7 @@ import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
+import { dakLijnen, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 
 export { gevelSvgs } from './gevel-ui.js';
@@ -52,8 +56,8 @@ import {
   wijzig,
 } from './staat.js';
 
-type Gereedschap = 'kies' | 'ruimte' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'meubel';
-type Selectie = { soort: 'ruimte' | 'opening' | 'meubel'; id: string } | undefined;
+type Gereedschap = 'kies' | 'ruimte' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
+type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht'; id: string } | undefined;
 
 const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
   { code: 'kies', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
@@ -67,10 +71,14 @@ const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: stri
   { code: 'binnendeur', label: 'Binnendeur', toets: 'D', hint: 'Klik op een binnenmuur. Draairichting wissel je in de eigenschappen.' },
   { code: 'doorgang', label: 'Doorgang (zonder deur)', toets: '', hint: 'Klik op een binnenmuur.' },
   { code: 'meubel', label: 'Meubel', toets: 'M', hint: 'Kies een meubel hieronder en klik in de plattegrond.' },
+  { code: 'daklicht', label: 'Lichtkoepel of lichtstraat', toets: 'K', hint: 'Kies een maat hieronder en klik in een ruimte zonder verdieping erboven. Het dak moet daar plat zijn.' },
 ];
 
 let gereedschap: Gereedschap = 'kies';
 let meubelType = 'bank3';
+let daklichtType = 'koepel_100';
+/** Dak op de bovenste verdieping tonen in de 3D (uit = erin kijken). */
+let toonDakIn3D = true;
 let selectie: Selectie;
 let viewBox: { x: number; y: number; b: number; d: number } | undefined;
 let zoom: Zoom | undefined;
@@ -91,7 +99,7 @@ let naarOfferte: () => void = () => {};
 let naarProjecten: () => void = () => {};
 
 interface Sleep {
-  soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'opening' | 'meubel';
+  soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'opening' | 'meubel' | 'daklicht';
   start: { x: number; y: number };
   id?: string;
   kant?: 'n' | 's' | 'w' | 'o';
@@ -148,6 +156,10 @@ function selectieKader(): Kader | undefined {
     const m = pl.meubels.find((x) => x.id === s.id);
     return m ? meubelVoetafdruk(m) : undefined;
   }
+  if (s.soort === 'daklicht') {
+    const l = pl.daklichten?.find((x) => x.id === s.id);
+    return l ? { x: l.x, y: l.y, b: l.b, d: l.d } : undefined;
+  }
   const o = pl.openingen.find((x) => x.id === s.id);
   if (!o) return undefined;
   return o.as === 'h' ? { x: o.midden - o.breedte / 2, y: o.lijn - 40, b: o.breedte, d: 80 } : { x: o.lijn - 40, y: o.midden - o.breedte / 2, b: 80, d: o.breedte };
@@ -165,7 +177,7 @@ function raamInfo(o: Opening) {
 
 function fouten(): Set<string> {
   const s = new Set<string>();
-  for (const m of controleerPlan(toestand().plan)) if (m.ernst === 'fout') { if (m.ruimte) s.add(m.ruimte); if (m.opening) s.add(m.opening); }
+  for (const m of controleerPlan(toestand().plan, cat)) if (m.ernst === 'fout') { if (m.ruimte) s.add(m.ruimte); if (m.opening) s.add(m.opening); if (m.daklicht) s.add(m.daklicht); }
   for (const o of plan().openingen) {
     const p = positieVan(o);
     if (p && !resultaat(p).geldig) s.add(o.id);
@@ -177,7 +189,7 @@ export function render() {
   const houder = $('#pl-canvas');
   const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   viewBox = zoom ? zoom.kijkvak() : passendKader();
-  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu() });
+  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(), dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN });
   zoom?.bijwerken();
   const zi = document.getElementById('pl-zoomhint');
   if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
@@ -221,6 +233,7 @@ function toonNiveaus() {
         t.plan.ruimtes = t.plan.ruimtes.filter((r) => niveauVan(r) !== n);
         t.plan.openingen = t.plan.openingen.filter((o) => niveauVan(o) !== n);
         t.plan.meubels = t.plan.meubels.filter((m) => niveauVan(m) !== n);
+        if (t.plan.daklichten) t.plan.daklichten = t.plan.daklichten.filter((l) => niveauVan(l) !== n);
         t.plan.verdiepingen = verdiepingenVan(t.plan).slice(0, n);
       });
       niveau = n - 1;
@@ -254,6 +267,8 @@ function nieuweVerdieping() {
 
 let wachtend3D = false;
 function plan3D() {
+  // De schakelaar "Dak tonen" heeft alleen zin met een dakkeuze.
+  $('#pl-toon-dak-label').hidden = !heeftDak();
   if (!viewer || wachtend3D) return;
   wachtend3D = true;
   requestAnimationFrame(() => {
@@ -261,6 +276,7 @@ function plan3D() {
     viewer?.toon(plattegrond3D(toestand().plan, cat, {
       laag: laag ? 110 : undefined,
       meubels: toonMeubels,
+      dak: toonDakIn3D,
       totNiveau: alleNiveaus && !laag ? undefined : niveau,
       inhoud: (o) => {
         const p = positieVan(o);
@@ -404,6 +420,28 @@ function splits(x: number, y: number, staand: boolean) {
   deelMetWand(staand ? 'v' : 'h', lijn, staand ? y : x, staand ? y : x);
 }
 
+/** Plaatst een lichtkoepel of lichtstraat met het midden op de klik; alleen op een plat dak, volledig boven één ruimte. */
+function plaatsDaklicht(x: number, y: number) {
+  const type = cat.daklichten?.[daklichtType];
+  if (!type) return;
+  const l: DakLicht = { id: nieuweId('k'), type: daklichtType, x: snap(x - type.b / 2, fijn()), y: snap(y - type.d / 2, fijn()), b: type.b, d: type.d, niveau };
+  // Proef op een kopie: ligt hij op een plat dak?
+  const proef = structuredClone(toestand().plan);
+  (proef.daklichten ??= []).push(l);
+  const reden = dakOpbouw(proef)?.daklichten.find((q) => q.licht.id === l.id)?.reden;
+  voorbeeld = undefined;
+  if (reden) {
+    melding = `Hier kan geen ${type.label.toLowerCase()}: hij ${reden}`;
+    render();
+    toonEigenschappen();
+    return;
+  }
+  wijzig('plan', (t) => { metDak(t); (t.plan.daklichten ??= []).push(l); });
+  selectie = { soort: 'daklicht', id: l.id };
+  melding = '';
+  kiesGereedschap('kies');
+}
+
 /** Deelt alle ruimtes die een wand kruist; minstens 60 cm aan elke kant. */
 function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number) {
   let nieuw: Ruimte[] = [];
@@ -447,6 +485,7 @@ function naPointerDown(ev: PointerEvent) {
     kiesGereedschap('kies');
     return;
   }
+  if (gereedschap === 'daklicht') { plaatsDaklicht(p.x, p.y); return; }
   if (gereedschap !== 'kies') { plaatsOpening(gereedschap, p.x, p.y); return; }
 
   const greep = doel.closest('[data-greep]') as SVGElement | null;
@@ -454,8 +493,8 @@ function naPointerDown(ev: PointerEvent) {
   const orig = JSON.stringify(plan());
   if (greep && selectie?.soort === 'ruimte') {
     sleep = { soort: 'greep', start: p, id: selectie.id, kant: greep.dataset.greep as Sleep['kant'], bewogen: false, orig };
-  } else if (item && ['ruimte', 'opening', 'meubel'].includes(item.dataset.soort ?? '')) {
-    const soort = item.dataset.soort as 'ruimte' | 'opening' | 'meubel';
+  } else if (item && ['ruimte', 'opening', 'meubel', 'daklicht'].includes(item.dataset.soort ?? '')) {
+    const soort = item.dataset.soort as 'ruimte' | 'opening' | 'meubel' | 'daklicht';
     selectie = { soort, id: item.dataset.id! };
     sleep = { soort, start: p, id: item.dataset.id!, bewogen: false, orig };
     melding = '';
@@ -484,6 +523,12 @@ function naPointerMove(ev: PointerEvent) {
     if (['raam', 'buitendeur', 'schuifraam', 'binnendeur', 'doorgang'].includes(gereedschap)) {
       const r = openingOp(gereedschap as OpeningSoort, p.x, p.y);
       voorbeeldOpening = r && !r.fout ? r.opening : undefined;
+      render();
+    }
+    // Voorbeeld van een lichtkoepel onder de muisaanwijzer.
+    if (gereedschap === 'daklicht') {
+      const type = cat.daklichten?.[daklichtType];
+      voorbeeld = type ? { x: snap(p.x - type.b / 2, fijn()), y: snap(p.y - type.d / 2, fijn()), b: type.b, d: type.d } : undefined;
       render();
     }
     return;
@@ -515,6 +560,10 @@ function naPointerMove(ev: PointerEvent) {
       const m0 = oud.meubels.find((m) => m.id === id)!, m = pl.meubels.find((x) => x.id === id)!;
       m.x = snap(m0.x + dx, fijn()); m.y = snap(m0.y + dy, fijn());
     }
+    if (sleep!.soort === 'daklicht') {
+      const l0 = oud.daklichten?.find((l) => l.id === id), l = pl.daklichten?.find((x) => x.id === id);
+      if (l0 && l) { l.x = snap(l0.x + dx, fijn()); l.y = snap(l0.y + dy, fijn()); }
+    }
     if (sleep!.soort === 'opening') {
       const o0 = oud.openingen.find((o) => o.id === id)!, o = pl.openingen.find((x) => x.id === id)!;
       const muur = muurVanOpening(o0, murenVan(oud));
@@ -537,6 +586,12 @@ function naPointerMove(ev: PointerEvent) {
           const m = pl.meubels.find((x) => x.id === m0.id)!;
           m.x = m0.x + ddx; m.y = m0.y + ddy;
         }
+      }
+      // Lichtkoepels boven de ruimte ook.
+      for (const l0 of oud.daklichten ?? []) {
+        if (!binnenR0(l0.x + l0.b / 2, l0.y + l0.d / 2)) continue;
+        const l = pl.daklichten?.find((x) => x.id === l0.id);
+        if (l) { l.x = l0.x + ddx; l.y = l0.y + ddy; }
       }
       for (const o0 of oud.openingen) {
         const opRand = delenVan(r0).some((q) => (o0.as === 'h'
@@ -636,6 +691,7 @@ function verwijderSelectie() {
   wijzig('plan', (t) => {
     if (s.soort === 'ruimte') t.plan.ruimtes = t.plan.ruimtes.filter((r) => r.id !== s.id);
     if (s.soort === 'meubel') t.plan.meubels = t.plan.meubels.filter((m) => m.id !== s.id);
+    if (s.soort === 'daklicht') t.plan.daklichten = t.plan.daklichten?.filter((l) => l.id !== s.id);
     if (s.soort === 'opening') {
       const o = t.plan.openingen.find((x) => x.id === s.id);
       if (o?.positie) t.posities = t.posities.filter((p) => p.id !== o.positie);
@@ -791,6 +847,32 @@ function toonEigenschappen() {
     const r = el('div', { class: 'knoppenrij' });
     r.append(knop('Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
     vak.append(r);
+  } else if (s?.soort === 'daklicht') {
+    const l = pl.daklichten?.find((x) => x.id === s.id);
+    if (!l) { selectie = undefined; return toonEigenschappen(); }
+    const type = cat.daklichten?.[l.type];
+    const zet = (f: (x: DakLicht) => void) => wijzig('plan', (tt) => { const x = tt.plan.daklichten?.find((y) => y.id === l.id); if (x) f(x); });
+    vak.append(el('h3', {}, type?.vorm === 'lichtstraat' ? 'Lichtstraat' : 'Lichtkoepel'));
+    const rij = el('label', { class: 'eig' });
+    rij.append(el('span', {}, 'Maat'), keuzelijst('pl-daklicht-type', Object.entries(cat.daklichten ?? {}).map(([k, v]) => [k, v.label]), l.type, (w) => zet((x) => {
+      // Andere maat: het midden blijft op zijn plaats.
+      const nieuw = cat.daklichten?.[w];
+      if (!nieuw) return;
+      const cx = x.x + x.b / 2, cy = x.y + x.d / 2;
+      Object.assign(x, { type: w, b: nieuw.b, d: nieuw.d, x: snap(cx - nieuw.b / 2, 5), y: snap(cy - nieuw.d / 2, 5) });
+    })));
+    vak.append(rij);
+    const reden = dakOpbouw(toestand().plan)?.daklichten.find((x) => x.licht.id === l.id)?.reden;
+    if (reden) vak.append(el('p', { class: 'kleinmelding fout' }, `Kan hier niet: hij ${reden}`));
+    const onder = ruimteOp(pl, l.x + l.b / 2, l.y + l.d / 2);
+    vak.append(el('p', { class: 'klein' }, `Opening ${getal(l.b)} × ${getal(l.d)} cm${onder ? ` boven ${onder.naam}` : ''}. Telt mee voor het daglicht: ongeveer ${getal((l.b * l.d * DAKLICHT_GLAS) / 10000, 2)} m² glas.`));
+    const r = el('div', { class: 'knoppenrij' });
+    if (l.b !== l.d) r.append(knop('Draaien 90°', () => zet((x) => {
+      const cx = x.x + x.b / 2, cy = x.y + x.d / 2;
+      Object.assign(x, { b: x.d, d: x.b, x: snap(cx - x.d / 2, 5), y: snap(cy - x.b / 2, 5) });
+    })));
+    r.append(knop('Verwijderen', verwijderSelectie, 'gevaar'));
+    vak.append(r);
   } else {
     vak.append(el('h3', {}, 'Woning'));
     const zet = (f: (p: Plattegrond) => void) => wijzig('plan', (t) => f(t.plan));
@@ -814,6 +896,7 @@ function toonEigenschappen() {
 }
 
 function toonOverzicht() {
+  toonDak();
   const pl = plan();
   const muren = murenVan(pl);
   const tb = $('#pl-ruimtes tbody');
@@ -831,7 +914,7 @@ function toonOverzicht() {
   const totaal = alles.ruimtes.reduce((t, r) => t + ruimteMaten(alles, r).netto, 0);
   const n = verdiepingenVan(alles).length;
   $('#pl-totaal').textContent = `${verdiepingenVan(alles)[niveau]?.naam}: ${getal(netto, 1)} m² netto · ${getal(bruto, 1)} m² bruto${n > 1 ? ` · woning ${getal(totaal, 1)} m² netto` : ''} · ${alles.openingen.filter((o) => o.positie).length} ramen en buitendeuren`;
-  const meldingen = controleerPlan(alles);
+  const meldingen = controleerPlan(alles, cat);
   for (const o of alles.openingen) {
     const p = positieVan(o);
     if (p) for (const m of resultaat(p).meldingen) meldingen.push({ ernst: m.ernst, melding: `${p.code}: ${m.melding}`, opening: o.id });
@@ -839,13 +922,13 @@ function toonOverzicht() {
   meldingen.sort((a, b) => (a.ernst === b.ernst ? 0 : a.ernst === 'fout' ? -1 : 1));
   $('#pl-meldingen').replaceChildren(...meldingen.map((m) => {
     const li = el('li', { class: m.ernst }, m.melding);
-    const id = m.opening ?? m.ruimte;
+    const id = m.opening ?? m.daklicht ?? m.ruimte;
     if (id) {
       li.style.cursor = 'pointer';
       li.addEventListener('click', () => {
-        const item = m.opening ? alles.openingen.find((o) => o.id === id) : alles.ruimtes.find((r) => r.id === id);
+        const item = m.opening ? alles.openingen.find((o) => o.id === id) : m.daklicht ? alles.daklichten?.find((l) => l.id === id) : alles.ruimtes.find((r) => r.id === id);
         if (item) niveau = niveauVan(item);
-        selectie = { soort: m.opening ? 'opening' : 'ruimte', id };
+        selectie = { soort: m.opening ? 'opening' : m.daklicht ? 'daklicht' : 'ruimte', id };
         render();
         toonEigenschappen();
       });
@@ -868,6 +951,8 @@ function kiesGereedschap(g: Gereedschap) {
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === g));
   $('#pl-hint').textContent = GEREEDSCHAP.find((x) => x.code === g)?.hint ?? '';
   $('#pl-meubels').hidden = g !== 'meubel';
+  $('#pl-daklichten').hidden = g !== 'daklicht';
+  voorbeeld = undefined;
   render();
   toonEigenschappen();
 }
@@ -934,6 +1019,23 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     }
     return d;
   }));
+  // Palet met lichtkoepels en lichtstraten (vaste maten uit de catalogus).
+  const koepels = $('#pl-daklichten');
+  const koepelGroepen = [...new Set(Object.values(cat.daklichten ?? {}).map((t) => t.groep))];
+  koepels.replaceChildren(...koepelGroepen.map((g) => {
+    const d = el('div', { class: 'palet' });
+    d.append(el('p', { class: 'klein' }, g));
+    for (const [code, t] of Object.entries(cat.daklichten ?? {}).filter(([, t]) => t.groep === g)) {
+      const b = el('button', { type: 'button', 'data-daklicht': code, 'aria-pressed': String(code === daklichtType) }, t.label);
+      b.addEventListener('click', () => {
+        daklichtType = code;
+        for (const x of koepels.querySelectorAll<HTMLButtonElement>('[data-daklicht]')) x.setAttribute('aria-pressed', String(x.dataset.daklicht === code));
+        kiesGereedschap('daklicht');
+      });
+      d.append(b);
+    }
+    return d;
+  }));
   const houder = $('#pl-canvas');
   zoom = new Zoom({
     doel: houder,
@@ -958,12 +1060,15 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   houder.addEventListener('pointerdown', naPointerDown);
   houder.addEventListener('pointermove', naPointerMove);
   houder.addEventListener('pointerup', naPointerUp);
-  houder.addEventListener('pointerleave', () => { if (voorbeeldOpening) { voorbeeldOpening = undefined; render(); } });
+  houder.addEventListener('pointerleave', () => {
+    if (voorbeeldOpening || (gereedschap === 'daklicht' && voorbeeld)) { voorbeeldOpening = undefined; voorbeeld = undefined; render(); }
+  });
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | 'gevels' | '3d'));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.plStandpunt as 'schuin'));
   $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => { laag = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
+  $<HTMLInputElement>('#pl-toon-dak').addEventListener('change', (e) => { toonDakIn3D = (e.target as HTMLInputElement).checked; plan3D(); });
   $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
   $('#pl-ongedaan').addEventListener('click', () => ongedaan());
   $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());
@@ -979,6 +1084,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       const weg = new Set(t.plan.openingen.map((o) => o.positie).filter(Boolean));
       t.posities = t.posities.filter((p) => !weg.has(p.id));
       t.plan = { ...t.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] };
+      // De lichtkoepels gaan mee weg; de dakkeuze (vorm en bedekking) blijft, zoals de gevel.
+      delete t.plan.daklichten;
     });
     kiesGereedschap('ruimte');
   });
@@ -1012,6 +1119,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       const s = selectie;
       wijzig('plan', (t) => {
         if (s.soort === 'meubel') { const m = t.plan.meubels.find((x) => x.id === s.id); if (m) { m.x += v[0]; m.y += v[1]; } }
+        if (s.soort === 'daklicht') { const l = t.plan.daklichten?.find((x) => x.id === s.id); if (l) { l.x += v[0]; l.y += v[1]; } }
         if (s.soort === 'opening') { const o = t.plan.openingen.find((x) => x.id === s.id); if (o) o.midden += o.as === 'h' ? v[0] : v[1]; }
       });
     }
@@ -1022,6 +1130,6 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
 /** Wordt opgeroepen na elke wijziging in de toestand. */
 export function naWijziging() {
   render();
-  if (!sleep || sleep.soort === 'meubel' || sleep.soort === 'opening') toonEigenschappen();
+  if (!sleep || sleep.soort === 'meubel' || sleep.soort === 'opening' || sleep.soort === 'daklicht') toonEigenschappen();
   else toonOverzicht();
 }

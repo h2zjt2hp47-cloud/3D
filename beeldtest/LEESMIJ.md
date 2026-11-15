@@ -44,6 +44,7 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `pebble-schuin` | kuipfauteuil met verdekte voet |
 | `stockholm-schuin` | ronde poef |
 | `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
+| `bouw-dak` | dak en lichtkoepel (15/11): zadeldak met rode pannen op de verdieping (topgevels, oversteek, nokvorst), grind op het lage platte dak en een lichtkoepel erin. Genomen ná de twee beelden hierboven: het zet een dak in het project |
 | `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame op schuine poten (13/11) |
 | `fraser-schuin` | vier schuine poten met een kruis, zitting in twee lagen, schaal die rond de zitting uitsteekt |
 | `satie-schuin`, `quin-schuin` | trommel tot op de vloer of op een lage voet, met één of vier losse kussens tegen de schaal |

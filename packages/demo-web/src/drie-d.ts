@@ -668,6 +668,77 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     steen: STEEN, planken: PLANK, tegel: TEGEL, parket: PARKET,
     planken_h: LIGGEND, leien: LEIEN, zink: ZINK, natuursteen: NATUURSTEEN, pleister: PLEISTER,
   };
+  // ---------- dakbedekking (woning) ----------
+  const PANNEN = { b: 60, h: 68 }, ROOFING = { b: 100, h: 100 }, GRIND = { b: 80, h: 80 }, GROENDAK = { b: 120, h: 120 };
+  Object.assign(textuurMaat, { pannen: PANNEN, roofing: ROOFING, grind: GRIND, groendak: GROENDAK });
+  /**
+   * Keramische dakpannen, 30 × 34 cm zichtbaar: per pan een golf (rug licht, geul donker) en bovenaan de schaduw van de
+   * pan erboven. De bovenkant van de tekening ligt hoger op het dak (v loopt met de helling mee, zie prismaGeometrie).
+   */
+  const pannen = (hex: string) => canvasTextuur(PANNEN.b, PANNEN.h, 4, (g, px) => {
+    const toeval = vasteReeks('pannen' + hex);
+    for (let r = 0; r < 2; r++) for (let s = 0; s < 2; s++) {
+      const x = s * 30 * px, y = r * 34 * px, w = 30 * px, h = 34 * px, f = 0.92 + toeval() * 0.16;
+      const golf = g.createLinearGradient(x, 0, x + w, 0);
+      golf.addColorStop(0, tint(hex, 0.74 * f));
+      golf.addColorStop(0.14, tint(hex, 1.0 * f));
+      golf.addColorStop(0.46, tint(hex, 1.14 * f));
+      golf.addColorStop(0.82, tint(hex, 0.9 * f));
+      golf.addColorStop(1, tint(hex, 0.66 * f));
+      g.fillStyle = golf;
+      g.fillRect(x, y, w, h);
+      const schaduw = g.createLinearGradient(0, y, 0, y + 7 * px);
+      schaduw.addColorStop(0, 'rgba(0,0,0,.5)');
+      schaduw.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = schaduw;
+      g.fillRect(x, y, w, 7 * px);
+      g.fillStyle = 'rgba(255,255,255,.1)';
+      g.fillRect(x, y + h - 1.2 * px, w, 1.2 * px);
+    }
+  });
+  /** Roofing: bitumen in banen van 1 m, met leislag (fijne korrel) en de naad van de overlap. */
+  const roofing = (hex: string) => canvasTextuur(ROOFING.b, ROOFING.h, 3, (g, px) => {
+    const toeval = vasteReeks('roofing' + hex);
+    g.fillStyle = hex;
+    g.fillRect(0, 0, ROOFING.b * px, ROOFING.h * px);
+    for (let n = 0; n < 5200; n++) {
+      g.fillStyle = toeval() < 0.5 ? `rgba(0,0,0,${toeval() * 0.14})` : `rgba(255,255,255,${toeval() * 0.1})`;
+      g.fillRect(toeval() * ROOFING.b * px, toeval() * ROOFING.h * px, 1.5, 1.5);
+    }
+    g.fillStyle = 'rgba(0,0,0,.34)';
+    g.fillRect(0, 0, 0.8 * px, ROOFING.h * px);
+    g.fillStyle = 'rgba(255,255,255,.07)';
+    g.fillRect(0.8 * px, 0, 7 * px, ROOFING.h * px);
+  });
+  /** Grind: rolgrind van 1 à 3 cm, elke kei een eigen tint. */
+  const grind = (hex: string) => canvasTextuur(GRIND.b, GRIND.h, 4, (g, px) => {
+    const toeval = vasteReeks('grind' + hex);
+    g.fillStyle = tint(hex, 0.8);
+    g.fillRect(0, 0, GRIND.b * px, GRIND.h * px);
+    for (let n = 0; n < 3400; n++) {
+      const x = toeval() * GRIND.b * px, y = toeval() * GRIND.h * px, r = (0.5 + toeval() * 0.9) * px;
+      g.fillStyle = tint(hex, 0.86 + toeval() * 0.26);
+      g.beginPath();
+      g.ellipse(x, y, r, r * (0.6 + toeval() * 0.4), toeval() * Math.PI, 0, Math.PI * 2);
+      g.fill();
+    }
+  });
+  /** Groendak: sedum in plukjes groen, geelgroen en roodbruin op donker substraat. */
+  const groendak = (hex: string) => canvasTextuur(GROENDAK.b, GROENDAK.h, 3, (g, px) => {
+    const toeval = vasteReeks('groendak' + hex);
+    g.fillStyle = tint(hex, 0.7);
+    g.fillRect(0, 0, GROENDAK.b * px, GROENDAK.h * px);
+    const tinten = [tint(hex, 1.0), tint(hex, 1.18), tint(hex, 0.84), '#8f9a4e', '#a3a85a', '#8a5a46', '#6d7d43'];
+    for (let n = 0; n < 5200; n++) {
+      const x = toeval() * GROENDAK.b * px, y = toeval() * GROENDAK.h * px, r = (0.8 + toeval() * 2.2) * px;
+      g.fillStyle = tinten[Math.floor(toeval() * tinten.length)]!;
+      g.globalAlpha = 0.55 + toeval() * 0.4;
+      g.beginPath();
+      g.arc(x, y, r, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+  });
 
   /**
    * UV in wereldmaat (cm) per vlak, zodat stenen en planken hun echte maat houden.
@@ -746,6 +817,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       else if (b.soort === 'dak') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.85 });
       else if (b.soort === 'gevel') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.97 });
       else if (b.soort === 'donker') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.9 });
+      else if (b.soort === 'pannen') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.74, map: pannen(b.kleur) });
+      else if (b.soort === 'roofing') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.96, map: roofing(b.kleur) });
+      else if (b.soort === 'grind') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: grind(b.kleur) });
+      else if (b.soort === 'groendak') m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: groendak(b.kleur) });
       else m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), roughness: 0.95, map: weefsel });
       if ('envMapIntensity' in m) m.envMapIntensity = OMGEVING;
       materialen.set(sleutel, m);
@@ -1285,7 +1360,74 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     return geo;
   }
 
+  /**
+   * Prisma (woning: dakvlak, topgevel, lichtstraat): een harde doorsnede in een verticaal vlak, recht doorgetrokken
+   * langs x of z, in wereldmaat. Elk vlak heeft zijn eigen normaal. Groep 0 = de mantel, 1 = het kopse vlak aan de
+   * min-kant, 2 = dat aan de plus-kant (elk met een eigen materiaal, zie `zijden`).
+   * Textuur in wereldmaat: op een staand vlak zoals bij een muur (u langs het vlak, v = hoogte), op een schuin vlak
+   * u langs de as en v langs de helling in ware lengte, van onder naar boven, zodat pannen en leien hun maat houden.
+   */
+  function prismaGeometrie(b: Blok, maten: ({ b: number; h: number } | undefined)[]) {
+    const langsX = b.as !== 'z';
+    const a0 = langsX ? b.x : b.z, a1 = a0 + (langsX ? b.b : b.d);
+    const pts = b.doorsnede!;
+    const pos: number[] = [], nor: number[] = [], uv: number[] = [];
+    const punt = (a: number, p: number, y: number): [number, number, number] => (langsX ? [a, y, p] : [p, y, a]);
+    type P3 = [number, number, number];
+    const driehoek = (A: P3, B: P3, C: P3, n: P3, uvs: [number, number][]) => {
+      // Draaizin volgens de normaal (naar buiten).
+      const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+      const om = (uy * vz - uz * vy) * n[0] + (uz * vx - ux * vz) * n[1] + (ux * vy - uy * vx) * n[2] < 0;
+      const hoeken = om ? [A, C, B] : [A, B, C], uvVolg = om ? [uvs[0]!, uvs[2]!, uvs[1]!] : uvs;
+      for (let i = 0; i < 3; i++) { pos.push(...hoeken[i]!); nor.push(...n); uv.push(...uvVolg[i]!); }
+    };
+    let opp = 0;
+    for (let i = 0; i < pts.length; i++) { const a = pts[i]!, c = pts[(i + 1) % pts.length]!; opp += a[0] * c[1] - c[0] * a[1]; }
+    const zin = opp < 0 ? -1 : 1;
+    const mantel = maten[0];
+    for (let i = 0; i < pts.length; i++) {
+      const [p0, y0] = pts[i]!, [p1, y1] = pts[(i + 1) % pts.length]!;
+      const dp = p1 - p0, dy = y1 - y0, len = Math.hypot(dp, dy);
+      if (len < 0.01) continue;
+      const np = (zin * dy) / len, ny = (-zin * dp) / len;
+      const n: P3 = langsX ? [0, ny, np] : [np, ny, 0];
+      const staand = Math.abs(ny) < 0.2, [pl, yl] = y0 <= y1 ? [p0, y0] : [p1, y1];
+      const v = (p: number, y: number) => (staand ? y : Math.abs(dy) < 0.01 ? p : Math.hypot(p - pl, y - yl));
+      const UV = (a: number, p: number, y: number): [number, number] => (mantel ? [a / mantel.b, v(p, y) / mantel.h] : [0, 0]);
+      driehoek(punt(a0, p0, y0), punt(a1, p0, y0), punt(a1, p1, y1), n, [UV(a0, p0, y0), UV(a1, p0, y0), UV(a1, p1, y1)]);
+      driehoek(punt(a0, p0, y0), punt(a1, p1, y1), punt(a0, p1, y1), n, [UV(a0, p0, y0), UV(a1, p1, y1), UV(a0, p1, y1)]);
+    }
+    const groepen: [number, number][] = [[0, pos.length / 3]];
+    const driehoeken: number[][] = THREE.ShapeUtils.triangulateShape(pts.map(([p, y]) => new THREE.Vector2(p, y)), []);
+    for (const [kant, a, maat] of [[-1, a0, maten[1]], [1, a1, maten[2]]] as const) {
+      const begin = pos.length / 3;
+      const n: P3 = langsX ? [kant, 0, 0] : [0, 0, kant];
+      for (const d of driehoeken) {
+        const h = d.map((i) => pts[i]!);
+        driehoek(punt(a, h[0]![0], h[0]![1]), punt(a, h[1]![0], h[1]![1]), punt(a, h[2]![0], h[2]![1]), n, h.map(([p, y]): [number, number] => (maat ? [p / maat.b, y / maat.h] : [0, 0])));
+      }
+      groepen.push([begin, pos.length / 3 - begin]);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    groepen.forEach(([start, aantal], i) => geo.addGroup(start, aantal, i));
+    return geo;
+  }
+
   function mesh(b: Blok) {
+    // Prisma (woning): harde doorsnede, in wereldmaat; de kopse vlakken kunnen een eigen materiaal hebben.
+    if (b.vorm === 'prisma' && b.doorsnede && b.doorsnede.length >= 3) {
+      const [kMin, kPlus] = b.as === 'z' ? (['z-', 'z+'] as const) : (['x-', 'x+'] as const);
+      const basis = materiaal(b), kop = (k: 'x-' | 'x+' | 'z-' | 'z+') => (b.zijden?.[k] ? materiaal(b.zijden[k]!) : basis);
+      const maat = (k: 'x-' | 'x+' | 'z-' | 'z+') => textuurMaat[b.zijden?.[k]?.soort ?? b.soort];
+      const m = new THREE.Mesh(prismaGeometrie(b, [textuurMaat[b.soort], maat(kMin), maat(kPlus)]), [basis, kop(kMin), kop(kPlus)]);
+      m.name = b.code;
+      m.castShadow = b.soort !== 'glas' && b.soort !== 'matglas';
+      m.receiveShadow = true;
+      return m;
+    }
     // Profiel (bv. een arm): altijd als zachte vorm, ook bij blokken (klein, dus meteen), met de kussens ernaast voor de
     // schaduw in de hoek en de naad of bies rond het voorpaneel. Een glad blok (doorlopende zetel) komt hier alleen zolang
     // zijn zachte vorm nog berekend wordt (zie `toon`): tot dan de gewone vorm.

@@ -15,7 +15,7 @@ import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positie
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
-const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'inrichting'] as const;
+const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'dak', 'inrichting'] as const;
 
 let naarPositie: (id: string) => void = () => {};
 let naarPlan: (openingId?: string) => void = () => {};

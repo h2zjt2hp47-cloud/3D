@@ -67,6 +67,7 @@ export { echt3dPlaatsing, type Echt3D, type Echt3DPlaatsing, type Echt3DUitkomst
 export { smeltMee, zachteVorm, zachtVeld, type ZachteVorm, type ZachteVormOpties } from './zachtevorm.js';
 export { doorlopendeOpbouw, doorlopendeRij } from './doorlopend.js';
 export { controleerCatalogus, maakCode, tekenstijlen } from './catalogus.js';
+export * from './dak.js';
 export * from './plattegrond.js';
 export * from './plattegrondsvg.js';
 export * from './offerte.js';
