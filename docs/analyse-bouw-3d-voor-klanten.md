@@ -450,6 +450,7 @@ een volledig ontwerp dat er goed uitziet; daarna past hij alleen aan wat bij dez
 | # | Maatregel | Wat het doet | Bestaat al? |
 |---|---|---|---|
 | 1 | **Snelstart in drie vragen** | *Wat* (een tegel: woning, aanbouw, carport …), *hoe groot* (drie maten met grote − en +, gangbare maten al ingevuld), *welke stijl* (één van vier beelden). Dan staat de 3D er, met ramen, dak en afwerking. | Nee |
+| 1b | **Daarna vrij tekenen** (Jonas, 15/11: "na de snelstart ook vrij tekenen") | Wat de snelstart oplevert, is een gewoon ontwerp, geen gesloten sjabloon. De verkoper tekent vrij verder: ruimtes verschuiven en bijtekenen, wanden, ramen, een verdieping erbij. Vanuit de 3D is vrij tekenen één tik ver, en terug ook. | De plattegrond-editor bestaat [code]; de aanbouw staat er nog los van |
 | 2 | **Stijlen** | Een stijl is een volledige set keuzes in één tik: gevel, kleur van het schrijnwerk, dak, vloer, binnenkleur. De aannemer legt zijn eigen stijlen vast (zijn typische werk). | Nee |
 | 3 | **Tik op het ding zelf** | Tik in de 3D op het dak, een raam of een wand: alleen de keuzes van dat ding verschijnen. Geen menu's zoeken. | De kijker meldt al waar je tikt (bij de zetels) [code] |
 | 4 | **Uitrusting in één tik** | "Basisuitrusting" plaatst per ruimte de stopcontacten, schakelaars, lichtpunten en ventilatie volgens vaste regels; "screens op zuid en west" in één tik. Daarna verplaats of schrap je wat niet past. | Het principe bestaat: een raam krijgt nu al keuzes volgens de ruimte [code] |

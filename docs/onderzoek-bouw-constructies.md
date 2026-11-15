@@ -1,6 +1,6 @@
 # Onderzoek: constructeurs en voorbeelden voor de bouwmodellen
 
-*15 november 2026. Online onderzoek voor de vaste modellen van de bouwconfigurator: bijgebouwen in hout, houtskelet en dak, staalbouw, staal in en rond de woning, en techniek (zonwering, ventilatie, elektriciteit, verlichting). Geen prijzen.*
+*15 november 2026. Online onderzoek voor de vaste modellen van de bouwconfigurator: bijgebouwen in hout, houtskelet en dak, staalbouw, staal in en rond de woning, techniek (zonwering, ventilatie, elektriciteit, verlichting) en alles wat een installateur vast plaatst (tellerkast, airco, warmtepomp, leidingen, technische ruimte). Geen prijzen.*
 
 > **Hoe dit onderzoek gebeurde, en wat dat betekent.**
 > - Alles komt uit **zoekresultaten**: de zoekmachine geeft per pagina een samenvatting met het adres erbij. De pagina's zelf **openen lukte niet** in deze sessie. Elk getal is dus één keer gelezen, in een samenvatting, en moet nog eens op de pagina zelf nagekeken worden vóór het in een model komt.
@@ -18,7 +18,8 @@
 6. **Zonwering**: fabrikanten (Renson, Brustor, Harol, Winsol, Wilms, Verano) geven per product de grootste maten; die kunnen rechtstreeks als grenzen in het model.
 7. **Ventilatie**: systeem C en D zijn goed beschreven door de Vlaamse overheid; wat je in 3D ziet, volgt uit het soort ruimte (droog of nat) [V1][V3].
 8. **Elektriciteit**: sinds 1 maart 2025 legt het AREI geen minimumhoogte voor stopcontacten meer op; 15 en 25 cm blijven aangeraden [E4]. De **vorm van de symbolen** stond niet in de zoekresultaten; de lijst van Volta is de bron om naast te leggen [E1].
-9. **Wat dit betekent voor de modellen**: per productsoort staat hieronder een voorstel met maten, grenzen, stap en opties. Elk voorstel is een vertrekpunt voor een gesprek met een vakman, geen vaststaand gegeven. De lijst met vragen staat in hoofdstuk 7.
+9. **Voor de installateur** (hoofdstuk 6): voor de tellerkast geeft Fluvius harde regels (0,5 tot 3 m van de gevel, 120 tot 200 cm hoog) [I1]; voor toestellen geven fabrikanten de vrije ruimte errond. Software voor installateurs bestaat, maar is gemaakt om te rekenen, niet om aan een klant te tonen. Over de datakast, vloerconvectoren en de maten van een gasketel vond ik niets.
+10. **Wat dit betekent voor de modellen**: per productsoort staat hieronder een voorstel met maten, grenzen, stap en opties. Elk voorstel is een vertrekpunt voor een gesprek met een vakman, geen vaststaand gegeven. De lijst met vragen staat in hoofdstuk 7.
 
 ---
 
@@ -514,6 +515,128 @@ Een lichtplan werkt in **drie lagen**: basisverlichting (gelijkmatig), sfeerverl
 
 ---
 
+## 6. Voor de installateur: wat vast in de woning komt
+
+Hier gaat het alleen om **wat je ziet en waar het komt**. Vermogens, debieten en leidingmaten rekent de installateur. Alle maten zijn voorbeelden van één merk of richtwaarden; de handleiding van het gekozen toestel beslist.
+
+### 6.1 Elektriciteit, het vaste deel
+
+| Onderdeel | Wat je ziet en waar het komt | Maten en richtwaarden | Bron |
+|---|---|---|---|
+| **Tellerkast** (van de netbeheerder Fluvius) | In een droog, verlicht en verlucht lokaal op het gelijkvloers, zo dicht mogelijk bij de straat (garage, inkomhal); **0,5 tot 3 m van de gevel**; nooit onder een waterleiding of afvoer; niet in slaapkamer, badkamer, wc, op een verdieping of in een kruipkelder | Kast 25 cm breed × 60 cm hoog × ± 23 cm diep; onderkant minstens 120 cm, bovenkant hoogstens 200 cm boven de vloer; 40 cm vrij tot het plafond; ervoor 80 tot 100 cm vrij en 2 m hoog | [I1][I2] |
+| **Verdeelbord** (zekeringkast) | Liefst centraal in huis, zodat de kabels kort blijven; op de muur (opbouw) of in de muur (inbouw) | Eén module is 17,5 mm breed. Opbouw (hoog × breed × diep): 27 × 35,5 × 15 cm voor 18 modules tot 45 × 35,5 × 15 cm voor 36 modules. Inbouw: 35 tot 82,5 cm hoog (14 tot 56 modules), 37,5 cm breed | [I3] |
+| **Aardingslus** | Verplicht bij nieuwbouw: een koperdraad van 35 mm² onderin de funderingssleuf, rond de hele woning. De twee uiteinden komen boven bij de **aardingsonderbreker**; van daar vertrekt de draad naar het verdeelbord | Uiteinden moeten bereikbaar blijven | [I4] |
+| **Laadpaal** | Als kastje aan de muur (*wallbox*) op de oprit, in de garage of onder de carport; als paal waar geen muur dichtbij is | Voorbeeld van een kastje: 29 × 21 × 11 cm. Montagehoogte niet gevonden | [I5] |
+| **Omvormer en thuisbatterij** | In garage, berging, technische ruimte of op zolder; niet in een gang, trap of vluchtweg, niet in een gesloten kastje | Batterij van 20 kWh: 55 × 35 × 118 cm (één Nederlands merk). Vrij te houden: 30 cm voor, links, rechts en boven; omvormer 40 cm boven of 20 cm naast de batterij | [I6] |
+| **Datakast** | **Niets gevonden** over maten of plaats in een Belgische woning | | |
+
+**Voorstel: het onderdeel in de 3D moet kunnen**
+- tellerkast: op een muur plaatsen, met een controle op de afstand tot de gevel (0,5 tot 3 m), de hoogte en de vrije zone ervoor (als doorzichtig blok getoond);
+- verdeelbord: aantal rijen kiezen (1 tot 4), opbouw of inbouw;
+- aardingslus: als lijn rond de fundering in de constructieweergave, met het punt waar hij boven komt;
+- laadpaal: aan de muur of op een paal, binnen of buiten;
+- omvormer en batterij: als blok met de vrije zone errond;
+- datakast: als blok, maten vrij (geen bron).
+
+### 6.2 Koeling en verwarming
+
+| Onderdeel | Wat je ziet en waar het komt | Maten en richtwaarden | Bron |
+|---|---|---|---|
+| **Airco, binnenunit** | *Wandmodel*: hoog aan de muur (het meest gekozen). *Vloermodel*: laag, op de plaats van een radiator, handig onder een schuin dak. *Cassette*: in een verlaagd plafond. *Kanaalunit*: verborgen boven het plafond, je ziet alleen roosters | Maten per merk; niet gezocht | [I7] |
+| **Airco, buitenunit** | Op de grond, op consoles aan de gevel of op een plat dak; vrije lucht rondom | Vrij: 10 tot 15 cm achter, 30 cm opzij (Nederlandse sites; de handleiding beslist) | [I8] |
+| **Koelleidingen** | Twee geïsoleerde koperen leidingen (een dunne en een dikkere, bijvoorbeeld 1/4 en 3/8 duim) plus een kabel, samen in een goot of in de muur, van binnenunit naar buitenunit | Grootste lengte **10 tot 25 m** bij gewone toestellen (voorbeeld van één toestel: 25 m lang en 15 m hoogteverschil), tot 70 m bij grote toestellen met meerdere binnenunits | [I8] |
+| **Condensafvoer** | Een slang van 16 of 18 mm die **altijd naar beneden loopt** naar een afvoer; kan dat niet, dan een pompje | Afschot in cijfers niet gevonden | [I8] |
+| **Warmtepomp lucht-water, buiten** | Buitenunit op een sokkel naast de woning. *Monoblock*: alles buiten, grotere unit. *Split*: kleinere buitenunit, met koelleidingen naar de binnenunit | Monoblock ± 1 m breed × 1,4 m hoog. Plaats minstens 100 × 80 cm; vrij: 1 m vooraan (en erboven), 30 tot 60 cm opzij, 15 tot 50 cm achter | [I9] |
+| **Warmtepomp, binnen** | Binnenunit, met ernaast of erin een **boiler** voor warm water en soms een **buffervat** | Binnenunit 60 tot 76 cm breed, 180 tot 190 cm hoog, 62 tot 90 cm diep. Vloer: 120 × 70 cm; met boiler 180 cm breed; met boiler en buffer 240 cm breed | [I9] |
+| **Boiler** | Staande cilinder in de technische ruimte | 200 liter: 60 cm doorsnede, 134 tot 160 cm hoog; 300 liter: 60 tot 64 cm doorsnede, 180 tot 198 cm hoog | [I10] |
+| **Vloerverwarming** | In de vloer: lussen van buis. Tegen de muur: de **verdeler** in een kast, één per verdieping of zone | Verdeler voor 2 tot 12 (soms 14) kringen; kast 43 tot 106 cm breed, 69 tot 80 cm hoog, 11 tot 16 cm diep. Eén kring met buis van 16 mm: tot ± 100 m, nooit meer dan 120 m. Afstand tussen de buizen 10 tot 15 cm (**te bevestigen**) | [I11] |
+| **Radiatoren** | Paneelradiator aan de muur, vaak onder het raam. Het type zegt hoe dik: 11 (één plaat), 21 en 22 (twee platen), 33 (drie platen) | Hoogtes 30 tot 90 cm; lengtes 40 tot 300 cm, in stappen van 10 cm tot 160 cm | [I12] |
+| **Convectoren** | In een goot in de vloer voor een groot raam | **Niets gevonden** | |
+| **Gasketel** | Wandketel met een dubbele buis (rookgas in de binnenbuis, verse lucht in de buitenbuis) door het dak of de gevel. Een gesloten toestel mag in elke ruimte staan | Buis 80/125 mm; langs de gevel 4 tot 6 m lang (één merk). Maten van de ketel niet gevonden | [I13] |
+
+**Voorstel: het onderdeel in de 3D moet kunnen**
+- airco: soort binnenunit kiezen en op muur, vloer of plafond zetten; buitenunit plaatsen; de leiding ertussen vanzelf tekenen, met de **lengte erbij en een waarschuwing boven een instelbare grens** (10 tot 25 m, per toestel); condensafvoer naar het dichtste afvoerpunt, met een waarschuwing als hij omhoog moet;
+- warmtepomp: monoblock of split; buitenunit met de vrije zone (1 m vooraan) als doorzichtig blok; binnenunit, boiler (200 of 300 liter) en buffervat als losse blokken;
+- vloerverwarming: verdelerkast op een muur; per ruimte aan of uit; lussen tonen in de constructieweergave, met het aantal kringen;
+- radiator: type, hoogte en lengte kiezen, op een muur of onder een raam;
+- gasketel: wandtoestel met de afvoer door dak of gevel.
+
+### 6.3 Sanitair en leidingen
+
+| Onderdeel | Wat je ziet en waar het komt | Maten en richtwaarden | Bron |
+|---|---|---|---|
+| **Toestellen** | Wc, lavabo, douche, bad, keukenspoelbak, wasmachine | Hangtoilet ± 36 cm breed × 53 cm diep; douchebak minstens 80 × 80, liever 90 × 90 cm. Andere maten niet gevonden | [I18] |
+| **Afvoeren** | Grijze buizen onder de vloer of in de muur, naar een verticale standleiding | **Wc 110 mm**; bad, douche en spoelbak 50 mm; lavabo en de rest 40 mm (sifon van de lavabo 32 mm). Wasmachine niet gevonden | [I14] |
+| **Afschot** van de afvoer | De buis loopt licht af naar de standleiding | **0,5 tot 1,5 cm per meter**: de doe-het-zelfzaak zegt 1 cm, een handboek noemt 0,5 cm als minimum, vakmensen op een forum 1 tot 1,4 cm | [I14] |
+| **Aanvoer warm en koud** | Vanaf een **collector** (verdeler) vertrekt naar elk toestel een eigen buis; elke groep heeft een kraantje | Kunststofbuis met aluminiumlaag van 16 mm naar de toestellen; dikkere hoofdleiding (20 tot 26 mm, forum) | [I15] |
+| **Regenwaterput en pomp** | Put in de tuin; pomp en filter in de berging; aparte leiding naar wc, wasmachine en buitenkraan | Verplicht bij nieuwbouw en herbouw in Vlaanderen: **5 000, 7 500 of 10 000 liter** naargelang het dak. De bronnen noemen andere drempels (80 en 120 m², of 40, 80 en 120 m²): **na te kijken** | [I16] |
+| **Waterverzachter** | Vlak na de watermeter; heeft een afvoer nodig en meestal een stopcontact | Voorbeeld van een klein toestel: 20 × 50 × 47 cm | [I17] |
+| **Buitenkraan** | Op de gevel; in Vlaanderen meestal op regenwater [afgeleid] uit [I16] | Niets gevonden | |
+
+**Voorstel: het onderdeel in de 3D moet kunnen**
+- toestellen plaatsen (bestaat al voor de badkamer); elk toestel kent zijn afvoermaat (110, 50 of 40 mm) en of het warm, koud of regenwater krijgt;
+- afvoer: vanzelf een lijn naar de dichtste standleiding, met de lengte en het **hoogteverlies door het afschot** (1 cm per meter als standaard), en een waarschuwing als de vloeropbouw te dun is;
+- aanvoer: collector warm en koud plaatsen; lijnen naar elk toestel in de constructieweergave;
+- regenwaterput: inhoud kiezen (5 000, 7 500, 10 000 liter), plaats in de tuin, pomp binnen;
+- waterverzachter en boiler als blok in de technische ruimte.
+
+### 6.4 Ventilatie, het vaste deel
+
+Dit vult 5.2 aan met de onderdelen die de installateur plaatst.
+
+| Onderdeel | Wat je ziet en waar het komt | Maten en richtwaarden | Bron |
+|---|---|---|---|
+| **Unit** (systeem C of D) | Kast in de technische ruimte of op zolder; systeem D heeft vier aansluitingen en een condensafvoer | Hoofdkanalen aan de unit 150 tot 180 mm (zie 5.2) | [V7] |
+| **Ronde kanalen** | Stijve buizen van de unit naar buiten en naar de verdeelkasten | 125, 160, 180 of 200 mm. Richtwaarde: 125 mm tot ± 225 m³ per uur, 160 mm tot ± 325 m³ per uur | [I19] |
+| **Flexibele kanalen** | Ronde of plat-ovale slangen van de verdeelkast naar elk ventiel, **in de chape, in het beton of boven een verlaagd plafond** | Rond 63, 75 of 90 mm, hoogstens 10, 15 of 20 m lang; chape minstens 5 cm. Plat-ovaal 14 × 6,4 cm | [I19] |
+| **Verdeelkast** (collector) | Platte doos waarop de flexibele kanalen aansluiten | Per kast 3 kanalen van 63 of 75 mm, of 2 van 90 mm (één merk); 6 aansluitingen op een kast van 160 mm (ander merk) | [I19] |
+| **Ventielen** | Rond ventiel in plafond of wand | Gat van ± 13 cm; aansluiting 80 mm (tot 50 m³ per uur) of 125 mm | [I19] |
+| **Dakdoorvoer, gevelrooster** | Pijp door het dak of kap op de gevel | 125 tot 200 mm; het kanaal naar de dakdoorvoer recht en zonder bochten, van 125 naar 160 mm | [I19] |
+
+**Voorstel: het onderdeel in de 3D moet kunnen**
+- unit plaatsen (C of D), met de doorvoer door dak of gevel;
+- verdeelkasten plaatsen; van elke kast een flexibel kanaal naar elk ventiel, **met de lengte erbij en een waarschuwing boven 10, 15 of 20 m** (naargelang de doorsnede van het kanaal);
+- kiezen waar de kanalen lopen: in de vloeropbouw of boven een verlaagd plafond; de configurator toont dan of de opbouw dik genoeg is (5 cm chape, 6,4 cm voor plat-ovaal).
+
+### 6.5 De technische ruimte
+
+**Wat er gewoonlijk samen staat** [afgeleid] uit de bronnen hierboven: tellerkast en verdeelbord (als de ruimte dicht bij de voorgevel ligt), de binnenunit van de warmtepomp of de gasketel, boiler en buffervat, de ventilatie-unit, de verdeler van de vloerverwarming, de collector voor warm en koud water, de waterverzachter, pomp en filter van het regenwater, en omvormer en batterij.
+
+**Hoeveel plaats?** Een vaste oppervlakte vond ik niet. Wat wel in de bronnen staat:
+- een warmtepomp met boiler en buffervat vraagt een wand van **2,4 m breed en 70 cm diep**, met een **doorgang van minstens 60 cm** ervoor [I9][I20];
+- de tellerkast vraagt 80 tot 100 cm vrij ervoor [I1];
+- de batterij vraagt 30 cm vrij rondom [I6];
+- een warmtepompboiler die zijn lucht uit de ruimte zelf haalt, vraagt een ruimte van 15 tot 20 m³ [I10];
+- water en elektriciteit horen uit elkaar: de tellerkast mag niet onder een waterleiding of afvoer hangen [I1].
+
+**Voorstel**: een *technische ruimte* als soort ruimte op de plattegrond. Je zet er de toestellen als blokken in; elk blok heeft een **vrije zone** (voor onderhoud of lucht) die zichtbaar wordt zodra ze een ander blok of een muur raakt. De configurator telt op hoeveel wandlengte de toestellen samen vragen en waarschuwt als de ruimte te klein is of als de tellerkast onder een leiding hangt.
+
+### 6.6 Hoe tonen installateurs en hun software het?
+
+| Pakket | Voor wie | Wat het toont | Bron |
+|---|---|---|---|
+| **Stabicad** (Trimble), trimble.com | Studiebureaus en grote installateurs; werkt bovenop Revit en AutoCAD | Leidingen, kanalen en toestellen in 3D en schema's in 2D, met berekeningen | [I21] |
+| **Trimble Nova** | Zelfde doelgroep | Vooral 2D-schema's, naast 3D | [I21] |
+| **MEPcontent**, mepcontent.com | Iedereen die in Revit of AutoCAD tekent | Gratis bibliotheek met 3D-modellen van toestellen van fabrikanten | [I21] |
+| **CADprofi HVAC & Piping**, cadprofi.com | Tekenaars | Plannen en isometrische aanzichten met een bibliotheek van onderdelen | [I21] |
+| **LoopCAD** | Vloerverwarming | Legplan van de lussen (genoemd op een forum) | [I21] |
+| **Schneider eDesign**, se.com | Elektriciens | Eendraadschema's | [I21] |
+| **Rekentool ventilatie van Buildwise** | Installateurs ventilatie | Ontwerp, montage en afregeling van woningventilatie | [I21] |
+| Diensten van fabrikanten | Installateurs | Vasco en Henco leveren een legplan voor vloerverwarming; Renson heeft een portaal voor de installateur | [I21] |
+
+**Kleuren van leidingen**
+- Het keuringsdocument van de Vlaamse waterbedrijven vraagt op het plan: **warm water rood, koud water blauw, regenwater (tweede circuit) groen** [I22].
+- Gasleidingen in kunststof zijn **geel** [I22].
+- Verwarming: aanvoer rood, retour blauw (forum) [I22].
+- Voor afvoeren en ventilatie vond ik geen afspraak. [eigen kennis] Gangbaar: afvoer grijs of bruin, toevoer van lucht blauw of groen, afvoer van lucht rood of geel. **Te bevestigen.**
+
+**Wat opvalt**
+- De pakketten voor vakmensen zijn **zwaar en duur** en bedoeld voor wie alles uitrekent [I21]. Een klein installatiebedrijf krijgt zijn plan vaak van de fabrikant.
+- **Geen enkel gevonden hulpmiddel is gemaakt om aan een klant te tonen** waar alles komt. [afgeleid] Daar zit de plaats van onze configurator: toestellen als blokken met hun vrije zone, leidingen als gekleurde lijnen met hun lengte, en waarschuwingen op de paar grenzen die ertoe doen (lengte van koelleiding en ventilatiekanaal, afschot, afstand van de tellerkast tot de gevel).
+- Leg de kleuren vast volgens het keuringsdocument (rood, blauw, groen) en geel voor gas; dat herkent elke installateur.
+
+---
+
 ## 7. Wat een vakman nog moet bevestigen
 
 **Hout (bijgebouwen, houtskelet, dak)**
@@ -542,8 +665,17 @@ Een lichtplan werkt in **drie lagen**: basisverlichting (gelijkmatig), sfeerverl
 17. Elektriciteit: de **vorm van de symbolen** naast de lijst van Volta leggen; de zones in de badkamer in het huidige AREI; de regel voor gemengde kringen.
 18. Verlichting: welke bundelhoeken en lichtkleuren de elektricien standaard aanbiedt.
 
+**Voor de installateur**
+19. Elektriciteit: de plaats van tellerkast en verdeelbord in zijn projecten; maten en plaats van de datakast; montagehoogte van een laadpaal.
+20. Airco en warmtepomp: grootste leidinglengte en vrije ruimte bij de merken die hij plaatst; hoe hij de condensafvoer legt; geluid tegenover de buren (ik vond alleen Nederlandse regels).
+21. Vloerverwarming: afstand tussen de buizen en lengte per kring; hoeveel verdelers per woning.
+22. Sanitair: afvoermaat van wasmachine en keuken, het afschot dat hij aanhoudt, de drempels van de regenwaterput.
+23. Ventilatie: welke kanalen hij gebruikt (rond of plat-ovaal) en waar ze lopen.
+24. Technische ruimte: welke oppervlakte hij vraagt, en wat er volgens hem nooit naast elkaar mag staan.
+25. De kleuren voor afvoer en ventilatie op een plan.
+
 **Algemeen**
-19. Elk getal in dit document nog eens nalezen op de pagina zelf (zie de kadertekst bovenaan).
+26. Elk getal in dit document nog eens nalezen op de pagina zelf (zie de kadertekst bovenaan).
 
 ---
 
@@ -664,6 +796,30 @@ Alle bronnen zijn op 15/11/2026 geraadpleegd **als samenvatting in het zoekresul
 - [E5] Elektramat, hoogte van stopcontacten en schakelaars: https://www.elektramat.be/kennisbank/hoogte-stopcontact/ en https://www.elektramat.be/kennisbank/hoogte-lichtschakelaar-ruimtes/
 - [E6] Elektramat en Bobex, aantal per kring, keuken en badkamer: https://www.elektramat.be/kennisbank/hoeveel-stopcontacten-per-kamer-heb-je-nodig/, https://www.bobex.be/nl-be/keuken/indeling/plaatsen/lichtplan/voorschriften-stopcontacten/ en https://www.bobex.be/nl-be/badkamerrenovatie/elektriciteit/
 - [E7] Niko, afwerkingen en configurator: https://www.niko.eu/en/our-products/switches-and-sockets/finishings
+
+**Voor de installateur**
+- [I1] Fluvius, plaatsingsvereisten meterkast en aansluiting eengezinswoning: https://www.fluvius.be/sites/fluvius/files/2019-10/fluvius-plaatsingsvereisten-meterkast.pdf en https://www.fluvius.be/sites/fluvius/files/2019-06/9010132-aansluiting_elektriciteit_eengezinswoning_fluvius_new.pdf
+- [I2] ABB, meterkast 25S60: https://new.abb.com/low-voltage/nl-be/productaanbod/verdeel-en-meterkasten/25S60-meterkast
+- [I3] ABB, verdeelkasten, en Elektramat over de plaats: https://new.abb.com/low-voltage/nl-be/productaanbod/verdeel-en-meterkasten/fix-o-rail-150-verdeelkasten-opbouw, https://new.abb.com/low-voltage/nl-be/productaanbod/verdeel-en-meterkasten/fix-o-rail-150-f4-verdeelkasten-inbouw en https://www.elektramat.be/kennisbank/waar-plaats-je-de-zekeringkast-in-huis/
+- [I4] Volta, lespakket aarding, en Zelektro op Bouwinfo: https://volta-org.be/media/nihnyeek/lespakket_aarding.pdf en https://www.bouwinfo.be/news/technieken/elektriciteit/partner/zelektrobe/aarding-en-arei-hoe-kies-je-de-juiste-kabels-kiezen-voor-je-aardingsinstallatie
+- [I5] Laadpaal: Bobex (offertesite) https://www.bobex.be/nl-be/laadpalen/ en go-e https://go-e.com/nl-be/oplossingen/voor-klanten/elektrische-wagen-thuis-opladen; de maten van het kastje komen van een productpagina in een Nederlandse webwinkel
+- [I6] Thuisbatterij: Bobex https://www.bobex.be/nl-be/thuisbatterij/installeren/afmetingen/ en Zonneplan (Nederland) https://www.zonneplan.nl/thuisbatterij/afmeting/
+- [I7] Bobex (offertesite), binnenunits van airco: https://www.bobex.be/nl-be/airco/welke-kiezen/binnenunit-airco/
+- [I8] Airco, leidingen en condens: voorbeeldtoestel https://www.new-heating.com/en/products/haier-haier-slim-duct-kanaal-binnen-buitenunit-50-kw-r32; handleiding buitendelen https://www.technim.nl/content/uploads/2025/05/1297010-tm1297014-_20221506_Handleiding-buitendelen-2022_3458420075103361222.pdf; condensafvoer https://id.nl/energie-en-klimaat/klimaat-en-luchtkwaliteit/klimaatbeheersing/koelen-zonder-vochtproblemen-alles-over-de-condensafvoer-van-je-airco; vrije ruimte buitenunit https://www.werkspot.nl/air-conditioning/artikelen/beste-plek-voor-je-buitenunit-airco-kiezen (allemaal Nederlands)
+- [I9] Warmtepomp: Thermia België https://belgium-nl.thermia.com/hoeveel-ruimte-heb-ik-nodig-voor-een-warmtepomp/; NIBE https://www.nibe.eu/download/18.143da023196a65e6d0fda/1746693878984/Aandachtspunten-luchtwater-warmtepompenV25.pdf; Bosch België https://www.bosch-homecomfort.com/be/nl/residentieel/info-advies/je-bosch-oplossing-uitgelegd!/warmtepompen/monoblock-warmtepomp/; Bobex https://www.bobex.be/nl-be/warmtepomp/afmetingen/
+- [I10] Boilers: Bulex https://www.bulex.be/fe/bulex-05-tf-hq-few-200me-few300me-00-1568009.pdf; Stiebel Eltron en Ubbink (productbladen); Buildwise, gids met 30 veelgestelde vragen https://www.buildwise.be/media/vfdpiwgh/gids-30-veelgestelde-vragen.pdf
+- [I11] Vloerverwarming: Wavin, technisch handboek https://mediahub.wavin.com/m/2c4d597b5e84f4c/original/Technisch-Handboek-Wavin-Vloerverwarming-en-koeling.pdf; Purmo/Radson https://www.purmo.com (technische gids vloerverwarming 2020 en verdelerkast); Rehau https://www.rehau.com/downloads/777518/vloerverwarming-p-hkv-d-verdeler.pdf; RBM https://rbm.eu
+- [I12] Radson, paneelradiatoren: https://www.radson.com/docs/STANDARD_NL.pdf
+- [I13] Bosch België, rookgasafvoer, en een Vlaamse publicatie over opstellingsruimtes: https://www.bosch-homecomfort.com/be/nl/residentieel/info-advies/je-bosch-oplossing-uitgelegd!/verwarming-op-gas/rookgasafvoer-cv-ketel/ en https://publicaties.vlaanderen.be/view-file/35463
+- [I14] Afvoeren: Gamma België https://www.gamma.be/nl/doe-het-zelf/a/afvoer-wc-installeren; Brico https://www.brico.be; DYKA België https://cdn.dyka.be/media/wysiwyg/DYKAbelgie/Nieuws/201809_0588_DYKA_Themakrant_Binnenriolering_BE_NL_LR.pdf; forum Klusidee (afschot)
+- [I15] Henco, technisch handboek: https://www.henco.be/sites/default/files/images/2023-09/TH_Henco_2023_NL_LR.pdf; Gamma België, verdelers: https://www.gamma.be
+- [I16] Vlaanderen, verplichte regenwaterput: https://www.vlaanderen.be/bouwen-wonen-en-energie/water/regenwater/verplichte-installatie-van-een-regenwaterput-en-infiltratiesysteem-bij-nieuwbouw-en-herbouw; de drempels komen van KBC, Callmepower en Spotto en verschillen onderling
+- [I17] Waterverzachter: Bobex https://www.bobex.be/nl-be/waterverzachter/soorten/kleine-waterontharder/ en Werkspot (Nederland) https://www.werkspot.nl/loodgieterswerk/artikelen/zo-installeer-je-een-waterontharder-stap-voor-stap
+- [I18] Toestellen: Bobex https://www.bobex.be/nl-be/badkamerrenovatie/toilet/hoogte/; douchebak uit Nederlandse documenten van woningcorporaties
+- [I19] Ventilatiekanalen: Duco https://www.duco.eu/en/products/mechanical-ventilation/ducoflex-ventilation-ducting; Renson https://www.renson.eu/gd-gb/producten-zoeken/ventilatie/mechanische-ventilatie/luchtverdeling/easyflex; Ubbink https://cdn.ubbink.com/be/getmedia/3e52edec-0e3a-4c80-8eaa-e197c15fbf88/Ubbink_brochure_woonhuisventilatie_NL.pdf; Wavin https://mediahub.wavin.com/m/703e528b3dcd63dc/original/Technisch-handboek-Wavin-Ventiza-luchtverdeelsysteem-Binnenklimaat-Oplossing.pdf
+- [I20] Technische ruimte: [I9] en een Vlaams ontwerpvoorbeeld voor ventilatie: https://publicaties.vlaanderen.be/view-file/35459
+- [I21] Software: Stabicad en Trimble Nova https://www.trimble.com/en/products/stabicad-for-revit; MEPcontent https://www.mepcontent.com; CADprofi https://www.cadprofi.com/main/nl/products/cadprofi/cadprofi-hvac-a-piping; LoopCAD (genoemd op forum Klusidee); Schneider eDesign https://www.se.com/be/nl/faqs/FAQ000262111; Buildwise, rekentool ventilatie https://www.buildwise.be/media/of2iiepa/userguiderekentool21_nl_200623.pdf; Vasco https://vasco.eu; Henco https://www.henco.be
+- [I22] Kleuren: AquaFlanders, uitvoeringsplan voor de keuring https://www.aquaflanders.be/public/downloads/Uitvoeringsplan-en-voorbeeld.pdf; TECE, technische informatie (gele gasbuis) https://www.tece.com; forum Klusidee (verwarming)
 
 **Verlichting**
 - [L1] Delta Light: https://deltalight.com/en/about-deltalight/our-brand en https://www.deltalight.com/en/my-deltalight/technical-downloads
