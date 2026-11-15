@@ -1,10 +1,11 @@
 """
 PROEF, NIET GEBRUIKEN ZONDER DE BINNENLIJNEN MEE TE METEN.
-Uitslag bij Manon (15/11/2026): de overlap van de silhouetten steeg (98 / 95 / 97 %), maar Jonas vond het vorige bestand
-juister, en terecht: de voorrand van de zitting ligt op de foto op 49 % van de hoogte, in het vorige bestand op 48 %, in
-het "nagemeten" bestand op 55 %. Een silhouet weet niets van de lijnen binnen de omtrek, en zonder onderstel is er geen
-vaste maat om de camera aan op te hangen: camera en vorm compenseren elkaar. Het resultaat is niet gekoppeld; Manon
-staat weer op het goedgekeurde bestand. Zie LEESMIJ.md, "Nameten op de foto's".
+Uitslag bij Manon (15/11/2026): de overlap van de silhouetten steeg (van 97 / 93 / 94 % naar 98 / 96 / 97 %), maar Jonas
+vond het vorige bestand juister. Mijn lezing van waarom (op het oog afgelezen op het blad, niet nagemeten, door Jonas nog
+te bevestigen): de zitting kwam te hoog en te fors; haar voorrand ligt op de foto rond de helft van de hoogte, in het
+vorige bestand ook, in het "nagemeten" bestand duidelijk hoger. Een silhouet weet niets van de lijnen binnen de omtrek,
+en zonder onderstel is er geen vaste maat om de camera aan op te hangen: camera en vorm compenseren elkaar. Het resultaat
+is niet gekoppeld; Manon staat weer op het goedgekeurde bestand. Zie LEESMIJ.md, "Nameten op de foto's".
 
 Zoekt voor een model uit de motor de aanpassingen (aanpassingen.py) waarmee zijn silhouet het best op de productfoto's
 ligt. Zonder Blender: de netten van uit_motor.py worden rechtstreeks op de foto's gelegd (zie pas.py).

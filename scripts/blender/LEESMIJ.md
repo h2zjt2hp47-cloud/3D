@@ -119,19 +119,22 @@ reeks) is daarvoor gereedschap geschreven:
   Bekijk elk masker één keer.
 - `pas` zoekt de camera per foto en meldt de afwijking per hoogte en per plaats. `"samen": true` houdt de camerahoogte
   voor alle foto's gelijk (zelfde statief); de afstand blijft per foto vrij, want de zetel stond niet altijd even ver.
-- `vormpas.py` liet daarna de vorm zelf zoeken (rand, helling, zitting). De overlap steeg van 95 / 93 / 92 % naar
-  98 / 96 / 97 %.
+- `vormpas.py` liet daarna de vorm zelf zoeken (rand, helling, zitting). De overlap (voor / schuin / zij, met dezelfde
+  cameraregels) steeg van 97 / 93 / 94 % voor het goedgekeurde bestand naar 98 / 96 / 97 %.
 
-**Toch is het resultaat afgekeurd** (Jonas, 15/11: "vorig bestand van Manon was correcter"), en terecht:
+**Toch is het resultaat afgekeurd** (Jonas, 15/11: "vorig bestand van Manon was correcter"). Hij gaf geen reden; wat
+volgt is mijn lezing, door hem nog te bevestigen:
 
 1. **Een silhouet ziet alleen de buitenomtrek.** De zitting kwam 4,6 cm hoger en forser te staan omdat dat de omtrek van
-   opzij beter vulde. Op de foto van voren ligt de voorrand van de zitting op 49 % van de hoogte; in het goedgekeurde
-   bestand op 48 %, in het "nagemeten" op 55 %. Die lijn ligt binnen de omtrek en telde dus niet mee.
+   opzij beter vulde. Op het blad (op het oog afgelezen, niet nagemeten) ligt de voorrand van de zitting op de foto van
+   voren rond de helft van de hoogte, in het goedgekeurde bestand ook, en in het "nagemeten" bestand duidelijk hoger.
+   Die lijn ligt binnen de omtrek en telde dus niet mee.
 2. **Zonder onderstel is er geen vaste maat buiten de zetel.** Camera (hoogte, afstand, richting) en vorm kunnen elkaar
    dan compenseren: een hogere overlap bewijst niet dat de vorm juister is. Bij Sullivan kwam de camera uit de poten.
-3. **De foto's passen niet op de maten van de website:** bij gelijke hoogte is Manon op de foto's ±4 % smaller en ±10 %
-   dieper dan 75 × 70 × 75. Het bestand moet op de maten van de site blijven, dus wordt een vorm die op de foto past,
-   daarna ±9 % ingedrukt. Welke maat afwijkt, is een vraag voor de klant.
+3. **De foto's lijken niet op de maten van de website te passen:** de afgekeurde passing vond Manon bij gelijke hoogte
+   ±4 % smaller en ±10 % dieper dan 75 × 70 × 75. Dat is een aanwijzing, geen meting: het komt uit dezelfde passing
+   waarin camera en vorm elkaar compenseren. Het bestand moet op de maten van de site blijven, dus wordt een vorm die
+   op de foto past, daarna ±9 % ingedrukt.
 4. Eerdere pogingen lieten de zitting zelfs door de schaal steken: dat ziet een silhouet evenmin.
 
 **Wat blijft:** `pas.py` om te meten en te tonen waar een bestand afwijkt (cijfers, geen oordeel), en de nieuwe sleutels
