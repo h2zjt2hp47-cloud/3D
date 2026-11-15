@@ -98,7 +98,9 @@ const ZETELBEELDEN = [
   { naam: 'ross-kop', model: 'Ross', familie: 'Fauteuils', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.3, 0.3, 0.5, 0.82], bouwstenen: true },
   { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.04, 0.2, 0.32, 0.8] },
 ];
-const BOUWBEELDEN = [{ naam: 'bouw-woning' }, { naam: 'bouw-raam' }];
+// `bouw-dak` komt na de twee oude beelden: het zet een dak in het project, en dat mag `bouw-woning` niet veranderen.
+// `bouw-zon` komt daarna: de lichtinval op het project met dak en koepel.
+const BOUWBEELDEN = [{ naam: 'bouw-woning' }, { naam: 'bouw-raam' }, { naam: 'bouw-dak' }, { naam: 'bouw-zon' }];
 
 const nodig = (b) => !alleen || alleen.some((a) => b.naam.startsWith(a));
 
@@ -203,6 +205,51 @@ async function maakBeelden() {
       await p.click('.nav [data-weergave="positie"]');
       await p.click('[data-p-weergave="3d"]');
       beelden.set('bouw-raam', png(await wachtTotStil(p, '#p-3d canvas')));
+      console.log('klaar');
+    }
+    if (bouw.some((b) => b.naam === 'bouw-dak')) {
+      // Dak en lichtkoepel (15/11): zadeldak met rode pannen op de verdieping, grind op het lage platte dak, en daarin
+      // een lichtkoepel boven de leefruimte. Alles via het scherm, zoals een gebruiker.
+      process.stdout.write('  bouw-dak … ');
+      await p.click('.nav [data-weergave="plan"]');
+      await p.click('[data-pl-weergave="plan"]');
+      await p.click('[data-dak-vorm="zadel"]');
+      await p.click('[data-dak-kleur="rood"]');
+      await p.selectOption('#dak-plat', 'grind:grijs');
+      await p.click('[data-gereedschap="daklicht"]');
+      await p.click('[data-daklicht="koepel_100"]');
+      // Klik in de plattegrond op (410, 640) cm: boven de leefruimte, naast de verdieping.
+      await p.evaluate(() => document.querySelector('#pl-canvas').scrollIntoView({ block: 'center' }));
+      await p.waitForTimeout(200);
+      const [x, y] = await p.evaluate(() => {
+        const svg = document.querySelector('#pl-canvas svg'), punt = svg.createSVGPoint();
+        punt.x = 410; punt.y = 640;
+        const s = punt.matrixTransform(svg.getScreenCTM());
+        return [s.x, s.y];
+      });
+      await p.mouse.click(x, y);
+      await p.click('[data-pl-weergave="3d"]');
+      await p.click('[data-pl-standpunt="schuin"]');
+      beelden.set('bouw-dak', png(await wachtTotStil(p, '#pl-3d canvas')));
+      console.log('klaar');
+    }
+    if (bouw.some((b) => b.naam === 'bouw-zon')) {
+      // Lichtinval (15/11): 21 juni om 13 u, van boven in het gelijkvloers gekeken. De verdieping en het dak zijn
+      // verborgen maar werpen schaduw: de zon valt alleen door de ramen en door de lichtkoepel binnen.
+      // Zonder `bouw-dak` ervoor (met --alleen) is er geen koepel: neem beide samen.
+      process.stdout.write('  bouw-zon … ');
+      await p.click('.nav [data-weergave="plan"]');
+      await p.click('[data-pl-weergave="3d"]');
+      await p.check('#pl-zon-aan');
+      await p.selectOption('#pl-zon-dag', 'zomer');
+      await p.evaluate(() => {
+        const s = document.getElementById('pl-zon-uur');
+        s.value = '13';
+        s.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await p.uncheck('#pl-alle-niveaus');
+      await p.click('[data-pl-standpunt="boven"]');
+      beelden.set('bouw-zon', png(await wachtTotStil(p, '#pl-3d canvas')));
       console.log('klaar');
     }
     await p.close();

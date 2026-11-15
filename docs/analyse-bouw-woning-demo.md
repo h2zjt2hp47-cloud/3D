@@ -152,7 +152,7 @@ Telkens met het nut voor de klant en een ruwe inschatting van het werk: **S** = 
 | Kettingmaten ook in de plattegrond (binnenmaten per ruimte, maten tussen ramen) | Uitvoeringsplan | S |
 | Trap met kwartdraai of spiltrap | Nu alleen een rechte trap | S |
 | Plan als onderlegger (foto of PDF van de architect) en daarop natekenen | Sneller dan opnieuw tekenen | M |
-| Dak: plat, zadeldak of lessenaarsdak, met dakramen | Nu alleen muren | M |
+| ~~Dak: plat, zadeldak of lessenaarsdak~~, met dakramen | **Gedaan** (15/11): plat, lessenaar of zadel, met de bedekking uit een dakcatalogus (EPDM, roofing, grind, groendak, pannen, leien, zink), oversteek en topgevels, en lichtkoepels en een lichtstraat in het platte dak. Het hellende dak komt op de bovenste verdieping als die één rechthoek is; anders plat met een melding. **Nog niet:** dakramen, goten, schilddak, een hellend dak op een L-vorm of op een lager volume. | – |
 | Buitenaanleg: terras, oprit, tuin | Mooier beeld; tegels per m² | S |
 
 ### B. Ramen, deuren en zonwering
@@ -212,7 +212,7 @@ Telkens met het nut voor de klant en een ruwe inschatting van het werk: **S** = 
 
 - Ruimtes zijn rechthoeken of samenstellingen van rechthoeken (L, U); geen schuine muren.
 - Een getekende wand deelt altijd de hele ruimte; een losse muur die halverwege stopt, kan nog niet.
-- Alleen platte daken en rechte trappen.
+- Het hellende dak (lessenaar of zadel) kan alleen op de bovenste verdieping, en alleen als die één rechthoek is; lagere delen blijven plat. Geen dakramen en geen goten. Alleen rechte trappen.
 - De inmeting en de handtekening worden alleen in de browser van het toestel bewaard.
 - Buitendeuren staan in 3D dicht; binnendeuren tonen we open (90°).
 - De 3D is schematisch (blokken), geen fotorealistische weergave.

@@ -26,6 +26,7 @@ function patroonSvg(id: string, soort: string, kleur: string): string {
     planken: [12, 100, 'M0 0V100', 0.8],
     planken_h: [100, 15, 'M0 0H100', 0.8],
     zink: [43, 100, 'M0 0V100', 1.6],
+    pannen: [30, 34, 'M0 0H30M0 0V34', 0.8],
   };
   const v = vorm[soort];
   if (!v) return '';
@@ -98,13 +99,15 @@ export function tekenSvg(t: TekeningResultaat, opties: SvgOpties = {}): string {
         `<rect data-code="${esc(v.code)}" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}"${r} fill="${kleurVeilig(v.vulling, 'none')}" stroke="${stroke}" stroke-width="${dikte}"/>`,
       );
     }
-    if (v.patroon && v.pad === undefined) {
+    if (v.patroon) {
       const pk = kleurVeilig(v.patroonKleur, '#00000055');
       const id = `pt-${v.patroon}-${pk.replace(/[^0-9a-zA-Z]/g, '')}`;
       const def = patroonSvg(id, v.patroon, pk);
       if (def) {
         patronen.set(id, def);
-        delen.push(`<rect x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}" fill="url(#${id})" stroke="none" pointer-events="none" class="patroon"/>`);
+        // Het patroon volgt de vorm: een rechthoek, of het pad zelf (bv. een topgevel onder een schuin dak).
+        if (v.pad === undefined) delen.push(`<rect x="${n(v.x)}" y="${n(v.y)}" width="${n(v.breedte)}" height="${n(v.hoogte)}" fill="url(#${id})" stroke="none" pointer-events="none" class="patroon"/>`);
+        else if (/^[MmLlHhVvCcSsQqTtAaZz0-9.,\s-]*$/.test(v.pad)) delen.push(`<path d="${v.pad}" fill="url(#${id})" stroke="none" pointer-events="none" class="patroon"/>`);
       }
     }
     if (v.symbool) delen.push(...symboolLijnen(v.x, v.y, v.breedte, v.hoogte, v.symbool, lijn, sw));

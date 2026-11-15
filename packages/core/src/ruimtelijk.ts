@@ -15,7 +15,9 @@ export type BlokSoort =
   | 'stof' | 'kussen' | 'hout' | 'metaal' | 'donker' | 'glas' | 'steen' | 'dak' | 'gevel' | 'planken'
   | 'tegel' | 'parket' | 'kunststof' | 'matglas'
   // Gevelbekleding: liggende planken, leien, zink met staande naad, natuursteen, sierpleister.
-  | 'planken_h' | 'leien' | 'zink' | 'natuursteen' | 'pleister';
+  | 'planken_h' | 'leien' | 'zink' | 'natuursteen' | 'pleister'
+  // Dakbedekking (woning): dakpannen, roofing (bitumen in banen), grind en groendak. EPDM is de effen soort `dak`.
+  | 'pannen' | 'roofing' | 'grind' | 'groendak';
 
 /** Zijde van een blok (balk), voor een ander materiaal op één zijvlak (bv. baksteen buiten, verf binnen). */
 export type BlokZijde = 'x+' | 'x-' | 'z+' | 'z-' | 'y+';
@@ -26,8 +28,10 @@ export interface Blok {
   /**
    * blok = (afgeronde) balk; cilinder/kegel = staand of liggend; bol = knoop; kuipwand = gebogen wand langs `pad`;
    * profiel = een doorsnede (`profiel`) die langs een rechte `pad` loopt, bv. een uitlopende arm.
+   * prisma = een harde doorsnede (`doorsnede`) in een verticaal vlak, recht doorgetrokken langs x of z (`as`): een
+   * hellend dakvlak, een topgevel of een lichtstraat (woning; de zetels gebruiken het niet).
    */
-  vorm: 'blok' | 'cilinder' | 'kegel' | 'bol' | 'kuipwand' | 'profiel';
+  vorm: 'blok' | 'cilinder' | 'kegel' | 'bol' | 'kuipwand' | 'profiel' | 'prisma';
   /** Minimumhoek (x, y, z) en afmetingen (b langs x, h langs y, d langs z), in cm. */
   x: number;
   y: number;
@@ -97,6 +101,18 @@ export interface Blok {
   rand?: number;
   /** Profiel: hoe ver het voorpaneel in het midden bol staat, in cm (gevulde stof). */
   kopBol?: number;
+  /**
+   * Prisma (vorm 'prisma'): de doorsnede als punten [p, y] in wereldmaat (cm), rondom. p loopt langs z als het prisma
+   * langs x doorgetrokken is (`as: 'x'`, van x tot x + b) en langs x bij `as: 'z'` (van z tot z + d); y is de hoogte.
+   * x/y/z/b/h/d blijven het omsluitende kader. `zijden` geldt voor de twee kopse vlakken (bij as 'x': 'x-' en 'x+').
+   * `plaatsBlokken` draait een prisma niet mee: het staat al in wereldmaat.
+   */
+  doorsnede?: [number, number][];
+  /**
+   * Voor het oog verborgen, maar werpt wel schaduw (woning, lichtinval): het dak, een verdieping of het stuk muur dat
+   * weggelaten is om binnen te kijken. Zo valt het zonlicht alleen door ramen en lichtkoepels binnen.
+   */
+  alleenSchaduw?: boolean;
   /** Draaiing rond de verticale as in graden (van x naar z), rond het midden; bv. een kussen in een gebogen zetel. */
   draai?: number;
   /**

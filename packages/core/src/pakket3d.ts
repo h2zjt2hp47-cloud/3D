@@ -8,7 +8,14 @@
 import type { Scene3D } from './ruimtelijk.js';
 
 export const PAKKET3D_SOORT = 'bouw-3d-pakket';
-export const PAKKET3D_VERSIE = 1;
+/**
+ * Versie van het formaat. Ze gaat omhoog telkens de scène iets krijgt dat een oudere kijker niet kan tekenen; die
+ * kijker weigert het pakket dan met een uitleg, in plaats van het verkeerd te tonen.
+ *   1  de blokken zoals op 15/11/2026 (woning met plat dak, ramen, deuren, meubels);
+ *   2  dak en lichtkoepels: de vorm `prisma` met een `doorsnede`, de daksoorten (pannen, roofing, grind, groendak) en
+ *      blokken die alleen schaduw werpen (`alleenSchaduw`).
+ */
+export const PAKKET3D_VERSIE = 2;
 
 /** De woning tot en met één verdieping; `laag` is dezelfde scène met de muren op 110 cm (om binnen te kijken). */
 export interface Pakket3DNiveau {

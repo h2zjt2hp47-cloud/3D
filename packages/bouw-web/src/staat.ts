@@ -113,7 +113,7 @@ function standaardMeta(): OfferteMeta {
     btw: 21,
     klanttype: 'particulier',
     korting: 0,
-    regels: { vloeren: true, wanden: true, binnendeuren: true, ruwbouw: false, inrichting: false, gevel: true },
+    regels: { vloeren: true, wanden: true, binnendeuren: true, ruwbouw: false, inrichting: false, gevel: true, dak: true },
     meerwerk: [],
     winddruk: 800,
   };
