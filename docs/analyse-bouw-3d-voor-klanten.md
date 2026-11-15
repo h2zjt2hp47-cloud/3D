@@ -7,6 +7,21 @@ Dit is alleen een analyse. Ze bouwt voort op `docs/analyse-bouw-3d-missing-link.
 > **Labels:** **[code]** = vandaag vastgesteld in de code. **[beslist]** = antwoord van Jonas op een van de twaalf vragen hieronder. **[inschatting]** = mijn redenering. **[te bevestigen]** = moet iemand anders bevestigen (leverancier, aannemer, Missing Link).
 > Werk: **S** = enkele dagen, **M** = één à twee weken, **L** = meer.
 
+## Het doel (Jonas, 15/11)
+
+> *"Snel een mooie 3D opmaken die een verkoper kan tonen na het eerste gesprek ter plaatse bij de klant. Dit kan nadien
+> verder in detail ingevuld worden."*
+
+Daaruit volgen twee fasen, en alles in dit document wordt daaraan getoetst:
+
+| Fase | Wanneer | Wat telt | Wat erbij hoort |
+|---|---|---|---|
+| **1 · Eerste gesprek** | Bij de klant, of meteen erna | Snel, mooi, kunnen tonen en meegeven | Snelstart, stijlen, tik op het ding, vrij tekenen, een mooiere 3D, meegeven (bestand of link, blad met beelden), zonder prijzen |
+| **2 · Detail invullen** | Nadien, op kantoor | Volledig en juist | Constructie en doorsnede, alle raamtypes, vloeropbouw, techniek en installateur, het detail van de offerte, beheer |
+
+Fase 1 gaat voor. Niets uit fase 2 mag fase 1 trager of drukker maken: het detail zit achter *Meer opties*, in het
+overzicht, of in een aparte weergave.
+
 ## In het kort
 
 1. **Het doel verschuift van "offerte maken" naar "het ontwerp tonen".** De verkoper bouwt het ontwerp op, de klant ziet het in 3D en krijgt het mee. Prijzen verdwijnen uit beeld; de rekenmotor blijft bestaan voor later.
@@ -16,7 +31,7 @@ Dit is alleen een analyse. Ze bouwt voort op `docs/analyse-bouw-3d-missing-link.
    - *een nieuwe blik* (constructie: houtskelet, dakconstructie, vloeropbouw): hetzelfde ontwerp, maar je ziet wat erin zit.
 3. **Eén ding maakt alles goedkoper: een bibliotheek van bouwdelen.** Paal, ligger, spant, wandvlak, dakvlak, plaat, poort. Een carport, een loods en een houtskeletwand zijn alle drie een samenstelling daarvan. Vandaag is de 3D van elk model apart geprogrammeerd; dat houdt geen zes productsoorten vol.
 4. **Het zwaarste stuk is niet de 3D maar het beheer.** Je koos dat de aannemer zelf zijn modellen, kleuren en materialen beheert. Dat kan voor materialen, kleuren, maten en welke opties hij toont. Een **nieuwe vorm** (een ander soort carport) blijft programmeerwerk. En beheren vraagt bewaren buiten de browser.
-5. **Volgorde** (jouw keuze: eerst de constructieweergave): zie hoofdstuk 8. Het zijn een tiental rondes; elke ronde eindigt met een testbestand en een test op tablet en groot scherm.
+5. **Volgorde:** herschikt naar het doel (zie hoofdstuk 8): eerst snel, mooi en kunnen meegeven; de constructieweergave en al het andere detail komen daarna. Elke ronde eindigt met echte schermafdrukken en een test op tablet en groot scherm.
 
 Wat ik nog van je nodig heb, staat in hoofdstuk 14. **Het belangrijkste is gebruiksgemak: zie hoofdstuk 13 (de kortste weg naar een resultaat).** Later op 15/11 kwamen erbij: de toets aan twee echte offertes (hoofdstuk 10), alles voor de installateur (hoofdstuk 11) en het oordeel over de schetsen (hoofdstuk 12).
 
@@ -296,21 +311,26 @@ Na de schetsen kwamen er nog wensen bij (15/11): **zonneschermen, ventilatie, st
 
 ## 8. Volgorde
 
-| Ronde | Wat | Werk [inschatting] |
-|---|---|---|
-| 1 | *(loopt)* Dak, lichtkoepels, lichtinval; 3D doorsturen | – |
-| 2 | **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
-| 3 | **Bouwdelen en opbouw als gegevens** (hoofdstuk 3): de basis voor rondes 4, 6, 7 en 8 | M |
-| 4 | **Constructieweergave** van de woning (jouw eerste keuze): houtskelet, balklaag, dakconstructie, vloeropbouw, de knop *Afgewerkt / Constructie* | L |
-| 5 | **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
-| 6 | **Aanbouw en bijgebouwen in hout:** de bestaande aanbouw op bouwdelen en tegen de woning; carport, dan tuinhuis, poolhouse, pergola | M–L |
-| 7 | **Staalbouw:** loods of hal | M–L |
-| 8 | **Staal in en rond de woning:** trap, balustrade, luifel | M |
-| 9 | **Meegeven:** kijkbestand, blad zonder prijzen, maten in de 3D, varianten naast elkaar | M |
-| 10 | **Vloerafwerking** (legpatronen, plinten) en de rest van de afwerkingen uit de vorige analyse | M |
-| 11 | **Beheer door de aannemer**, zodra vaststaat waar het bewaard wordt | L |
+Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven), dan fase 2 (detail).
 
-Ronde 3 lijkt een omweg vóór jouw eerste keuze, maar de constructieweergave bestáát uit bouwdelen en opbouwen. Wie ze overslaat, programmeert het skelet één keer voor de woning en later opnieuw voor de carport en de loods.
+| Ronde | Fase | Wat | Werk [inschatting] |
+|---|---|---|---|
+| 1 | 1 | *(loopt)* Dak, lichtkoepels, lichtinval. Klaar: 3D doorsturen als pakket en zending | – |
+| 2 | 1 | **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
+| 3 | 1 | **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
+| 4 | 1 | **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
+| – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
+| 5 | 2 | **Bouwdelen en opbouw als gegevens** (hoofdstuk 3): de basis voor wat volgt | M |
+| 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw | L |
+| 7 | 2 | **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
+| 8 | 2 | **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
+| 9 | 2 | **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
+| 10 | 2 | **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
+| 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
+| 12 | 2 | **Vloerafwerking** en de rest van de afwerkingen | M |
+| 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
+
+Elke ronde eindigt met echte schermafdrukken, een testbestand en de gemeten tikken op tablet en groot scherm.
 
 ---
 
