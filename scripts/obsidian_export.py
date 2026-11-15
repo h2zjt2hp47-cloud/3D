@@ -82,8 +82,13 @@ def main():
             tekst = omzetten(zonder_frontmatter(f.read()))
         with open(os.path.join(UIT, f'{titel}.md'), 'w', encoding='utf-8') as f:
             f.write(frontmatter(titel, tags, klant) + tekst)
-    for b in os.listdir(os.path.join(ROOT, 'docs', 'afbeeldingen')):
-        shutil.copy(os.path.join(ROOT, 'docs', 'afbeeldingen', b), os.path.join(UIT, 'afbeeldingen', b))
+    # Ook de submappen (bv. schermschetsen): een verwijzing als ![[schermschetsen/blad-01.jpg]] vindt Obsidian op het pad.
+    bron = os.path.join(ROOT, 'docs', 'afbeeldingen')
+    for map_, _, bestanden in os.walk(bron):
+        doel = os.path.join(UIT, 'afbeeldingen', os.path.relpath(map_, bron))
+        os.makedirs(doel, exist_ok=True)
+        for b in bestanden:
+            shutil.copy(os.path.join(map_, b), os.path.join(doel, b))
 
     # Collectie: één notitie per familie met alle modellen (uit de modellenlijst van de motor).
     modellen = os.path.join(ROOT, 'packages', 'core', 'voorbeelden', 'modellen.ts')

@@ -346,6 +346,14 @@ buiten.
 
 De kijker opent ook een zending (hij haalt het pakket eruit) en toont een positie van voren, met het hele raam in beeld.
 
+**Versie 2 van het pakket (15/11, bij het dak).** Sinds de woning een schuin dak, dakbedekkingen en lichtkoepels kan
+hebben, staan er in de 3D vormen die de eerste kijker niet kan tekenen (een schuin dakvlak, pannen, grind, een koepel).
+Het pakket draagt daarom versie 2. De regel: een kijker toont pakketten tot en met zijn eigen versie; een nieuwer pakket
+weigert hij met een uitleg, in plaats van het verkeerd te tonen. De nieuwe kijker opent ook de oude pakketten (versie 1).
+**Wie de kijker van vóór het dak nog heeft, moet hem dus vervangen.** Nagekeken in een echte browser: pakket en zending
+van de voorbeeldwoning met een zadeldak in pannen, en met een plat dak in grind met een koepel en een lichtstraat,
+openen zonder fouten in de losse kijker; de zending bevat nog steeds geen enkel bedrag.
+
 **Wat nog niet bestaat:** het versturen zelf. Pakket en zending zijn nu een bestand; waar Missing Link het bewaart en hoe
 het een beeld ontvangt, hangt af van de antwoorden op hoofdstuk 8 (vragen 4 en 5). Er is niets naar Missing Link
 geschreven.
