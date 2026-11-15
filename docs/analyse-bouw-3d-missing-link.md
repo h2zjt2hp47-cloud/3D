@@ -2,7 +2,7 @@
 
 Vraag van Jonas (15/11): *"latere fase, kunnen we de 3D voor de bouw klaar maken om in te bouwen in missing link? Graag nog wat extra mogelijkheden in bouwen qua afwerkingen enzo eerst analyse maken"*.
 
-Dit is alleen een analyse. Er is niets aan de bouwdemo gewijzigd.
+Dit was alleen een analyse; wat er sindsdien gebouwd is, staat in hoofdstuk 11. Het vervolg (3D tonen aan klanten zonder prijzen, meer producten, de volgorde) staat in `docs/analyse-bouw-3d-voor-klanten.md`.
 
 > **Hoe lees je de labels?**
 > - **[code]**: vandaag vastgesteld in de code of gemeten op de bundel.
