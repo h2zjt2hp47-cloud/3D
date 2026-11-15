@@ -281,7 +281,15 @@ function bouwIndelingen(): HTMLElement {
   return vak;
 }
 
+/** De indeling waarmee een soort begint als je ze in de stap "Soort" kiest (de eerste tegel van die soort). */
+const EERSTE_INDELING: Record<string, string> = { raam: 'enkel_dk', terrasdeur: 'terrasdeur', voordeur: 'voordeur', schuif: 'schuif2', hefschuif: 'hefschuif3', vouwwand: 'vouwwand4', glaswand: 'glaswand' };
+
 function zet(code: string, w: unknown) {
+  // Een andere soort kiezen is een andere indeling kiezen: zo passen maat, glas en profiel zich meteen aan
+  // (een raam van 1,2 m dat een hef-schuifdeur wordt, zou anders vol fouten staan).
+  const p = huidig();
+  const start = p?.model === 'RAAM' && code === 'type' && p.keuzes.type !== w ? INDELINGEN.find((i) => i.code === EERSTE_INDELING[String(w)]) : undefined;
+  if (start) { kiesIndeling(start); return; }
   wijzig('positie', (t) => {
     const p = t.posities.find((x) => x.id === huidigId);
     if (p) p.keuzes[code] = w as never;

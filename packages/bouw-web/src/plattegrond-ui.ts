@@ -31,7 +31,6 @@ import {
   type RuimteType,
 } from '../../core/src/index.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
-import { raamBlokken } from '../../core/voorbeelden/raam3d.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';

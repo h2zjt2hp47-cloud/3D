@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { controleerModel, tekenSvg, type Keuzes } from '../src/index.js';
 import { berekenRaam, raamdeur, RAL_KLEUREN, ruitenVan } from '../voorbeelden/raam.js';
-import { raamBlokken } from '../voorbeelden/raam3d.js';
+import { raamBlokken, raamScene } from '../voorbeelden/raam3d.js';
 import { INDELINGEN, indelingVan, pasIndelingToe } from '../voorbeelden/raamindelingen.js';
 import { openingenVan, rasterVan } from '../voorbeelden/raamraster.js';
 import { raamKeuzes } from '../voorbeelden/woning.js';
@@ -285,6 +285,15 @@ describe('grote glaspartijen', () => {
     expect(codes({ type: 'glaswand', breedte: 3600, hoogte: 2500, profiel: 'alu' })).toContain('veiligheidsglas');
     expect(r.stuklijst.map((s) => s.code)).not.toContain('deurslot');
     expect(codes({ type: 'glaswand', ...groot, delen: 'd1', breedte: 3500 })).toContain('deel_breed');
+  });
+
+  it('scène: bij de nieuwe indelingen liggen vloer en terras net boven het grondvlak van de 3D (geen strepen)', () => {
+    const vloer = (extra: Keuzes) => raamScene(raam(extra)).blokken.filter((b) => b.code === 'vloer_binnen' || b.code === 'terras').map((b) => Math.round((b.y + b.h) * 100) / 100);
+    expect(vloer({ type: 'hefschuif', ...groot, delen: 'd3' })).toEqual([0.3, 0.3]);
+    expect(vloer({ vakken: 'v2', breedte: 1600, vak1: 'draai_l', vak2: 'draaikip_r', stolp: true })).toEqual([0.3, 0.3]);
+    // De indelingen van vroeger blijven exact wat ze waren.
+    expect(vloer({})).toEqual([0, 0]);
+    expect(vloer({ type: 'schuif', breedte: 3000, hoogte: 2300, ...gelaagd })).toEqual([0, 0]);
   });
 
   it('de nieuwe soorten gebruiken alleen artikelen die in de prijslijst staan', () => {
