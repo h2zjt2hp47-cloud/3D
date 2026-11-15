@@ -33,7 +33,7 @@ overzicht, of in een aparte weergave.
 4. **Het zwaarste stuk is niet de 3D maar het beheer.** Je koos dat de aannemer zelf zijn modellen, kleuren en materialen beheert. Dat kan voor materialen, kleuren, maten en welke opties hij toont. Een **nieuwe vorm** (een ander soort carport) blijft programmeerwerk. En beheren vraagt bewaren buiten de browser.
 5. **Volgorde:** herschikt naar het doel (zie hoofdstuk 8): eerst snel, mooi en kunnen meegeven; de constructieweergave en al het andere detail komen daarna. Elke ronde eindigt met echte schermafdrukken en een test op tablet en groot scherm.
 
-Wat ik nog van je nodig heb, staat in hoofdstuk 14. **Het belangrijkste is gebruiksgemak: zie hoofdstuk 13 (de kortste weg naar een resultaat).** Later op 15/11 kwamen erbij: de toets aan twee echte offertes (hoofdstuk 10), alles voor de installateur (hoofdstuk 11) en het oordeel over de schetsen (hoofdstuk 12).
+Wat ik nog van je nodig heb, staat in hoofdstuk 15. **Het belangrijkste is gebruiksgemak: zie hoofdstuk 13 (de kortste weg naar een resultaat).** Hoofdstuk 14: aanwijzing voor EPB, schatting van de stabiliteit en meetstaat, zoals de referentie-app. Later op 15/11 kwamen erbij: de toets aan twee echte offertes (hoofdstuk 10), alles voor de installateur (hoofdstuk 11) en het oordeel over de schetsen (hoofdstuk 12).
 
 ---
 
@@ -289,7 +289,10 @@ Na de schetsen kwamen er nog wensen bij (15/11): **zonneschermen, ventilatie, st
 
 ## 6. Wat dit niet is
 
-- **Geen berekening.** Geen stabiliteit, geen EPB, geen windlast. De bestaande controles (daglicht, veiligheidsglas, de statiek van een raam) blijven richtwaarden en "te verifiëren".
+- **Geen officiële berekening.** De configurator geeft wel schattingen (hoofdstuk 14: een aanwijzing voor EPB, een schatting
+  van de stabiliteit, een meetstaat), maar geen EPB-aangifte en geen stabiliteitsstudie. Bij elke schatting staat dat erbij,
+  met de aannames. De bestaande controles (daglicht, veiligheidsglas, de statiek van een raam) blijven richtwaarden en
+  "te verifiëren".
 - **Geen foto.** De 3D blijft opgebouwd uit blokken met een getekende structuur. Met dak, kleuren en profielen wordt ze rijker, maar ze wordt geen foto van het huis.
 - **Geen uitvoeringsplan.** De constructieweergave toont wat erin zit, niet hoe het gezaagd en gemonteerd wordt.
 - **Geen prijzen**, in eerste instantie.
@@ -321,7 +324,8 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 4 | 1 | **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
 | 5 | 2 | **Bouwdelen en opbouw als gegevens** (hoofdstuk 3): de basis voor wat volgt | M |
-| 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw | L |
+| 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
+| 6b | 2 | **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
 | 8 | 2 | **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
@@ -427,9 +431,9 @@ plaatsen, één manier om een leiding te trekken, en een catalogus die zegt welk
 - **Technische ruimte:** de toestellen die samen horen (tellerkast, verdeelbord, boiler, verdeler, ventilatie-unit) als
   één opstelling die je in een berging of garage zet, met de vrije ruimte die ze vragen.
 - **Buiten:** buitenunit van airco of warmtepomp tegen een gevel of op een plat dak, met de vrije ruimte errond.
-- **Geen berekening.** Geen vermogen, geen debiet, geen leidingdiameters uitrekenen, geen controle op het AREI of op de
-  regels van de netbeheerder. De configurator **toont en telt**; de installateur dimensioneert. Dat staat op het scherm
-  en op elk blad.
+- **Geen berekening van de installatie.** Geen vermogen, geen debiet, geen leidingdiameters uitrekenen, geen controle op
+  het AREI of op de regels van de netbeheerder. De configurator **toont en telt** (de toestellen en de meters leiding komen
+  in de meetstaat van hoofdstuk 14); de installateur dimensioneert. Dat staat op het scherm en op elk blad.
 
 ### 11.4 Wat het technisch vraagt
 
@@ -506,7 +510,42 @@ het trager maakt, gaat achter *Meer opties*.
 
 ---
 
-## 14. Wat ik nog van je nodig heb
+## 14. Wat de referentie-app nog doet: EPB-waarde, schatting van stabiliteit, meetstaat (15/11)
+
+Jonas over de app van Carpentier: *"app geeft EPB-waarde, doet schatting van stabiliteit en geeft meetstaat van nodige
+materialen."* Dat hoort dus ook bij ons doel. Het zijn alle drie uitkomsten van **fase 2** (detail invullen): ze staan in
+het overzicht en maken het eerste gesprek niet trager.
+
+Alle drie volgen uit hetzelfde: de **bouwdelen en de opbouw als gegevens** (hoofdstuk 3). Wie weet welke lagen en welke
+balken er in een wand, vloer en dak zitten, kan ze tellen, hun isolatiewaarde optellen en hun overspanning nakijken.
+
+| Uitkomst | Wat de verkoper krijgt | Hoe het werkt | Wat al bestaat [code] | Werk |
+|---|---|---|---|---|
+| **Meetstaat** | Per ontwerp een lijst van wat nodig is: aantal en lengte van stijlen, balken en kepers per doorsnede; m² plaat, isolatie, folie, gevel- en dakbekleding per soort; ramen, koepels, toestellen. Zonder prijzen; te kopiëren of door te sturen. | Elk bouwdeel telt zijn eigen stukken en lagen; de meetstaat is de som, met een snijverlies per soort. | De motor heeft al een stuklijst met formules (nu gebruikt voor de prijs van ramen) en een glasbestelling per ruit | M, na de bouwdelen |
+| **Aanwijzing voor EPB** | Per deel van de schil (wand, dak, vloer, raam) de U-waarde, met een groen of rood teken tegenover de grootste toegelaten waarde. | Uit de lagen: dikte gedeeld door de warmtegeleiding van het materiaal, opgeteld, met een toeslag voor het hout tussen de isolatie. Voor ramen bestaat de berekening al. | De U-waarde van een raam (glas, profiel, afstandhouder) | M |
+| **Schatting van de stabiliteit** | Per balklaag, dak en latei: "deze doorsnede volstaat voor deze overspanning" of "te licht, neem er een zwaardere", met de aannames erbij. | De klassieke formules voor een balk op twee steunpunten (doorbuiging en sterkte), met een vaste belasting per soort vloer of dak en de eigenschappen van de houtklasse. | Dezelfde aanpak bestaat al voor de stijl van een raam (winddruk, doorbuiging, nodige stijfheid) | M–L |
+
+**Eerlijk over wat dit wel en niet is**
+
+- **EPB:** de configurator kan U-waarden per deel geven. Het **E-peil of S-peil van een hele woning** is veel meer
+  (vorm, oriëntatie, ventilatie, installaties, de officiële software). Dat bouw ik niet; ik noem het daarom een
+  *aanwijzing voor EPB*, geen EPB-waarde. De grootste toegelaten U-waarden en de warmtegeleiding per materiaal moeten uit
+  een bron komen die iemand naleest **[te bevestigen]**; ik ken ze uit algemene kennis (bv. 0,24 W/m²K voor wand, dak en
+  vloer in Vlaanderen), niet uit een nagelezen tekst.
+- **Stabiliteit:** het is een **schatting**, zoals Jonas het noemt. Ze gaat over hout (balken, kepers, lateien, stijlen),
+  niet over staal, funderingen, windverbanden of aansluitingen. De belastingen en de veiligheidsfactoren zijn aannames
+  die een ingenieur moet nalezen **[te bevestigen]**. Op het scherm en op elk blad staat: *schatting, een ingenieur rekent
+  na*.
+- **Meetstaat:** die is zo goed als het recept van het bouwdeel. Zonder een vakman die het recept naleest (hoeveel
+  stijlen rond een opening, welke plaat waar) is ze een benadering.
+- Of de app van Carpentier dit op dezelfde manier doet, weet ik niet: ik heb de app en de film niet kunnen bekijken.
+
+**Plaats in de volgorde:** de meetstaat komt samen met de constructieweergave (ronde 6); de aanwijzing voor EPB en de
+schatting van de stabiliteit zijn een eigen ronde erna.
+
+---
+
+## 15. Wat ik nog van je nodig heb
 
 1. **Eén aannemer per productsoort** die een recept wil nalezen (houtbouw, staalbouw). Zonder vakman blijven het benaderingen.
 2. **Waar wordt bewaard?** Voor de link naar de klant en voor het beheer: in Missing Link, of op een eigen server van de configurator?
