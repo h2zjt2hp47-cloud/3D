@@ -119,6 +119,11 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
   - `opEcht(plaatsing | null, toestand)` meldt na elke opbouw wat in beeld staat: getoond, laden, benadering, fout of geen. De ontwerper toont de naamsvermelding en de passende uitleg, ook na het laden of bij een fout.
 - **Bestanden:** `demo-web/modellen3d/<sleutel>.glb` (+ `<sleutel>.jpg` voor de modelkaart, `BRON.md` met licentie). `bouw.mjs` sluit ze alleen in de gewone demo in (`/*MODELLEN3D*/`), niet in de huisstijlversie. `staat.ts` toont proefmodellen alleen als hun bestand er is (`proefModellenNu`).
 - **Een bestand voorbereiden:** lampen en camera's eruit, kleurvarianten eruit, texturen verkleinen (zie `docs/echte-3d-modellen.md`). Meet de maten en de zithoogte in het bestand, en kies elementtypes die binnen de catalogusgrenzen vallen (arm ≤ 40 cm, afgerond eindelement ≥ 80 cm). Wat de klant moet aanleveren, staat in dat document.
+- **Zelf een bestand bouwen in Blender (proef 15/11, Sullivan):** `scripts/blender/sullivan.py` maakt `demo-web/modellen3d/sullivan_blender.glb`; uitleg, installatie (`pip install bpy`, draait zonder scherm) en de regels voor een bestand in `scripts/blender/LEESMIJ.md`. Kort:
+  - de vorm staat als gegevens bovenaan het script (buitenkant per hoogte, rand per hoek, dikte); het script stelt de maten bij tot die van de website en bakt de schaduw in de plooien met de naden erin;
+  - meter, y omhoog, voorkant naar +z; delen met `stof` en `poot` in de naam; één stofmateriaal en één vel stof op één schaal; `occlusionTexture` ingesloten; geen compressie;
+  - het proefmodel is een apart model in `voorbeelden/proefmodellen.ts` dat het ontwerp van het gewone model overneemt: prijs, tekeningen en blokken blijven die van het gewone model (test in `echt3d.test.ts`, ook op het bestand zelf);
+  - vergelijken met de foto's doe je met `scripts/blender/overlay.py` en een teruggerekende camera, niet met verhoudingen in pixels (de foto's zijn van dichtbij genomen).
 
 ## Zachte vormen (proef 4/11, `core/src/zachtevorm.ts`)
 - **`zachteVorm(blokken, { raster 2, overgang 4, overgangBinnen 10, minAfronding 1,25 × raster, buren, tegelCm })`**: maakt van gestoffeerde blokken één dichte vorm. Werkwijze:

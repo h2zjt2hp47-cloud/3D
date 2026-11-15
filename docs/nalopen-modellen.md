@@ -516,6 +516,25 @@ schuin afloopt, en dat geen enkel verloop zowel de foto van voren als die van op
 een verkleinde foto. Op de volle foto, tegen de diepte van 80 cm, is het ±17 cm. Het echte verschil zat in de vorm: de
 schaal is een tulp.
 
+## Proef in Blender: Sullivan als 3D-bestand (15/11)
+
+Vier afwijkingen van Sullivan staan hieronder bij de grenzen van de motor: de vlakke bovenkant van de rug, de rolarm,
+de rug die dikker is bij de zitting en de ronde onderrand. Op 15/11 is Sullivan als proef **gebouwd in Blender** en als
+3D-bestand in de configurator gezet, naast het gewone model (dat niet gewijzigd is). In dat bestand zijn de vier
+opgelost. Uitleg, beelden, kost en wat nog afwijkt: [Echte 3D-modellen](echte-3d-modellen.md), hoofdstuk *Proef 15/11*.
+
+![Sullivan: foto, huidige versie en de versie uit Blender](afbeeldingen/sullivan-blender.jpg)
+
+Twee dingen uit die proef gelden ook voor de modellen in onze bouwstenen:
+
+- **De foto's zijn van dichtbij genomen** (±3 m). Wat verder van de camera staat, lijkt kleiner. De rug van Sullivan
+  staat ±45 cm achter de armen en is daardoor breder dan zijn aandeel in de foto van voren: net onder de bovenkant
+  ±74 % van de hele breedte (in de foto 65 %), op zijn breedst ±90 % (in de foto 85 %). De verhoudingen uit één foto in
+  de hoofdstukken hierboven zijn dus ondergrenzen voor wat achteraan staat. Met een teruggerekende camera (zie
+  `scripts/blender/LEESMIJ.md`) meet je het juist.
+- **Van opzij helt de rug op de foto verder achterover dan 80 cm diepte toelaat** (±5 cm bovenaan). De maten van de
+  website gaan voor; het staat bij de vragen voor de klant.
+
 ## Stand van de afwijkingen (14/11)
 
 Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
@@ -561,6 +580,10 @@ Elke afwijking uit de lijsten hierboven eindigt in één van drie vakken.
 - Maten van Fréjus, Gozo, Azar, Husk en Esmee; maten van de poefs Stockholm, Kanto en Fez.
 - Wat de standaardstikking per model is in onze keuzes ("single stitching", "external stitching").
 - De echte stoffen en kleuren (Belize en Azar wijken in tint af; de demostoffen zijn geen stoffen van de klant).
+- Sullivan: klopt de diepte van 80 cm? Op de foto van opzij staat de bovenkant van de rug ±5 cm verder naar achter dan
+  die maat toelaat (gemeten met een teruggerekende camera, 15/11; een foto blijft een foto).
+- Bestaan er 3D-bestanden of CAD-tekeningen van de modellen? Dat is de beste bron voor echte 3D-modellen (zie
+  [Echte 3D-modellen](echte-3d-modellen.md)).
 
 ## Nog te doen
 

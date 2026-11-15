@@ -1,6 +1,6 @@
 # 3D-technieken: wat werkt waarvoor (kennisbank)
 
-*Stand 13/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
+*Stand 15/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
 meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat in de notities onderaan.
 
 ## De opvatting sinds 13/11: eerst het echte product, dan de techniek
@@ -43,7 +43,7 @@ Uitwerking en beelden: [Modellen nalopen tegen de productfoto's](nalopen-modelle
 | **Vorm als gegevens** (sinds 13/11) | De opbouw van een model in onderdelen (zitting, schaal, onderstel), met de vorm als getallen in het modelbestand: dikte, omloop, verloop van de bovenrand, soort zitting, onderstel. | Modellen met een eigen vorm binnen één familie: de fauteuils van de klant (Milton, Mabel …). Later ook raamtypes binnen één profielsysteem. | Een vorm die buiten de familie valt: dan eerst een nieuwe bouwsteen in de motor. | Meteen |
 | **Doorlopende opbouw** | Een rij elementen wordt in 3D één product. Prijs en tekeningen blijven per element. | Modulaire zetels die als één geheel ogen (Doha, Montego). | Hoeksofa's (nog niet uitgewerkt). | Zoals de zachte vormen |
 | **Boog** | De hele vorm buigt in een boog; wat erop staat (kussens) draait mee. | Gebogen sofa's (Montego); later rondboogramen. | – | Meteen |
-| **Echt 3D-bestand** | Een afgewerkt model uit een 3D-programma of van de fabrikant (GLB), met onze stoffen en afwerking. De configurator kijkt of het bestand bij de gekozen maten past. | Vaste onderdelen (krukken, scharnieren) of topmodellen met een eigen bestand. | Producten op maat: een bestand kun je uitrekken, niet omvormen. | Laden bij het openen |
+| **Echt 3D-bestand** | Een afgewerkt model uit een 3D-programma of van de fabrikant (GLB), met onze stoffen en afwerking. De configurator kijkt of het bestand bij de gekozen maten past. Sinds 15/11 bouwen we zo'n bestand ook zelf, met een script in Blender (proef: Sullivan). | Vaste onderdelen (krukken, scharnieren), topmodellen met een eigen bestand, en vaste modellen met een vorm die onze bouwstenen niet halen (fauteuils). | Producten op maat: een bestand kun je uitrekken, niet omvormen. | Laden bij het openen |
 | **Weergave** | Licht en reflecties uit een omgevingsbeeld, schaduw in de hoeken, zachte slagschaduwen, echte kamers als decor, een fotomodus die licht natuurgetrouw narekent. | Beide demo's: de bouwdemo gebruikt dezelfde 3D-weergave. | – | Fotomodus ±1 min |
 | **Snelheid** | Zware vormen in de achtergrond rekenen (één per keer, tot dan de eenvoudige vorm) en onthouden; tabellen per cm in het grondvlak voor lange vormen. | Alles wat zwaar rekent. | – | 2 à 3 × sneller |
 
@@ -141,6 +141,19 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
     stak de schaal achteraan 1,5 cm buiten de zetel: de scheve schaal heeft haar hoogste punt naast het midden, en de
     variant op een verdekte voet begon 5 cm lager. Een test loopt nu voor die twee modellen elke vorm, de kleinste en
     grootste maten, losse kussens en elke draaiing af: gewone getallen, binnen de zetel, zonder spleet.
+28. **Een productfoto van dichtbij is geen tekening: reken de camera terug.** De foto's van Sullivan zijn op ±3 m
+    genomen. De voorste poten staan in beeld verder uit elkaar en lager dan de achterste, en de rug (ver weg) lijkt
+    smaller dan hij is: in de foto van voren is hij net onder de bovenkant 65 % van de hele breedte, met de camera
+    erbij ±74 %. De camera volgt uit het onderstel: de poten staan op een vierkant, dus uit hun onderlinge afstanden en
+    hoogtes in beeld volgen afstand, hoogte en lens (`scripts/blender/LEESMIJ.md`). Leg daarna de omtrek van het model
+    over de foto (`scripts/blender/overlay.py`): dan zie je de afwijking in plaats van ze te schatten.
+29. **Een vast model dat de motor niet haalt, bouw je als bestand.** De vier grenzen van de motor bij Sullivan (vlakke
+    rugbovenkant, rolarm, dikkere rug bij de zitting, ronde onderrand) verdwijnen in één 3D-bestand uit Blender, zonder
+    de motor uit te breiden. De prijs is dat het bestand vastligt: het rekt maar 5 % mee, en prijs en tekeningen
+    blijven uit de bouwstenen komen. Voor een fauteuil op vaste maten is dat een goede ruil; voor een sofa per cm niet.
+30. **Zet een proef eerst met een dummy door de hele weg.** Voor er iets gemodelleerd was, ging een blok met een arm
+    aan één kant van Blender tot in de configurator: richting, maten, stof, poten, de schakelaar met de benadering.
+    Zo bleek meteen dat een fauteuil langs dezelfde weg kan als de rij van de eerste proef.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
@@ -162,6 +175,11 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
 ![Proef SSS en TRAA (5/11)](afbeeldingen/proef-sss-traa.jpg)
 
 **Buiten de app** (het resultaat gaat als afbeelding mee in de pagina):
+- **Blender 5.3** (GPL; wat je ermee maakt is van jou), sinds 15/11 gebruikt: een script bouwt een vast model als
+  3D-bestand, verdeelt de stof over één vel, bakt de schaduw in de plooien en exporteert. Draait zonder scherm als
+  Python-pakket (`pip install bpy`), ook in een cloudsessie. Het legt het model ook met een teruggerekende camera over
+  de productfoto's. Eerste proef: Sullivan. Zie `scripts/blender/LEESMIJ.md` en
+  [Echte 3D-modellen](echte-3d-modellen.md). Blender zit niet in de bouw van de configurator.
 - **Material Maker 1.8** (MIT, Windows, Mac, Linux): naadloze stoffen bouwen (bouclé, velours, linnen, rib) met kleur,
   reliëf en glans, met blokjes die je verbindt, zonder code. Past bij de regel "procedureel, zelf gemaakt". Voorrang 1.
 - **DeepBump** (Blender-uitbreiding, GPL-3): een echte reliëfkaart uit de stoffoto van de productsite, in plaats van de

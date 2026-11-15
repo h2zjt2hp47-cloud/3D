@@ -1,6 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { berekenOntwerp, blokkenVan, bouw3D, tekenVooraanzicht, type Ontwerp, type OntwerpElement } from '../src/index.js';
-import { glamVelvet3D, proefModellen } from '../voorbeelden/proefmodellen.js';
+import { zetelModellen } from '../voorbeelden/modellen.js';
+import { glamVelvet3D, proefModellen, sullivanBlender3D } from '../voorbeelden/proefmodellen.js';
 import { standaardMaterialen } from '../voorbeelden/sofa.js';
 import { zetelCatalogus } from '../voorbeelden/vrij-ontwerp.js';
 
@@ -91,5 +93,89 @@ describe('proefmodel met echt 3D-bestand', () => {
   it('stof: een foto als textuur gaat mee; een andere stof per element niet', () => {
     expect(scene(kopie((o) => { o.hoofdmateriaal = 'chill_zone_051'; })).echt?.stof).toMatchObject({ kleur: '#687281', textuurCm: 15, textuur: expect.stringMatching(/^data:image\//) });
     expect(scene(kopie((o) => { element(o, 'e2').materiaal = 'velours_bosgroen'; })).echtNiet).toMatch(/^Een andere stof per element/);
+  });
+});
+
+/**
+ * Proef 15/11: Sullivan als 3D-bestand, gebouwd in Blender naar de productfoto's (scripts/blender/sullivan.py).
+ * Het is een apart proefmodel: het gewone model Sullivan, zijn prijs en zijn tekeningen blijven wat ze waren.
+ */
+describe('proef: Sullivan gebouwd in Blender', () => {
+  const blender = proefModellen.find((m) => m.code === 'proef_sullivan_blender')!;
+  const sullivan = zetelModellen.find((m) => m.code === 'sullivan')!;
+  const toon = (aanpassen?: (o: Ontwerp) => void) => {
+    const o = structuredClone(blender.ontwerp);
+    aanpassen?.(o);
+    return bouw3D(o, zetelCatalogus, standaardMaterialen, { echt3d: sullivanBlender3D });
+  };
+
+  it('is hetzelfde ontwerp als Sullivan: zelfde prijs, tekening en blokken', () => {
+    expect({ ...blender.ontwerp, model: 'sullivan' }).toEqual(sullivan.ontwerp);
+    const a = berekenOntwerp(blender.ontwerp, zetelCatalogus, standaardMaterialen);
+    const b = berekenOntwerp(sullivan.ontwerp, zetelCatalogus, standaardMaterialen);
+    expect(a.meldingen.filter((m) => m.ernst === 'fout')).toEqual([]);
+    expect(a.prijs).toEqual(b.prijs);
+    expect(Math.round(a.prijs.brutoprijsExcl)).toBe(954);
+    expect(tekenVooraanzicht(blender.ontwerp, zetelCatalogus, standaardMaterialen)).toEqual(tekenVooraanzicht(sullivan.ontwerp, zetelCatalogus, standaardMaterialen));
+    expect(toon().blokken).toEqual(bouw3D(sullivan.ontwerp, zetelCatalogus, standaardMaterialen).blokken);
+  });
+
+  it('het gewone model Sullivan blijft de benadering: het heeft geen 3D-bestand', () => {
+    expect(sullivan.echt3d).toBeUndefined();
+    expect(blender.bron).toMatch(/benadering op basis van de productfoto's, gebouwd in Blender/);
+    expect(sullivanBlender3D.vermelding).toMatch(/benadering, geen bestand van de fabrikant/);
+  });
+
+  it('past: het bestand komt in de maten van de website, in de stof en het hout van het ontwerp', () => {
+    const s = toon();
+    expect(s.echtNiet).toBeUndefined();
+    expect(s.echt).toMatchObject({
+      bestand: 'sullivan_blender', x: 0, z: 0, b: 72, d: 80, h: 93,
+      elementen: [{ id: 'e1', x0: 0, x1: 72 }],
+      stof: { kleur: '#86888a', weefsel: 'wol' },
+      poten: { soort: 'hout', kleur: '#2f2a26' },
+    });
+  });
+
+  it('een andere stof of een ander hout gaat mee', () => {
+    expect(toon((o) => { o.hoofdmateriaal = 'velours_petrol'; }).echt).toMatchObject({ stof: { kleur: '#1f6b75', weefsel: 'velours' } });
+    expect(toon((o) => { o.opties = { ...o.opties, hout: 'eik_naturel' }; }).echt?.poten.soort).toBe('hout');
+  });
+
+  it('wat het bestand niet toont, geeft de benadering met de reden', () => {
+    expect(toon((o) => { o.elementen[0]!.opties = { kuipvorm: 'rond' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
+    expect(toon((o) => { o.opties = { ...o.opties, zitting: 'losse_kussens' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
+    expect(toon((o) => { o.opties = { ...o.opties, poten: 'draaivoet' }; }).echtNiet).toMatch(/zit niet in het 3D-bestand/);
+    // Een ronde zitting mag maar een paar procent rekken (anders wordt ze ovaal).
+    expect(toon((o) => { o.elementen[0]!.breedte = 74; }).echt).toMatchObject({ b: 74 });
+    expect(toon((o) => { o.elementen[0]!.breedte = 80; }).echtNiet).toMatch(/Breedte 80 cm/);
+  });
+
+  it('het 3D-bestand zelf: maten van de website, delen voor stof en hout, schaduwtextuur, niets wat de weergave niet leest', () => {
+    const b = readFileSync(new URL('../../demo-web/modellen3d/sullivan_blender.glb', import.meta.url));
+    expect(b.readUInt32LE(0)).toBe(0x46546c67);
+    const json = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'));
+    // De weergave rekt het kader van het bestand per richting tot de maten van het element: het kader moet dus kloppen.
+    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    for (const mesh of json.meshes) for (const p of mesh.primitives) {
+      const acc = json.accessors[p.attributes.POSITION];
+      for (let i = 0; i < 3; i++) { min[i] = Math.min(min[i]!, acc.min[i]); max[i] = Math.max(max[i]!, acc.max[i]); }
+      expect(Object.keys(p.attributes)).toEqual(expect.arrayContaining(['POSITION', 'NORMAL', 'TEXCOORD_0']));
+    }
+    const { b: breed, d: diep, h: hoog } = sullivanBlender3D.maat;
+    expect((max[0]! - min[0]!) * 100).toBeCloseTo(breed, 0);
+    expect((max[1]! - min[1]!) * 100).toBeCloseTo(hoog, 0);
+    expect((max[2]! - min[2]!) * 100).toBeCloseTo(diep, 0);
+    expect(min[1]).toBeCloseTo(0, 3);
+    // Geen verschuiving of schaal op de delen (de weergave neemt de vorm zoals ze in het bestand staat).
+    for (const n of json.nodes) expect(Object.keys(n).sort()).toEqual(['mesh', 'name']);
+    const namen = json.nodes.map((n: { name: string }) => n.name);
+    expect(namen.some((n: string) => /stof/.test(n))).toBe(true);
+    expect(namen.some((n: string) => /poot/.test(n))).toBe(true);
+    const stof = json.materials.find((m: { name: string }) => /stof/.test(m.name));
+    expect(stof.occlusionTexture).toEqual({ index: 0 });
+    expect(json.images[0].mimeType).toBe('image/jpeg');
+    expect(json.extensionsRequired).toBeUndefined();
+    expect(b.length).toBeLessThan(400_000);
   });
 });

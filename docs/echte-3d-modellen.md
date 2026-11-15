@@ -1,4 +1,4 @@
-# Echte 3D-modellen in de configurator (proef, 4/11/2026)
+# Echte 3D-modellen in de configurator (proef, 4/11/2026; Blender, 15/11/2026)
 
 ## Waarom deze proef
 
@@ -114,6 +114,71 @@ Per model:
   (zie hierboven).
 - **Getest in Chromium zonder grafische kaart** (swiftshader), ook in de fotorealistische modus. Niet getest op een
   echte tablet of telefoon.
+
+## Proef 15/11: Sullivan gebouwd in Blender
+
+Vraag van Jonas: "Kunnen we Blender gebruiken voor de 3D?" Antwoord: ja, als **werkplaats naast de configurator**, niet
+in de plaats van de 3D erin. Blender draait niet in een webpagina; de configurator moet de zetel bij elke keuze opnieuw
+tekenen, in één bestand en zonder internet. Wat Blender wél kan: een vast model als 3D-bestand bouwen, dat de
+configurator dan toont met onze stoffen en afwerkingen, langs de weg van de proef hierboven.
+
+**De proef:** Sullivan, de fauteuil die het meest van de foto afweek, gebouwd met een script in Blender
+(`scripts/blender/sullivan.py`, uitleg in `scripts/blender/LEESMIJ.md`). Het staat als apart proefmodel in de gewone
+demo: *1 · Modellen* > filter *Proef: echt 3D-model* > *Sullivan (proef: gebouwd in Blender)*. Het gewone model
+Sullivan, zijn prijs (954 euro, verzonnen) en zijn tekeningen zijn niet aangeraakt.
+
+![Sullivan: foto, huidige versie en de versie uit Blender](afbeeldingen/sullivan-blender.jpg)
+
+**Wat de versie uit Blender anders doet** (de vier grenzen van onze motor uit `docs/nalopen-modellen.md`):
+
+| Op de foto | Huidige versie (bouwstenen) | Versie uit Blender |
+|---|---|---|
+| De rug is bovenaan vlak en breed, met ronde hoeken | Een boog; de rug is smaller | Vlak over ±45 cm; de rug is op zijn breedst ±65 cm |
+| De arm is een dik, rond kussen met een ronde kop | Een rechte wand die naar voren afloopt tot op de zitting | Een kussen van ±10,5 cm dik en ±59 cm hoog (vooraan ±56 cm), met een ronde kop |
+| De rug is bij de zitting dikker | Overal even dik | 9 cm bovenaan, 11 cm bij de zitting (zitdiepte ±60,5; website 60) |
+| De schaal plooit onderaan rond naar binnen | Eén rechte hoek van voet tot rand | Ronde onderrand tot op de houten ring |
+| Een plooi waar de arm tegen de rug ligt; naden rond de armkop, de rug en de zitting | Een plooi in de dikte; een naadlijn | Plooi aan de binnenkant; naden als fijne lijnen in de schaduw |
+
+**Hoe het gemeten is.** Niet op het oog en niet met verhoudingen in pixels: de foto's zijn van dichtbij genomen (±3 m),
+waardoor wat dichterbij staat groter lijkt. Uit de poten van het onderstel is per foto de camera teruggerekend
+(afstand, hoogte, lens). Blender legt het model dan met dezelfde camera over de foto. De gele lijn is de omtrek van het
+model:
+
+![De omtrek van het Blender-model op de vier productfoto's](afbeeldingen/sullivan-blender-omtrek.jpg)
+
+Van voren en schuin valt de omtrek bijna overal samen met de foto. Van opzij helt de rug op de foto iets verder
+achterover: daar staat het model ±3 cm (onderaan) tot ±5 cm (bovenaan) naar voren. De maten van de website (80 cm diep)
+laten niet meer toe, en die maten gaan voor.
+
+**Wat het bestand kan en niet kan**
+
+- Elke stof en elke houtkleur: ja (de stof ligt op ware grootte, de schaduw in de plooien komt uit het bestand).
+- Klikken om te kiezen, schaduw op de vloer, de fotorealistische modus: zoals bij de andere modellen.
+- Breedte en diepte: tot 5 % rekken (een ronde zitting wordt anders ovaal). Daarbuiten toont de configurator de
+  benadering en zegt hij waarom.
+- Een andere vorm van fauteuil, losse kussens, een ander onderstel, een bies: zit niet in het bestand. Ook dan de
+  benadering.
+- **Prijs, tekeningen en offerte komen uit de bouwstenen**, niet uit het bestand. Het boven- en vooraanzicht tonen dus
+  de huidige vorm, de 3D de vorm uit Blender. Dat verschil is klein maar het is er.
+
+**Wat het kost**
+
+- Het bestand weegt 251 kB; de gewone demo wordt er 337 kB zwaarder door (6,41 → 6,75 MB). Voor veertien fauteuils is
+  dat ±4,7 MB erbij.
+- Bouwen en bijstellen van dit eerste model: ±1 uur, het gereedschap inbegrepen (het script, de camera's, de
+  vergelijking met de foto's). Een volgend model in dezelfde familie (ronde zitting met een schaal: Manon, Ross,
+  Fraser, Milton, de Mabels) kan van hetzelfde script vertrekken en vraagt vooral meten en bijstellen.
+- Blender zelf is gratis; het is alleen nodig om een bestand opnieuw te maken, niet om de configurator te bouwen.
+
+**Wat nog afwijkt van de foto**
+
+- De helling van de rug van opzij (zie hierboven).
+- De armkop is op de foto boller; de stof spant en plooit er. Ons bestand is glad.
+- De stof: het model staat in grijze wol; op de foto is het een groengrijze bouclé (een keuze van stof, geen vorm).
+- De naden staan waar de foto's ze laten vermoeden; de echte naadverdeling moet van de klant komen.
+
+**Beslissing voor Jonas:** volgen de andere fauteuils deze weg? De beste bron blijft een bestand van de klant zelf
+(CAD of van de ontwerper); dit is de weg als die er niet zijn.
 
 ## Volgende stap
 

@@ -1,0 +1,9 @@
+{
+  "hart_achter_voorkant": 31,
+  "fotos": {
+    "voor": { "bestand": "sullivan-10_orig.jpg", "F": 1600, "D": 312, "h": 85.4, "az": -5.5, "doel": [-0.5, 0, 57.5] },
+    "schuin": { "bestand": "sullivan-9_orig.jpg", "F": 1600, "D": 327, "h": 96, "az": -36, "doel": [22.6, -16.4, 50] },
+    "zij": { "bestand": "sullivan-12_orig.jpg", "F": 1600, "D": 312, "h": 84.3, "az": -98.5, "doel": [0, 7.0, 52.5] },
+    "achter": { "bestand": "sullivan-11_orig.jpg", "F": 1600, "D": 304, "h": 87, "az": -135, "doel": [0, 0, 47.4] }
+  }
+}
