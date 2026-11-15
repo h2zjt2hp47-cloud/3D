@@ -137,7 +137,7 @@ describe('lichtinval in de 3D van de woning', () => {
     const s = schaduw(licht.blokken);
     // Het dak boven het gelijkvloers, de vloerplaat en de muren van de verdieping, en het dak daarboven (zonder
     // dakkeuze rekent de schaduw met een plat dak).
-    for (const begin of ['schaduw_dak_leef', 'schaduw_plaat_slk3', 'schaduw_muur_', 'schaduw_dak_slk3', 'schaduw_dakrand_']) {
+    for (const begin of ['schaduw_dak_0', 'schaduw_dakplaat_leef', 'schaduw_plaat_slk3', 'schaduw_muur_', 'schaduw_dak_1', 'schaduw_dakrand_']) {
       expect(s.some((b) => b.code.startsWith(begin)), begin).toBe(true);
     }
     // Glas laat het licht door: geen ruit als schaduwwerper, wel de kaders.
@@ -170,7 +170,7 @@ describe('lichtinval in de 3D van de woning', () => {
     plan.dak = { vorm: 'plat', helling: 35, richting: 'onder', oversteek: 40, bedekking: { materiaal: 'epdm', kleur: 'zwart' } };
     plan.daklichten = [{ id: 'k1', type: 'koepel_100', x: 690, y: 686, b: 100, d: 100 }];
     const s = schaduw(plattegrond3D(plan, planCatalogus, { totNiveau: 0, lichtinval: true }).blokken);
-    const dak = s.filter((b) => b.code === 'schaduw_dak_leef' || b.code === 'schaduw_dakplaat_leef');
+    const dak = s.filter((b) => b.code === 'schaduw_dak_0' || b.code === 'schaduw_dakplaat_leef');
     expect(dak.length).toBeGreaterThan(2);
     // Geen stuk dak boven het midden van de koepel (740, 736), wel de opstand errond; het glas werpt geen schaduw.
     expect(dak.some((b) => b.x < 740 && b.x + b.b > 740 && b.z < 736 && b.z + b.d > 736)).toBe(false);

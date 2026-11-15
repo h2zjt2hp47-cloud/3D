@@ -621,6 +621,9 @@ function controleerDak(plan: Plattegrond, cat: PlanCatalogus | undefined, uit: P
   } else if (mat?.minHelling && hellend && o.keuze.helling < mat.minHelling) {
     uit.push({ ernst: 'waarschuwing', melding: `Dak: ${o.keuze.helling}° is te vlak voor ${mat.label.toLowerCase()} (minstens ${mat.minHelling}°; richtwaarde, te verifiëren).` });
   }
+  // Een grote oversteek op een steil dak zakt tot voor de ramen (de onderkant van het dak gaat door de muurkop).
+  const zakt = o.hellend ? Math.round(o.hellend.oversteek * o.hellend.tan) : 0;
+  if (zakt > 60) uit.push({ ernst: 'waarschuwing', melding: `Dak: met ${o.hellend!.oversteek} cm oversteek op ${o.hellend!.helling}° hangt de dakvoet ${zakt} cm onder de bovenkant van de muur, tot voor de ramen. Verklein de oversteek of de helling.` });
   const naam = (l: DakLicht) => cat?.daklichten?.[l.type]?.label ?? 'Lichtkoepel';
   for (const { licht, reden, rand } of o.daklichten) {
     if (reden) uit.push({ ernst: 'fout', daklicht: licht.id, melding: `${naam(licht)} ${reden}` });
@@ -716,6 +719,28 @@ function vrijeDakstukken(plan: Plattegrond, n: number): { ruimte: Ruimte; stuk: 
   for (const r of niveauPlan(plan, n).ruimtes) for (const deel of delenVan(r)) {
     const vrij = boven.reduce<Rechthoek[]>((stukken, q) => stukken.flatMap((s) => trekAf(s, q)), [deel]);
     for (const s of vrij) uit.push({ ruimte: r, stuk: s });
+  }
+  return uit;
+}
+
+/** Voegt rechthoeken die aan elkaar sluiten samen tot zo weinig mogelijk stroken (liggend, van boven naar onder). */
+export function voegSamen(stukken: Rechthoek[]): Rechthoek[] {
+  const ys = [...new Set(stukken.flatMap((s) => [s.y, s.y + s.d]))].sort((a, b) => a - b);
+  const uit: Rechthoek[] = [];
+  for (let i = 0; i + 1 < ys.length; i++) {
+    const y0 = ys[i]!, y1 = ys[i + 1]!;
+    if (y1 - y0 < 0.01) continue;
+    // De stukken die deze strook bedekken, als aaneengesloten intervallen in x.
+    const stroken: [number, number][] = [];
+    for (const s of stukken.filter((q) => q.y <= y0 + 0.01 && q.y + q.d >= y1 - 0.01).sort((a, b) => a.x - b.x)) {
+      const laatste = stroken[stroken.length - 1];
+      if (laatste && s.x <= laatste[1] + 0.01) laatste[1] = Math.max(laatste[1], s.x + s.b); else stroken.push([s.x, s.x + s.b]);
+    }
+    for (const [a, b] of stroken) {
+      // Zelfde breedte als de strook erboven: die loopt gewoon door.
+      const boven = uit.find((r) => Math.abs(r.x - a) < 0.01 && Math.abs(r.x + r.b - b) < 0.01 && Math.abs(r.y + r.d - y0) < 0.01);
+      if (boven) boven.d = y1 - boven.y; else uit.push({ x: a, y: y0, b: b - a, d: y1 - y0 });
+    }
   }
   return uit;
 }
@@ -953,21 +978,30 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     }
     if (platHier) {
       const lichten = opbouw ? opbouw.daklichten.filter((l) => !l.reden && niveauVan(l.licht) === n).map((l) => l.licht) : [];
+      const bedekt: Rechthoek[] = [];
       for (const { ruimte: r, stuk } of vrijeDakstukken(plan, n)) {
         if (!opbouw) {
           // Zonder dakkeuze: het effen donkere blok van altijd.
           blokken.push({ code: `dak_${r.id}`, soort: 'dak', vorm: 'blok', x: stuk.x, y: y0 + H, z: stuk.y, b: stuk.b, h: VLOERDIKTE, d: stuk.d, kleur: '#2e2e2e' });
           continue;
         }
-        // Met dakkeuze: een lichte dakplaat (het plafond eronder) en daarop een laag in de bedekking, met een opening
-        // per daklicht. De stukken bedekking grijpen een halve centimeter in elkaar: zo ligt in de naden alleen
-        // bedekking op bedekking (zelfde tekening, dus onzichtbaar) en schemert er geen zijkant door.
+        // Met dakkeuze: per ruimte een dakplaat met een lichte onderkant (het plafond), en een opening per daklicht.
+        // Haar zijkanten en bovenkant krijgen de kleur van de bedekking: een staand vlak vlak onder het dak schemert
+        // onder een schuine kijkhoek als een stippellijn door het dakvlak (zo zie je het niet).
         for (const s of lichten.reduce<Rechthoek[]>((st, l) => st.flatMap((q) => trekAf(q, l)), [stuk])) {
-          blokken.push({ code: `dakplaat_${r.id}`, soort: 'gevel', vorm: 'blok', x: s.x, y: y0 + H, z: s.y, b: s.b, h: VLOERDIKTE - DAK_LAAG, d: s.d, kleur: '#c9c6bf' });
-          blokken.push({ code: `dak_${r.id}`, soort: platAfw.soort, vorm: 'blok', x: s.x - 0.5, y: y0 + H + VLOERDIKTE - DAK_LAAG, z: s.y - 0.5, b: s.b + 1, h: DAK_LAAG, d: s.d + 1, kleur: platAfw.kleur });
+          blokken.push({
+            code: `dakplaat_${r.id}`, soort: 'gevel', vorm: 'blok', x: s.x, y: y0 + H, z: s.y, b: s.b, h: VLOERDIKTE - DAK_LAAG, d: s.d, kleur: '#c9c6bf',
+            zijden: { 'y+': platAfw, 'x-': platAfw, 'x+': platAfw, 'z-': platAfw, 'z+': platAfw },
+          });
+          bedekt.push(s);
         }
       }
-      for (const l of lichten) blokken.push(...daklichtBlokken(l, cat.daklichten?.[l.type]?.vorm ?? 'koepel', y0 + H + VLOERDIKTE));
+      // Daarop de bedekking als één laag voor de hele verdieping, in zo weinig mogelijk stroken: geen naad boven elke
+      // binnenmuur. Waar twee stroken toch aan elkaar sluiten, grijpen ze een halve centimeter in elkaar.
+      for (const s of voegSamen(bedekt)) {
+        blokken.push({ code: `dak_${n}`, soort: platAfw.soort, vorm: 'blok', x: s.x - 0.5, y: y0 + H + VLOERDIKTE - DAK_LAAG, z: s.y - 0.5, b: s.b + 1, h: DAK_LAAG, d: s.d + 1, kleur: platAfw.kleur });
+      }
+      for (const l of lichten) blokken.push(...daklichtBlokken(l, cat.daklichten?.[l.type]?.vorm ?? 'koepel', y0 + H + VLOERDIKTE, VLOERDIKTE));
     }
     if (hellendHier) blokken.push(...hellendDak3D(plan, cat, p, opbouw.hellend!, y0 + H, dakAfwerking(cat, opbouw.keuze.bedekking)));
   }

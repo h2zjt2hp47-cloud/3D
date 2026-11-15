@@ -249,9 +249,9 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
           // Kant van de dakvoet: je kijkt op het dakvlak, van de onderkant van de oversteek tot de nok.
           vormen.push({ code: 'dak.vlak', x: r1(u0), y: sy(yb + hellend.top), breedte: r1(b), hoogte: r1(hellend.top + o * hellend.tan), vulling: dakAfw.kleur, lijn: '#2b2b28', ...patroon });
         } else {
-          // Hoge kant van een lessenaar: alleen de rand van het dak is te zien.
-          const onder = yb + dakHoogte(hellend, hellend.nokP + (hellend.nokP > hellend.voetP ? o : -o));
-          vormen.push({ code: 'dak.rand', x: r1(u0), y: sy(onder + dikte), breedte: r1(b), hoogte: r1(dikte), vulling: '#3f3e3b', lijn: '#2b2b28' });
+          // Hoge kant van een lessenaar: de rand van het dak, en eronder de onderkant van de oversteek (die loopt naar
+          // de kijker toe omhoog en is dus te zien), tot op de bovenkant van de muur.
+          vormen.push({ code: 'dak.rand', x: r1(u0), y: sy(yb + hellend.top), breedte: r1(b), hoogte: r1(hellend.top - hellend.nok), vulling: '#3f3e3b', lijn: '#2b2b28' });
         }
       }
     }

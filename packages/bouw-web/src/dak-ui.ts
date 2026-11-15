@@ -112,7 +112,7 @@ export function toonDak() {
       vak.append(rij('Loopt af naar', keuzelijst('dak-richting', (Object.keys(KANT) as GevelKant[]).map((k) => [k, KANT[k]]), dak.richting, (w) => zet((d) => { d.richting = w as GevelKant; }))));
     } else {
       const nu = dak.richting === 'boven' || dak.richting === 'onder' ? 'onder' : 'rechts';
-      vak.append(rij('Nok', keuzelijst('dak-richting', [['onder', 'van links naar rechts op het plan'], ['rechts', 'van boven naar onder op het plan']], nu, (w) => zet((d) => { d.richting = w as GevelKant; }))));
+      vak.append(rij('Nok', keuzelijst('dak-richting', [['onder', 'van links naar rechts'], ['rechts', 'van boven naar onder']], nu, (w) => zet((d) => { d.richting = w as GevelKant; }))));
     }
   }
   vak.append(el('p', { class: 'klein' }, dak.vorm === 'plat' ? 'Bedekking' : 'Bedekking van het hellende dak'));

@@ -239,8 +239,8 @@ export function dakBlokken(d: HellendDak, y: number, bedekking: { soort: BlokSoo
  * Lichtkoepel of lichtstraat op een plat dak: opstand rond de opening en daarop het glas. `y` = bovenkant van het dak.
  * De opening in het dak zelf snijdt `plattegrond3D` uit de dakplaat.
  */
-export function daklichtBlokken(l: DakLicht, vorm: 'koepel' | 'lichtstraat', y: number): Blok[] {
-  const R = OPSTAND_RAND, H = OPSTAND_HOOGTE, grijs = '#cfcdc7', glas = '#cfdde1';
+export function daklichtBlokken(l: DakLicht, vorm: 'koepel' | 'lichtstraat', y: number, dakdikte = 30): Blok[] {
+  const R = OPSTAND_RAND, H = OPSTAND_HOOGTE, grijs = '#cfcdc7', glas = '#cfdde1', wit = '#eceae4', k = 1.5;
   const blok = (code: string, soort: BlokSoort, x: number, yy: number, z: number, b: number, h: number, d: number, kleur: string, extra: Partial<Blok> = {}): Blok =>
     ({ code: `daklicht_${l.id}_${code}`, soort, vorm: 'blok', x: r2(x), y: r2(yy), z: r2(z), b: r2(b), h: r2(h), d: r2(d), kleur, ...extra });
   const uit: Blok[] = [
@@ -248,6 +248,11 @@ export function daklichtBlokken(l: DakLicht, vorm: 'koepel' | 'lichtstraat', y: 
     blok('opstand_r', 'kunststof', l.x + l.b, y, l.y - R, R, H, l.d + 2 * R, grijs),
     blok('opstand_a', 'kunststof', l.x, y, l.y - R, l.b, H, R, grijs),
     blok('opstand_v', 'kunststof', l.x, y, l.y + l.d, l.b, H, R, grijs),
+    // Lichte dagkanten in de schacht, van het plafond tot de bovenkant van de opstand (de dakplaat zelf is daar donker).
+    blok('dagkant_l', 'gevel', l.x, y - dakdikte, l.y, k, dakdikte + H, l.d, wit),
+    blok('dagkant_r', 'gevel', l.x + l.b - k, y - dakdikte, l.y, k, dakdikte + H, l.d, wit),
+    blok('dagkant_a', 'gevel', l.x + k, y - dakdikte, l.y, l.b - 2 * k, dakdikte + H, k, wit),
+    blok('dagkant_v', 'gevel', l.x + k, y - dakdikte, l.y + l.d - k, l.b - 2 * k, dakdikte + H, k, wit),
   ];
   if (vorm === 'lichtstraat') {
     // Lichtstraat: een laag zadeldakje in glas over de lange kant, met een profiel op de nok.

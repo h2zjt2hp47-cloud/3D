@@ -175,6 +175,10 @@ describe('dakopbouw van het plan', () => {
     const flauw = controleerPlan(doos(zadel({ helling: 12 })), planCatalogus).map((m) => m.melding);
     expect(flauw.some((m) => /12° is te vlak voor keramische dakpannen \(minstens 20°/.test(m))).toBe(true);
     expect(controleerPlan(doos(zadel({ helling: 12, bedekking: { materiaal: 'zink', kleur: 'kwarts' } })), planCatalogus).some((m) => /te vlak/.test(m.melding))).toBe(false);
+    // Een grote oversteek op een steil dak hangt tot voor de ramen: waarschuwing met de maat.
+    const steil = controleerPlan(doos(zadel({ helling: 60, oversteek: 120 })), planCatalogus).map((m) => m.melding);
+    expect(steil.some((m) => /120 cm oversteek op 60° hangt de dakvoet 208 cm onder de bovenkant van de muur/.test(m))).toBe(true);
+    expect(controleerPlan(doos(zadel()), planCatalogus).some((m) => /hangt de dakvoet/.test(m.melding))).toBe(false); // 45° en 50 cm: 50 cm
   });
 });
 
@@ -234,11 +238,15 @@ describe('lichtkoepels en lichtstraten', () => {
   it('3D: opening in de dakplaat, opstand en glas; de dakplaat is niet meer één blok', () => {
     const plan = doos(plat(), [koepel('k1', 300, 200), koepel('k2', 600, 200, { type: 'lichtstraat_200', b: 200 })]);
     const blokken = plattegrond3D(plan, planCatalogus).blokken;
-    const dak = blokken.filter((b) => b.code === 'dak_r1'), dakplaat = blokken.filter((b) => b.code === 'dakplaat_r1');
-    // De dakplaat: samen de hele ruimte min de twee openingen; daarop de bedekking in het materiaal uit de catalogus.
+    const dak = blokken.filter((b) => b.code === 'dak_0'), dakplaat = blokken.filter((b) => b.code === 'dakplaat_r1');
+    // De dakplaat: samen de hele ruimte min de twee openingen, met een lichte onderkant (het plafond) en verder de
+    // kleur van de bedekking. Daarop de bedekking uit de catalogus, als één laag in zo weinig mogelijk stroken.
     expect(dakplaat.reduce((t, b) => t + b.b * b.d, 0)).toBeCloseTo(1000 * 600 - 100 * 100 - 200 * 100, 3);
-    expect(dak.length).toBe(dakplaat.length);
+    expect(dakplaat.every((b) => b.kleur === '#c9c6bf' && b.zijden?.['y+']?.soort === 'grind' && b.zijden?.['x-']?.soort === 'grind')).toBe(true);
+    expect(dak.length).toBeLessThanOrEqual(dakplaat.length);
     expect(dak.every((b) => b.soort === 'grind' && b.kleur === '#a8a59e' && b.y + b.h === 300)).toBe(true);
+    // Zonder daklichten is de bedekking van een rechthoekig dak één blok (geen naden).
+    expect(plattegrond3D(doos(plat()), planCatalogus).blokken.filter((b) => b.code === 'dak_0').map((b) => [b.x, b.z, b.b, b.d])).toEqual([[-0.5, -0.5, 1001, 601]]);
     // Niets van het dak ligt over de openingen.
     const over = (b: { x: number; z: number; b: number; d: number }, l: DakLicht) => Math.min(b.x + b.b, l.x + l.b) - Math.max(b.x, l.x) > 0.1 && Math.min(b.z + b.d, l.y + l.d) - Math.max(b.z, l.y) > 0.1;
     // (De bedekking grijpt een halve centimeter over de rand, onder de opstand: vandaar de marge van 1 cm.)
@@ -314,7 +322,7 @@ describe('3D van het dak', () => {
     expect(top[0]!.doorsnede).toEqual([[15, 269], [585, 269], [585, 300], [300, 585], [15, 300]]);
     // De muren langs de nok: een wig die de schuine onderkant volgt (binnen zichtbaar); geen dakrand en geen plat dak.
     expect(blokken.filter((b) => b.code.startsWith('dakwig_')).length).toBe(2);
-    expect(blokken.some((b) => b.code.startsWith('dakrand_') || b.code === 'dak_r1')).toBe(false);
+    expect(blokken.some((b) => b.code.startsWith('dakrand_') || b.code === 'dak_0' || b.code === 'dakplaat_r1')).toBe(false);
     // De muurkop onder de topgevel is geen wit vlak meer.
     expect(blokken.filter((b) => b.code.startsWith('muur_') && b.zijden?.['y+']?.soort === 'steen').length).toBeGreaterThan(0);
     // Het kader (voor de camera) omvat het dak.
@@ -350,11 +358,13 @@ describe('3D van het dak', () => {
     plan.dak = plat('groendak', 'sedum');
     const blokken = plattegrond3D(plan, planCatalogus).blokken;
     const yTop = 2 * 270 + 30 + 30; // bovenkant van het dak van de verdieping
-    expect(blokken.filter((b) => b.code === 'dak_slk3').map((b) => [b.soort, b.kleur, b.y + b.h])).toEqual([['groendak', '#6f8a4f', yTop]]);
-    expect(blokken.find((b) => b.code === 'dak_leef')?.soort).toBe('groendak');
+    // De verdieping (drie ruimtes) krijgt één blok bedekking; het lage dak (een L) twee stroken.
+    expect(blokken.filter((b) => b.code === 'dak_1').map((b) => [b.soort, b.kleur, b.y + b.h, b.b, b.d])).toEqual([['groendak', '#6f8a4f', yTop, 821, 381]]);
+    expect(blokken.filter((b) => b.code === 'dak_0').map((b) => b.soort)).toEqual(['groendak', 'groendak']);
+    expect(blokken.filter((b) => b.code === 'dakplaat_slk3').length).toBe(1);
     expect(blokken.filter((b) => b.code.startsWith('dakrand_') && b.y > 500).length).toBeGreaterThan(3);
     // Zonder dakkeuze heeft de verdieping geen dak (zoals vroeger).
-    expect(plattegrond3D(voorbeeldWoning().plan, planCatalogus).blokken.some((b) => b.code === 'dak_slk3')).toBe(false);
+    expect(plattegrond3D(voorbeeldWoning().plan, planCatalogus).blokken.some((b) => b.code === 'dak_slk3' || b.code === 'dak_1')).toBe(false);
   });
 });
 
