@@ -28,6 +28,8 @@ die compressie niet (de weergave in de configurator leest ze niet).
 | `aanpassingen.py` | Per model wat de productfoto's anders tonen dan de motor (dikte van de rand, vorm van de rand, de zitting ...). Alles wat daar staat, is een benadering uit foto's. |
 | `sullivan.py` | Sullivan, met de hand gemeten op de foto's (de eerste proef): alleen de vorm, de bouwstenen komen uit `zetelbouw.py`. |
 | `overlay.py`, `cameras-sullivan.json` | Legt een bestand met een passende camera over de productfoto's: de omtrek als lijn op de foto, en het model in grijs vanuit hetzelfde standpunt. |
+| `pas.py`, `cameras-manon.json` | Meten zonder Blender: het silhouet van de zetel uit een foto halen, per foto de camera zoeken waarmee het bestand het best past, en per hoogte in cm melden waar het afwijkt. |
+| `vormpas.py` | Proef (15/11): de aanpassingen zelf laten zoeken op de silhouetten. **Afgekeurd bij Manon**, zie "Nameten op de foto's" hieronder. |
 | `raster.py` | Uitsnede van een foto met een raster in fotopixels, om punten af te lezen (gewone Python met Pillow, zonder Blender). |
 
 ## Een bestand (opnieuw) maken
@@ -99,5 +101,42 @@ camera's in `cameras-sullivan.json` staan daarom ±10 % verder (zodat 72 breed e
 het script is wat groter dan in onze bouwstenen (ring 58 cm in plaats van 56). De foto's passen niet op alle maten van
 de website tegelijk; welke maat afwijkt, moet de klant zeggen (zie `docs/echte-3d-modellen.md`). Schrijf zo'n
 bijstelling altijd op: het is een keuze, geen meting.
+
+## Nameten op de foto's: wat `pas.py` kan, en wat de proef met Manon leerde (15/11)
+
+Jonas vroeg om ook de acht andere bestanden na te meten zoals Sullivan. Voor Manon (geen onderstel, drie foto's uit één
+reeks) is daarvoor gereedschap geschreven:
+
+```bash
+/tmp/blender-omgeving/bin/python scripts/blender/pas.py masker <foto> <masker.png> x,y [x,y ...] [--weg x,y,straal ...]
+```
+
+```bash
+/tmp/blender-omgeving/bin/python scripts/blender/pas.py pas packages/demo-web/modellen3d/manon.glb scripts/blender/cameras-manon.json <maskermap>
+```
+
+- `masker` haalt het silhouet uit de foto (punten op de bekleding; `--weg` voor weerspiegelingen met dezelfde kleur).
+  Bekijk elk masker één keer.
+- `pas` zoekt de camera per foto en meldt de afwijking per hoogte en per plaats. `"samen": true` houdt de camerahoogte
+  voor alle foto's gelijk (zelfde statief); de afstand blijft per foto vrij, want de zetel stond niet altijd even ver.
+- `vormpas.py` liet daarna de vorm zelf zoeken (rand, helling, zitting). De overlap steeg van 95 / 93 / 92 % naar
+  98 / 96 / 97 %.
+
+**Toch is het resultaat afgekeurd** (Jonas, 15/11: "vorig bestand van Manon was correcter"), en terecht:
+
+1. **Een silhouet ziet alleen de buitenomtrek.** De zitting kwam 4,6 cm hoger en forser te staan omdat dat de omtrek van
+   opzij beter vulde. Op de foto van voren ligt de voorrand van de zitting op 49 % van de hoogte; in het goedgekeurde
+   bestand op 48 %, in het "nagemeten" op 55 %. Die lijn ligt binnen de omtrek en telde dus niet mee.
+2. **Zonder onderstel is er geen vaste maat buiten de zetel.** Camera (hoogte, afstand, richting) en vorm kunnen elkaar
+   dan compenseren: een hogere overlap bewijst niet dat de vorm juister is. Bij Sullivan kwam de camera uit de poten.
+3. **De foto's passen niet op de maten van de website:** bij gelijke hoogte is Manon op de foto's ±4 % smaller en ±10 %
+   dieper dan 75 × 70 × 75. Het bestand moet op de maten van de site blijven, dus wordt een vorm die op de foto past,
+   daarna ±9 % ingedrukt. Welke maat afwijkt, is een vraag voor de klant.
+4. Eerdere pogingen lieten de zitting zelfs door de schaal steken: dat ziet een silhouet evenmin.
+
+**Wat blijft:** `pas.py` om te meten en te tonen waar een bestand afwijkt (cijfers, geen oordeel), en de nieuwe sleutels
+in `aanpassingen.py` (`rand_eind`, `rand_hoek`, `zit_*`, `maat_vast`) om een model met de hand bij te sturen. **Wat niet
+meer mag:** een bestand vervangen op grond van de overlap alleen. Meet ook lijnen binnen de omtrek (voorrand van de
+zitting, naden), leg foto, vorig en nieuw bestand naast elkaar, en laat Jonas kiezen.
 
 Let op het teken van `az`: schuiven de achterste poten in beeld naar links, dan is `az` negatiever.

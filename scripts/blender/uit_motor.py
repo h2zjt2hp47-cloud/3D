@@ -29,7 +29,17 @@ def kwartrond(straal, stappen=4):
     return [(straal * (1 - math.sin(a)), straal * (1 - math.cos(a))) for a in np.linspace(0, math.pi / 2, stappen + 1)]
 
 
-def wand(net, b, naar, zit_top, aan):
+def zit_omtrek(b, naar, aan):
+    """De omtrek van een zitting in plattegrond, met wat op de foto's gemeten is (groter, dieper, verder naar voor)."""
+    omtrek = np.array([naar(x, z) for x, z in b['omtrek']])
+    if 'zit_schaal' in aan or 'zit_voor' in aan or 'zit_diep' in aan:
+        hart = (omtrek.max(0) + omtrek.min(0)) / 2
+        schaal = aan.get('zit_schaal', 1.0)
+        omtrek = hart + (omtrek - hart) * [schaal, schaal * aan.get('zit_diep', 1.0)] - [0, aan.get('zit_voor', 0.0)]
+    return omtrek
+
+
+def wand(net, b, naar, zit_top, aan, zit=None):
     """Kuipwand van de motor → dik vel met ronde rand. `naar` zet (x, z) van de motor om naar (x, y) hier."""
     P = np.array([naar(x, z) for x, z in b['pad']])
     top = np.array(b['hoogtes'], float)
@@ -37,6 +47,15 @@ def wand(net, b, naar, zit_top, aan):
     onder = float(b['y'])
     dik = float(b['dikte'])
     binnen = np.maximum(0, np.array(b.get('binnen') or [0.0] * n, float))
+    # Gemeten op de foto's (vormpas.py): de wand korter aan de uiteinden, en breder of dieper in plattegrond.
+    if aan.get('inkorten'):
+        langs = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))])
+        nieuw = np.linspace(aan['inkorten'], langs[-1] - aan['inkorten'], n)
+        P = np.stack([np.interp(nieuw, langs, P[:, 0]), np.interp(nieuw, langs, P[:, 1])], -1)
+        top, binnen = np.interp(nieuw, langs, top), np.interp(nieuw, langs, binnen)
+    if 'pad_breed' in aan or 'pad_diep' in aan:
+        midden = (P[0] + P[-1]) / 2
+        P = midden + (P - midden) * [aan.get('pad_breed', 1.0), aan.get('pad_diep', 1.0)]
     # Zelfde doorsnede als de motor (wandDoorsnede): normaal haaks op de middenlijn, naar de buitenkant van de bocht.
     raaklijn = eenheid(P[np.minimum(n - 1, np.arange(n) + 1)] - P[np.maximum(0, np.arange(n) - 1)])
     ruw = np.stack([raaklijn[:, 1], -raaklijn[:, 0]], -1)
@@ -48,6 +67,9 @@ def wand(net, b, naar, zit_top, aan):
     # Helling (weegt met het deel van de normaal dat naar achteren wijst) en waaier (rondom naar buiten), per cm hoogte.
     leun = np.array(naar(*b.get('leun', [0, 0]), richting=True))
     lang = float(np.hypot(*leun))
+    if aan.get('leun_extra'):                                       # meer of minder naar achter hellen (cm per cm hoogte)
+        leun = (leun / lang if lang > 0 else np.array([0.0, 1.0])) * (lang + aan['leun_extra'])
+        lang = float(np.hypot(*leun))
     gewicht = np.maximum(0, (1.0 if np.dot(ruw[m], leun) >= 0 else -1.0) * (ruw @ leun) / lang) if lang > 0 else np.zeros(n)
     waaier = float(b.get('waaier', 0.0)) + aan.get('waaier_extra', 0.0)
     schuif = leun[None, :] * gewicht[:, None] + nrm * waaier
@@ -55,11 +77,21 @@ def wand(net, b, naar, zit_top, aan):
     if 'rand' in aan:                                               # hoogte van de rand: functie van de plaats langs de wand (0 = midden, 1 = uiteinde)
         plaats = np.abs(np.linspace(-1, 1, n))
         top = pchip(aan['rand'])(plaats)
+    if 'rand_eind' in aan:                                          # vloeiende randlijn: vlak in het midden, zakkend naar het uiteinde
+        plaats = np.abs(np.linspace(-1, 1, n))
+        hoogst = aan.get('rand_top', float(top.max()))
+        top = hoogst - (hoogst - aan['rand_eind']) * plaats ** aan.get('rand_macht', 2.0)
+    if aan.get('rand_hoek'):                                        # ronde hoek waar de rand in de voorkant van de wand overgaat
+        langs = np.concatenate([[0], np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))])
+        t = np.clip(1 - np.minimum(langs, langs[-1] - langs) / aan['rand_hoek'], 0, 1)
+        top = top - aan['rand_hoek'] * (1 - np.sqrt(1 - t * t))
     top = top + aan.get('rand_extra', 0.0)
     dikte_rand = 2 * half * aan.get('dikte_factor', 1.0) + aan.get('dikte_extra', 0.0)
     if 'dikte' in aan:
         dikte_rand = pchip(aan['dikte'])(np.abs(np.linspace(-1, 1, n)))
     buitenlijn = buitenlijn + nrm * ((dikte_rand - 2 * half) * aan.get('dikte_naar_buiten', 0.0))[:, None]
+    if '_meet' in aan:                                              # voor vormpas.py: waar de buitenkant van de wand loopt
+        aan['_meet']['wand'] = (buitenlijn.copy(), nrm.copy(), schuif.copy(), onder)
     onderrand = aan.get('onderrand', 3.5 if onder >= 8 else 2.0)
     bol = aan.get('bol', 0.0)                                       # hoe ver de wand halverwege naar buiten bolt (cm)
     # Te lage uiteinden (lager dan de rol dik is) laten we weg: de ronde kop sluit de wand daar af.
@@ -85,10 +117,20 @@ def wand(net, b, naar, zit_top, aan):
     # Achter de zitting is de wand niet te zien: daar dunner, zodat de binnenkant niet door de zitting steekt.
     verborgen = zit_top is not None and onder < zit_top - 6
 
+    # Is de zitting op de foto's gemeten (kleiner, onderaan smaller), dan komt de wand onderaan minstens tot in de zitting:
+    # anders gaapt er een spleet tussen de twee waar je de dikte van de wand ziet.
+    minstens = np.full(n, 3.0)
+    if zit is not None:
+        omtrek, taps = zit
+        hart = (omtrek.max(0) + omtrek.min(0)) / 2
+        voet = hart + (omtrek - hart) * (1 - taps / np.maximum(np.linalg.norm(omtrek - hart, axis=1, keepdims=True), 1))
+        tot_zit = np.linalg.norm(buitenlijn[:, None, :] - voet[None, :, :], axis=-1).min(1)
+        minstens = np.clip(tot_zit + 0.8, 3.0, np.maximum(3.0, dikte_rand + 3.0))
+
     def dikte(Z):
         D = np.broadcast_to(dikte_rand[:, None], Z.shape).copy()
         if verborgen:
-            D = np.maximum(3.0, D * zacht((Z - (zit_top - 18)) / 16))
+            D = np.maximum(minstens[:, None], D * zacht((Z - (zit_top - 18)) / 16))
         return D
 
     return dikke_wand(net, buiten, onder, top, dikte_rand, dikte, naar_buiten=lambda O: nrm3,
@@ -101,8 +143,8 @@ def zitting(net, b, naar, aan, zichtbaar_onder, bovenste=True):
     Zitting met een omtrek (ronde of ovale trommel): ronde bovenrand, bol bovenvlak, onderrand, naad. Bij een zitting in
     twee lagen (Fraser) is alleen de bovenste laag bol en rond; de onderste is een band met een kleine rand.
     """
-    omtrek = [naar(x, z) for x, z in b['omtrek']]
-    y, h = float(b['y']), float(b['h'])
+    omtrek = [tuple(p) for p in zit_omtrek(b, naar, aan)]
+    y, h = float(b['y']), float(b['h']) + (aan.get('zit_hoog', 0.0) if bovenste else 0.0)
     r = min(float(b.get('afronding', 4)) * aan.get('zit_rand_factor', 1.0), h / 2 - 0.5) if bovenste else min(1.2, h / 3)
     ro = min(aan.get('zit_onderrand', 2.5 if zichtbaar_onder else 0.8), h / 3)
     kroon = aan.get('zit_bol', min(2.0, 0.03 * min(b['b'], b['d']))) if bovenste else 0.0
@@ -111,6 +153,10 @@ def zitting(net, b, naar, aan, zichtbaar_onder, bovenste=True):
     profiel = [(ro + 2.5, y)] + [(i, y + o) for i, o in kwartrond(ro)]
     for t in (0.25, 0.5, 0.75):
         profiel.append((-buik * math.sin(t * math.pi), y + ro + t * (top - r - y - ro)))
+    if aan.get('zit_taps'):                                         # de trommel is onderaan smaller dan bovenaan (cm per kant)
+        profiel = [(i + aan['zit_taps'] * (1 - min(1.0, max(0.0, (z - y) / max(1e-6, top - r - y)))), z) for i, z in profiel]
+    if '_meet' in aan:                                              # voor vormpas.py: de omtrek van de trommel, onderaan en bovenaan
+        aan['_meet'].setdefault('zit', []).append((np.array(omtrek), y, top - r, aan.get('zit_taps', 0.0)))
     naad = len(profiel)
     profiel += [(r * (1 - math.cos(a)), top - r + r * math.sin(a)) for a in np.linspace(0, math.pi / 2, 6)]
     naam = b['code'].replace('.', '_')
@@ -175,7 +221,13 @@ def netten_uit_motor(g, aan=None):
         if deel.get('weg'):
             continue
         if b['vorm'] == 'kuipwand':
-            net = Net(); wand(net, b, naar, zit_top, deel); stof.append(net)
+            # De zitting waar de wand omheen staat (alleen als ze op de foto's gemeten is: anders blijft alles zoals het was).
+            zit = None
+            for z in zittingen:
+                zdeel = {**aan, **aan.get(z['code'].split('.', 1)[1], {})}
+                if z['y'] + z['h'] >= zit_top - 0.01 and any(k in zdeel for k in ('zit_schaal', 'zit_diep', 'zit_voor', 'zit_taps')):
+                    zit = (zit_omtrek(z, naar, zdeel), zdeel.get('zit_taps', 0.0))
+            net = Net(); wand(net, b, naar, zit_top, deel, zit); stof.append(net)
         elif b['soort'] == 'kussen' and b.get('omtrek'):
             net = Net()
             zitting(net, b, naar, deel, zichtbaar_onder=b['y'] <= laagste_zit + 0.01 and b['y'] >= 8, bovenste=b['y'] + b['h'] >= zit_top - 0.01)
@@ -197,14 +249,33 @@ def netten_uit_motor(g, aan=None):
     return stof, hout, donker, over
 
 
-def bouw(code, uit, ao_px=512, met_ao=True):
+def aanpassing_van(code):
+    """De aanpassingen van één model: wat met de hand in aanpassingen.py staat, plus wat vormpas.py op de foto's mat."""
+    import copy
     from aanpassingen import AANPASSINGEN
+    aan = copy.deepcopy(AANPASSINGEN.get(code, {}))
+    pad = os.path.join(HIER, 'gemeten', f'{code}.json')
+    if os.path.exists(pad):
+        for sleutel, waarde in json.load(open(pad)).items():
+            if sleutel.startswith('_'):                              # uitleg en cijfers van de meting zelf
+                continue
+            if isinstance(waarde, dict):
+                aan.setdefault(sleutel, {}).update(waarde)
+            else:
+                aan[sleutel] = waarde
+    return aan
+
+
+def bouw(code, uit, ao_px=512, met_ao=True):
     g = json.load(open(os.path.join(HIER, 'gegevens', f'{code}.json')))
-    stof, hout, donker, over = netten_uit_motor(g, AANPASSINGEN.get(code, {}))
+    aan = aanpassing_van(code)
+    stof, hout, donker, over = netten_uit_motor(g, aan)
     if over:
         print('niet omgezet (blijven weg uit het bestand):', ', '.join(over))
     eigen = [('plint', (0.02, 0.02, 0.02), [donker])] if donker.punten else []
-    maat = schrijf_glb(uit, stof, [hout] if hout.punten else [], eigen, maat=None, ao_px=ao_px, met_ao=met_ao, hoek_scherp=65,
+    # Een model dat op de foto's nagemeten is, komt precies op de maten van de website uit (zoals Sullivan).
+    vast = (g['maat']['b'], g['maat']['d'], g['maat']['h']) if aan.get('maat_vast') else None
+    maat = schrijf_glb(uit, stof, [hout] if hout.punten else [], eigen, maat=vast, ao_px=ao_px, met_ao=met_ao, hoek_scherp=65,
                        bron=f"{g['naam']}: opbouw uit de configurator, afgewerkt in Blender; vorm naar de productfoto's (benadering, geen bestand van de fabrikant).")
     print('maten van het bestand (cm):', np.round(maat, 1), '| kader van het model:', g['maat']['b'], g['maat']['d'], g['maat']['h'])
     return maat

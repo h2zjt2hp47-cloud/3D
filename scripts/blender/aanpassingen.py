@@ -13,6 +13,16 @@ Sleutels (voor het hele model, of per blok onder de naam na de punt, bv. 'rug' o
   zit_bol, zit_rand_factor, zit_onderrand, zit_buik   de zitting
   naden, naad_rand  naden tekenen (ja/nee)
   weg              dit blok niet meenemen
+Gemeten op de foto's met pas.py en vormpas.py (camera's per model in cameras-<code>.json):
+  maat_vast        het bestand komt precies op de maten van de website uit
+  inkorten         de wand eindigt zoveel cm vroeger aan elk uiteinde
+  rand_eind, rand_macht, rand_top   vloeiende randlijn: hoogte aan het uiteinde (cm), hoe lang ze vlak blijft (2 = parabool,
+                   hoger = langer vlak), hoogte in het midden (cm; leeg = zoals de motor)
+  rand_hoek        straal van de ronde hoek waar de rand in de voorkant van de wand overgaat (cm)
+  pad_breed, pad_diep   de plattegrond van de wand breder of dieper (factor)
+  leun_extra       extra helling naar achter (cm per cm hoogte)
+  zit_schaal, zit_diep, zit_voor, zit_taps   de trommel groter (factor), dieper dan breed (factor), verder naar voor (cm), onderaan smaller (cm per kant)
+  zit_hoog         de zitting hoger of lager dan in de motor (cm); de zithoogte in de configurator verandert niet
 """
 AANPASSINGEN = {
     # Manon: de rand van de schaal is op de foto's breder en ronder dan de 6 cm van de motor; de zitting is een dikke

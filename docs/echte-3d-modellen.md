@@ -255,6 +255,20 @@ bouwstenen. Alleen Sullivan is met camera's op de foto's nagemeten.
   6,18 naar 9,07 MB (offline 6,65 naar 9,54 MB) en blijft alleen een bestand, niet gepubliceerd.
 - **Online** staan de negen bestanden sinds 15/11 (akkoord van Jonas, versie `1794770295-23d1`).
 
+### Nameten van de andere acht: proef met Manon, afgekeurd (15/11)
+
+Jonas vroeg om alle bestanden na te meten zoals Sullivan. Voor Manon is meetgereedschap geschreven (`pas.py`: silhouet uit
+de foto, camera per foto, afwijking in cm; `vormpas.py`: de vorm laten passen). De overlap met de drie foto's steeg van
+95 / 93 / 92 % naar 98 / 96 / 97 %, maar het bestand werd **niet** beter: de zitting stond 4,6 cm te hoog en te fors.
+Jonas zag het op het blad ("vorig bestand van Manon was correcter"). Op de foto van voren ligt de voorrand van de
+zitting op 49 % van de hoogte, in het goedgekeurde bestand op 48 %, in het nagemeten op 55 %.
+
+- Manon staat weer op het goedgekeurde bestand; de zeven andere zijn niet aangeraakt.
+- Waarom het misliep en wat ervan blijft: `scripts/blender/LEESMIJ.md`, "Nameten op de foto's".
+- Nieuwe vraag voor de klant: op de foto's is Manon bij gelijke hoogte ±4 % smaller en ±10 % dieper dan de
+  75 × 70 × 75 van de website. Welke maat klopt?
+- Hoe verder met het nameten, beslist Jonas (zie `docs/overdracht.md`).
+
 ## Volgende stap
 
 1. De vragen hierboven aan Corneille & Silence voorleggen.

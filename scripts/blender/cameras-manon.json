@@ -1,0 +1,46 @@
+{
+  "hart_achter_voorkant": 35,
+  "samen": true,
+  "fotos": {
+    "voor": {
+      "bestand": "manon-4_orig.jpg",
+      "az": -3.0,
+      "h": 65.3,
+      "D": 300,
+      "F": 1851,
+      "doel": [
+        4.9,
+        -0.3,
+        37.6
+      ]
+    },
+    "schuin": {
+      "bestand": "manon-2_orig.jpg",
+      "az": -42.1,
+      "h": 65.3,
+      "D": 300,
+      "F": 1922,
+      "doel": [
+        6.8,
+        -6.1,
+        38.2
+      ]
+    },
+    "zij": {
+      "bestand": "manon-3_orig.jpg",
+      "az": -95.0,
+      "h": 65.3,
+      "D": 300,
+      "az_grens": [
+        -100,
+        -87
+      ],
+      "F": 1933,
+      "doel": [
+        -0.8,
+        -9.7,
+        38.4
+      ]
+    }
+  }
+}

@@ -164,6 +164,13 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
     vorm. Daarom per model op één blad: foto, bouwstenen, bestand. Negen bestanden zijn gekoppeld; bij Quin, Tumble en
     Karl was het bestand niet beter en houden we de bouwstenen. Een bestand dat de bouwstenen niet verslaat, is alleen
     gewicht in de pagina.
+32. **Een hogere overlap met de foto is geen bewijs dat de vorm juister is.** Proef van 15/11 met Manon: gereedschap dat
+    per foto de camera zoekt en de vorm laat passen op het silhouet. De overlap steeg van ±93 naar ±97 %, en toch vond
+    Jonas het vorige bestand juister. Terecht: een silhouet ziet alleen de buitenomtrek, en de zitting kwam 4,6 cm te
+    hoog te staan (een lijn binnen de omtrek). Zonder onderstel is er bovendien geen vaste maat om de camera aan op te
+    hangen, zodat camera en vorm elkaar compenseren. Meet dus ook lijnen binnen de omtrek, hang de camera aan iets
+    buiten de bekleding (poten, frame), en laat het oog van Jonas beslissen op een blad met foto, vorig en nieuw.
+    Uitleg: `scripts/blender/LEESMIJ.md`, "Nameten op de foto's".
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
