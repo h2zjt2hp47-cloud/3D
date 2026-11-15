@@ -298,6 +298,9 @@ Volgens de afspraak spreek ik geen andere sessie of ontwikkelaar aan: deze lijst
 >   testbestand: (1) dak, koepels, lichtinval en doorsturen; (2) gebruiksgemak, opnieuw getest als nieuwe gebruiker;
 >   (3) de overige afwerkingen uit hoofdstuk 6; (4) echt gebruik (bewaren buiten de browser, catalogus en prijzen van
 >   buiten). Ronde 4 vraagt echte prijzen en artikels en de antwoorden van hoofdstuk 8.
+> - **"Ik zou enkel 3D zonder prijzen maken in eerste instantie."** De zending bevat daarom geen prijzen, totalen of
+>   stuklijst meer. In de schermen zelf staan de prijzen nog; ze uit beeld halen hoort bij ronde 2. Ronde 4 (echte
+>   prijzen) schuift naar later.
 > - Nog open: de vragenlijst van hoofdstuk 8 (vooral waar Missing Link de zending bewaart en hoe het een beeld oplaadt).
 
 De oorspronkelijke vragen:
@@ -318,7 +321,7 @@ Wat er staat, zonder dat er iets aan Missing Link moest gebeuren:
 |---|---|---|
 | **3D-pakket** | `packages/core/src/pakket3d.ts` | De 3D van een project als gewone gegevens (JSON): de woning per verdieping (met volle en met lage muren) en elke positie van de offerte. Met een soort en een versienummer; **zonder prijzen**. `leesPakket3D` controleert een pakket en weigert met een uitleg in gewone taal. |
 | **Knop "3D doorsturen (pakket)"** | Offerte van de bouwdemo (`bouw-web/src/doorsturen.ts`) | Maakt het pakket van het huidige project en bewaart het als bestand. Staat bij de interne knoppen: in de klantweergave is ze verborgen. |
-| **Zending voor Missing Link** | Knop in de offerte; `Zending` in `pakket3d.ts`, `maakZending` in `doorsturen.ts` | Alles in één bestand: de offerteregels zoals de export voor het ERP, **per positie een beeld** (JPEG, het raam of de deur van voren, volledig in beeld) plus één van de woning, en het 3D-pakket. De voorbeeldwoning: 32 regels, 15 beelden, 874 kB, in 18 s getekend in een browser zonder grafische kaart. De beelden worden buiten beeld getekend; het scherm verandert niet. |
+| **Zending voor Missing Link** | Knop in de offerte; `Zending` in `pakket3d.ts`, `maakZending` in `doorsturen.ts` | Alles in één bestand: de regels zoals de export voor het ERP maar **zonder prijzen, totalen en stuklijst** (beslissing 15/11: eerst alleen 3D), **per positie een beeld** (JPEG, het raam of de deur van voren, volledig in beeld) plus één van de woning, en het 3D-pakket. De voorbeeldwoning: 32 regels, 15 beelden, 0,7 MB, in ±15 s getekend in een browser zonder grafische kaart. De beelden worden buiten beeld getekend; het scherm verandert niet. |
 | **Losse kijker** | `bouw-web/src/kijker.ts` → `dist/bouw-kijker.html` | Eén pagina die een pakket toont en niets kan wijzigen: de woning, tot en met een verdieping, muren laag, elke positie, drie standpunten, beeld bewaren. 1,5 MB (de fotomodus van de zetels zit er niet in). |
 
 **Hoe een ander systeem de kijker gebruikt** (dit is de afspraak uit hoofdstuk 4, in het klein):

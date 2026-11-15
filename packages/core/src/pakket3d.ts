@@ -44,7 +44,8 @@ export const ZENDING_VERSIE = 1;
 /**
  * Zending: alles wat een ander systeem (bv. Missing Link) in één keer van een project ontvangt (beslissing van Jonas op
  * 15/11/2026: een beeld bij elke offerteregel én de draaibare 3D in het project).
- *   - `offerte`: de regels zoals de export voor het ERP ze geeft (positie, omschrijving, aantal, prijs, configuratie, stuklijst);
+ *   - `offerte`: de regels zoals de export voor het ERP ze geeft, **zonder prijzen en zonder stuklijst** (positie, omschrijving, aantal,
+ *     eenheid, configuratie, details): in eerste instantie gaat alleen de 3D door, de prijs maakt het andere systeem zelf;
  *   - `beelden`: per positie (op haar code) een beeld van de 3D, en één van de hele woning, als data-URL;
  *   - `pakket3d`: het 3D-pakket voor de kijker.
  */

@@ -283,24 +283,30 @@ function offertetekst(): string {
   ].join('\n');
 }
 
-/** Export als JSON (structuur zoals een koppeling met het ERP ze zou doorsturen). */
-function exportGegevens(): Record<string, unknown> {
+/**
+ * Export als gegevens (structuur zoals een koppeling met het ERP ze zou doorsturen).
+ * `prijzen: false` laat elke prijs, kostprijs, korting, elk totaal en de stuklijst weg: alleen wat er is en hoeveel. Zo gaat de
+ * zending naar Missing Link (beslissing van Jonas op 15/11: eerst alleen 3D, zonder prijzen).
+ */
+function exportGegevens(opties: { prijzen: boolean } = { prijzen: true }): Record<string, unknown> {
   const t = toestand(), o = berekenHuidigeOfferte();
+  const met = opties.prijzen;
   return {
-    offerte: { nummer: t.meta.nummer, datum: t.meta.datum, klant: t.meta.klant, adres: t.meta.adres, project: t.meta.project, btw_procent: o.btwProcent, korting_procent: o.kortingProcent },
+    offerte: { nummer: t.meta.nummer, datum: t.meta.datum, klant: t.meta.klant, adres: t.meta.adres, project: t.meta.project, ...(met ? { btw_procent: o.btwProcent, korting_procent: o.kortingProcent } : {}) },
     regels: [
       ...t.posities.map((p) => {
         const r = resultaat(p);
         return {
-          positie: p.code, omschrijving: p.naam, aantal: p.aantal, eenheidsprijs: r.prijs.brutoprijsExcl, kostprijs: r.prijs.kostprijs,
+          positie: p.code, omschrijving: p.naam, aantal: p.aantal, ...(met ? { eenheidsprijs: r.prijs.brutoprijsExcl, kostprijs: r.prijs.kostprijs } : {}),
           configuratie: { model: MODELLEN[p.model].model.code, versie: MODELLEN[p.model].model.versie, keuzes: p.keuzes },
           details: r.samenvatting,
-          stuklijst: r.stuklijst.map((s) => ({ artikel: s.artikel, omschrijving: s.omschrijving, hoeveelheid: s.hoeveelheid, eenheid: s.eenheid })),
+          // De stuklijst hoort bij de prijs (ze bevat ook meerprijzen als regel): zonder prijzen blijft ze weg.
+          ...(met ? { stuklijst: r.stuklijst.map((s) => ({ artikel: s.artikel, omschrijving: s.omschrijving, hoeveelheid: s.hoeveelheid, eenheid: s.eenheid })) } : {}),
         };
       }),
-      ...o.regels.map((r) => ({ positie: r.groep, omschrijving: r.omschrijving, aantal: r.hoeveelheid, eenheid: r.eenheid, eenheidsprijs: r.eenheidsprijs, kostprijs: r.kostprijs })),
+      ...o.regels.map((r) => ({ positie: r.groep, omschrijving: r.omschrijving, aantal: r.hoeveelheid, eenheid: r.eenheid, ...(met ? { eenheidsprijs: r.eenheidsprijs, kostprijs: r.kostprijs } : {}) })),
     ],
-    totaal: { excl: o.excl, btw: o.btw, incl: o.incl },
+    ...(met ? { totaal: { excl: o.excl, btw: o.btw, incl: o.incl } } : {}),
   };
 }
 
@@ -403,12 +409,12 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
   $('#o-export').addEventListener('click', () => download(`${toestand().meta.nummer}.json`, exportJson(), 'application/json'));
   // 3D doorsturen: de 3D van woning en posities als pakket (gewone gegevens) voor de losse kijker, bv. in Missing Link.
   $('#o-3d').addEventListener('click', () => download(`3D ${toestand().meta.nummer}.json`, JSON.stringify(maakPakket3D(omschrijving)), 'application/json'));
-  // Zending: wat Missing Link in één keer ontvangt: de offerteregels, een beeld per regel en het 3D-pakket voor de kijker.
+  // Zending: wat Missing Link in één keer ontvangt: de regels (zonder prijzen), een beeld per regel en het 3D-pakket voor de kijker.
   $('#o-zending').addEventListener('click', async () => {
     const knop = $<HTMLButtonElement>('#o-zending'), melding = $('#o-melding');
     knop.disabled = true;
     try {
-      const z = await maakZending(exportGegevens(), omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
+      const z = await maakZending(exportGegevens({ prijzen: false }), omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
       const n = Object.keys(z.beelden.posities).length + (z.beelden.woning ? 1 : 0);
       download(`Zending ${toestand().meta.nummer}.json`, JSON.stringify(z), 'application/json');
       melding.textContent = n ? `Zending klaar: ${z.pakket3d.posities.length} regels, ${n} beelden en de 3D.` : 'Zending klaar, zonder beelden: de 3D werkt niet op dit toestel.';
