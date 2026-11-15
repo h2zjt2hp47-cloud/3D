@@ -347,6 +347,25 @@ describe('bouwdelen: de twee weergaven', () => {
     expect(meetstaat(terug, M)).toStrictEqual(meetstaat(w, M));
   });
 
+  it('zonder lagen of zonder maten is er niets te tekenen, met een melding in gewone taal', () => {
+    const leeg = wandvlak({ lengte: 400, hoogte: 260, opbouw: { naam: 'Leeg', soort: 'wand', lagen: [] } }, M);
+    expect(leeg.meldingen).toEqual(['De opbouw «Leeg» heeft geen lagen: er is niets te tekenen.']);
+    expect(bouwdeelBlokken(leeg, 'afgewerkt')).toEqual([]);
+    expect(bouwdeelBlokken(leeg, 'constructie')).toEqual([]);
+    expect(meetstaat(leeg, M)).toEqual([]);
+    for (const nul of [wandvlak({ lengte: 0, hoogte: 260, opbouw: O.hsb_hout! }, M), vloervlak({ lengte: 400, breedte: 0, opbouw: O.verdiepingsvloer_hout! }, M), dakvlak({ lengte: 0, diepte: 300, helling: 40, opbouw: O.hellend_dak_pannen! }, M)]) {
+      expect(nul.meldingen).toEqual(['De maten van het bouwdeel zijn niet groter dan nul: er is niets te tekenen.']);
+      expect(nul.stukken).toEqual([]);
+      expect(bouwdeelBlokken(nul, 'constructie')).toEqual([]);
+      expect(bouwdeelBlokken(nul, 'afgewerkt')).toEqual([]);
+      expect(JSON.stringify(nul)).not.toMatch(/null|NaN/);
+    }
+    // Een materiaal dat niet in de lijst staat: de laag wordt grijs getekend en dat wordt gemeld.
+    const vreemd = wandvlak({ lengte: 400, hoogte: 260, opbouw: { naam: 'Vreemd', soort: 'wand', lagen: [{ naam: 'Plaat', materiaal: 'triplex', dikte: 18, rol: 'plaat' }] } }, M);
+    expect(vreemd.meldingen).toEqual(['Het materiaal «triplex» van de laag «Plaat» staat niet in de materialenlijst: de laag is grijs getekend.']);
+    expect(bouwdeelBlokken(vreemd, 'afgewerkt')).toHaveLength(1);
+  });
+
   it('de voorbeelden geven geen meldingen', () => {
     for (const [naam, deel] of alleDelen()) expect(deel.meldingen, naam).toEqual([]);
   });

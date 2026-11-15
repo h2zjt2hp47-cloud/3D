@@ -264,15 +264,17 @@ interface SkeletKader {
 /** Bouwt het bouwdeel van een vlak: de lagen uit de opbouw, het skelet (via `skelet`) en de hoeveelheden. */
 function maakVlak(
   soort: BouwdeelSoort,
-  vlakZonderDikte: Omit<BouwdeelVlak, 'dikte'>,
+  v0: Omit<BouwdeelVlak, 'dikte'>,
   opbouw: Opbouw,
   materialen: Record<string, BouwMateriaal>,
   meldingen: string[],
   skelet: (k: SkeletKader) => void,
 ): Bouwdeel {
   const plaatsen = laagPlaatsen(opbouw);
+  if (!plaatsen.length) meldingen.push(`De opbouw «${opbouw.naam}» heeft geen lagen: er is niets te tekenen.`);
+  if (!(v0.lengte > 0) || !(v0.breedte > 0)) meldingen.push('De maten van het bouwdeel zijn niet groter dan nul: er is niets te tekenen.');
   const dikte = plaatsen.length ? plaatsen[plaatsen.length - 1]!.tot / 10 : 0;
-  const v: BouwdeelVlak = { ...vlakZonderDikte, dikte };
+  const v: BouwdeelVlak = { ...v0, dikte };
   const cos = Math.cos(rad(v.helling)), tan = Math.tan(rad(v.helling));
   // Oppervlaktes langs de helling: de maat langs v is horizontaal gemeten.
   const m2 = (r: VlakRechthoek) => ((r.u1 - r.u0) * (r.v1 - r.v0)) / cos / 10000;
