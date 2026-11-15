@@ -18,7 +18,7 @@ Dit is alleen een analyse. Ze bouwt voort op `docs/analyse-bouw-3d-missing-link.
 4. **Het zwaarste stuk is niet de 3D maar het beheer.** Je koos dat de aannemer zelf zijn modellen, kleuren en materialen beheert. Dat kan voor materialen, kleuren, maten en welke opties hij toont. Een **nieuwe vorm** (een ander soort carport) blijft programmeerwerk. En beheren vraagt bewaren buiten de browser.
 5. **Volgorde** (jouw keuze: eerst de constructieweergave): zie hoofdstuk 8. Het zijn een tiental rondes; elke ronde eindigt met een testbestand en een test op tablet en groot scherm.
 
-Wat ik nog van je nodig heb, staat in hoofdstuk 10.
+Wat ik nog van je nodig heb, staat in hoofdstuk 13. Later op 15/11 kwamen erbij: de toets aan twee echte offertes (hoofdstuk 10), alles voor de installateur (hoofdstuk 11) en het oordeel over de schetsen (hoofdstuk 12).
 
 ---
 
@@ -320,7 +320,121 @@ Niets verandert aan de beslissing: een aparte app die de 3D doorstuurt. Elk nieu
 
 ---
 
-## 10. Wat ik nog van je nodig heb
+## 10. Toets aan twee echte offertes (15/11)
+
+Jonas gaf twee offertes van twee aannemers voor **hetzelfde werk**: een uitbouw in houtskelet achter een rijwoning, tussen
+twee bestaande scheidingsmuren, met plat dak. Zijn vraag: *"Deze offerte willen we kunnen weergeven met ook detail."*
+Namen, adressen en bedragen staan bewust niet in dit document (de repo is publiek).
+
+**Wat dit oplevert:** een concreet eerste doel. Kan de configurator deze uitbouw tonen, post per post, dan is hij
+bruikbaar voor een echte verkoper. Het is ook precies de **aanbouw** die Jonas als eigen vorm vroeg.
+
+| Post in de offertes | Wat je in 3D zou moeten zien | Stand vandaag |
+|---|---|---|
+| Bestaande woning waar de uitbouw tegen komt | De bestaande toestand in een neutrale tint, het nieuwe deel in kleur | **Ontbreekt.** De aanbouw staat los. |
+| Afbraak terras, grondwerken, container | Niets: dat is werk, geen ding | Hoort alleen als regel in het overzicht |
+| Fundering, betonplaat, kimblokken, isolerende blokken onder de wand | In de doorsnede en in de constructieweergave | Ontbreekt (bouwdelen, opbouw) |
+| Houtskeletwanden: stijlen, grondbalk, plaat buiten, isolatie, dampscherm, regelwerk, plaat binnen | Constructieweergave en doorsnede van de wand | Ontbreekt (rondes 3 en 4) |
+| Dakstructuur: randbalken en liggers of balken, beplating | Constructieweergave van het dak | Ontbreekt (rondes 3 en 4) |
+| Dakopbouw: dampscherm, isolatie, afschot, EPDM; aluminium dakrand; noodafvoer; regenafvoeren | Plat dak met afwerking en dakrand; de lagen in de doorsnede | Dak en dakrand: in opbouw. Afvoeren en lagen: ontbreekt |
+| Drie platte dakramen 120 × 120 met buitenzonwering | Koepels in het dak, zonwering open of dicht | Koepels: in opbouw. Zonwering erop: ontbreekt |
+| Hefschuifraam 4,00 × 2,35 m | Het raam in de achtergevel, open te schuiven | Hef-schuif bestaat in het aanbouwmodel [code] |
+| Twee screens op dat raam | Screens half of helemaal neer | Screen bestaat per raam [code]; twee naast elkaar op één raam niet |
+| Raamventilatie (toestellen op het raam) | Een toestel bovenaan het raam | Alleen een rooster ja of nee [code] |
+| Gevel in thermisch behandeld hout, verticaal; zijwanden tegen de buren | Houten gevel achteraan; zijwanden die je niet ziet | Hout verticaal bestaat [code]; "tussen twee muren" niet |
+| Binnen: gipsplaten op wand en plafond, schilderklaar | Wanden en plafond in een kleur | Wand bestaat [code]; plafond ontbreekt |
+| Vloeropbouw: isolatie, chape, vloer (PVC of tegels) | Vloerafwerking in de ruimte; de lagen in de doorsnede | Afwerking bestaat [code]; opbouw ontbreekt |
+| Elektriciteit: schakelaars, stopcontacten, inbouwspots, een kleine verdeelkast | Op hun plaats in wand en plafond; avondbeeld | Ontbreekt (techniek) |
+| Sanitair: hangtoilet, buitenkraan, leidingen | Toestellen op hun plaats; leidingen als lijn | Wc bestaat als meubel [code]; de rest ontbreekt |
+
+**"Met ook detail" en "minder detail op het scherm" gaan samen** als het detail op twee plaatsen zit en nergens anders:
+
+1. in het **overzicht**: elke regel klapt open en toont de regels van de offerte (zoals "dampscherm, isolatie 100 en 60 mm,
+   EPDM, muuraansluitingen");
+2. in de **3D**: tik je op een deel (het dak, de wand, het raam), dan verschijnt hetzelfde detail als een kaartje.
+
+Daarvoor moet elk deel van de 3D weten bij welke post het hoort. Dat is nieuw: vandaag kent de 3D alleen blokken.
+
+**Wat de tweede offerte goed doet** [afgeleid uit de tekst, de beelden zijn niet bekeken]: ze volgt de volgorde van het
+bouwen (voorbereiding, wind- en waterdichte constructie met wand en dak, binnenafwerking, supplementen) en beschrijft de
+opbouw van wand en dak in gewone zinnen. Die volgorde is een goed voorbeeld voor het overzicht.
+
+**Voorstel:** deze uitbouw (zonder namen) wordt het **voorbeeldproject** van de configurator en de maatstaf per ronde:
+"kunnen we deze offerte nu tonen?"
+
+---
+
+## 11. Voor de installateur (15/11)
+
+Vraag van Jonas: *"voeg ook alles wat een installateur kan nodig hebben toe, airco, leidingen, meterkasten etc."* Eerder
+die dag: zonneschermen, ventilatie, stopcontacten, verlichting.
+
+Dit hoofdstuk is een **eerste indeling** uit algemene kennis **[inschatting]**. Het online onderzoek naar wat
+installateurs en hun software tonen, loopt nog en komt in `docs/onderzoek-bouw-constructies.md`; daarna wordt dit
+hoofdstuk bijgewerkt. Alle maten, hoogtes en afstanden die erbij komen, zijn richtwaarden **[te bevestigen]** door een
+installateur.
+
+### 11.1 Wat een installateur wil plaatsen en tonen
+
+| Vak | Toestellen (een ding op een plaats) | Leidingen (een lijn van A naar B) |
+|---|---|---|
+| **Elektriciteit** | tellerkast en verdeelbord, stopcontacten, schakelaars, lichtpunten en armaturen, datakast en datapunten, laadpaal, omvormer en batterij van zonnepanelen, bel en videofoon | kabels en buizen per kring, aarding |
+| **Koeling en verwarming** | airco binnenunit (wand, cassette, kanaal, vloer) en buitenunit, warmtepomp (buiten- en binnenunit, boiler of buffervat), gasketel, radiatoren en convectoren, verdeler van de vloerverwarming, thermostaat | koelleidingen en condensafvoer, aanvoer en retour, lussen van de vloerverwarming, gasleiding |
+| **Ventilatie** | de unit (systeem C of D), toevoer- en afvoermonden, raamroosters, dakdoorvoer, gevelrooster, dampkap | kanalen (rond of plat), collectoren |
+| **Sanitair** | wc, lavabo, douche, bad, spoelbak, wasmachine en droogkast, boiler, collector, waterverzachter, regenwaterpomp, buitenkraan | warm en koud water, afvoeren met hun diameter, regenwater |
+| **Zonwering** | screens, rolluiken, buitenjaloezieën, knikarmscherm, lamellendak | (de voeding hoort bij elektriciteit) |
+
+Alles valt dus in twee soorten: **toestellen** en **leidingen**. Dat maakt het bouwbaar: één manier om een toestel te
+plaatsen, één manier om een leiding te trekken, en een catalogus die zegt welke er bestaan.
+
+### 11.2 Hoe het getoond wordt
+
+| Waar | Hoe |
+|---|---|
+| **In het plan** | Een eenvoudig teken per toestel, een gekleurde lijn per leiding (een vaste kleur per soort: bv. rood warm water, blauw koud, bruin afvoer, groen ventilatie, geel gas). De tekens voor elektriciteit volgen de gewoonte van het vak **[te bevestigen]**. |
+| **In de 3D** | Toestellen als echte dingen op hun hoogte; leidingen als buizen. Met één knop *Techniek* wordt de woning doorschijnend en zie je alleen de installaties; per vak aan of uit te zetten. |
+| **In de doorsnede** | Leidingen in de vloeropbouw, in de leidingspouw van een houtskeletwand, boven een verlaagd plafond. |
+| **In het overzicht** | Aantallen per toestel en lopende meters per soort leiding en per diameter. Zonder prijzen. |
+| **Avond** | De armaturen geven licht (zie schets 7). |
+
+### 11.3 Wat het moet kunnen, en wat niet
+
+- **Snel plaatsen:** tik op een toestel, tik in het plan. Een leiding trek je van toestel naar toestel; ze volgt de wanden
+  en krijgt vanzelf een hoogte (in de vloer, in de wand, tegen het plafond) die je kunt wijzigen.
+- **Vaste hoogtes als voorstel:** een stopcontact, een schakelaar, een airco-unit krijgen een gangbare hoogte, te wijzigen.
+- **Technische ruimte:** de toestellen die samen horen (tellerkast, verdeelbord, boiler, verdeler, ventilatie-unit) als
+  één opstelling die je in een berging of garage zet, met de vrije ruimte die ze vragen.
+- **Buiten:** buitenunit van airco of warmtepomp tegen een gevel of op een plat dak, met de vrije ruimte errond.
+- **Geen berekening.** Geen vermogen, geen debiet, geen leidingdiameters uitrekenen, geen controle op het AREI of op de
+  regels van de netbeheerder. De configurator **toont en telt**; de installateur dimensioneert. Dat staat op het scherm
+  en op elk blad.
+
+### 11.4 Wat het technisch vraagt
+
+| Onderdeel | Wat nieuw is | Werk |
+|---|---|---|
+| **Toestel in het plan** | Een nieuw soort element naast meubel en opening: het hangt aan een wand, een plafond, een vloer of een raam, op een hoogte | M |
+| **Leiding** | Een lijn met een soort, een diameter en een hoogte, die wanden volgt en door wanden kan | M–L |
+| **Catalogus techniek** | Toestellen en leidingen als gegevens (naam, maat, teken, vorm in 3D, kleur) | M |
+| **Weergave** | De knop *Techniek* (doorschijnende woning), aan en uit per vak, armaturen die licht geven | M |
+| **Tellen** | Aantallen en lopende meters in het overzicht | S |
+| **Vormen in 3D** | Per toestel een eenvoudige vorm uit blokken; voor de bekende toestellen later een echt 3D-bestand (de techniek bestaat bij de zetels) | S per toestel |
+
+Dit is een eigen ronde, na de constructieweergave: de leidingen lopen door de opbouw van vloer, wand en plafond.
+
+---
+
+## 12. Jonas over de schetsen en de bestaande configurator (15/11)
+
+- Op de eerste schetsen: te veel detail, moet snel en duidelijk zijn voor een verkoper (zie hoofdstuk 5).
+- Daarna: *"Ik ben nog meer overtuigd van hoe de vorige versie eruitziet van de 3D-bouwconfigurator."* Gevolg: we bouwen
+  **verder op de bestaande configurator en zijn echte 3D**. De schetsen blijven alleen als idee voor de indeling (de 3D
+  groot, weinig keuzes tegelijk, het detail in het overzicht). Wat getoond wordt om te beoordelen, zijn voortaan echte
+  schermafdrukken, geen tekeningen.
+
+---
+
+## 13. Wat ik nog van je nodig heb
 
 1. **Eén aannemer per productsoort** die een recept wil nalezen (houtbouw, staalbouw). Zonder vakman blijven het benaderingen.
 2. **Waar wordt bewaard?** Voor de link naar de klant en voor het beheer: in Missing Link, of op een eigen server van de configurator?
