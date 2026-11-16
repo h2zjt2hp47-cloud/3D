@@ -832,6 +832,74 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
   details.opbouwkeuze > summary::before, details.opbouwlagen > summary::before, details.constructiedeel > summary::before, details.aannames > summary::before { content: '▸'; margin-right: 8px; }
   details.opbouwkeuze[open] > summary::before, details.opbouwlagen[open] > summary::before, details.constructiedeel[open] > summary::before, details.aannames[open] > summary::before { content: '▾'; }
 }
+/* ---------- kiezen, plaatsen, ongedaan maken en de uitleg samen in beeld (16/11, doorloop deel A) ----------
+   Wat de verkoper nodig heeft om verder te tekenen, staat naast of vlak boven de tekening, op elk toestel, zonder
+   scrollen: een kort gereedschap, het palet op de plaats van het gereedschap, Ongedaan maken boven de tekening en de 3D,
+   het maatvenster boven de tekening (niet erop) en de uitleg na een geweigerde tik bij de tik zelf. */
+/* Woorden voor de muis of de vinger (zie `aanraak` en `voorVinger` in hulp.ts voor de tekst die het programma maakt). */
+.alleen-vinger { display: none; }
+@media (pointer: coarse) {
+  .alleen-muis { display: none !important; }
+  span.alleen-vinger { display: inline; }
+  /* Sneltoetsen zeggen niets op een tablet. */
+  .gereedschap kbd { display: none; }
+}
+/* Het gereedschap: korte namen (de volledige staat in de titel en de uitleg onder de tekening). Op een tablet in twee
+   kolommen, zodat ook Meubel, Daklicht en Techniek naast de tekening staan (vroeger tot 1058 px op een scherm van 820). */
+#pl-gereedschap button > span:first-child { min-width: 0; }
+@media (pointer: coarse) and (min-width: 761px) {
+  #view-plan:not(.groot-scherm) #pl-gereedschap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #view-plan:not(.groot-scherm) #pl-gereedschap button { padding: 4px 8px; font-size: .84rem; line-height: 1.15; }
+  #view-plan:not(.groot-scherm) #pl-gereedschap .techniekknop { grid-column: 1 / -1; margin-top: 2px; }
+}
+/* De weergave en Ongedaan maken boven de tekening en de 3D. */
+.weergavebalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+#pl-ongedaan:disabled { opacity: .45; cursor: default; }
+/* Het palet van een meubel of een daklicht staat op de plaats van het gereedschap (zoals de techniek): naast de tekening. */
+.paletlade { display: grid; gap: 6px; }
+.paletlade[hidden] { display: none; }
+.paletlade .tkop { margin: 0; gap: 6px; }
+.paletlade .tkop button { flex: 1 1 auto; }
+.paletlade [data-palet-kies] { border: 1px solid var(--lijn); background: var(--vlak); color: inherit; border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: .9rem; }
+.paletlade [data-palet-kies][aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+.paletlade .ttegels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.paletlade .ttegel { font-size: .8rem; align-content: center; padding: 4px 6px; }
+.paletgroepen button { font-size: .8rem; padding: 4px 8px; }
+/* De vakken van de techniek als raster van twee op twee (vroeger vier rijen in de smalle kolom). */
+.techniekpalet .tvaktabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.techniekpalet .tvaktabs button { line-height: 1.15; text-align: left; }
+@media (pointer: coarse) { .paletlade .tkop button, .paletlade [data-palet-kies], .paletgroepen button { min-height: 44px; } }
+/* De tekening blijft staan als je de pagina scrolt (bv. naar de controles of het einde van een lang palet). Alleen in de
+   plattegrond: de 3D en de gevels hebben eronder knoppen die je moet kunnen bereiken. */
+#pl-werkvlak, #pl-3d { position: relative; }
+@media (min-height: 600px) {
+  #view-plan:not(.driedmodus):not(.gevelmodus):not(.groot-scherm) #pl-werkvlak { position: sticky; top: 6px; }
+}
+/* Groot scherm in de 3D op een tablet staand: de 3D bovenaan, het gereedschap eronder (liggend en op de laptop staan
+   de kolommen naast elkaar, zoals vroeger). */
+@media (max-width: 900px) {
+  #view-plan.groot-scherm.driedmodus .planraster > .links { order: 3; }
+}
+/* Het maatvenster na het plaatsen (of na een tik op een maat) staat boven de tekening, over de knoppen van de weergave en
+   het zoomen, nooit op de tekening zelf: de volgende tik op de tekening telt gewoon. Het heeft zijn eigen Ongedaan maken. */
+.maatvraag.gedokt { left: 8px; right: 8px; width: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 4px 10px; box-shadow: 0 6px 16px rgba(0, 0, 0, .18); }
+.maatvraag.gedokt .maatvraag-titel { font-size: .92rem; }
+.maatvraag.gedokt .maatvraag-velden { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.maatvraag.gedokt .maatvraag-veld { display: flex; align-items: center; gap: 4px; }
+.maatvraag.gedokt .maatvraag-veld > span:first-child { color: var(--zacht); }
+.maatvraag.gedokt .maatvraag-veld .cm-veld { width: 78px; }
+.maatvraag.gedokt .maatvraag-kanten > span.klein { flex-basis: auto; }
+.maatvraag.gedokt .maatvraag-uitleg { flex: 1 1 100%; }
+.maatvraag.gedokt .maatvraag-melding { flex: 1 1 100%; }
+.maatvraag-acties { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+.maatvraag-acties .maatvraag-ok { min-height: 36px; }
+@media (pointer: fine) { .maatvraag.gedokt .cm-veld { min-height: 34px; padding: 3px 6px; } }
+@media (min-width: 901px) { .maatvraag.gedokt .maatvraag-uitleg { display: none; } }
+@media (pointer: coarse) { .maatvraag-acties .maatvraag-ok { min-height: 44px; } }
+/* De uitleg na een tik die niet kan (of wat een tik met de techniek deed): bij de tik, in beeld, en ze vangt zelf geen tik. */
+.tikmelding { position: absolute; z-index: 15; max-width: min(340px, calc(100% - 16px)); padding: 8px 12px; border-radius: 10px; background: #fff4e0; border: 2px solid #c9771e; color: #22262a; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); font-size: .9rem; line-height: 1.3; pointer-events: none; }
+.tikmelding.info { background: #f2f6f8; border-color: #34505f; }
+.tikmelding[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -940,21 +1008,24 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
       </section>
       <section class="kaart alleen-plan">
         <div class="knoppenrij" style="margin-top:0">
-          <button type="button" id="pl-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button>
           <button type="button" id="pl-voorbeeld" class="tweede">Nieuw project …</button>
           <button type="button" id="pl-leeg" class="gevaar">Plattegrond wissen</button>
         </div>
-        <p class="klein">Delete = verwijderen · Q = meubel draaien · pijltjes = verschuiven · Esc = selecteren</p>
+        <p class="klein alleen-muis">Delete = verwijderen · Q = meubel draaien · pijltjes = verschuiven · Esc = selecteren · Ctrl+Z = ongedaan maken</p>
       </section>
     </aside>
-    <section class="kaart">
+    <section class="kaart" id="pl-werkvlak">
       <div class="kaartkop">
         <div id="pl-niveaus" class="tabs niveaus" role="group" aria-label="Verdieping"></div>
-        <div class="tabs" role="group" aria-label="Weergave">
-          <button type="button" data-pl-weergave="plan" aria-pressed="true">Plattegrond</button>
-          <button type="button" data-pl-weergave="gevels" aria-pressed="false">Gevels</button>
-          <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
-          <button type="button" data-pl-weergave="doorsnede" aria-pressed="false" title="Een snede door de woning: de lagen van wanden, vloeren en dak">Doorsnede</button>
+        <div class="weergavebalk">
+          <div class="tabs" role="group" aria-label="Weergave">
+            <button type="button" data-pl-weergave="plan" aria-pressed="true">Plattegrond</button>
+            <button type="button" data-pl-weergave="gevels" aria-pressed="false">Gevels</button>
+            <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
+            <button type="button" data-pl-weergave="doorsnede" aria-pressed="false" title="Een snede door de woning: de lagen van wanden, vloeren en dak">Doorsnede</button>
+          </div>
+          <!-- Altijd naast de tekening en de 3D (ook in het groot scherm); de gevels hebben hun eigen knop in het palet. -->
+          <button type="button" id="pl-ongedaan" class="tweede alleen-plan" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken">↶ Ongedaan</button>
         </div>
       </div>
       <div id="gv-editor" hidden>
@@ -991,7 +1062,8 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
           <label><input type="checkbox" id="pl-alle-niveaus" checked> Alle verdiepingen</label>
           <label id="pl-toon-dak-label" hidden><input type="checkbox" id="pl-toon-dak" checked> Dak tonen</label>
           <label title="Snel: vlot draaien, ook op een tablet. Mooi: scherper beeld, zachtere schaduw en schaduw in de hoeken.">Kwaliteit <select id="pl-3d-kwaliteit"><option value="snel">Snel</option><option value="mooi">Mooi</option></select></label>
-          <span class="klein">tikken = kiezen · slepen = draaien · zoomen met Ctrl (⌘) + scrollen of knijpen</span>
+          <span class="klein alleen-muis">klikken = kiezen · slepen = draaien · zoomen met Ctrl (⌘) + scrollen</span>
+          <span class="klein alleen-vinger">tikken = kiezen · slepen = draaien · knijpen = zoomen</span>
         </div>
         <div id="pl-zon" class="zonblok"></div>
       </div>

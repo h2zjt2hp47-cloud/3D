@@ -1391,7 +1391,7 @@ export function controleerPlan(plan: Plattegrond, cat?: PlanCatalogus): PlanMeld
 
 /** Dak en daklichten: de terugval op plat, een bedekking die niet past, en koepels die niet op een plat dak liggen. */
 function controleerDak(plan: Plattegrond, cat: PlanCatalogus | undefined, uit: PlanMelding[]) {
-  const o = dakOpbouw(plan);
+  const o = dakOpbouw(plan, cat);
   if (!o) return;
   if (o.terugval) uit.push({ ernst: 'waarschuwing', melding: o.terugval });
   const hellend = o.keuze.vorm !== 'plat';
@@ -1821,7 +1821,7 @@ export interface DakOpbouw {
  * en alleen als die één rechthoek is. Lagere delen zonder verdieping erboven blijven plat (daar kunnen koepels).
  * Is de bovenste verdieping geen rechthoek (L- of U-vorm), dan valt alles terug op plat, met een melding.
  */
-export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
+export function dakOpbouw(plan: Plattegrond, cat?: Pick<PlanCatalogus, 'daklichten'>): DakOpbouw | undefined {
   const keuze = dakVan(plan);
   if (!keuze || !plan.ruimtes.length) return undefined;
   const top = Math.max(...plan.ruimtes.map(niveauVan));
@@ -1848,6 +1848,14 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
     for (const { ruimte, stuk } of vrijeDakstukken(plan, n)) plat.push({ ...stuk, niveau: n, ruimte: ruimte.id });
     for (const s of dakrandStukken(plan, n)) dakranden.push({ ...s, niveau: n });
   }
+  // Het juiste woord in de uitleg: met de catalogus is een plat dakraam geen koepel (zonder catalogus zoals vroeger).
+  const vorm = (l: DakLicht) => cat?.daklichten?.[l.type]?.vorm ?? 'koepel';
+  const WOORD: Record<string, { een: string; naam: string; hem: string }> = {
+    koepel: { een: 'een koepel', naam: 'lichtkoepel', hem: 'hem' },
+    lichtstraat: { een: 'een lichtstraat', naam: 'lichtstraat', hem: 'ze' },
+    dakraam: { een: 'een dakraam', naam: 'plat dakraam', hem: 'het' },
+  };
+  const woord = (l: DakLicht) => WOORD[vorm(l)] ?? WOORD.koepel!;
   const overlapt = (a: Rechthoek, b: Rechthoek) => Math.min(a.x + a.b, b.x + b.b) - Math.max(a.x, b.x) > 0.5 && Math.min(a.y + a.d, b.y + b.d) - Math.max(a.y, b.y) > 0.5;
   const daklichten = (plan.daklichten ?? []).map((licht) => {
     const n = niveauVan(licht);
@@ -1855,7 +1863,7 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
     const r = ruimteOp(plan, licht.x + licht.b / 2, licht.y + licht.d / 2, n);
     let reden: string | undefined, rand = Infinity;
     if (!r) reden = 'ligt niet boven een ruimte.';
-    else if (hellend && n === top) reden = 'ligt onder het hellende dak: daar kan geen lichtkoepel (dakramen zijn voor later). Verwijder hem of kies een plat dak.';
+    else if (hellend && n === top) reden = `ligt onder het hellende dak: daar kan geen ${woord(licht).naam} (dakramen zijn voor later). Verwijder ${woord(licht).hem} of kies een plat dak.`;
     else {
       // Volledig op de platte dakstukken van één ruimte?
       const stukken = plat.filter((s) => s.niveau === n && s.ruimte === r.id);
@@ -1864,7 +1872,7 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
         : stukken.reduce<Rechthoek[]>((st, q) => st.flatMap((s) => trekAf(s, q)), [vak]).filter((s) => s.b > 0.5 && s.d > 0.5);
       if (rest.length) {
         reden = niveauPlan(plan, n + 1).ruimtes.flatMap(delenVan).some((q) => overlapt(q, vak))
-          ? 'ligt onder een verdieping; een koepel kan alleen in een dak.'
+          ? `ligt onder een verdieping; ${woord(licht).een} kan alleen in een dak.`
           : 'ligt over een muur of buiten de ruimte. Verschuif hem tot hij volledig boven één ruimte ligt.';
       } else {
         for (const m of murenVan(niveauPlan(plan, n))) {
