@@ -390,7 +390,13 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 .maatpaneel-raster { display: grid; grid-template-columns: 300px minmax(0, 1.25fr) minmax(220px, 1fr); gap: 12px 18px; align-items: start; }
 .maatpaneel-links, .maatpaneel-midden, .maatpaneel-rechts { display: grid; gap: 8px; align-content: start; }
 .maatpaneel-rechts .eig { margin-bottom: 0; }
-@media (max-width: 1100px) { .maatpaneel-raster { grid-template-columns: 300px minmax(0, 1fr); } .maatpaneel-rechts { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end; } }
+@media (max-width: 1100px) {
+  .maatpaneel-raster { grid-template-columns: 300px minmax(0, 1fr); }
+  .maatpaneel-rechts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+  .maatpaneel-rechts .eig { flex: 1 1 220px; }
+  .maatpaneel-rechts #mp-meldingen, .maatpaneel-rechts .maatpaneel-knoppen { flex: 1 1 100%; }
+  #mp-meldingen:empty { display: none; }
+}
 .maatschets { position: relative; width: 300px; height: 230px; }
 .maatschets svg { position: absolute; inset: 0; }
 .maatschets .cm-veld { position: absolute; width: 74px; transform: translate(-50%, -50%); text-align: center; padding: 4px; }
@@ -404,6 +410,10 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 #mp-meldingen p { margin: 0; }
 .maatpaneel-plaatsen { justify-self: start; min-height: 52px; padding: 0 28px; font-size: 1.05rem; font-weight: 600; border-radius: 10px; border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); cursor: pointer; }
 .maatpaneel-plaatsen:disabled { opacity: .45; cursor: not-allowed; }
+/* In de knoppenrij wint de algemene regel voor knoppen (licht): Plaatsen blijft de hoofdknop. */
+.maatpaneel-knoppen { margin-top: 0; }
+.maatpaneel-knoppen .maatpaneel-plaatsen { background: var(--accent); color: var(--vlak); padding: 0 28px; font-size: 1.05rem; border-radius: 10px; }
+.maatpaneel-knoppen button { min-height: 52px; }
 @media (max-width: 640px) { .maatpaneel-raster { grid-template-columns: minmax(0, 1fr); } .maatschets { justify-self: center; } }
 .maatvraag { position: absolute; z-index: 20; width: min(300px, calc(100% - 8px)); display: grid; gap: 6px; padding: 10px 12px; background: var(--vlak); border: 2px solid var(--accent); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .22); }
 .maatvraag-kop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
