@@ -716,6 +716,23 @@ function toestelTeken(t: Toestel, type: ToestelType, gekozen: boolean, fout: boo
   return d.join('');
 }
 
+/**
+ * Het teken van een soort toestel als klein beeld, voor een tegel in het palet van het scherm (ronde 10b): hetzelfde
+ * teken als in de tekening, in de kleur van zijn vak, met een stukje wand erboven als het aan een wand of gevel hangt.
+ * Kleine toestellen (stopcontact) staan zo groot als grote (een kast): het beeld past zich aan het teken aan.
+ */
+export function toestelTekenBeeld(type: ToestelType, px = 40): string {
+  const aan = type.bevestiging;
+  const t: Toestel = { id: 'beeld', type: '', x: 0, y: 0, hoogte: 0, draai: 0, aan };
+  const m = toestelMaten(type, aan);
+  const wand = aan === 'wand' || aan === 'buiten';
+  const s = Math.max(m.b + 10, m.d + 16, 38);
+  // Aan een wand: de wand bovenaan, het teken eronder; anders het teken in het midden.
+  const y0 = wand ? -m.d / 2 - 7 : -s / 2;
+  const muur = wand ? `<rect x="${n(-s / 2)}" y="${n(-m.d / 2 - 6)}" width="${n(s)}" height="5" fill="#9a9a94"/>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n(-s / 2)} ${n(y0)} ${n(s)} ${n(s)}" width="${px}" height="${px}" aria-hidden="true">${muur}${toestelTeken(t, type, false, false)}</svg>`;
+}
+
 function meubelSvg(m: Meubel, t: MeubelType, gekozen: boolean): string {
   const v = meubelVoetafdruk(m);
   const verschuif: Record<number, [number, number]> = { 0: [0, 0], 90: [m.d, 0], 180: [m.b, m.d], 270: [0, m.b] };

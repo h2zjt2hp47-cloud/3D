@@ -24,6 +24,8 @@ export const constructieCatalogus: PlanCatalogus = { ...planCatalogus, opbouw: w
 /** Welke weergave de 3D van de woning toont. Hoort bij het kijken, niet bij het project: niet bewaard, start op Afgewerkt. */
 let weergave: 'afgewerkt' | 'constructie' = 'afgewerkt';
 let opnieuw: () => void = () => {};
+/** Na een tik op Afgewerkt of Constructie (de techniek gaat dan uit, zie techniek-ui.ts). */
+let bijWeergave: (w: 'afgewerkt' | 'constructie') => void = () => {};
 
 export const constructieAan = () => weergave === 'constructie';
 
@@ -48,8 +50,9 @@ export function constructieScene(opties: Constructie3DOpties): Scene3D {
  * De knop *Afgewerkt / Constructie* boven de knoppen van de 3D, met de zin dat de constructie een voorstelling is
  * (alleen in *Constructie*). `opnieuw` tekent de 3D opnieuw.
  */
-export function startConstructie(omgeving: { opnieuw: () => void }) {
+export function startConstructie(omgeving: { opnieuw: () => void; bijWeergave?: (w: 'afgewerkt' | 'constructie') => void }) {
   opnieuw = omgeving.opnieuw;
+  bijWeergave = omgeving.bijWeergave ?? (() => {});
   const knoppen = $('#pl-3d-knoppen');
   const rij = el('div', { class: 'constructiebalk' });
   const tabs = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Weergave van de 3D', id: 'pl-3d-weergave' });
@@ -66,7 +69,8 @@ export function startConstructie(omgeving: { opnieuw: () => void }) {
   knoppen.prepend(rij);
 }
 
-function zetWeergave(w: 'afgewerkt' | 'constructie') {
+/** Afgewerkt of Constructie (ook van buiten: de knop *Techniek* zet eerst Afgewerkt). */
+export function zetWeergave(w: 'afgewerkt' | 'constructie') {
   weergave = w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-3d-weergave]')) b.setAttribute('aria-pressed', String(b.dataset['3dWeergave'] === w));
   const noot = document.getElementById('pl-constructie-noot');
@@ -77,6 +81,7 @@ function zetWeergave(w: 'afgewerkt' | 'constructie') {
     hint.dataset.afgewerkt ??= hint.textContent ?? '';
     hint.textContent = w === 'constructie' ? 'Tik op een buitenmuur om haar opbouw te kiezen; een vloer of het dak toont de zijne.' : hint.dataset.afgewerkt;
   }
+  bijWeergave(w);
   opnieuw();
 }
 

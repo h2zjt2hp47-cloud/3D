@@ -758,6 +758,37 @@ details.aannames { margin: 6px 0; }
 details.aannames ul { margin: 4px 0; padding-left: 20px; }
 .constructieinhoud h4 { margin: 12px 0 4px; }
 #pl-doorsnede { margin-top: 8px; }
+/* Techniek voor de installateur (ronde 10b): het palet in plaats van het gereedschap, de balk bij de 3D. */
+.gereedschap .techniekknop { margin-top: 6px; border-style: dashed; }
+#pl-canvas[data-techniek] [data-soort="meubel"] { opacity: .3; }
+#pl-techniek-melding { margin: 8px 0 0; }
+@media (min-width: 1201px) { #pl-techniek-melding { display: none !important; } }
+.techniekpalet { display: grid; gap: 6px; }
+.techniekpalet[hidden] { display: none; }
+.techniekpalet .tkop { margin: 0; gap: 6px; }
+.techniekpalet .tkop button { flex: 1 1 auto; }
+.techniekpalet .tkop [data-techniek-kies] { border: 1px solid var(--lijn); background: var(--vlak); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+.techniekpalet .tkop [data-techniek-kies][aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+.tvaktabs button { font-size: .8rem; padding: 4px 8px; border-left: 4px solid var(--vak, var(--lijn)); }
+.tsub { margin: 6px 0 0; font-size: .78rem; color: var(--zacht); }
+.ttegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 4px; }
+.ttegel { display: grid; justify-items: center; align-content: start; gap: 2px; text-align: center; border: 1px solid var(--lijn); background: var(--vlak); color: inherit; border-radius: 6px; padding: 4px 3px 5px; cursor: pointer; font: inherit; font-size: .72rem; line-height: 1.12; min-height: 44px; hyphens: auto; overflow-wrap: anywhere; }
+.ttegels.breed { grid-template-columns: 1fr; }
+.ttegels.breed .ttegel { text-align: left; justify-items: start; font-size: .8rem; padding: 6px 8px; }
+.ttegel[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); background: var(--accent-zacht, var(--vlak)); }
+.ttegel .tbeeld svg { display: block; width: 32px; height: 32px; flex: none; }
+.ttegel .tlijn { display: block; width: 34px; height: 6px; border-radius: 3px; margin: 6px 0 4px; }
+.ttegel .tlijn.vloer { -webkit-mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 11px); mask: repeating-linear-gradient(90deg, #000 0 7px, transparent 7px 11px); }
+.tvakken { display: flex; flex-wrap: wrap; gap: 4px; }
+.tvakken button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--lijn); background: var(--vlak); color: inherit; border-radius: 14px; padding: 3px 9px; cursor: pointer; font: inherit; font-size: .78rem; opacity: .55; }
+.tvakken button[aria-pressed="true"] { opacity: 1; border-color: currentColor; }
+.tvakken .tstip { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.techniekpalet .voorbehoud, .techniekbalk .voorbehoud { font-size: .8rem; margin: 4px 0 0; }
+.techniekpalet [data-techniek-voorbeeld] { justify-self: start; }
+.techniekbalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 4px 0 6px; }
+.techniekbalk[hidden] { display: none; }
+.techniekbalk .voorbehoud { flex: 1 1 280px; }
+@media (pointer: coarse) { .ttegel, .tvakken button, .techniekpalet .tkop button, .tvaktabs button { min-height: 44px; } }
 .doorsnedebalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 8px; }
 .doorsnedebalk input[type="range"] { flex: 1 1 200px; min-width: 160px; }
 #pl-doorsnede-tekening svg { width: 100%; height: auto; display: block; background: #fff; border: 1px solid var(--lijn); border-radius: 6px; }

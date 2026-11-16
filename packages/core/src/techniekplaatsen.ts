@@ -1,5 +1,5 @@
 /**
- * Hulpfuncties om techniek in het plan te zetten (ronde 10), voor het scherm van een volgende ronde: een toestel tegen de
+ * Hulpfuncties om techniek in het plan te zetten (ronde 10), voor het scherm (ronde 10b, bouw-web/src/techniek-ui.ts): een toestel tegen de
  * dichtste wand zetten (ook een schuine), een leiding van A naar B die de wanden volgt, de technische ruimte als één
  * opstelling langs de wanden van een berging of garage, en de lus van een vloerverwarming in een ruimte. Zuivere
  * functies: ze geven een nieuw toestel of nieuwe punten terug en wijzigen het plan niet.
@@ -12,7 +12,10 @@ import {
   asVan, binnenVorm, delenVan, langsAs, murenVan, muurVanOpening, muurVlak, niveauPlan, niveauVan, opAs, openingenVanRuimte, ruimteOp,
   verschuifZijden, vormVanDeel, type Muur, type Plattegrond, type Punt,
 } from './plattegrond.js';
-import { draaiNaar, nieuwToestel, standaardToestelHoogte, toestelMaten, toestelVoetafdruk, type TechniekCatalogus, type Toestel, type ToestelType } from './techniek.js';
+import { gevelLijnen } from './maatinvoer.js';
+import {
+  draaiNaar, nieuwToestel, standaardToestelHoogte, toestelMaten, toestelVoetafdruk, voorRichting, type Leiding, type TechniekCatalogus, type Toestel, type ToestelType,
+} from './techniek.js';
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 const fijn = (x: number) => { const y = Math.round(x * 1e6) / 1e6; return y === 0 ? 0 : y; };
@@ -322,4 +325,157 @@ export function vloerverwarmingLus(plan: Plattegrond, ruimteId: string, opties: 
     punten.push(liggend ? [fijn(r1(a)), fijn(r1(c))] : [fijn(r1(c)), fijn(r1(a))], liggend ? [fijn(r1(b)), fijn(r1(c))] : [fijn(r1(c)), fijn(r1(b))]);
   }
   return punten;
+}
+
+// ---------- voor het scherm (ronde 10b): een toestel op zijn vlak, leidingen die meegaan ----------
+
+/**
+ * Het vlak waartegen een toestel hangt of staat, van hoek tot hoek: binnen het binnenvlak van de ruimte (de zijde van haar
+ * binnenvorm), buiten de buitenkant van de gevel (van buitenhoek tot buitenhoek). Voor de maatvraag van het scherm: de
+ * afstand van een hoek tot het midden van het toestel.
+ */
+export interface ToestelVlak {
+  /** De twee hoeken op het vlak (cm): binnen `van` links of boven; buiten links zoals je de gevel van buiten ziet. */
+  van: Punt;
+  tot: Punt;
+  /** Lengte van het vlak en de plaats van het midden van het toestel erlangs, vanaf `van` (cm). */
+  lengte: number;
+  s: number;
+  /** Eenheid van `van` naar `tot`, en de richting van het vlak naar het toestel. */
+  u: Punt;
+  n: Punt;
+  /** Van het vlak tot het midden van het toestel (cm): de halve diepte, buiten of op de vloer plus de vrije ruimte achter. */
+  diep: number;
+  /** Namen van de hoeken (`van`, `tot`) in gewone taal. */
+  namen: [string, string];
+  buiten: boolean;
+}
+
+/**
+ * Het vlak waartegen een toestel staat (zie `ToestelVlak`), of niets als het niet tegen een wand staat (een toestel aan het
+ * plafond, of een toestel dat losstaat). De achterkant van het toestel moet tot 2 cm op het vlak liggen.
+ */
+export function toestelVlak(plan: Plattegrond, t: Toestel, type: ToestelType): ToestelVlak | undefined {
+  if (t.aan === 'plafond' || t.aan === 'dak') return undefined;
+  const n = niveauVan(t), p = niveauPlan(plan, n), muren = murenVan(p);
+  const m3 = toestelMaten(type, t.aan);
+  const diep = m3.d / 2 + (t.aan === 'wand' ? 0 : type.vrij?.achter ?? 0);
+  const v = voorRichting(t.draai);
+  const achter: Punt = [t.x - v[0] * diep, t.y - v[1] * diep];
+  const gericht = (van: Punt, tot: Punt, normaal: Punt, s: number, buiten: boolean): ToestelVlak => {
+    const L = Math.hypot(tot[0] - van[0], tot[1] - van[1]);
+    const u: Punt = [(tot[0] - van[0]) / L, (tot[1] - van[1]) / L];
+    // Binnen: van links naar rechts (liggend) of van boven naar onder (staand of schuin). Buiten: zoals van buiten gezien.
+    const liggend = Math.abs(u[0]) >= Math.abs(u[1]);
+    const om = !buiten && (liggend ? u[0] < 0 : u[1] < 0);
+    const uit = om ? { van: tot, tot: van, u: [-u[0], -u[1]] as Punt, s: L - s } : { van, tot, u, s };
+    const namen: [string, string] = buiten ? ['links', 'rechts'] : liggend ? ['links', 'rechts'] : ['boven', 'onder'];
+    return { ...uit, van: [r1(uit.van[0]), r1(uit.van[1])], tot: [r1(uit.tot[0]), r1(uit.tot[1])], lengte: r1(L), s: r1(uit.s), n: normaal, diep, namen, buiten };
+  };
+  const r = ruimteOp(p, t.x, t.y);
+  if (r) {
+    for (const deel of delenVan(r)) {
+      const vorm = binnenVorm(vormVanDeel(deel), muren);
+      for (let i = 0; i < vorm.length; i++) {
+        const a = vorm[i]!, b = vorm[(i + 1) % vorm.length]!, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (L < 1) continue;
+        const u: Punt = [(b[0] - a[0]) / L, (b[1] - a[1]) / L], binnen: Punt = [-u[1], u[0]];
+        if (binnen[0] * v[0] + binnen[1] * v[1] < 0.99) continue;
+        const af = (achter[0] - a[0]) * binnen[0] + (achter[1] - a[1]) * binnen[1];
+        const s = (achter[0] - a[0]) * u[0] + (achter[1] - a[1]) * u[1];
+        if (Math.abs(af) > 2 || s < -1 || s > L + 1) continue;
+        return gericht(a, b, binnen, s, false);
+      }
+    }
+    return undefined;
+  }
+  for (const g of gevelLijnen(plan, n)) {
+    if (g.o[0] * v[0] + g.o[1] * v[1] < 0.99) continue;
+    const vlak: Punt = [g.p[0] + g.o[0] * (g.dikte / 2), g.p[1] + g.o[1] * (g.dikte / 2)];
+    const af = (achter[0] - vlak[0]) * g.o[0] + (achter[1] - vlak[1]) * g.o[1];
+    const su = (achter[0] - vlak[0]) * g.u[0] + (achter[1] - vlak[1]) * g.u[1];
+    if (Math.abs(af) > 2 || su < g.hoekLinks - 1 || su > g.hoekRechts + 1) continue;
+    const hoek = (x: number): Punt => [vlak[0] + g.u[0] * x, vlak[1] + g.u[1] * x];
+    return gericht(hoek(g.hoekLinks), hoek(g.hoekRechts), g.o, su - g.hoekLinks, true);
+  }
+  return undefined;
+}
+
+/** Het toestel op `s` cm van de hoek `van` langs zijn vlak (de draaiing blijft). */
+export function opToestelVlak(t: Toestel, vlak: ToestelVlak, s: number): Toestel {
+  return { ...t, x: r1(vlak.van[0] + vlak.u[0] * s + vlak.n[0] * vlak.diep), y: r1(vlak.van[1] + vlak.u[1] * s + vlak.n[1] * vlak.diep) };
+}
+
+const zelfdePlaats = (p: Punt, q: Punt) => Math.abs(p[0] - q[0]) < 0.05 && Math.abs(p[1] - q[1]) < 0.05;
+
+const lengteVan = (pts: Punt[]) => pts.reduce((t, p, i) => (i ? t + Math.hypot(p[0] - pts[i - 1]![0], p[1] - pts[i - 1]![1]) : t), 0);
+
+/**
+ * Punten weg die op een rechte lijn liggen met hun buren (ook als de leiding daar op haar stappen terugkeert), behalve de
+ * uiteinden en een stuk op of neer (twee punten op dezelfde plaats, of een andere hoogte).
+ */
+function rechtTrekken(punten: Punt[], hoogtes?: number[]): { punten: Punt[]; hoogtes?: number[] } {
+  const p = [...punten], h = hoogtes ? [...hoogtes] : undefined;
+  for (let i = 1; i < p.length - 1;) {
+    const a = p[i - 1]!, b = p[i]!, c = p[i + 1]!;
+    const kruis = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+    const zelfde = !h || (h[i - 1] === h[i] && h[i] === h[i + 1]);
+    if (zelfde && Math.hypot(b[0] - a[0], b[1] - a[1]) > 0.5 && Math.hypot(c[0] - b[0], c[1] - b[1]) > 0.5 && Math.abs(kruis) < 0.5) {
+      p.splice(i, 1);
+      h?.splice(i, 1);
+    } else i++;
+  }
+  return h ? { punten: p, hoogtes: h } : { punten: p };
+}
+
+/**
+ * Verschuift punten van een leiding (die in een versleepte ruimte, of het uiteinde bij een versleept toestel): `naar` geeft
+ * de nieuwe plaats van een punt dat meegaat, of niets. Een stuk dat liggend of staand was en waarvan nu maar één einde
+ * meeging, krijgt een knik, zodat de leiding haaks blijft: van de twee mogelijke knikken die met de kortste weg. Punten die
+ * daarna op een rechte lijn liggen (of waar de leiding op haar stappen zou terugkeren), vallen weg. De hoogtes per punt
+ * (`hoogtes`) gaan mee. Geeft een kopie (of dezelfde leiding als er niets meegaat).
+ */
+export function verschuifLeidingPunten(l: Leiding, naar: (p: Punt, i: number) => Punt | undefined): Leiding {
+  const oud = l.punten, nieuw = oud.map((p, i) => naar(p, i)), h = l.hoogtes;
+  if (!nieuw.some(Boolean)) return l;
+  const nu = oud.map((p, i) => nieuw[i] ?? p);
+  const punten: Punt[] = [], hoogtes: number[] = [];
+  const zet = (p: Punt, hoogte: number | undefined) => {
+    const q = punten[punten.length - 1];
+    // Twee punten op dezelfde plaats en hoogte worden één (een stuk op of neer, met een andere hoogte, blijft).
+    if (q && zelfdePlaats(p, q) && (!h || hoogtes[hoogtes.length - 1] === hoogte)) return;
+    punten.push([r1(p[0]), r1(p[1])]);
+    if (h) hoogtes.push(hoogte!);
+  };
+  oud.forEach((p, i) => {
+    const a = nu[i]!;
+    if (i > 0) {
+      const v = oud[i - 1]!, va = nu[i - 1]!;
+      const liggend = Math.abs(p[1] - v[1]) < 0.01 && Math.abs(p[0] - v[0]) > 0.01, staand = Math.abs(p[0] - v[0]) < 0.01 && Math.abs(p[1] - v[1]) > 0.01;
+      // Eén einde ging mee en het stuk staat nu schuin: een knik, de kortste van de twee (met de buren erbij gerekend).
+      if (!!nieuw[i - 1] !== !!nieuw[i] && (liggend || staand) && Math.abs(a[0] - va[0]) > 0.01 && Math.abs(a[1] - va[1]) > 0.01) {
+        const k1: Punt = [va[0], a[1]], k2: Punt = [a[0], va[1]];
+        const venster = (k: Punt) => lengteVan(rechtTrekken([...(nu[i - 2] ? [nu[i - 2]!] : []), va, k, a, ...(nu[i + 1] ? [nu[i + 1]!] : [])]).punten);
+        zet(venster(k1) <= venster(k2) ? k1 : k2, h?.[nieuw[i] ? i : i - 1]);
+      }
+    }
+    zet(a, h?.[i]);
+  });
+  const recht = rechtTrekken(punten, h ? hoogtes : undefined);
+  const uit: Leiding = { ...l, punten: recht.punten };
+  if (h) uit.hoogtes = recht.hoogtes;
+  return uit;
+}
+
+/**
+ * De punten van een leiding die op dezelfde plaats liggen als punt i en ernaast (een stuk op of neer naar een andere
+ * hoogte): die versleep je samen. Geeft de nummers van de punten.
+ */
+export function puntGroep(l: Leiding, i: number): number[] {
+  const p = l.punten[i];
+  if (!p) return [];
+  let a = i, b = i;
+  while (a > 0 && zelfdePlaats(l.punten[a - 1]!, p)) a--;
+  while (b < l.punten.length - 1 && zelfdePlaats(l.punten[b + 1]!, p)) b++;
+  return Array.from({ length: b - a + 1 }, (_, k) => a + k);
 }

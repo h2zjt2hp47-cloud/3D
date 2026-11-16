@@ -7,6 +7,7 @@
  *   ruimte:<id>             vloer en wandkleur
  *   meubel:<id>             draaien of verwijderen
  *   wand:<id>               een losse wand (ronde 2d): hoogte, afwerking of gevelmateriaal, verwijderen
+ *   toestel:<id>, leiding:<id>  techniek (ronde 10b, alleen met de techniek aan): hoogte of ligging, verwijderen (techniek-ui.ts)
  * Ook hier: de stijlen (één tik zet het hele ontwerp in een stijl) en een variant maken (een kopie om te vergelijken).
  */
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
@@ -19,9 +20,10 @@ import { el } from './hulp.js';
 import { stijlBeeld } from './snelstart-ui.js';
 import { actiefProject, dupliceerProject, positieVan, toestand, wijzig, type Toestand } from './staat.js';
 import { familie } from './meegeven.js';
+import { techniekDingKeuzes, techniekTitel } from './techniek-ui.js';
 
 /** Is dit een ding dat je kan aantikken? Andere namen (binnenmuur, terras, schaduw) geven geen keuzes. */
-export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:|wand:)/.test(id);
+export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:|wand:|toestel:|leiding:)/.test(id);
 
 /** Kleuren voor het schrijnwerk die in één tik te kiezen zijn; de hele waaier staat in de configurator. */
 const SNELLE_KLEUREN = ['wit', 'creme', 'ral7035', 'ral7022', 'antraciet', 'zwart'];
@@ -216,6 +218,7 @@ function titel(ding: string): string {
     const r = losseWandRuimte(t.plan, w);
     return r ? `Losse wand · ${r.naam}` : 'Losse muur buiten';
   }
+  if (soort === 'toestel' || soort === 'leiding') return techniekTitel(ding);
   return '';
 }
 
@@ -250,6 +253,7 @@ export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: ()
   else if (soort === 'ruimte') ruimteKeuzes(vak, id);
   else if (soort === 'meubel') meubelKeuzes(vak, id, nav.sluit);
   else if (soort === 'wand') wandKeuzes(vak, id, nav.sluit);
+  else if (soort === 'toestel' || soort === 'leiding') techniekDingKeuzes(vak, ding, nav);
 }
 
 // ---------- stijlen en varianten ----------

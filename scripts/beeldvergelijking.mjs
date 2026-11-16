@@ -125,10 +125,15 @@ const BOUWBEELDEN = [
   // met een hoek in verstek en een schuin stuk (`LOSSE_WANDEN`). De tekening, en de 3D van het gelijkvloers zonder dak.
   { naam: 'bouw-losse-plan', losse: 'plan' },
   { naam: 'bouw-losse-3d', losse: '3d', toetsen: 'R5U4' },
-  // Techniek voor de installateur (ronde 10, 16/11): de configurator toont ze nog niet, dus uit de motor (tsx) in de losse
+  // Techniek voor de installateur (ronde 10, 16/11): uit de motor (tsx) in de losse
   // kijker: de uitgeruste voorbeeldwoning in de uitgezette weergave, en de tekening van het gelijkvloers met de tekens.
   { naam: 'bouw-techniek', techniek: '3d', toetsen: 'O1' },
   { naam: 'bouw-techniek-plan', techniek: 'plan' },
+  // Techniek op het scherm (ronde 10b, 16/11), op een eigen pagina: *Voorbeeld openen: woning met techniek* in het palet,
+  // de tekening met de techniek aan (elektriciteit op de voorgrond, de andere vakken en de meubels lichter), en de 3D
+  // *In de woning* met lage muren, het gelijkvloers schuin.
+  { naam: 'bouw-techniek-scherm-plan', techniekScherm: 'plan' },
+  { naam: 'bouw-techniek-scherm-3d', techniekScherm: '3d' },
   // Vaste modellen (ronde 8b, 16/11), elk via de snelstart in een nieuw project, op een eigen pagina: een carport met
   // berging en zadeldak (de bedekking wordt vanzelf zink), het poolhouse, de hal van 15 × 30 m buiten (helemaal in beeld)
   // en in de constructieweergave, en de rechte trap met haar maten. `klik` = wat er daarna in de configurator gebeurt.
@@ -477,6 +482,35 @@ async function maakBeelden() {
         const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
         for (const [, k, n] of (b.toetsen ?? '').matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
         beelden.set(b.naam, png(await wachtTotStil(p, '#drie-d canvas')));
+      }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  const techniekScherm = bouw.filter((x) => x.techniekScherm);
+  if (techniekScherm.length) {
+    // Een verse pagina; de knop Techniek, dan het voorbeeld (een nieuw project met de uitgeruste woning).
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.click('.nav [data-weergave="plan"]');
+    await p.click('[data-pl-weergave="plan"]');
+    await p.click('[data-techniek-aan]');
+    await p.click('[data-techniek-voorbeeld]');
+    await p.waitForTimeout(800);
+    for (const b of techniekScherm) {
+      process.stdout.write(`  ${b.naam} … `);
+      if (b.techniekScherm === 'plan') {
+        await p.click('[data-pl-weergave="plan"]');
+        await p.waitForTimeout(800);
+        beelden.set(b.naam, PNG.sync.read(await p.locator('#pl-canvas').screenshot()));
+      } else {
+        await p.click('[data-pl-weergave="3d"]');
+        await p.click('[data-techniek-3d="woning"]');
+        await p.check('#pl-laag');
+        await p.uncheck('#pl-alle-niveaus');
+        await p.click('[data-pl-standpunt="schuin"]');
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       }
       console.log('klaar');
     }

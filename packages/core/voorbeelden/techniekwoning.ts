@@ -5,7 +5,7 @@
  * verdeler en lussen per ruimte, een radiator op de verdieping, ventilatie D met kanalen, gevelrooster en dakdoorvoer, en
  * water, regenwater en de afvoeren van keuken, wc en badkamers.
  *
- * Gemaakt met de hulpfuncties die het scherm later gebruikt (`tegenWand`, `leidingLangsWanden`, `technischeOpstelling`,
+ * Gemaakt met de hulpfuncties die ook het scherm gebruikt (`tegenWand`, `leidingLangsWanden`, `technischeOpstelling`,
  * `vloerverwarmingLus`), zodat het voorbeeld ook die bewijst. **Volledig verzonnen** en **door geen installateur
  * nagelezen**: een voorbeeld om te tonen, geen ontwerp van een installatie. Wat niet in de berging paste (de
  * ventilatie-unit staat daarom tegen het plafond, de regenwaterpomp in de inkom), staat hieronder bij `opstelling`.
@@ -19,7 +19,7 @@ import { planCatalogus } from './inrichting.js';
 import { techniekCatalogus } from './techniek.js';
 import { voorbeeldWoning, type DemoPositie } from './woning.js';
 
-/** De plancatalogus met de techniek erbij (het scherm zet `techniek` er later zelf bij). */
+/** De plancatalogus met de techniek erbij (sinds ronde 10b heeft `planCatalogus` ze zelf: dit is dezelfde). */
 export const techniekPlanCatalogus: PlanCatalogus = { ...planCatalogus, techniek: techniekCatalogus };
 
 /** De volgorde waarin de technische ruimte in de berging gevuld wordt: van de geprobeerde volgordes de enige waarin alle zes passen. */

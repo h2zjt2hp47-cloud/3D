@@ -7,6 +7,7 @@ import {
   dakOpbouw, gevelOppervlaktes, losseWandHoogte, losseWandLengte, losseWandRuimte, losseWandVlak, murenVan, niveauPlan, niveauVan, ruimteMaten, verdiepingenVan,
   type DakBedekking, type DakLichtType, type DakMateriaal, type GevelMateriaal, type GevelOntwerp, type Muur, type OfferteRegel, type PlanCatalogus, type Plattegrond,
 } from '../src/index.js';
+import { techniekCatalogus } from './techniek.js';
 
 const VOEGEN = { grijs: { label: 'Grijs', hex: '#bdb8ad' }, wit: { label: 'Wit', hex: '#e8e4da' }, antraciet: { label: 'Antraciet', hex: '#4a4846' }, zand: { label: 'Zand', hex: '#cbbd9d' } };
 
@@ -186,6 +187,9 @@ export const planCatalogus: PlanCatalogus = {
   gevels: gevelCatalogus,
   daken: dakCatalogus,
   daklichten: daklichtCatalogus,
+  // Techniek voor de installateur (ronde 10b): de schermen tonen ze pas als je ze opzoekt. Een plan zonder toestellen
+  // of leidingen verandert er niet door (tekening, 3D en controles kijken alleen met een optie of met techniek in het plan).
+  techniek: techniekCatalogus,
 };
 
 /** Demoprijzen per eenheid: [verkoop, kost]. */
