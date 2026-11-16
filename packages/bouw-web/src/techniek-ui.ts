@@ -270,11 +270,12 @@ function technischeRuimte(r: Ruimte) {
   const o = besteOpstelling(plan, r.id, types);
   if (!o.toestellen.length) { meld(o.meldingen[0] ?? `In ${r.naam} past niets langs de wanden.`); return; }
   const nieuw = o.toestellen.map((t) => ({ ...t, id: nieuweId('t') }));
+  // Met de collector staat er sanitair in het plan: vanaf dan meldt de controle ook elke natte ruimte zonder afvoer.
+  // (Vóór de wijziging bekijken: `wijzig` past het plan ter plaatse aan.)
+  const sanitair = nieuw.some((t) => typeVan(t)?.vak === 'sanitair') && !(plan.toestellen ?? []).some((t) => typeVan(t)?.vak === 'sanitair') && !(plan.leidingen ?? []).some((l) => tc.leidingen[l.soort]?.vak === 'sanitair');
   for (const t of nieuw) zichtbaar.add(typeVan(t)!.vak);
   wijzig('plan', (x) => { (x.plan.toestellen ??= []).push(...nieuw); });
   omg?.kies(undefined);
-  // Met de collector staat er sanitair in het plan: vanaf dan meldt de controle ook elke natte ruimte zonder afvoer.
-  const sanitair = nieuw.some((t) => typeVan(t)?.vak === 'sanitair') && !(plan.toestellen ?? []).some((t) => typeVan(t)?.vak === 'sanitair') && !(plan.leidingen ?? []).some((l) => tc.leidingen[l.soort]?.vak === 'sanitair');
   meld([
     `Technische ruimte in ${r.naam}: ${nieuw.length} toestellen langs de wanden.`, ...o.meldingen,
     dubbel.length ? `Al in het plan (niet nog eens): ${dubbel.join(', ')}.` : '',
