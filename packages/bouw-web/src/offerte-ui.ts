@@ -385,6 +385,13 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
   toonWerkenOverzicht();
   // Constructie (ronde 6): meetstaat, aanwijzing voor EPB en schatting van de stabiliteit, elk achter een kop die openklapt.
   toonConstructieOverzicht();
+  // Doorloop B14: een project met alleen een carport, tuinhuis, loods, staalwerk of aanbouw (zonder ruimtes) heeft geen
+  // plattegrond en geen ramen: dan geen kaart Constructie ("Nog geen ruimtes"), Uit de plattegrond of Statiek voor ramen.
+  const los = !t.plan.ruimtes.length && t.posities.some((p) => p.model === 'AANBOUW' || isVastModel(p.model));
+  const constructie = document.getElementById('o-constructie');
+  if (constructie) constructie.hidden = los;
+  $('#o-uitplan-kaart').hidden = los;
+  $('#o-statiek-kaart').hidden = los && !t.posities.some((p) => p.model === 'RAAM');
   // Techniek (ronde 10b): de telling per vak, alleen als het plan techniek heeft, dicht tot je ze openklapt.
   toonTechniekOverzicht();
   for (const x of document.querySelectorAll('.o-btwlabel')) x.textContent = PRIJZEN ? `prijzen ${btwLabel()}` : '';

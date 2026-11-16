@@ -13,6 +13,8 @@ import { startProjecten, toonProjecten } from './projecten-ui.js';
 import { startVarianten, toonVarianten } from './varianten-ui.js';
 import { startWerken } from './werken-ui.js';
 import { laatstBewaard, opslagProbleem, opWijziging, toestand } from './staat.js';
+import { beginScherm } from '../../core/src/projecten.js';
+import { isVastModel } from '../../core/voorbeelden/vastemodellen.js';
 
 window.addEventListener('error', (e) => {
   // "Script error." zonder details komt van een script van een ander domein (bv. een browserextensie of de
@@ -72,6 +74,16 @@ const nav = {
   naarPositie3D: (id: string) => { toon('positie', { positie: id }); toonPositie3D(); },
   /** Varianten van dit ontwerp in 3D naast elkaar. */
   naarVarianten: () => toon('varianten'),
+  /**
+   * Een project dat net geopend werd (Projecten, een bestand): een carport, tuinhuis, loods, staalwerk of aanbouw zonder
+   * ruimtes in de configurator met de 3D, zoals na de snelstart (doorloop B14); al de rest in de plattegrond.
+   */
+  naarProject: () => {
+    const t = toestand();
+    const b = beginScherm({ zonderWoning: t.meta.zonderWoning, ruimtes: t.plan.ruimtes.length, posities: t.posities.map((p) => ({ id: p.id, los: p.model === 'AANBOUW' || isVastModel(p.model) })) });
+    if (b.scherm === 'positie') nav.naarPositie3D(b.id);
+    else toon('plan');
+  },
   geefMee,
   /** De plattegrond met het paneel Ruimte met maten (na de snelstart: een aanbouw met gemeten maten). */
   naarMaten: (maten: { breedte: number; diepte: number }) => { toon('plan'); openRuimteMetMaten({ maten, plaats: 'tegen' }); },
