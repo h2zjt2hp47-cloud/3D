@@ -52,6 +52,13 @@ export interface GeplaatstBouwdeel {
   open?: boolean;
   dek?: Bouwdeel | null;
   dekOmhoog?: number;
+  /**
+   * De kleur van de kern (wat `bouwdeelBlokken` tussen de binnenste en de buitenste laag tekent) in de afgewerkte
+   * weergave. De kern is nergens te zien (kader, hoekplank, boeiboord en dak dekken hem af), maar zijn lichte kopse
+   * kant schemert in de kijker, recht van voren gezien, als een stippellijn door wat ervoor staat. In de kleur van de
+   * gevel (wand) of van het boeiboord (dak) valt dat weg.
+   */
+  kernKleur?: string;
 }
 
 /** Een bijgebouw als samenstelling van bouwdelen, met de losse blokken erbij. */
@@ -189,9 +196,11 @@ class Samensteller {
 /** De blokken van één geplaatst bouwdeel in een weergave, op hun plaats. */
 function blokkenVan(g: GeplaatstBouwdeel, weergave: BouwWeergave): Blok[] {
   const voorvoegsel = `${g.code}.`;
-  if (weergave === 'constructie' || !g.open) return opPlaats(bouwdeelBlokken(g.deel, weergave, { voorvoegsel }), g.deel.maten, g);
+  if (weergave === 'constructie') return opPlaats(bouwdeelBlokken(g.deel, weergave, { voorvoegsel }), g.deel.maten, g);
+  const kern = (blokken: Blok[]) => (g.kernKleur ? blokken.map((b) => (b.code.includes('.kern.') ? { ...b, kleur: g.kernKleur! } : b)) : blokken);
+  if (!g.open) return opPlaats(kern(bouwdeelBlokken(g.deel, 'afgewerkt', { voorvoegsel })), g.deel.maten, g);
   const skelet = bouwdeelBlokken(g.deel, 'constructie', { voorvoegsel, lagen: false });
-  const dek = g.dek ? plaatsBouwdeel(bouwdeelBlokken(g.dek, 'afgewerkt', { voorvoegsel: `${voorvoegsel}dek.` }), { x: 0, y: g.dekOmhoog ?? 0, z: 0 }) : [];
+  const dek = g.dek ? plaatsBouwdeel(kern(bouwdeelBlokken(g.dek, 'afgewerkt', { voorvoegsel: `${voorvoegsel}dek.` })), { x: 0, y: g.dekOmhoog ?? 0, z: 0 }) : [];
   return opPlaats([...skelet, ...dek], g.deel.maten, g);
 }
 
@@ -235,7 +244,7 @@ interface DakBasis {
  */
 function platDak(S: Samensteller, o: DakBasis & { y: number; richting: 'x' | 'z'; randAchter: boolean }) {
   const opbouw = bijgebouwDak(o.bedekking, o.hout, o.richting === 'z' ? 'dakbeschot_dwars' : 'dakbeschot', o.geisoleerd);
-  S.vlak('dak', opbouw, (ob) => dakvlak({ lengte: o.X1 - o.X0, diepte: o.Z1 - o.Z0, opbouw: ob, richting: o.richting }, M), o.X0, o.y, o.Z0);
+  S.vlak('dak', opbouw, (ob) => dakvlak({ lengte: o.X1 - o.X0, diepte: o.Z1 - o.Z0, opbouw: ob, richting: o.richting }, M), o.X0, o.y, o.Z0).kernKleur = M[o.hout]?.kleur;
   if (o.bedekking === 'open') return;
   // Boeiboord: van 2 cm onder de dakbalken tot 3 cm boven de bedekking (de opstand van de dakrand).
   const f = BOEI, hf = Math.ceil(dikteCm(opbouw) + BOEI_ONDER + 3), y = o.y - BOEI_ONDER, bx = o.X1 - o.X0 + 2 * f, bz = o.Z1 - o.Z0;
@@ -260,7 +269,7 @@ function lessenaarDak(S: Samensteller, o: DakBasis & { onder: (z: number) => num
   const opbouw = bijgebouwDak(o.bedekking, o.hout, 'dakbeschot_dwars', o.geisoleerd);
   const Tv = dikteCm(opbouw) / o.cos, f = BOEI, L = o.Z1 - o.Z0, bx = o.X1 - o.X0 + 2 * f;
   const zLaag = o.laag === 'voor' ? o.Z1 : o.Z0, zHoog = o.laag === 'voor' ? o.Z0 : o.Z1;
-  S.vlak('dak', opbouw, (ob) => dakvlak({ lengte: o.X1 - o.X0, diepte: L, helling: o.graden, opbouw: ob }, M), o.X0, o.onder(zLaag), o.Z0, o.laag === 'voor' ? 180 : 0);
+  S.vlak('dak', opbouw, (ob) => dakvlak({ lengte: o.X1 - o.X0, diepte: L, helling: o.graden, opbouw: ob }, M), o.X0, o.onder(zLaag), o.Z0, o.laag === 'voor' ? 180 : 0).kernKleur = M[o.hout]?.kleur;
   // Aan de lage kant komt het boeiboord gelijk met de bedekking (het water moet eraf); aan de hoge kant 2 cm hoger.
   const hLaag = Tv + BOEI_ONDER, hHoog = Tv + BOEI_ONDER + 2;
   S.zet('boeiboord', balk(bx, f, hLaag, o.hout), o.X0 - f, o.onder(zLaag) - BOEI_ONDER, o.laag === 'voor' ? o.Z1 : o.Z0 - f);
@@ -278,8 +287,8 @@ function zadelVlakken(S: Samensteller, o: DakBasis & { yVoet: number; graden: nu
   const opbouw = bijgebouwDak(o.bedekking, o.hout, 'dakbeschot_dwars', o.geisoleerd);
   const Tv = dikteCm(opbouw) / o.cos, f = BOEI, L = o.Z1 - o.Z0, mid = (o.X0 + o.X1) / 2, half = mid - o.X0;
   const maak = (ob: Opbouw) => dakvlak({ lengte: L, diepte: half, helling: o.graden, opbouw: ob }, M);
-  S.vlak('dak', opbouw, maak, o.X0, o.yVoet, o.Z0, 270);
-  S.vlak('dak', opbouw, maak, mid, o.yVoet, o.Z0, 90);
+  S.vlak('dak', opbouw, maak, o.X0, o.yVoet, o.Z0, 270).kernKleur = M[o.hout]?.kleur;
+  S.vlak('dak', opbouw, maak, mid, o.yVoet, o.Z0, 90).kernKleur = M[o.hout]?.kleur;
   const hVoet = Tv + BOEI_ONDER, hWind = Tv + BOEI_ONDER + 2;
   for (const x of [o.X0 - f, o.X1]) S.zet('boeiboord', balk(L, f, hVoet, o.hout), x, o.yVoet - BOEI_ONDER, o.Z0, 90);
   const windveer = () => prismaStuk('ligger', o.hout, { breedte: mm(f), hoogte: mm(hWind * o.cos) }, (half + f) / o.cos, f, stijgend(half + f, o.tan, hWind));
@@ -422,11 +431,12 @@ function bouwOverkapping(r: ConfiguratieResultaat): BijgebouwSamenstelling {
         else S.blok(S.vast, `${g.code}.rail.${deel}`, 'metaal', DONKER, dwars - 1.5, y, a0, t + 3, 3, lengte);
       }
     }
-    // De deur van de berging: een blad van planken, iets terug in de opening, met een kruk.
+    // De deur van de berging: een blad van planken achter de gevelplanken (het grijpt rondom in het regelwerk, zo is er
+    // geen kier), met een kruk.
     for (const o of g.deel.vlak?.openingen ?? []) {
       S.bij(S.afwerking, g, [
-        { code: 'deur.blad', soort: gevelTeken.soort === 'planken' ? 'planken_h' : 'planken', vorm: 'blok', kleur: gevelTeken.kleur, x: r2(o.u0 + 0.6), y: r2(o.v0 + 1), z: 1.5, b: r2(o.u1 - o.u0 - 1.2), h: r2(o.v1 - o.v0 - 1.6), d: 3.5 },
-        { code: 'deur.kruk', soort: 'metaal', vorm: 'blok', kleur: DONKER, x: r2(o.u0 + 7), y: r2(o.v0 + 98), z: -1.5, b: 2.5, h: 13, d: 3 },
+        { code: 'deur.blad', soort: gevelTeken.soort === 'planken' ? 'planken_h' : 'planken', vorm: 'blok', kleur: gevelTeken.kleur, x: r2(o.u0 - GRIJP), y: r2(o.v0 + 0.8), z: 2.2, b: r2(o.u1 - o.u0 + 2 * GRIJP), h: r2(o.v1 - o.v0 - 0.8 + GRIJP), d: 3.5 },
+        { code: 'deur.kruk', soort: 'metaal', vorm: 'blok', kleur: DONKER, x: r2(o.u0 + 7), y: r2(o.v0 + 98), z: -0.8, b: 2.5, h: 13, d: 3 + GRIJP },
       ]);
     }
     return g;
@@ -543,61 +553,70 @@ function bouwOverkapping(r: ConfiguratieResultaat): BijgebouwSamenstelling {
 
 // ---------- tuinhuis en poolhouse ----------
 
-/** Raam in de eigen assen van een wand (z = 0 is buiten): een kader over de hele dikte van de wand en het glas erin. */
+/**
+ * Schrijnwerk in de eigen assen van een wand (z = 0 is buiten). Elk stuk grijpt `GRIJP` cm in het stuk ernaast en het
+ * kader grijpt rondom in de wand: twee vlakken die precies tegen elkaar liggen, tekent de kijker van voren gezien als
+ * een stippellijn, en door een kier zie je het licht van binnen.
+ */
+function schrijnwerk(code: string, kleur: string) {
+  const uit: Blok[] = [];
+  const blok = (deel: string, soort: BlokSoort, x: number, y: number, z: number, b: number, h: number, d: number, kl = kleur) => {
+    if (b > 0.01 && h > 0.01) uit.push({ code: `${code}.${deel}`, soort, vorm: 'blok', kleur: kl, x: r2(x), y: r2(y), z: r2(z), b: r2(b), h: r2(h), d: r2(d) });
+  };
+  /** Een kader van `s` cm breed rond de rechthoek (x0..x1, y0..y1), met glas erin; `onder` = hoogte van de onderregel. */
+  const raam = (naam: string, x0: number, x1: number, y0: number, y1: number, z: number, d: number, s: number, onder = s) => {
+    const g = GRIJP;
+    blok(`${naam}.links`, 'gevel', x0, y0, z, s, y1 - y0, d);
+    blok(`${naam}.rechts`, 'gevel', x1 - s, y0, z, s, y1 - y0, d);
+    blok(`${naam}.onder`, 'gevel', x0 + s - g, y0, z, x1 - x0 - 2 * s + 2 * g, onder, d);
+    blok(`${naam}.boven`, 'gevel', x0 + s - g, y1 - s, z, x1 - x0 - 2 * s + 2 * g, s, d);
+    return { x: x0 + s - g, b: x1 - x0 - 2 * s + 2 * g, y: y0 + onder - g, top: y1 - s + g };
+  };
+  return { uit, blok, raam };
+}
+const GRIJP = 0.4;
+const GLAS = '#bcd0d6';
+
+/** Raam: een kader over de hele dikte van de wand (iets ervoor en erachter) en het glas erin. */
 function raamBlokken(code: string, o: VlakRechthoek, dikte: number, kleur: string): Blok[] {
-  const k = 5, z = -0.6, d = dikte + 1.2;
-  const blok = (deel: string, soort: BlokSoort, x: number, y: number, zz: number, b: number, h: number, dd: number, kl = kleur): Blok =>
-    ({ code: `${code}.${deel}`, soort, vorm: 'blok', kleur: kl, x: r2(x), y: r2(y), z: r2(zz), b: r2(b), h: r2(h), d: r2(dd) });
-  return [
-    blok('kader.links', 'kunststof', o.u0, o.v0, z, k, o.v1 - o.v0, d),
-    blok('kader.rechts', 'kunststof', o.u1 - k, o.v0, z, k, o.v1 - o.v0, d),
-    blok('kader.boven', 'kunststof', o.u0 + k, o.v1 - k, z, o.u1 - o.u0 - 2 * k, k, d),
-    blok('kader.onder', 'kunststof', o.u0 + k, o.v0, z, o.u1 - o.u0 - 2 * k, k, d),
-    blok('glas', 'glas', o.u0 + k, o.v0 + k, 4, o.u1 - o.u0 - 2 * k, o.v1 - o.v0 - 2 * k, 1.2, '#bcd0d6'),
-  ];
+  const w = schrijnwerk(code, kleur), g = GRIJP;
+  const dag = w.raam('kader', o.u0 - g, o.u1 + g, o.v0 - g, o.v1 + g, -0.6, dikte + 1.2, 5 + g);
+  w.blok('glas', 'glas', dag.x, dag.y, 4, dag.b, dag.top - dag.y, 1.2, GLAS);
+  return w.uit;
 }
 
-/** Deur in de eigen assen van een wand: een kader, en één of twee deurbladen met glas bovenaan, of twee schuivende glasdelen. */
+/** Deur: een kader zonder onderregel, en één of twee deurbladen met glas bovenaan, of twee schuivende glasdelen. */
 function deurBlokken(code: string, o: VlakRechthoek, dikte: number, kleur: string, type: 'enkel' | 'dubbel' | 'schuifraam'): Blok[] {
-  const k = 5, z = -0.6, d = dikte + 1.2, uit: Blok[] = [];
-  const blok = (deel: string, soort: BlokSoort, x: number, y: number, zz: number, b: number, h: number, dd: number, kl = kleur) => {
-    if (b > 0.01 && h > 0.01) uit.push({ code: `${code}.${deel}`, soort, vorm: 'blok', kleur: kl, x: r2(x), y: r2(y), z: r2(zz), b: r2(b), h: r2(h), d: r2(dd) });
-  };
-  const H = o.v1 - o.v0;
-  blok('kader.links', 'kunststof', o.u0, o.v0, z, k, H, d);
-  blok('kader.rechts', 'kunststof', o.u1 - k, o.v0, z, k, H, d);
-  blok('kader.boven', 'kunststof', o.u0 + k, o.v1 - k, z, o.u1 - o.u0 - 2 * k, k, d);
-  const u0 = o.u0 + k, u1 = o.u1 - k, v1 = o.v1 - k;
+  const w = schrijnwerk(code, kleur), g = GRIJP, k = 5, z = -0.6, d = dikte + 1.2;
+  w.blok('kader.links', 'gevel', o.u0 - g, o.v0, z, k + g, o.v1 - o.v0 + g, d);
+  w.blok('kader.rechts', 'gevel', o.u1 - k, o.v0, z, k + g, o.v1 - o.v0 + g, d);
+  w.blok('kader.boven', 'gevel', o.u0 + k - g, o.v1 - k, z, o.u1 - o.u0 - 2 * k + 2 * g, k + g, d);
+  // De dagmaat binnen het kader; de bladen grijpen er rondom in.
+  const u0 = o.u0 + k, u1 = o.u1 - k, boven = o.v1 - k + g;
   if (type === 'schuifraam') {
     // Twee glasdelen die langs elkaar schuiven, elk in een smal kader; een lage dorpel eronder.
-    blok('dorpel', 'kunststof', u0, o.v0, z, u1 - u0, 3, d);
-    const overlap = 6, kier = 0.4, b = (u1 - u0 - 2 * kier + overlap) / 2, s = 5;
-    for (const [i, x] of [u0 + kier, u1 - kier - b].entries()) {
-      const zz = 3 + i * 4, n = `vleugel${i + 1}`;
-      blok(`${n}.links`, 'kunststof', x, o.v0 + 3, zz, s, v1 - o.v0 - 3, 3.5);
-      blok(`${n}.rechts`, 'kunststof', x + b - s, o.v0 + 3, zz, s, v1 - o.v0 - 3, 3.5);
-      blok(`${n}.onder`, 'kunststof', x + s, o.v0 + 3, zz, b - 2 * s, s, 3.5);
-      blok(`${n}.boven`, 'kunststof', x + s, v1 - s, zz, b - 2 * s, s, 3.5);
-      blok(`${n}.glas`, 'glas', x + s, o.v0 + 3 + s, zz + 1.2, b - 2 * s, v1 - o.v0 - 3 - 2 * s, 1.2, '#bcd0d6');
+    w.blok('dorpel', 'gevel', u0 - g, o.v0, z, u1 - u0 + 2 * g, 3, d);
+    const overlap = 6, b = (u1 - u0 + overlap) / 2 + g;
+    for (const [i, x] of [u0 - g, u1 + g - b].entries()) {
+      const zz = 3 + i * 4, dag = w.raam(`vleugel${i + 1}`, x, x + b, o.v0 + 3 - g, boven, zz, 3.5, 5);
+      w.blok(`vleugel${i + 1}.glas`, 'glas', dag.x, dag.y, zz + 1.2, dag.b, dag.top - dag.y, 1.2, GLAS);
     }
-    return uit;
+    return w.uit;
   }
   // Deurblad: stijlen en regels rond een dicht paneel onderaan en glas bovenaan.
-  const bladen = type === 'dubbel' ? 2 : 1, b = (u1 - u0) / bladen, s = 10, zz = 3, dd = 4.5, yPaneel = o.v0 + 2, yGlas = o.v0 + Math.min(95, H * 0.45);
+  const bladen = type === 'dubbel' ? 2 : 1, b = (u1 - u0) / bladen, zz = 3, dd = 4.5, onder = o.v0 + 0.8, yGlas = o.v0 + Math.min(95, (o.v1 - o.v0) * 0.45);
   for (let i = 0; i < bladen; i++) {
-    const x = u0 + i * b + 0.3, bb = b - 0.6, n = `blad${i + 1}`;
-    blok(`${n}.links`, 'kunststof', x, yPaneel, zz, s, v1 - yPaneel - 0.5, dd);
-    blok(`${n}.rechts`, 'kunststof', x + bb - s, yPaneel, zz, s, v1 - yPaneel - 0.5, dd);
-    blok(`${n}.onder`, 'kunststof', x + s, yPaneel, zz, bb - 2 * s, 18, dd);
-    blok(`${n}.midden`, 'kunststof', x + s, yGlas - s, zz, bb - 2 * s, s, dd);
-    blok(`${n}.boven`, 'kunststof', x + s, v1 - 0.5 - s, zz, bb - 2 * s, s, dd);
-    blok(`${n}.paneel`, 'kunststof', x + s, yPaneel + 18, zz + 1, bb - 2 * s, yGlas - s - yPaneel - 18, dd - 2);
-    blok(`${n}.glas`, 'glas', x + s, yGlas, zz + 1.6, bb - 2 * s, v1 - 0.5 - s - yGlas, 1.2, '#bcd0d6');
+    const x0 = u0 + i * b - (i === 0 ? g : 0), x1 = u0 + (i + 1) * b + (i === bladen - 1 ? g : 0), n = `blad${i + 1}`;
+    const dag = w.raam(n, x0, x1, onder, boven, zz, dd, 10, 18);
+    w.blok(`${n}.midden`, 'gevel', dag.x, yGlas - 10, zz, dag.b, 10, dd);
+    w.blok(`${n}.paneel`, 'gevel', dag.x, dag.y, zz + 1, dag.b, yGlas - 10 + g - dag.y, dd - 2);
+    w.blok(`${n}.glas`, 'glas', dag.x, yGlas - g, zz + 1.6, dag.b, dag.top - yGlas + g, 1.2, GLAS);
     // De kruk zit aan de kant waar de bladen elkaar raken (bij één blad: rechts gezien van binnen).
-    const kruk = bladen === 2 && i === 1 ? x + 3.5 : x + bb - 6.5;
-    blok(`${n}.kruk`, 'metaal', kruk, o.v0 + 100, zz - 2.5, 3, 12, 2.5, '#b9b9b6');
+    w.blok(`${n}.kruk`, 'metaal', bladen === 2 && i === 1 ? x0 + 3.5 : x1 - 6.5, o.v0 + 100, zz - 2.5, 3, 12, 2.5 + g, '#b9b9b6');
   }
-  return uit;
+  // Een naaldlat over de naad van twee deurbladen.
+  if (bladen === 2) w.blok('naald', 'gevel', u0 + b - 1.5, onder, zz - 0.6, 3, boven - g - onder, 0.6 + g);
+  return w.uit;
 }
 
 function bouwTuinhuis(r: ConfiguratieResultaat): BijgebouwSamenstelling {
@@ -657,6 +676,7 @@ function bouwTuinhuis(r: ConfiguratieResultaat): BijgebouwSamenstelling {
   // ----- wanden: voor en achter over de hele breedte, de zijwanden ertussen -----
   const wand = (naam: string, lengte: number, hoogte: number, openingen: WandOpening[], x: number, z: number, draai: Draai) => {
     const g = S.vlak(`wand.${naam}`, bijgebouwWand(bekleding, geisoleerd, boven(hoogte).latei), (o) => wandvlak({ lengte, hoogte, opbouw: o, openingen }, M), x, y0, z, draai);
+    g.kernKleur = gevelTeken.kleur;
     (g.deel.vlak?.openingen ?? []).forEach((o, i) => {
       const code = `${o.v0 < 0.01 ? 'deur' : 'raam'}${i + 1}`;
       S.bij(S.afwerking, g, o.v0 < 0.01 ? deurBlokken(code, o, t, kleur, deurType) : raamBlokken(code, o, t, kleur));

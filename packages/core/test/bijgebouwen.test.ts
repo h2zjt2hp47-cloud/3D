@@ -582,6 +582,9 @@ describe('tuinhuis en poolhouse', () => {
     expect(laag('links', 0).x1).toBeCloseTo(14.35, 2);
     expect(blokken(r, 'wand.voor.1.afwerking.4.').every((b) => b.soort === 'planken')).toBe(true);
     expect(delen(r, 'hoekplank')).toHaveLength(4);
+    // De kern van de wand (nergens te zien) heeft de kleur van de gevel: zijn kopse kant schemert anders door in de kijker.
+    expect(blokken(r, 'wand.voor.1.kern.').map((b) => b.kleur)).toEqual(blokken(r, 'wand.voor.1.kern.').map(() => M.gevel_thermisch_naaldhout_staand!.kleur));
+    expect(blokken(r, 'wand.voor.1.kern.').length).toBeGreaterThan(0);
     // Het geheel: wanden en hoekplanken vullen precies de voetafdruk.
     expect(omvang([...blokken(r, 'wand.').filter((b) => b.code.includes('.afwerking.') || b.code.includes('.kern.')), ...blokken(r, 'hoekplank')])).toMatchObject({ x0: 0, x1: 400, z0: 0, z1: 300, y0: 12, y1: 232 });
     // Liggende planken, een andere houtsoort.
@@ -605,14 +608,17 @@ describe('tuinhuis en poolhouse', () => {
     expect([openingen(r, 'links').length, openingen(r, 'rechts').length, openingen(r, 'achter').length]).toEqual([1, 2, 3]);
     // Elke opening heeft haar schrijnwerk, alleen in de afgewerkte weergave.
     expect(blokken(r, 'wand.voor.1.deur2.blad').length).toBeGreaterThan(8);
-    expect(blokken(r, 'wand.voor.1.raam1.').map((b) => b.soort)).toEqual(['kunststof', 'kunststof', 'kunststof', 'kunststof', 'glas']);
+    expect(blokken(r, 'wand.voor.1.deur2.naald')).toHaveLength(1);
+    expect(blokken(r, 'wand.voor.1.raam1.').map((b) => b.soort)).toEqual(['gevel', 'gevel', 'gevel', 'gevel', 'glas']) // een mat kader rondom, en het glas;
     expect(blokken(r, 'wand.achter.1.raam').filter((b) => b.soort === 'glas')).toHaveLength(3);
     expect(blokken(r, 'wand.', 'constructie').filter((b) => /\.(deur|raam)\d+\./.test(b.code))).toEqual([]);
     // Het glas van een raam zit in zijn opening, in de wand (gezien van voor staat het eerste raam van de wand rechts).
     const glas = blokken(r, 'wand.voor.1.raam1.glas')[0]!;
     expect(glas.z).toBeGreaterThan(300 - 14.35);
     expect(glas.z + glas.d).toBeLessThan(300);
-    expect([glas.x, glas.x + glas.b]).toEqual([598 - voor[0]!.u1 + 5, 598 - voor[0]!.u0 - 5]);
+    // Binnen het kader van 5 cm; het glas grijpt er 0,4 cm in.
+    expect(glas.x).toBeCloseTo(598 - voor[0]!.u1 + 5 - 0.4, 2);
+    expect(glas.x + glas.b).toBeCloseTo(598 - voor[0]!.u0 - 5 + 0.4, 2);
 
     // De deur links of rechts (gezien van buiten), en de drie soorten deur.
     const midden = (x: ConfiguratieResultaat) => { const d = omvang(blokken(x, 'wand.voor.1.deur')); return (d.x0 + d.x1) / 2; };
@@ -622,7 +628,7 @@ describe('tuinhuis en poolhouse', () => {
     expect(blokken(tuin({ deur: 'dubbel', ramen_voor: 0 }), 'wand.voor.1.deur').filter((b) => b.code.endsWith('.kruk'))).toHaveLength(2);
     const schuif = blokken(tuin({ deur: 'schuifraam', ramen_voor: 0 }), 'wand.voor.1.deur');
     expect(schuif.filter((b) => b.soort === 'glas')).toHaveLength(2);
-    expect(omvang(schuif).x1 - omvang(schuif).x0).toBe(300);
+    expect(omvang(schuif).x1 - omvang(schuif).x0).toBeCloseTo(300 + 2 * 0.4, 2); // het kader grijpt 0,4 cm in de wand
     // Kleur van het schrijnwerk.
     expect(blokken(tuin({ schrijnwerk: 'wit' }), 'wand.voor.1.deur1.kader.links')[0]!.kleur).toBe('#efece4');
 
@@ -660,7 +666,7 @@ describe('tuinhuis en poolhouse', () => {
         const p = delen(breed, 'paal').map((g) => plek(g)).sort((a, b) => a.x0 - b.x0);
         expect(p, naam).toHaveLength(aantal);
         const d = omvang(blokken(breed, 'wand.voor.1.deur'));
-        for (const k of p) expect(k.x1 <= d.x0 + 0.7 || k.x0 >= d.x1 - 0.7, `${naam}: paal voor de deur`).toBe(true);
+        for (const k of p) expect(k.x1 <= d.x0 || k.x0 >= d.x1, `${naam}: paal voor de deur`).toBe(true);
         p.slice(1).forEach((k, i) => expect(k.x0 - p[i]!.x0, naam).toBeLessThanOrEqual(500));
       }
     }
