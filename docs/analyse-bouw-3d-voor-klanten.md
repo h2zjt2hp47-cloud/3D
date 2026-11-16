@@ -320,8 +320,8 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 |---|---|---|---|
 | 1 | 1 | **Klaar (15/11):** dak (plat, lessenaar, zadel, met bedekking), lichtkoepels en lichtstraten, lichtinval (zon op een dag en uur, noordrichting, zon per gevel); 3D doorsturen als pakket en zending. Niet nagekeken op een toestel met WebGPU | – |
 | 2 | 1 | **Klaar (16/11, hoofdstuk 20):** **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
-| 2b | 1 | *(vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
-| 2c | 1 | *(loopt sinds 16/11, vóór 2b)* **Schuine muren in de motor en de 3D:** een ruimte met een vrije vorm, schuine muren met ramen en deuren, gevelaanzicht, plat dak, zon per gevel, tekening en controles; een rechthoekig plan blijft exact hetzelfde. Het scherm om ze in te geven komt met 2b | L |
+| 2b | 1 | *(loopt sinds 16/11; vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
+| 2c | 1 | **Klaar (16/11, hoofdstuk 21):** **Schuine muren in de motor en de 3D:** een ruimte met een vrije vorm, schuine muren met ramen en deuren, gevelaanzicht, plat dak, zon per gevel, tekening en controles; een rechthoekig plan blijft exact hetzelfde. Het scherm om ze in te geven komt met 2b | L |
 | 3 | 1 | **Klaar (16/11, hoofdstuk 18):** **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
 | 4 | 1 | *(loopt sinds 16/11)* **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
@@ -796,4 +796,33 @@ per overspanning, de afstanden van gordingen en wandregels (het onderzoek spreek
 portalen tot 8 m), het windverband, wat de portalen niet hebben (vouten, voetplaten), de maten van balustrade, luifel en trap.
 **Voor de kijker:** een hal van 30 m valt als *positie* half buiten beeld (zichtgrens en grondvlak van 40 m); als *woning* (buiten)
 lukt het wel. Op te lossen wanneer de loods een scherm krijgt.
+
+---
+
+## 21. Gebouwd op 16/11: schuine muren in de motor, de tekening en de 3D (ronde 2c)
+
+Jonas, op de vraag of de muren altijd haaks zijn: **"schuine muren ook"**. De plattegrond was helemaal op rechte hoeken gebouwd
+(elke muur horizontaal of verticaal); nu kent ze ook vrije vormen. **Het scherm om ze in te geven komt met ronde 2b** (loopt).
+
+| Wat | Inhoud |
+|---|---|
+| **Vrije vorm** | Een ruimte kan een `omtrek` krijgen: de hoekpunten op de as van de muren. Convexe vormen (een scheve vierhoek, een vijfhoek met een afgeschuinde hoek); een niet-convexe vorm maak je uit twee delen. |
+| **Vorm uit gemeten maten** | Vier zijden en een diagonaal (zoals een inmeter meet) of drie zijden en twee hoeken → de vorm, de hoeken en de tweede diagonaal als controle; maten die niet kunnen, krijgen een uitleg in gewone taal. Binnenmaten worden naar de as van de muren omgerekend. |
+| **Muren** | Schuine muren met verstek in de hoeken; een rechte binnenwand die tegen een schuine muur uitkomt, loopt tot in haar vlak. Een test controleert dat muren plus netto vloer de buitenomtrek exact vullen. |
+| **Ramen en deuren** | In een schuine muur, met afstanden tot de hoeken, draairichting en deurboog; in 3D gedraaid mee met de muur. |
+| **Gevels** | In de vier gewone gevelaanzichten staat een schuine muur in verkort (en is ze te verven); elke schuine gevel heeft ook een eigen aanzicht recht ervoor, met kettingmaten (het scherm toont dat nog niet). |
+| **Dak en zon** | Plat dak boven een vrije vorm, met koepels en dakrand in verstek. Een hellend dak blijft alleen op één rechthoek (anders plat met een melding). De zon per gevel rekent met de echte richting van een schuine gevel. |
+| **Oppervlaktes en controles** | Netto en bruto oppervlakte van een veelhoek; overlap, daglicht, ventilatie; een meubel moet binnen de vorm staan. Indelen met een rechte wand knipt een vrije vorm in twee. |
+
+**Een rechthoekige woning verandert niet**: vóór het werk zijn vingerafdrukken genomen van de voorbeeldwoning (zonder dak, met
+zadeldak, lessenaar, groendak met koepels) en van een L-vorm: muren, hoeken, openingen, afstanden, oppervlaktes, tekening, 3D,
+gevels, dak, controles en offerteregels blijven exact gelijk. Alle bestaande beelden blijven gelijk; drie nieuwe beelden bewaken
+de schuine muren.
+
+**Het 3D-pakket staat nu op versie 4** (nieuwe vormen voor schuine muren en vloeren); de kijker van 16/11 (na dit werk) is nodig.
+
+**Wat (nog) niet kan:** een schuine binnenwand tekenen, een hellend dak op een vrije vorm, een meubel schuin draaien, de kopse kant
+van een binnenmuur tegen een schuine gevel, schuine daklichten. Een fijne witte lijn naast ramen en deuren in de 3D bestaat ook bij
+rechte muren met donkere planken; niet opgelost. Waar de muur van de woning precies op het eindpunt van een schuine muur van dikte
+wisselt, overlappen de muren een klein stukje (± 190 cm²).
 
