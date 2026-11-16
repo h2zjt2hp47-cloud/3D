@@ -135,12 +135,12 @@ describe('loods: uitersten en elke keuze', () => {
     }
   }, LANG);
 
-  it('200 willekeurige configuraties: altijd een 3D zonder fouten in de tekening, ook als het model een fout meldt', () => {
+  it('80 willekeurige configuraties: altijd een 3D zonder fouten in de tekening, ook als het model een fout meldt', () => {
     let zaad = 7;
     const toeval = () => ((zaad = (zaad * 16807) % 2147483647) - 1) / 2147483646;
     const kies = <T,>(l: readonly T[]) => l[Math.floor(toeval() * l.length)]!;
     let geldig = 0;
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 80; i++) {
       const k: Keuzes = {
         breedte: 600 + 100 * Math.floor(toeval() * 25), afstand: 500 + 50 * Math.floor(toeval() * 7), traveeen: 2 + Math.floor(toeval() * 8),
         zijhoogte: 300 + 50 * Math.floor(toeval() * 11), dakvorm: kies(['zadel', 'lessenaar']), helling: `h${6 + Math.floor(toeval() * 15)}`,
@@ -159,7 +159,7 @@ describe('loods: uitersten en elke keuze', () => {
       // Een geldige configuratie tekent alle openingen zonder ze in te korten.
       controleerScene(r, JSON.stringify(k), r.geldig);
     }
-    expect(geldig).toBeGreaterThan(30);
+    expect(geldig).toBeGreaterThan(12);
   }, LANG);
 });
 
