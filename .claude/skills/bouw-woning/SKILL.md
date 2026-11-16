@@ -306,16 +306,18 @@ Doel (Jonas): *wat de verkoper nodig heeft om verder te tekenen, staat naast of 
   | | Tablet staand | Tablet liggend | Laptop |
   |---|---|---|---|
   | Gereedschap (van – tot) | 276–1167 → 276–706 | 226–1117 → 226–656 | 168–922 → 168–835 |
-  | Meubelpalet / de trap | 1175 / 2706 → 276 / 576 | 1125 / 2656 → 226 / 526 | 930 / 2185 → 168 / 390 |
-  | Daklichtpalet / plat dakraam 100 | 1175 / 1666 → 276 / 616 | 1125 / 1616 → 226 / 566 | 930 / 1339 → 168 / 489 |
-  | Techniek: technische ruimte / eerste leiding / stopcontact | 1198 / 1098 / 637 → 406 / 587 / 730 | 1148 / 1048 / 587 → 356 / 537 / 680 | 1027 / 927 / 466 → 280 / 436 / 579 |
+  | Meubelpalet / de trap | 1175 / 2706 → 276 / 526 | 1125 / 2656 → 226 / 476 | 930 / 2185 → 168 / 349 |
+  | Daklichtpalet / plat dakraam 100 | 1175 / 1666 → 276 / 566 | 1125 / 1616 → 226 / 516 | 930 / 1339 → 168 / 448 |
+  | Techniek: technische ruimte / eerste leiding / stopcontact | 1198 / 1098 / 637 → 356 / 506 / 618 | 1148 / 1048 / 587 → 306 / 456 / 568 | 1027 / 927 / 466 → 239 / 365 / 477 |
+  | Techniek: toestellen naast de tekening (Elektriciteit, Koeling, Ventilatie, Sanitair) | alle | 8/14, 4/10, 6/6, 5/5 | alle |
+  | Maatvenster na een raam (tekening vanaf) | 452–762 op de tekening (406) → 228–403 | op de tekening → 197–301 (304) | 580–869 op de tekening (223) → 135–221 |
   | Scrollen in de taken meubel, daklicht, techniek | 2 + 2 + 1 → 0 | 3 + 3 + 7 → 0 | 2 + 2 + 5 → 0 |
   | Twee stopcontacten, dan de technische ruimte (toestellen) | 1 → 9 | 2 → 9 | 2 → 9 |
   | Uitleg na een binnendeur op een buitenmuur | 1518 → 701 (bij de tik) | onder de vouw → 710 | 134 → 134 en 677 |
   | Ongedaan maken: plattegrond / 3D | 1217 / 3705 → 352 / 306 | 1167 / 3801 → 250 / 256 | 972 / 972 → 180 / 187 |
   | Groot scherm in de 3D: bovenkant / deel van het scherm | 995 / 15 % → 75 / 67 % | 75 / 43 % (gelijk) | 65 / 48 % (gelijk) |
 
-  De trap kost één tik meer (de tab *Trappen*), zonder scrollen. Esc na een toestel of een raam: het venster bleef open → dicht. Dubbel tikken op *Plattegrond wissen*: 2 → 0 ruimtes → 2 → 2. Een koepel over een plat dakraam: geplaatst → geweigerd. Op de tablet geen tekst meer met klik, Ctrl, Delete of pijltjes (3 → 0) en geen sneltoets in het gereedschap (9 → 0). Alle knoppen, tegels, tabs en velden van gereedschap, paletten, het paneel van een dakraam en het maatvenster: minstens 44 beeldpunten (staand en liggend). Geen fout in de pagina.
+  De trap kost één tik meer (de tab *Trappen*), zonder scrollen. Het maatvenster ligt ook bij een losse wand en met een melding erbij nooit op de tekening (het loopt naar boven); typen, Enter, *Ongedaan* in het venster en naast het zoomen, en Indelen met een getypte maat werken zoals vroeger. Esc na een toestel of een raam: het venster bleef open → dicht. Dubbel tikken op *Plattegrond wissen*: 2 → 0 ruimtes → 2 → 2. Een koepel over een plat dakraam: geplaatst → geweigerd. Op de tablet geen tekst meer met klik, Ctrl, Delete of pijltjes (3 → 0) en geen sneltoets in het gereedschap (9 → 0). Alle knoppen, tegels, tabs en velden van gereedschap, paletten, het paneel van een dakraam en het maatvenster: minstens 44 beeldpunten (staand en liggend). Geen fout in de pagina.
 
 ## Projecten en opslag (`staat.ts`, `projecten-ui.ts`)
 - localStorage: index `bouw-demo.projecten.v1` ({ actief, projecten: ProjectInfo[] }), elk project apart in `bouw-demo.project.<id>`, sjablonen in `bouw-demo.sjablonen.v1`, bibliotheek in `bouw-demo.bibliotheek.v1`. Het oude enkele project (`bouw-demo.v1`) wordt bij de eerste start het eerste project.

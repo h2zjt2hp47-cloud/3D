@@ -388,30 +388,6 @@ function toonNiveaus() {
   }
 }
 
-/**
- * Een knop die iets wist: de eerste tik vraagt "Zeker?", de tweede doet het. Een tweede tik binnen 0,6 s (een dubbeltik of
- * een vinger die twee keer raakt) telt niet: die moet bewust zijn. Na 6 s zonder tweede tik staat de knop weer zoals eerst.
- */
-function zekerKnop(b: HTMLButtonElement, vraag: string, doe: () => void) {
-  const gewoon = b.textContent ?? '';
-  let sinds = 0, terug = 0;
-  const herstel = () => { window.clearTimeout(terug); b.dataset.zeker = ''; b.textContent = gewoon; };
-  b.addEventListener('click', () => {
-    const nu = performance.now();
-    if (b.dataset.zeker !== '1') {
-      b.dataset.zeker = '1';
-      b.textContent = vraag;
-      sinds = nu;
-      window.clearTimeout(terug);
-      terug = window.setTimeout(herstel, 6000);
-      return;
-    }
-    if (nu - sinds < 600) return;
-    herstel();
-    doe();
-  });
-}
-
 /** Nieuwe verdieping: één ruimte boven de hele verdieping eronder, om daarna in te delen. */
 function nieuweVerdieping() {
   const t = toestand();
@@ -1616,6 +1592,30 @@ function knop(tekst: string, f: () => void, cls = 'tweede'): HTMLButtonElement {
   const b = el('button', { type: 'button', class: cls }, tekst) as HTMLButtonElement;
   b.addEventListener('click', f);
   return b;
+}
+
+/**
+ * Een knop die iets wist: de eerste tik vraagt "Zeker?", de tweede doet het. Een tweede tik binnen 0,6 s (een dubbeltik of
+ * een vinger die twee keer raakt) telt niet: die moet bewust zijn. Na 6 s zonder tweede tik staat de knop weer zoals eerst.
+ */
+function zekerKnop(b: HTMLButtonElement, vraag: string, doe: () => void) {
+  const gewoon = b.textContent ?? '';
+  let sinds = 0, terug = 0;
+  const herstel = () => { window.clearTimeout(terug); b.dataset.zeker = ''; b.textContent = gewoon; };
+  b.addEventListener('click', () => {
+    const nu = performance.now();
+    if (b.dataset.zeker !== '1') {
+      b.dataset.zeker = '1';
+      b.textContent = vraag;
+      sinds = nu;
+      window.clearTimeout(terug);
+      terug = window.setTimeout(herstel, 6000);
+      return;
+    }
+    if (nu - sinds < 600) return;
+    herstel();
+    doe();
+  });
 }
 
 function toonEigenschappen() {
