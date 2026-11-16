@@ -321,7 +321,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 1 | 1 | **Klaar (15/11):** dak (plat, lessenaar, zadel, met bedekking), lichtkoepels en lichtstraten, lichtinval (zon op een dag en uur, noordrichting, zon per gevel); 3D doorsturen als pakket en zending. Niet nagekeken op een toestel met WebGPU | – |
 | 2 | 1 | **Klaar (16/11, hoofdstuk 20):** **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
 | 2b | 1 | **Klaar (16/11, hoofdstuk 23)** *(vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
-| 2d | 1 | *(loopt sinds 16/11; vraag van Jonas: "hoe teken [ik] gewoon een muur zonder dat dit meteen een aparte ruimte wordt?")* **Losse wand:** een wand die geen ruimte opdeelt (een muur die halverwege stopt, een halfhoog muurtje, een tuinmuur of keermuur), getekend of met maten in cm, ook schuin; in plattegrond, gevels, 3D en meetstaat | M |
+| 2d | 1 | **Klaar (16/11, hoofdstuk 27)** *(vraag van Jonas: "hoe teken [ik] gewoon een muur zonder dat dit meteen een aparte ruimte wordt?")* **Losse wand:** een wand die geen ruimte opdeelt (een muur die halverwege stopt, een halfhoog muurtje, een tuinmuur of keermuur), getekend of met maten in cm, ook schuin; in plattegrond, gevels, 3D en meetstaat | M |
 | 2c | 1 | **Klaar (16/11, hoofdstuk 21):** **Schuine muren in de motor en de 3D:** een ruimte met een vrije vorm, schuine muren met ramen en deuren, gevelaanzicht, plat dak, zon per gevel, tekening en controles; een rechthoekig plan blijft exact hetzelfde. Het scherm om ze in te geven komt met 2b | L |
 | 3 | 1 | **Klaar (16/11, hoofdstuk 18):** **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
 | 4 | 1 | **Klaar (16/11, hoofdstuk 22):** **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
@@ -332,7 +332,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
 | 8 | 2 | **Klaar (16/11, hoofdstukken 19 en 25)**, ook op de schermen; de aanbouw staat nog niet op bouwdelen **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Klaar (16/11, hoofdstukken 20 en 25)**, ook op de schermen: **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
-| 10 | 2 | *(klaar in de motor, tekening en 3D op 16/11, hoofdstuk 24; nog geen scherm om te plaatsen)* **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
+| 10 | 2 | *(klaar in de motor, tekening en 3D op 16/11, hoofdstuk 24; het scherm om te plaatsen loopt sinds 16/11)* **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
 | 12 | 2 | **Vloerafwerking** en de rest van de afwerkingen | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
@@ -963,4 +963,24 @@ schuine muren sluiten in de constructie niet precies; geen dakrand, muurplaat, g
 lateien in de constructie; de doorsnede toont geen ramen, trap of meubels; vijf van de zes plaatsen hebben vandaag maar één opbouw
 (alleen bij de buitenmuren is er echt keuze); het pakket en het bestand voor de klant dragen de constructie (nog) niet mee. De
 kleuren van de lagen zijn fel.
+
+---
+
+## 27. Gebouwd op 16/11: een losse wand die geen ruimte opdeelt (ronde 2d)
+
+Jonas: *"Hoe teken [ik] gewoon een muur zonder dat dit meteen een aparte ruimte wordt?"*
+
+| Wat | Inhoud |
+|---|---|
+| **Gereedschap** | *Losse wand (deelt niets)*, sneltoets L. Slepen van punt naar punt (ook schuin; bijna recht wordt recht), een eindpunt kleeft aan een muur. Daarna de maatvraag: **lengte** (wat gebouwd wordt, van de muur tot het vrije einde), **vrij tot de muur** (de afstand loodrecht tot de dichtste evenwijdige muur, links of rechts), **hoogte** (tot het plafond of *Halfhoog 110 cm*). Selecteren, slepen, een eindpunt slepen, een maat aantikken, verwijderen, ongedaan maken; ze gaat mee als je de ruimte versleept. De hint van *Wand tekenen* legt het verschil uit. |
+| **Binnen en buiten** | Binnen een ruimte: een muur die halverwege stopt of een halfhoog muurtje, in de afwerking van de ruimte (of een eigen). Buiten: een tuin- of keermuur in een gevelmateriaal. |
+| **Overal zichtbaar** | Plattegrond (een lage wand licht en gearceerd, met "h 110"), 3D, gevels (een tuinmuur voor de woning), constructie (binnen als binnenwand in houtskelet, buiten als effen muur met de melding dat de catalogus er geen opbouw voor heeft), meetstaat en overzicht. |
+| **Wat niet verandert** | De ruimtes, hun oppervlakte, de afgeleide muren en de controles. Een plan zonder losse wanden is exact zoals vroeger. |
+
+Gemeten (groot scherm en tablet gelijk): een muurtje van 120 cm lang en 110 cm hoog op 300 cm van de muur in 6 tikken, een tuinmuur
+van 6 m op 1 m van de zijgevel in 5. Vroeger kon geen van beide.
+
+**Wat nog niet kan:** een losse wand schuift niet mee als je een muur verschuift of een ruimte groter maakt (de controle meldt het
+als ze dan door een muur loopt); geen ramen of deuren in een losse wand; geen verstek met een muur van de woning; niet in de schuine
+gevelaanzichten; varianten zien ze niet. Een bakstenen tuinmuur oogt in de gevel-editor (half doorzichtig) wat roze.
 
