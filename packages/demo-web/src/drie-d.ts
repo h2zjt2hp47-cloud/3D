@@ -2638,8 +2638,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     plaatsCamera();
   });
   const los = (ev: PointerEvent) => {
-    // Klik zonder slepen: het element onder de muis kiezen.
-    if (ev.type === 'pointerup' && drukStart && aanwijzers.size === 1 && Math.hypot(ev.clientX - drukStart.x, ev.clientY - drukStart.y) < 5) kies(ev);
+    // Klik zonder slepen: het element onder de muis kiezen. Een gebouw aantikken met de vinger mag tot 12 px schuiven
+    // (een vinger ligt nooit stil); de zetels houden 5 px.
+    const marge = !opties.zetel && ev.pointerType === 'touch' ? 12 : 5;
+    if (ev.type === 'pointerup' && drukStart && aanwijzers.size === 1 && Math.hypot(ev.clientX - drukStart.x, ev.clientY - drukStart.y) < marge) kies(ev);
     drukStart = null;
     aanwijzers.delete(ev.pointerId);
     knijpAfstand = 0;
@@ -2651,7 +2653,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     if (!opties.opKlik) return;
     const r = renderer.domElement.getBoundingClientRect();
     straal.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camera);
-    const raak = straal.intersectObjects(groep.children, true).find((h: any) => h.object.name || h.object.parent?.name);
+    // Een gebouw: blokken die alleen schaduw werpen (lichtinval, `schaduw_…`) zijn onzichtbaar en vangen geen tik.
+    const raak = straal.intersectObjects(groep.children, true).find((h: any) => (h.object.name || h.object.parent?.name) && (opties.zetel || !String(h.object.name).startsWith('schaduw_')));
     // Echt 3D-model: het element onder de klik, volgens zijn stuk langs x.
     const echt = raak?.object.parent?.userData?.echt as Echt3DPlaatsing | undefined;
     if (echt) {

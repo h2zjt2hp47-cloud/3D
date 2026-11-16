@@ -307,6 +307,7 @@ function plan3D() {
     });
     // Na de snelstart een ruimer kader: de camera staat verder, zodat de hele woning met lucht erboven in beeld komt.
     viewer?.toon(ruimKader ? ruimKaderVan(scene) : scene);
+    beeldActueel = !!viewer;
     if (volgendStandpunt) { viewer?.standpunt(volgendStandpunt); volgendStandpunt = undefined; }
   });
   toonDingKeuzes();
@@ -1051,9 +1052,15 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   }
 }
 
-/** Het beeld van de 3D van de woning zoals ze laatst getoond werd (JPEG als data-URL), of null als de 3D nog niet open was. */
+/** Toont de 3D het huidige ontwerp? Na elke wijziging (of een ander project) niet meer, tot de 3D opnieuw getekend is. */
+let beeldActueel = false;
+
+/**
+ * Het beeld van de 3D van de woning zoals ze laatst getoond werd (JPEG als data-URL), of null als de 3D nog niet open
+ * was of sindsdien iets veranderde (dan zou het een ander ontwerp tonen).
+ */
 export function ontwerpBeeld(): string | null {
-  return viewer?.beeld?.('image/jpeg', 0.85) ?? null;
+  return beeldActueel ? viewer?.beeld?.('image/jpeg', 0.85) ?? null : null;
 }
 
 /** Kwaliteit van de 3D van de woning: de bewaarde keuze, anders Snel op een aanraakscherm en Mooi op een computer. */
@@ -1179,6 +1186,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   });
   // Een ander project (snelstart, variant, openen): beginnen op het gelijkvloers, zonder keuze, passend in beeld.
   opWijziging((bron) => {
+    beeldActueel = false;
     if (bron !== 'vervang') return;
     niveau = 0;
     selectie = undefined;
