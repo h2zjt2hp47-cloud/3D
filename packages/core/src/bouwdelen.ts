@@ -525,19 +525,72 @@ export function wandvlak(invoer: WandInvoer, materialen: Record<string, BouwMate
   }, getal(invoer.kleinste));
 }
 
-/** Balklaag van een vloer of plat dak: balken op het raster en een randbalk over de koppen van de balken. */
-function balklaag(k: SkeletKader, L: number, B: number, richting: 'x' | 'z') {
-  if (richting === 'z') {
-    if (B <= 2 * k.t) return;
-    k.stuk('randbalk', { u0: 0, u1: L, v0: 0, v1: k.t }, 'u');
-    k.stuk('randbalk', { u0: 0, u1: L, v0: B - k.t, v1: B }, 'u');
-    for (const u of raster(L, k.t, k.hoh)) k.stuk('balk', { u0: u, u1: Math.min(L, u + k.t), v0: k.t, v1: B - k.t }, 'v');
-  } else {
-    if (L <= 2 * k.t) return;
-    k.stuk('randbalk', { u0: 0, u1: k.t, v0: 0, v1: B }, 'v');
-    k.stuk('randbalk', { u0: L - k.t, u1: L, v0: 0, v1: B }, 'v');
-    for (const w of raster(B, k.t, k.hoh)) k.stuk('balk', { u0: k.t, u1: L - k.t, v0: w, v1: Math.min(B, w + k.t) }, 'u');
+/**
+ * Balklaag van een vloer of plat dak: balken op het raster en een randbalk over de koppen van de balken. Met `gaten`
+ * (een trapgat, een koepel; al binnen de randen geknipt, zie `balkGaten`) komt er aan elke kant van een gat een
+ * doorlopende balk, worden de balken die door het gat lopen onderbroken en dragen twee raveelbalken (rol `randbalk`)
+ * hun koppen. Zonder gaten zijn de stukken precies die van vroeger.
+ */
+function balklaag(k: SkeletKader, L: number, B: number, richting: 'x' | 'z', gaten: VlakRechthoek[] = []) {
+  // In de assen van de balklaag: a = dwars op de balken (daar staan ze op het raster), b = langs de balken.
+  const langsZ = richting === 'z';
+  const A = langsZ ? L : B, Bl = langsZ ? B : L, t = k.t;
+  const r = (a0: number, a1: number, b0: number, b1: number): VlakRechthoek => (langsZ ? { u0: a0, u1: a1, v0: b0, v1: b1 } : { u0: b0, u1: b1, v0: a0, v1: a1 });
+  const balkLangs = langsZ ? 'v' : 'u', randLangs = langsZ ? 'u' : 'v';
+  if (Bl <= 2 * t) return;
+  k.stuk('randbalk', r(0, A, 0, t), randLangs);
+  k.stuk('randbalk', r(0, A, Bl - t, Bl), randLangs);
+  const g = gaten.map((x) => (langsZ ? { a0: x.u0, a1: x.u1, b0: x.v0, b1: x.v1 } : { a0: x.v0, a1: x.v1, b0: x.u0, b1: x.u1 }));
+  if (!g.length) {
+    for (const a of raster(A, t, k.hoh)) k.stuk('balk', r(a, Math.min(A, a + t), t, Bl - t), balkLangs);
+    return;
   }
+  // De doorlopende balken: de randen van het raster, een balk naast elk gat (die vervalt als ze een randbalk van het
+  // raster zou raken: die neemt haar plaats in), en het raster (een rasterbalk die minder dan een balkbreedte naast een
+  // andere zou liggen, vervalt).
+  const rast = raster(A, t, k.hoh);
+  const vast: number[] = rast.length > 1 ? [rast[0]!, rast[rast.length - 1]!] : [...rast];
+  const botst = (a: number, marge: number) => vast.some((v) => a < v + t + marge - EPS && a + t > v - marge + EPS);
+  for (const x of g) for (const a of [x.a0 - t, x.a1]) if (a >= -EPS && a + t <= A + EPS && !botst(a, 0)) vast.push(a);
+  for (const a of rast.slice(1, -1)) if (!botst(a, t)) vast.push(a);
+  vast.sort((p, q) => p - q);
+  const doorGat = (a: number, x: (typeof g)[number]) => a + t > x.a0 + EPS && a < x.a1 - EPS;
+  for (const a of vast) {
+    // Loopt de balk door een gat, dan stopt hij tegen de raveelbalken ervoor en erachter.
+    let stukken: [number, number][] = [[t, Bl - t]];
+    for (const x of g.filter((y) => doorGat(a, y))) {
+      stukken = stukken.flatMap(([b0, b1]) => [[b0, Math.min(b1, x.b0 - t)], [Math.max(b0, x.b1 + t), b1]] as [number, number][]).filter(([b0, b1]) => b1 - b0 > EPS);
+    }
+    for (const [b0, b1] of stukken) k.stuk('balk', r(a, Math.min(A, a + t), b0, b1), balkLangs);
+  }
+  // De raveelbalken: dwars over het gat, van de doorlopende balk aan de ene kant tot die aan de andere kant.
+  for (const x of g) {
+    const links = Math.max(0, ...vast.filter((a) => !doorGat(a, x) && a + t <= x.a0 + EPS).map((a) => a + t));
+    const rechts = Math.min(A, ...vast.filter((a) => !doorGat(a, x) && a >= x.a1 - EPS));
+    if (x.b0 - t > t + EPS) k.stuk('randbalk', r(links, rechts, x.b0 - t, x.b0), randLangs);
+    if (x.b1 + t < Bl - t - EPS) k.stuk('randbalk', r(links, rechts, x.b1, x.b1 + t), randLangs);
+  }
+}
+
+/**
+ * De gaten in een balklaag (cm, in het vlak), zo geknipt dat er langs de rand een randbalk en een balk naast het gat
+ * past. Wat te klein wordt, vervalt; een melding zegt wat er gebeurde.
+ */
+function balkGaten(gaten: VlakRechthoek[] | undefined, L: number, B: number, t: number, meldingen: string[]): VlakRechthoek[] {
+  const uit: VlakRechthoek[] = [];
+  (gaten ?? []).forEach((w, i) => {
+    const g = { u0: Math.max(w.u0, 2 * t), u1: Math.min(w.u1, L - 2 * t), v0: Math.max(w.v0, 2 * t), v1: Math.min(w.v1, B - 2 * t) };
+    const wat = `Opening ${i + 1}`;
+    if (g.u1 - g.u0 < MIN_OPENING || g.v1 - g.v0 < MIN_OPENING) {
+      meldingen.push(`${wat} past niet in het vlak en is weggelaten: langs de rand is plaats nodig voor een randbalk en een balk.`);
+      return;
+    }
+    if ((['u0', 'u1', 'v0', 'v1'] as const).some((k) => Math.abs(g[k] - w[k]) > 0.01)) {
+      meldingen.push(`${wat} is ingekort tot ${r2(g.u1 - g.u0)} × ${r2(g.v1 - g.v0)} cm: langs de rand is plaats nodig voor een randbalk en een balk.`);
+    }
+    uit.push({ u0: r2(g.u0), u1: r2(g.u1), v0: r2(g.v0), v1: r2(g.v1) });
+  });
+  return uit;
 }
 
 export interface VloerInvoer {
@@ -549,6 +602,17 @@ export interface VloerInvoer {
   richting?: 'x' | 'z';
   /** Kleinste lengte van een balk (cm): een korter stuk vervalt. Standaard 0. */
   kleinste?: number;
+  /**
+   * Gaten in de vloer (cm, u langs x en v langs z), bv. een trapgat. De lagen worden uitgespaard; in een balklaag komt
+   * er een balk naast het gat en dragen raveelbalken de onderbroken balken. Leeg = een vloer zonder gaten, zoals vroeger.
+   */
+  openingen?: VlakRechthoek[];
+}
+
+/** De dikte van het skelet van een opbouw in het vlak (cm): de breedte van de balken, of 0 zonder skelet. */
+function skeletBreedte(o: Opbouw): number {
+  const l = o.lagen?.[dragendeLaag(o)];
+  return l?.rol === 'skelet' && l.hout && getal(l.hout.breedte) > 0 ? l.hout.breedte / 10 : 0;
 }
 
 /**
@@ -558,7 +622,9 @@ export interface VloerInvoer {
 export function vloervlak(invoer: VloerInvoer, materialen: Record<string, BouwMateriaal>): Bouwdeel {
   const L = Math.max(0, getal(invoer.lengte)), B = Math.max(0, getal(invoer.breedte));
   const richting = invoer.richting ?? (B <= L ? 'z' : 'x');
-  return maakVlak('vloervlak', { ligging: 'liggend', lengte: L, breedte: B, helling: 0, richting, openingen: [] }, invoer.opbouw, materialen, [], (k) => balklaag(k, L, B, richting), getal(invoer.kleinste));
+  const meldingen: string[] = [];
+  const gaten = balkGaten(invoer.openingen, L, B, skeletBreedte(invoer.opbouw), meldingen);
+  return maakVlak('vloervlak', { ligging: 'liggend', lengte: L, breedte: B, helling: 0, richting, openingen: gaten }, invoer.opbouw, materialen, meldingen, (k) => balklaag(k, L, B, richting, gaten), getal(invoer.kleinste));
 }
 
 export interface DakInvoer {
@@ -572,6 +638,8 @@ export interface DakInvoer {
   richting?: 'x' | 'z';
   /** Kleinste lengte van een balk of keper (cm): een korter stuk vervalt. Standaard 0. */
   kleinste?: number;
+  /** Plat dak: gaten (cm, u langs x en v langs z), bv. voor een lichtkoepel; zoals bij een vloervlak. Een hellend dak kent ze (nog) niet. */
+  openingen?: VlakRechthoek[];
 }
 
 /**
@@ -583,7 +651,9 @@ export function dakvlak(invoer: DakInvoer, materialen: Record<string, BouwMateri
   const helling = Math.min(75, Math.max(0, getal(invoer.helling)));
   if (helling < 0.01) {
     const richting = invoer.richting ?? (B <= L ? 'z' : 'x');
-    return maakVlak('dakvlak', { ligging: 'liggend', lengte: L, breedte: B, helling: 0, richting, openingen: [] }, invoer.opbouw, materialen, [], (k) => balklaag(k, L, B, richting), getal(invoer.kleinste));
+    const meldingen: string[] = [];
+    const gaten = balkGaten(invoer.openingen, L, B, skeletBreedte(invoer.opbouw), meldingen);
+    return maakVlak('dakvlak', { ligging: 'liggend', lengte: L, breedte: B, helling: 0, richting, openingen: gaten }, invoer.opbouw, materialen, meldingen, (k) => balklaag(k, L, B, richting, gaten), getal(invoer.kleinste));
   }
   return maakVlak('dakvlak', { ligging: 'hellend', lengte: L, breedte: B, helling, richting: 'z', openingen: [] }, invoer.opbouw, materialen, [], (k) => {
     for (const u of raster(L, k.t, k.hoh)) k.stuk('keper', { u0: u, u1: Math.min(L, u + k.t), v0: 0, v1: B }, 'v');

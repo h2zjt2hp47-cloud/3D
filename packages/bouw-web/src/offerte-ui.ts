@@ -19,6 +19,7 @@ import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 import { maakPakket3D, maakZending } from './doorsturen.js';
 import { drukBlad } from './blad.js';
 import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
+import { toonConstructieOverzicht } from './constructie-ui.js';
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
 const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'dak', 'inrichting'] as const;
@@ -305,6 +306,8 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     return d;
   }));
   $('#o-regels-kaart').hidden = o.regels.length === 0;
+  // Constructie (ronde 6): meetstaat, aanwijzing voor EPB en schatting van de stabiliteit, elk achter een kop die openklapt.
+  toonConstructieOverzicht();
   for (const x of document.querySelectorAll('.o-btwlabel')) x.textContent = PRIJZEN ? `prijzen ${btwLabel()}` : '';
 
   // Totalen (alleen met prijzen).

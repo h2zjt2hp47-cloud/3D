@@ -149,6 +149,12 @@ export interface Scene3D {
   echt?: Echt3DPlaatsing;
   /** Waarom het echte 3D-model van dit model niet past bij het ontwerp (de weergave toont dan de blokken). */
   echtNiet?: string;
+  /**
+   * Gelijke stukken samen tekenen (bouw, constructieweergave): de kijker voegt blokken met hetzelfde materiaal samen tot
+   * één vorm per materiaal en per ding, in plaats van elk blok apart. Voor een scène met duizenden stukken (een woning in
+   * constructie). Ontbreekt = elk blok apart, zoals altijd; de zetels gebruiken het niet.
+   */
+  samenvoegen?: boolean;
 }
 
 export interface Bouw3DOpties {

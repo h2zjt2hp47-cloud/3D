@@ -20,6 +20,7 @@ import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { denoise } from 'three/addons/tsl/display/DenoiseNode.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
 import { fotoWebGPU, heeftWebGPU } from './fotomodus-webgpu.js';
 
@@ -3208,6 +3209,47 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     zachtGepland = window.setTimeout(volgende, 140);
   }
 
+  /**
+   * Gelijke stukken samen tekenen (bouw, `Scene3D.samenvoegen`; ronde 6): een woning in constructie telt duizend à
+   * tweeduizend stukken, en elk apart getekend kost elk een tekenopdracht, voor het beeld en voor de schaduw. Hier wordt
+   * elk blok gemaakt zoals altijd (`mesh`), en worden de vormen met hetzelfde materiaal, dezelfde schaduw en hetzelfde
+   * ding (de naam tot de eerste punt: aantikken en aanduiden blijven werken) samengevoegd tot één vorm, op hun plaats.
+   * De textuur blijft op wereldmaat (de UV's zijn al per blok gezet). Niet samengevoegd: wat meer dan één materiaal heeft,
+   * glas (doorzichtig: volgorde van tekenen), wat alleen schaduw werpt en wat kinderen heeft (naden). Geeft wat overblijft.
+   * Zonder de vlag in de scène gebeurt hier niets: alle bestaande beelden blijven gelijk.
+   */
+  function voegGelijkeSamen(blokken: Blok[]): Blok[] {
+    const los: Blok[] = [];
+    const groepen = new Map<string, { naam: string; mat: any; schaduw: boolean; vormen: any[] }>();
+    for (const b of blokken) {
+      if (b.alleenSchaduw || b.soort === 'glas' || b.soort === 'matglas') { los.push(b); continue; }
+      const m = mesh(b);
+      const mats = Array.isArray(m.material) ? m.material : [m.material];
+      if (!m.isMesh || m.children.length || mats.some((x: any) => x !== mats[0])) { m.geometry?.dispose(); los.push(b); continue; }
+      m.updateMatrix();
+      let g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+      m.geometry.dispose();
+      g.applyMatrix4(m.matrix);
+      g.clearGroups();
+      const naam = String(m.name ?? '').split('.')[0] ?? '';
+      const sleutel = `${mats[0].uuid}|${m.castShadow}|${naam}|${Object.keys(g.attributes).sort().join(',')}`;
+      const x = groepen.get(sleutel) ?? { naam, mat: mats[0], schaduw: !!m.castShadow, vormen: [] };
+      x.vormen.push(g);
+      groepen.set(sleutel, x);
+    }
+    for (const x of groepen.values()) {
+      const g = x.vormen.length === 1 ? x.vormen[0] : mergeGeometries(x.vormen, false);
+      if (!g) continue;
+      if (g !== x.vormen[0]) for (const v of x.vormen) v.dispose();
+      const m = new THREE.Mesh(g, x.mat);
+      m.name = x.naam ? `${x.naam}.samen` : '';
+      m.castShadow = x.schaduw;
+      m.receiveShadow = true;
+      groep.add(m);
+    }
+    return los;
+  }
+
   /** Tijdens de fotomodus niet tussendoor gewoon renderen (dat zou het rekenende beeld wissen). */
   let bezigMetFoto = false;
   let laatsteBreedte = 0;
@@ -3259,7 +3301,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
         }
         if (taken.length) planZacht(s, taken);
       }
-      for (const b of zichtbaar) if (!versmolten.has(b)) groep.add(mesh(b));
+      const apart = zichtbaar.filter((b) => !versmolten.has(b));
+      for (const b of !opties.zetel && s.samenvoegen ? voegGelijkeSamen(apart) : apart) groep.add(mesh(b));
       if (echt) groep.add(echt);
       schaduwOpnieuw();
       zetContactschaduw(s, echt);

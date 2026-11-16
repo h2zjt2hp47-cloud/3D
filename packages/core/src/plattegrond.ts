@@ -11,6 +11,7 @@ import {
   type DakBedekking, type DakKeuze, type DakLicht, type DakLichtType, type DakMateriaal, type HellendDak,
 } from './dak.js';
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
+import type { WoningOpbouw, WoningOpbouwCatalogus } from './opbouw.js';
 import {
   toestelMaten, leidingVerloop, techniekBlokken, toestelVoetafdruk, voorRichting,
   type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
@@ -139,6 +140,12 @@ export interface Plattegrond {
    */
   toestellen?: Toestel[];
   leidingen?: Leiding[];
+  /**
+   * De opbouw van wanden, vloeren en daken voor de constructieweergave, de doorsnede, de meetstaat, de aanwijzing voor
+   * EPB en de schatting van de stabiliteit (ronde 6, zie constructie.ts). Ontbreekt = de standaarden van de catalogus;
+   * de afgewerkte weergave, de gevels en de offerte lezen dit veld niet.
+   */
+  opbouw?: WoningOpbouw;
 }
 
 /** Kant van de woning (op de plattegrond): boven, onder, links of rechts. */
@@ -298,6 +305,8 @@ export interface PlanCatalogus {
   daklichten?: Record<string, DakLichtType>;
   /** Toestellen en leidingsoorten van de installateur (zie techniek.ts); zonder deze catalogus wordt geen techniek getoond. */
   techniek?: TechniekCatalogus;
+  /** Opbouwen van wanden, vloeren en daken (constructie.ts); zonder deze catalogus is er geen constructieweergave. */
+  opbouw?: WoningOpbouwCatalogus;
 }
 
 export type MeubelVorm =

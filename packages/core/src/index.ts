@@ -83,3 +83,5 @@ export * from './warmte.js';
 export * from './stabiliteit.js';
 export * from './maten3d.js';
 export * from './techniekplaatsen.js';
+export * from './constructie.js';
+export * from './doorsnede.js';
