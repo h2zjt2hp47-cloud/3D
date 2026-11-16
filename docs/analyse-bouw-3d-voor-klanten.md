@@ -329,8 +329,8 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 6 | 2 | *(loopt sinds 16/11)* **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
 | 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
-| 8 | 2 | *(bijgebouwen klaar in de motor op 16/11, hoofdstuk 19; op de schermen loopt sinds 16/11 samen met loods en staalwerk; de aanbouw nog niet op bouwdelen)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
-| 9 | 2 | *(klaar in de motor op 16/11, hoofdstuk 20; nog geen scherm)* **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
+| 8 | 2 | **Klaar (16/11, hoofdstukken 19 en 25)**, ook op de schermen; de aanbouw staat nog niet op bouwdelen **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
+| 9 | 2 | **Klaar (16/11, hoofdstukken 20 en 25)**, ook op de schermen: **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
 | 10 | 2 | *(klaar in de motor, tekening en 3D op 16/11, hoofdstuk 24; nog geen scherm om te plaatsen)* **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
 | 12 | 2 | **Vloerafwerking** en de rest van de afwerkingen | M |
@@ -915,4 +915,26 @@ eenvoudige weg legt aanvoer en retour van de warmtepomp buiten langs de gevel; e
 woning niet. **Na te lezen door een installateur:** elke maat en hoogte (vooral stopcontact, schakelaar, tellerkast, verdeelbord,
 airco, thermostaat), de vrije ruimtes, de grootste lengtes, de afstand tussen de buizen van de vloerverwarming, de kleuren die geen
 afspraak zijn, en alle tekens.
+
+---
+
+## 25. Gebouwd op 16/11: carport, tuinhuis, loods en staalwerk op de schermen (ronde 8b)
+
+| Wat | Inhoud |
+|---|---|
+| **Snelstart** | Vier nieuwe tegels: *Carport of overkapping*, *Tuinhuis of poolhouse*, *Loods of hal*, *Staalwerk* (balustrade, luifel, trap). Stap 2 de hoofdmaten in cm (typen of − en +; bij een loods de lengte als aantal traveeën), stap 3 een vertrekpunt met een pictogram en zijn maat. |
+| **Configurator** | Meteen in 3D, met **Afgewerkt / Constructie**, standpunten (ook op ooghoogte) en *Maten*. Per stap de hoofdkeuzes, het detail achter *Meer opties*, de meldingen van het model in gewone taal. Een keuze die niet meer kan, wordt vanzelf omgezet met een korte melding (EPDM bij een zadeldak wordt zink). De meetstaat staat waar bij een raam de bestellijst staat. |
+| **Overzicht, klant, blad** | De regel klapt open naar keuzes, opbouw en meetstaat; het bestand voor de klant en het blad tonen een gebouw buiten met zijn hoofdmaten, staalwerk op een rustige achtergrond. |
+| **Groot buiten** | Grondvlak, gras en zichtgrens groeien mee met het gebouw: een hal van 30 m (en zelfs 160 m) staat helemaal in beeld. |
+| **Carport** | Het vertrekpunt is nu 5 × 5 m met palen van 15 cm: geen paal meer in de inrit (palen van 12 of 14 cm mogen hoogstens 3 m uit elkaar staan, palen van 15 cm 5 m). |
+
+**Gemeten** (groot scherm en tablet evenveel): carport 5 × 5 m met berging en zadeldak 6 tikken (eerste 3D na 4), tuinhuis met
+luifel en zwarte gevel 6, loods 15 × 30 m met twee poorten 5, rechte trap met eiken treden 5. Geen bedrag op enig scherm, in het
+bestand of op het blad.
+
+**Wat nog niet kan:** een vast model staat los, niet tegen of in de getekende woning ("tegen een gevel" staat tegen een los stuk
+gevel, en de trap vervangt de trap van de plattegrond niet); de snelstart maakt altijd een nieuw project; varianten bestaan alleen
+bij de plattegrond; de klant ziet alleen de afgewerkte versie. Het zwarte tuinhuis is donker (deur en ramen vallen weg); een glazen
+of polycarbonaat dak blijft zwak in de 3D. **Te beslissen door Jonas:** raakt de verkoper in stap 2 geen maat aan, dan houdt elk
+vertrekpunt zijn eigen maat (de tegel toont welke) in plaats van de maat die stap 2 toonde.
 
