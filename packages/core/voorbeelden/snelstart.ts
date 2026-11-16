@@ -59,18 +59,18 @@ export const SNELSTART_TEGELS: SnelTegel[] = [
   {
     code: 'woning', label: 'Woning', uitleg: 'Nieuwbouw: een volledige woning met ramen, dak en gevel', soort: 'woning',
     maten: [
-      { code: 'breedte', label: 'Breedte (voorgevel)', eenheid: 'cm', toon: 'm', min: 700, max: 1600, stap: 50, standaard: 900 },
-      { code: 'diepte', label: 'Diepte', eenheid: 'cm', toon: 'm', min: 800, max: 1600, stap: 50, standaard: 1000 },
+      { code: 'breedte', label: 'Breedte (voorgevel)', eenheid: 'cm', toon: 'cm', min: 700, max: 1600, stap: 50, standaard: 900 },
+      { code: 'diepte', label: 'Diepte', eenheid: 'cm', toon: 'cm', min: 800, max: 1600, stap: 50, standaard: 1000 },
       { code: 'verdiepingen', label: 'Bouwlagen', eenheid: 'stuks', toon: 'aantal', min: 1, max: 3, stap: 1, standaard: 2 },
     ],
   },
   {
     code: 'aanbouw', label: 'Aanbouw', uitleg: 'Uitbouw achter een bestaande woning, met een grote raampartij', soort: 'aanbouw',
     maten: [
-      { code: 'breedte', label: 'Breedte', eenheid: 'mm', toon: 'm', ...grens('breedte'), stap: 500, standaard: 5000 },
-      { code: 'diepte', label: 'Diepte', eenheid: 'mm', toon: 'm', ...grens('diepte'), stap: 500, standaard: Number(AANBOUW_STANDAARD.diepte ?? 4000) },
+      { code: 'breedte', label: 'Breedte', eenheid: 'mm', toon: 'cm', ...grens('breedte'), stap: 500, standaard: 5000 },
+      { code: 'diepte', label: 'Diepte', eenheid: 'mm', toon: 'cm', ...grens('diepte'), stap: 500, standaard: Number(AANBOUW_STANDAARD.diepte ?? 4000) },
       // Minstens 2,80 m: de plattegrond heeft één muurhoogte, ook voor de bestaande woning (deuren van 2,30 m met een latei).
-      { code: 'hoogte', label: 'Hoogte', eenheid: 'mm', toon: 'm', ...grens('hoogte'), min: Math.max(2800, grens('hoogte').min), stap: 100, standaard: Number(AANBOUW_STANDAARD.hoogte ?? 3000) },
+      { code: 'hoogte', label: 'Hoogte', eenheid: 'mm', toon: 'cm', ...grens('hoogte'), min: Math.max(2800, grens('hoogte').min), stap: 100, standaard: Number(AANBOUW_STANDAARD.hoogte ?? 3000) },
     ],
   },
   {
@@ -91,6 +91,22 @@ export const SNELSTART_TEGELS: SnelTegel[] = [
 ];
 
 export type SnelMaten = Record<string, number>;
+
+/**
+ * Een getypte maat lezen, in **cm** tenzij er een eenheid bij staat: "450" = 450 cm, "4,5 m" of "4.5m" = 450 cm,
+ * "4500 mm" = 450 cm. Een kommagetal zonder eenheid onder 50 is meter ("4,5" = 450 cm: een muur van 4,5 cm bestaat niet).
+ * Geeft de waarde in de eenheid van de maat (cm of mm; een aantal wordt afgerond), of undefined als er geen getal staat.
+ * Begrenzen tot min en max doet het scherm.
+ */
+export function leesMaat(tekst: string, m: Pick<SnelMaat, 'eenheid'>): number | undefined {
+  const r = /^(\d+(?:[.,]\d+)?)(mm|cm|m)?$/.exec(tekst.trim().toLowerCase().replace(/\s+/g, ''));
+  if (!r) return undefined;
+  const x = Number(r[1]!.replace(',', '.'));
+  if (m.eenheid === 'stuks') return Math.round(x);
+  const eenheid = r[2] ?? (/[.,]/.test(r[1]!) && x < 50 ? 'm' : 'cm');
+  const cm = eenheid === 'm' ? x * 100 : eenheid === 'mm' ? x / 10 : x;
+  return m.eenheid === 'mm' ? Math.round(cm * 10) : Math.round(cm);
+}
 const r5 = (x: number) => Math.round(x / 5) * 5;
 const binnen = (x: number, min: number, max: number) => Math.min(max, Math.max(min, x));
 const indeling = (code: string) => INDELINGEN.find((i) => i.code === code)!;

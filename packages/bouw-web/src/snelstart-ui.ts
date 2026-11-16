@@ -9,7 +9,7 @@ import { standaardKeuzes } from '../../core/src/index.js';
 import { garagepoort } from '../../core/voorbeelden/garagepoort.js';
 import { dakCatalogus, gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
-import { aanbouwKeuzes, SNELSTART_TEGELS, snelRaam, snelWoning, type SnelMaat, type SnelTegel } from '../../core/voorbeelden/snelstart.js';
+import { aanbouwKeuzes, leesMaat, SNELSTART_TEGELS, snelRaam, snelWoning, type SnelMaat, type SnelTegel } from '../../core/voorbeelden/snelstart.js';
 import { stijlCatalogus, type Stijl } from '../../core/voorbeelden/stijlen.js';
 import { $, el, getal } from './hulp.js';
 import { legeToestand, nieuwePositie, nieuwProject, ramenToestand, type Positie, type Toestand } from './staat.js';
@@ -76,17 +76,12 @@ export function stijlBeeld(s: Stijl): string {
 const toonWaarde = (m: SnelMaat, w: number) => {
   if (m.toon === 'aantal') return String(w);
   const cm = m.eenheid === 'mm' ? w / 10 : w;
-  return m.toon === 'm' ? getal(cm / 100, 2) : getal(cm);
+  // Zonder scheidingsteken voor duizendtallen: "1.600" zou als 1,6 m gelezen worden.
+  return m.toon === 'm' ? `${getal(cm / 100, 2)} m` : String(Math.round(cm));
 };
-const eenheidTekst = (m: SnelMaat) => (m.toon === 'm' ? 'm' : m.toon === 'cm' ? 'cm' : '');
-/** Getypte waarde (in de getoonde eenheid, met komma of punt) terug naar de eenheid van het model. */
-function leesWaarde(m: SnelMaat, tekst: string): number | undefined {
-  const x = Number(tekst.replace(/\s/g, '').replace(',', '.'));
-  if (!Number.isFinite(x)) return undefined;
-  const cm = m.toon === 'm' ? x * 100 : x;
-  return m.toon === 'aantal' ? Math.round(x) : m.eenheid === 'mm' ? cm * 10 : cm;
-}
-const begrens = (m: SnelMaat, w: number) => Math.min(m.max, Math.max(m.min, Math.round(w / (m.toon === 'aantal' ? 1 : 10)) * (m.toon === 'aantal' ? 1 : 10)));
+const eenheidTekst = (m: SnelMaat) => (m.toon === 'cm' ? 'cm' : '');
+/** Binnen min en max, op een hele cm (of een heel aantal). */
+const begrens = (m: SnelMaat, w: number) => { const s = m.eenheid === 'mm' ? 10 : 1; return Math.min(m.max, Math.max(m.min, Math.round(w / s) * s)); };
 
 function zetKop(titel: string, uitleg: string) {
   $('#ss-titel').textContent = titel;
@@ -119,20 +114,25 @@ function toonStap1() {
 function toonStap2() {
   if (!tegel) return toonStap1();
   stap = 2;
-  zetKop(`${tegel.label}: hoe groot?`, 'Gangbare maten staan al ingevuld. Tik op − of +, of typ een maat. Fijner afstellen kan daarna.');
+  zetKop(`${tegel.label}: hoe groot?`, 'Gangbare maten staan al ingevuld. Tik op − of +, of typ de maat in cm (4,5 m mag ook). Fijner afstellen kan daarna.');
   const vak = el('div', { class: 'snel-maten' });
   for (const m of tegel.maten) {
     const rij = el('div', { class: 'snel-maat' });
-    const invoer = el('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${m.label}${eenheidTekst(m) ? ` in ${eenheidTekst(m)}` : ''}`, 'data-snel-maat': m.code }) as HTMLInputElement;
-    const zet = (w: number) => { maten[m.code] = begrens(m, w); invoer.value = toonWaarde(m, maten[m.code]!); min.disabled = maten[m.code]! <= m.min; plus.disabled = maten[m.code]! >= m.max; };
+    // Een groot veld met het cijfertoetsenbord van de tablet; een maat in cm (of "4,5 m").
+    const invoer = el('input', { type: 'text', inputmode: 'numeric', enterkeyhint: 'done', autocomplete: 'off', 'aria-label': `${m.label}${eenheidTekst(m) ? ` in ${eenheidTekst(m)}` : ''}`, 'data-snel-maat': m.code }) as HTMLInputElement;
+    const meter = el('span', { class: 'klein snel-meter', 'aria-hidden': 'true' });
+    const zet = (w: number) => { maten[m.code] = begrens(m, w); invoer.value = toonWaarde(m, maten[m.code]!); meter.textContent = m.toon === 'cm' ? `= ${getal((m.eenheid === 'mm' ? maten[m.code]! / 10 : maten[m.code]!) / 100, 2)} m` : ''; min.disabled = maten[m.code]! <= m.min; plus.disabled = maten[m.code]! >= m.max; };
     const min = el('button', { type: 'button', class: 'snel-knop', 'aria-label': `${m.label} kleiner`, 'data-snel-min': m.code }, '−') as HTMLButtonElement;
     const plus = el('button', { type: 'button', class: 'snel-knop', 'aria-label': `${m.label} groter`, 'data-snel-plus': m.code }, '+') as HTMLButtonElement;
     min.addEventListener('click', () => zet(maten[m.code]! - m.stap));
     plus.addEventListener('click', () => zet(maten[m.code]! + m.stap));
-    invoer.addEventListener('change', () => { const w = leesWaarde(m, invoer.value); zet(w ?? maten[m.code]!); });
+    invoer.addEventListener('change', () => { const w = leesMaat(invoer.value, m); zet(w ?? maten[m.code]!); });
+    invoer.addEventListener('focus', () => invoer.select());
     const waarde = el('span', { class: 'snel-waarde' });
     waarde.append(invoer, el('span', { class: 'eenheid' }, eenheidTekst(m)));
-    rij.append(el('span', { class: 'snel-maat-naam' }, m.label), min, waarde, plus);
+    const naam = el('span', { class: 'snel-maat-naam' });
+    naam.append(el('span', {}, m.label), meter);
+    rij.append(naam, min, waarde, plus);
     vak.append(rij);
     zet(maten[m.code] ?? m.standaard);
   }

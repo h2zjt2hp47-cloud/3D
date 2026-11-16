@@ -3,7 +3,7 @@ import { berekenConfiguratie, controleerPlan, dakOpbouw, niveauPlan, plattegrond
 import { aanbouw, aanbouwPrijslijst } from '../voorbeelden/aanbouw.js';
 import { planCatalogus } from '../voorbeelden/inrichting.js';
 import { berekenRaam } from '../voorbeelden/raam.js';
-import { aanbouwKeuzes, aanbouwNaarPlan, daklichtenOpDak, SNELSTART_TEGELS, snelRaam, snelWoning, verdeelDaklichten } from '../voorbeelden/snelstart.js';
+import { aanbouwKeuzes, aanbouwNaarPlan, daklichtenOpDak, leesMaat, SNELSTART_TEGELS, snelRaam, snelWoning, verdeelDaklichten } from '../voorbeelden/snelstart.js';
 import { pasStijlToe, raamInStijl, stijlCatalogus } from '../voorbeelden/stijlen.js';
 import { raamKeuzes, voorbeeldWoning } from '../voorbeelden/woning.js';
 import { raamBlokken } from '../voorbeelden/raam3d.js';
@@ -169,5 +169,27 @@ describe('snelstart: raam of deur', () => {
         }
       }
     }
+  });
+});
+
+describe('snelstart: maten intypen in cm', () => {
+  it('leest cm, en ook meter of mm met een eenheid', () => {
+    const cm = { eenheid: 'cm' as const }, mm = { eenheid: 'mm' as const }, stuks = { eenheid: 'stuks' as const };
+    expect(leesMaat('450', cm)).toBe(450);
+    expect(leesMaat(' 450 cm', cm)).toBe(450);
+    expect(leesMaat('4,5 m', cm)).toBe(450);
+    expect(leesMaat('4.5m', cm)).toBe(450);
+    expect(leesMaat('4,5', cm)).toBe(450);
+    expect(leesMaat('4500 mm', cm)).toBe(450);
+    expect(leesMaat('1600', cm)).toBe(1600);
+    // Een model in mm (aanbouw, raam): de getypte cm worden mm.
+    expect(leesMaat('450', mm)).toBe(4500);
+    expect(leesMaat('4,5 m', mm)).toBe(4500);
+    expect(leesMaat('2', stuks)).toBe(2);
+    expect(leesMaat('', cm)).toBeUndefined();
+    expect(leesMaat('vier meter', cm)).toBeUndefined();
+  });
+  it('alle lengtes in de snelstart staan in cm', () => {
+    for (const t of SNELSTART_TEGELS) for (const m of t.maten) expect(m.toon, `${t.code}.${m.code}`).toBe(m.eenheid === 'stuks' ? 'aantal' : 'cm');
   });
 });
