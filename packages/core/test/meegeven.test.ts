@@ -78,8 +78,11 @@ describe('maten in de 3D', () => {
     const lijnen = gebouwMaatlijnen(scene);
     const breedte = lijnen.filter((l) => l.groep === 'breedte');
     expect(breedte).toHaveLength(2);
-    const muren = scene.blokken.filter((b) => /^(muur|dakrand)_/.test(b.code));
+    // De muren zelf: de dakrand steekt een paar cm buiten de gevel en telt niet mee voor breedte en diepte.
+    const muren = scene.blokken.filter((b) => /^muur_/.test(b.code));
     const x0 = Math.min(...muren.map((b) => b.x)), x1 = Math.max(...muren.map((b) => b.x + b.b));
+    const randen = scene.blokken.filter((b) => /^dakrand_/.test(b.code));
+    if (randen.length) expect(Math.min(...randen.map((b) => b.x))).toBeLessThanOrEqual(x0);
     expect(breedte[0]!.van[0]).toBe(x0);
     expect(breedte[0]!.tot[0]).toBe(x1);
     expect(breedte[0]!.tekst).toBe(`Breedte ${meterTekst(x1 - x0)}`);

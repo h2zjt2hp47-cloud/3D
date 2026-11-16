@@ -49,9 +49,13 @@ const GROND = 4;
  */
 export function gebouwMaatlijnen(scene: Scene3D, opties: { hoogtes?: boolean } = {}): Maatlijn3D[] {
   const zichtbaar = scene.blokken.filter((b) => !b.alleenSchaduw);
-  const muren = zichtbaar.filter((b) => /^(muur|dakrand)_/.test(eigenCode(b)));
+  // Breedte en diepte meten de buitenkant van de muren; de dakrand steekt er een paar cm buiten en telt daar niet mee.
+  // De hoogte loopt wel tot de bovenkant van de dakrand: dat is de bovenkant van het gebouw.
+  const metRand = zichtbaar.filter((b) => /^(muur|dakrand)_/.test(eigenCode(b)));
+  const muren = metRand.filter((b) => /^muur_/.test(eigenCode(b)));
   if (!muren.length) return [];
-  const { x0, x1, z0, z1, y1: hoogte } = omvang(muren);
+  const { x0, x1, z0, z1 } = omvang(muren);
+  const hoogte = omvang(metRand).y1;
   const groot = Math.max(x1 - x0, z1 - z0);
   // Hoe ver de maatlijn naast de muur ligt: genoeg om los te staan van de gevel, niet zo ver dat ze in het gras verdwaalt.
   const naast = Math.min(220, Math.max(70, groot * 0.08));
@@ -67,7 +71,7 @@ export function gebouwMaatlijnen(scene: Scene3D, opties: { hoogtes?: boolean } =
   const hoek = naast * 0.9;
   // De hoogte op de hoeken van het hoogste deel (een verdieping die maar boven een deel van het gelijkvloers staat):
   // daar staat de maat tegen de muur die ze meet, niet in de lucht naast een lager stuk.
-  const top = omvang(muren.filter((b) => b.y + b.h >= hoogte - 1));
+  const top = omvang(metRand.filter((b) => b.y + b.h >= hoogte - 1));
   for (const [x, z, sx, sz] of [[top.x1, top.z1, 1, 1], [top.x0, top.z1, -1, 1], [top.x1, top.z0, 1, -1], [top.x0, top.z0, -1, -1]] as const) {
     lijnen.push({ van: [x, 0, z], tot: [x, hoogte, z], tekst: `Hoogte ${meterTekst(hoogte)}`, uit: [sx * S, 0, sz * S], afstand: hoek, groep: 'hoogte', kant: [sx * S, 0, sz * S] });
   }
