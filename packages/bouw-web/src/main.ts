@@ -27,9 +27,15 @@ window.addEventListener('error', (e) => {
 window.addEventListener('unhandledrejection', (e) => toonFout('Fout', e.reason));
 
 type Weergave = 'start' | 'projecten' | 'plan' | 'offerte' | 'positie' | 'werf' | 'varianten';
+const WEERGAVEN: Weergave[] = ['start', 'projecten', 'plan', 'offerte', 'positie', 'werf', 'varianten'];
 let actief: Weergave = 'plan';
 
-function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) {
+/**
+ * Toont een scherm. Doorloop B15 (16/11): elk ander scherm komt in de geschiedenis van de browser (`push`), zodat de
+ * terugknop (of terugvegen op een tablet) naar het vorige scherm gaat in plaats van de app te verlaten. Hetzelfde scherm
+ * opnieuw tonen vervangt alleen het adres; `geen` = de browser ging zelf terug of vooruit.
+ */
+function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}, geschiedenis: 'push' | 'vervang' | 'geen' = 'push') {
   // Een project zonder woning heeft geen plattegrond: dan de ramenlijst (offerte).
   if (w === 'plan' && toestand().meta.zonderWoning) w = 'offerte';
   // De werf staat niet meer in het menu zolang er geen prijzen getoond worden (inmeting en meerwerk gaan over bedragen).
@@ -46,10 +52,12 @@ function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) 
   if (w === 'start') toonSnelstart();
   if (w === 'varianten') toonVarianten();
   kop();
+  const adres = `#${w}${opties.positie ? `/${opties.positie}` : ''}`;
   try {
-    history.replaceState(null, '', `#${w}${opties.positie ? `/${opties.positie}` : ''}`);
+    if (geschiedenis === 'push' && location.hash && location.hash !== adres) history.pushState(null, '', adres);
+    else if (geschiedenis !== 'geen') history.replaceState(null, '', adres);
   } catch {
-    /* bv. Safari met file:// */
+    /* bv. Safari met file://, of een afgeschermde weergave */
   }
   window.scrollTo({ top: 0 });
 }
@@ -128,7 +136,7 @@ function zetKlantweergave(aan: boolean) {
   $('#klantweergave').setAttribute('aria-pressed', String(aan));
   try { localStorage.setItem('bouw-demo.klantweergave', aan ? '1' : '0'); } catch { /* niets */ }
   if (aan && actief === 'werf') toon('offerte');
-  else toon(actief);
+  else toon(actief, {}, 'vervang');
 }
 $('#klantweergave').addEventListener('click', () => zetKlantweergave(!document.body.classList.contains('klantmodus')));
 try { if (localStorage.getItem('bouw-demo.klantweergave') === '1') document.body.classList.add('klantmodus'); } catch { /* niets */ }
@@ -138,5 +146,11 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]'))
   b.addEventListener('click', () => veilig('Navigatie', () => toon(b.dataset.weergave as Weergave)));
 }
 $('#nav-aantal').textContent = String(toestand().posities.length);
-const [start, id] = location.hash.slice(1).split('/');
-veilig('Opstarten', () => toon((['start', 'projecten', 'plan', 'offerte', 'positie', 'werf', 'varianten'] as Weergave[]).includes(start as Weergave) ? (start as Weergave) : 'plan', { positie: id }));
+/** Het scherm uit het adres (#offerte, #positie/<id> …). */
+function uitAdres(): [Weergave, { positie?: string }] {
+  const [w, id] = location.hash.slice(1).split('/');
+  return [WEERGAVEN.includes(w as Weergave) ? (w as Weergave) : 'plan', { positie: id || undefined }];
+}
+// Terug en vooruit in de browser: het scherm van dat adres, zonder iets aan de geschiedenis toe te voegen.
+window.addEventListener('popstate', () => veilig('Terug', () => toon(...uitAdres(), 'geen')));
+veilig('Opstarten', () => toon(...uitAdres(), 'vervang'));
