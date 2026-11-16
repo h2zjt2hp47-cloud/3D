@@ -120,6 +120,11 @@ export const daklichtCatalogus: Record<string, DakLichtType> = {
   koepel_100_150: { label: 'Lichtkoepel 100 × 150', groep: 'Lichtkoepels', vorm: 'koepel', b: 100, d: 150, prijs: 1380, kost: 900, artikel: 'DAK-KOEPEL-150' },
   lichtstraat_200: { label: 'Lichtstraat 100 × 200', groep: 'Lichtstraten', vorm: 'lichtstraat', b: 200, d: 100, prijs: 2450, kost: 1620, artikel: 'DAK-STRAAT-200' },
   lichtstraat_300: { label: 'Lichtstraat 100 × 300', groep: 'Lichtstraten', vorm: 'lichtstraat', b: 300, d: 100, prijs: 3350, kost: 2210, artikel: 'DAK-STRAAT-300' },
+  // Platte dakramen (ronde 11b): vlak glas op een licht hellende opstand, met buitenzonwering naar keuze (een screen boven het glas).
+  dakraam_080: { label: 'Plat dakraam 80 × 80', groep: 'Platte dakramen', vorm: 'dakraam', b: 80, d: 80, prijs: 1290, kost: 850, artikel: 'DAK-RAAM-080', zonwering: { label: 'Buitenzonwering (screen) met motor', prijs: 690, kost: 450, artikel: 'DAK-RAAM-ZON-080' } },
+  dakraam_100: { label: 'Plat dakraam 100 × 100', groep: 'Platte dakramen', vorm: 'dakraam', b: 100, d: 100, prijs: 1590, kost: 1050, artikel: 'DAK-RAAM-100', zonwering: { label: 'Buitenzonwering (screen) met motor', prijs: 760, kost: 495, artikel: 'DAK-RAAM-ZON-100' } },
+  dakraam_120: { label: 'Plat dakraam 120 × 120', groep: 'Platte dakramen', vorm: 'dakraam', b: 120, d: 120, prijs: 1890, kost: 1240, artikel: 'DAK-RAAM-120', zonwering: { label: 'Buitenzonwering (screen) met motor', prijs: 840, kost: 550, artikel: 'DAK-RAAM-ZON-120' } },
+  dakraam_100_150: { label: 'Plat dakraam 100 × 150', groep: 'Platte dakramen', vorm: 'dakraam', b: 100, d: 150, prijs: 2090, kost: 1380, artikel: 'DAK-RAAM-150', zonwering: { label: 'Buitenzonwering (screen) met motor', prijs: 890, kost: 580, artikel: 'DAK-RAAM-ZON-150' } },
 };
 
 /** Gevelontwerp dat overeenkomt met de eenvoudige gevelkeuze (plan.gevel) van een ouder project. */
@@ -313,6 +318,13 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
     for (const [type, n] of aantal) {
       const t = cat.daklichten?.[type];
       regels.push({ code: `daklicht:${type}`, groep: 'Dak', omschrijving: `${t?.label ?? 'Lichtkoepel'}, met opstand`, eenheid: 'stuk', hoeveelheid: n, eenheidsprijs: t?.prijs ?? 0, kostprijs: t?.kost ?? 0 });
+    }
+    // Buitenzonwering op platte dakramen (ronde 11b): per type een regel, alleen als het type zonwering kent.
+    const zon = new Map<string, number>();
+    for (const l of dak.daklichten) if (!l.reden && l.licht.zonwering === 'screen' && cat.daklichten?.[l.licht.type]?.zonwering) zon.set(l.licht.type, (zon.get(l.licht.type) ?? 0) + 1);
+    for (const [type, n] of zon) {
+      const t = cat.daklichten![type]!, z = t.zonwering!;
+      regels.push({ code: `daklicht_zon:${type}`, groep: 'Dak', omschrijving: `${z.label} op ${t.label.toLowerCase()}`, eenheid: 'stuk', hoeveelheid: n, eenheidsprijs: z.prijs, kostprijs: z.kost });
     }
   }
   if (opties.ruwbouw) {

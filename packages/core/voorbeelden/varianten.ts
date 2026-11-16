@@ -60,9 +60,13 @@ export function ontwerpKenmerken(plan: Plattegrond, posities: OntwerpPositie[], 
       uit.push({ soort: 'dak', tekst: `${DAKVORM[dak.vorm] ?? dak.vorm} met ${m ? klein(m.label) : dak.bedekking.materiaal}${kleur && Object.keys(m?.kleuren ?? {}).length > 1 ? `, ${klein(kleur)}` : ''}` });
     }
     const lichten = plan.daklichten ?? [];
-    const koepels = lichten.filter((l) => cat.daklichten?.[l.type]?.vorm !== 'lichtstraat').length;
-    const straten = lichten.length - koepels;
-    uit.push({ soort: 'daklicht', tekst: !lichten.length ? 'geen lichtkoepels' : [koepels ? `${koepels} lichtkoepel${koepels === 1 ? '' : 's'}` : '', straten ? `${straten} lichtstra${straten === 1 ? 'at' : 'ten'}` : ''].filter(Boolean).join(' en ') });
+    const vorm = (l: (typeof lichten)[number]) => cat.daklichten?.[l.type]?.vorm;
+    const straten = lichten.filter((l) => vorm(l) === 'lichtstraat').length;
+    // Platte dakramen (ronde 11b) apart, met de zonwering erbij; de rest zijn koepels (zoals vroeger).
+    const ramen = lichten.filter((l) => vorm(l) === 'dakraam'), zon = ramen.filter((l) => l.zonwering === 'screen').length;
+    const koepels = lichten.length - straten - ramen.length;
+    const dakramen = ramen.length ? `${ramen.length} plat${ramen.length === 1 ? ' dakraam' : 'te dakramen'}${zon ? ` (${zon === ramen.length ? (zon === 1 ? 'met' : 'alle met') : `${zon} met`} screen)` : ''}` : '';
+    uit.push({ soort: 'daklicht', tekst: !lichten.length ? 'geen lichtkoepels' : [koepels ? `${koepels} lichtkoepel${koepels === 1 ? '' : 's'}` : '', straten ? `${straten} lichtstra${straten === 1 ? 'at' : 'ten'}` : '', dakramen].filter(Boolean).join(' en ') });
     const g = plan.gevelOntwerp?.standaard;
     if (g) {
       const m = cat.gevels?.[g.materiaal];

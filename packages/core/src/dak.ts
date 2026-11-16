@@ -47,6 +47,13 @@ export interface DakLicht {
   d: number;
   /** Verdieping van de ruimte eronder (0 = gelijkvloers). */
   niveau?: number;
+  /**
+   * Buitenzonwering op een plat dakraam (ronde 11b): een screen boven het glas. Ontbreekt = geen. Telt alleen als het type in
+   * de catalogus zonwering kent (`DakLichtType.zonwering`); een koepel of lichtstraat toont ze niet.
+   */
+  zonwering?: 'screen';
+  /** Hoe ver dat screen dicht is in de 3D en de tekening (alleen voor het beeld): half (standaard) of helemaal. */
+  zonweringStand?: 'half' | 'dicht';
 }
 
 /** Een dakbedekking in de catalogus: soort voor 3D en tekening, kleuren en prijs per m² (zelfde patroon als de gevel). */
@@ -69,11 +76,14 @@ export interface DakMateriaal {
   uitleg?: string;
 }
 
-/** Een lichtkoepel of lichtstraat in de catalogus, met een vaste dagmaat. */
+/**
+ * Een lichtkoepel, lichtstraat of plat dakraam in de catalogus, met een vaste dagmaat. Een plat dakraam (ronde 11b) is vlak
+ * glas op een opstand die licht helt (geen koepel).
+ */
 export interface DakLichtType {
   label: string;
   groep: string;
-  vorm: 'koepel' | 'lichtstraat';
+  vorm: 'koepel' | 'lichtstraat' | 'dakraam';
   /** Dagmaat van de opening (cm). */
   b: number;
   d: number;
@@ -81,6 +91,8 @@ export interface DakLichtType {
   prijs: number;
   kost: number;
   artikel?: string;
+  /** Buitenzonwering die op dit daklicht past (een screen boven het glas), per stuk met motor (demo: prijs verzonnen). */
+  zonwering?: { label: string; prijs: number; kost: number; artikel?: string };
 }
 
 /** Dikte van de dakopbouw onder de bedekking en van de bedekking zelf, loodrecht op het dakvlak (cm). */
@@ -235,11 +247,71 @@ export function dakBlokken(d: HellendDak, y: number, bedekking: { soort: BlokSoo
   return uit;
 }
 
+/** Helling van het glas van een plat dakraam (graden, richtwaarde): het water loopt af naar de voorkant (de grootste plan-y). */
+export const DAKRAAM_HELLING = 3;
+
+/** Hoeveel de achterkant van een plat dakraam hoger ligt dan de voorkant (cm), over de opstand gemeten. */
+export function dakraamStijging(l: Pick<DakLicht, 'd'>): number {
+  return r2((l.d + 2 * OPSTAND_RAND) * Math.tan((DAKRAAM_HELLING * Math.PI) / 180));
+}
+
 /**
- * Lichtkoepel of lichtstraat op een plat dak: opstand rond de opening en daarop het glas. `y` = bovenkant van het dak.
- * De opening in het dak zelf snijdt `plattegrond3D` uit de dakplaat.
+ * Plat dakraam (ronde 11b): een opstand die naar voren afloopt, daarop één vlakke glazen plaat met een donkere rand die over
+ * de opstand steekt. Met een screen (`l.zonwering`): een kast langs de hoge kant, twee geleiders opzij en het doek net boven
+ * het glas, half of helemaal dicht (`l.zonweringStand`). Alleen bestaande soorten en vormen (blok en prisma).
  */
-export function daklichtBlokken(l: DakLicht, vorm: 'koepel' | 'lichtstraat', y: number, dakdikte = 30): Blok[] {
+function dakraamBlokken(l: DakLicht, y: number, dakdikte: number): Blok[] {
+  const R = OPSTAND_RAND, H = OPSTAND_HOOGTE, grijs = '#cfcdc7', glas = '#cfdde1', wit = '#eceae4', rand = '#34373a', k = 1.5;
+  const id = `daklicht_${l.id}`;
+  // Achterkant (hoog) en voorkant (laag) van de opstand; `top(z)` = bovenkant van de opstand op plaats z.
+  const z0 = l.y - R, z1 = l.y + l.d + R;
+  const tan = dakraamStijging(l) / (z1 - z0);
+  const top = (z: number) => y + H + (z1 - z) * tan;
+  /** Een stuk dat van y0 tot de schuine bovenkant (+ op) reikt, of met `dik` een plaat die de helling volgt. */
+  const tot = (code: string, soort: BlokSoort, kleur: string, xa: number, xb: number, za: number, zb: number, y0: number) =>
+    prisma(`${id}_${code}`, soort, kleur, 'x', xa, xb, [[za, y0], [zb, y0], [zb, top(zb)], [za, top(za)]]);
+  const plaat = (code: string, soort: BlokSoort, kleur: string, xa: number, xb: number, za: number, zb: number, op: number, dik: number) =>
+    prisma(`${id}_${code}`, soort, kleur, 'x', xa, xb, [[za, top(za) + op], [zb, top(zb) + op], [zb, top(zb) + op + dik], [za, top(za) + op + dik]]);
+  const uit: Blok[] = [
+    tot('opstand_l', 'kunststof', grijs, l.x - R, l.x, z0, z1, y),
+    tot('opstand_r', 'kunststof', grijs, l.x + l.b, l.x + l.b + R, z0, z1, y),
+    tot('opstand_a', 'kunststof', grijs, l.x, l.x + l.b, z0, l.y, y),
+    tot('opstand_v', 'kunststof', grijs, l.x, l.x + l.b, l.y + l.d, z1, y),
+    // Lichte dagkanten in de schacht, van het plafond tot onder het glas.
+    tot('dagkant_l', 'gevel', wit, l.x, l.x + k, l.y, l.y + l.d, y - dakdikte),
+    tot('dagkant_r', 'gevel', wit, l.x + l.b - k, l.x + l.b, l.y, l.y + l.d, y - dakdikte),
+    tot('dagkant_a', 'gevel', wit, l.x + k, l.x + l.b - k, l.y, l.y + k, y - dakdikte),
+    tot('dagkant_v', 'gevel', wit, l.x + k, l.x + l.b - k, l.y + l.d - k, l.y + l.d, y - dakdikte),
+  ];
+  // De glazen plaat: 1,5 cm over de opstand, 3 cm dik, met een donkere rand van 7,5 cm (de bedrukte rand van het glas).
+  const t = 3, w = 7.5, xo0 = l.x - R - 1.5, xo1 = l.x + l.b + R + 1.5, zo0 = z0 - 1.5, zo1 = z1 + 1.5;
+  uit.push(
+    plaat('rand_a', 'kunststof', rand, xo0, xo1, zo0, zo0 + w, 0, t),
+    plaat('rand_v', 'kunststof', rand, xo0, xo1, zo1 - w, zo1, 0, t),
+    plaat('rand_l', 'kunststof', rand, xo0, xo0 + w, zo0 + w, zo1 - w, 0, t),
+    plaat('rand_r', 'kunststof', rand, xo1 - w, xo1, zo0 + w, zo1 - w, 0, t),
+    plaat('glas', 'glas', glas, xo0 + w, xo1 - w, zo0 + w, zo1 - w, 0, t),
+  );
+  if (l.zonwering === 'screen') {
+    // Screen: kast langs de hoge kant, geleiders opzij, het doek 1,2 cm boven het glas tot de helft of tot de voorkant.
+    const kast = '#6a6d70', doek = '#2f3234', zs = zo0 + 10, ze = l.zonweringStand === 'dicht' ? zo1 - 0.5 : zs + (zo1 - 0.5 - zs) / 2;
+    uit.push(
+      plaat('zon_kast', 'metaal', kast, xo0, xo1, zo0, zs, t, 8),
+      plaat('zon_geleider_l', 'metaal', kast, xo0, xo0 + 3.5, zs, zo1, t, 2.5),
+      plaat('zon_geleider_r', 'metaal', kast, xo1 - 3.5, xo1, zs, zo1, t, 2.5),
+      plaat('zon_doek', 'stof', doek, xo0 + 3.5, xo1 - 3.5, zs, ze - 1.5, t + 1.2, 0.4),
+      plaat('zon_onderlat', 'metaal', kast, xo0 + 3, xo1 - 3, ze - 3, ze, t + 0.6, 2.2),
+    );
+  }
+  return uit;
+}
+
+/**
+ * Lichtkoepel, lichtstraat of plat dakraam op een plat dak: opstand rond de opening en daarop het glas. `y` = bovenkant van
+ * het dak. De opening in het dak zelf snijdt `plattegrond3D` uit de dakplaat.
+ */
+export function daklichtBlokken(l: DakLicht, vorm: DakLichtType['vorm'], y: number, dakdikte = 30): Blok[] {
+  if (vorm === 'dakraam') return dakraamBlokken(l, y, dakdikte);
   const R = OPSTAND_RAND, H = OPSTAND_HOOGTE, grijs = '#cfcdc7', glas = '#cfdde1', wit = '#eceae4', k = 1.5;
   const blok = (code: string, soort: BlokSoort, x: number, yy: number, z: number, b: number, h: number, d: number, kleur: string, extra: Partial<Blok> = {}): Blok =>
     ({ code: `daklicht_${l.id}_${code}`, soort, vorm: 'blok', x: r2(x), y: r2(yy), z: r2(z), b: r2(b), h: r2(h), d: r2(d), kleur, ...extra });

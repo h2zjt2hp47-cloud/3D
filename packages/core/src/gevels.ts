@@ -3,7 +3,7 @@
  * en deuren (gezien van buiten), zonweringskasten, dakranden en kettingmaten (maten tussen de ramen).
  * Resultaat als TekeningResultaat, zodat tekenSvg ze tekent (scherm en afdruk).
  */
-import { DAK_BEDEKKING, DAK_OPBOUW, OPSTAND_HOOGTE, OPSTAND_RAND, dakHoogte, gevelOnderDak, oppervlakOnderDak } from './dak.js';
+import { DAK_BEDEKKING, DAK_OPBOUW, OPSTAND_HOOGTE, OPSTAND_RAND, dakHoogte, dakraamStijging, gevelOnderDak, oppervlakOnderDak } from './dak.js';
 import {
   asVan,
   langsAs,
@@ -293,8 +293,16 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
       if (ervoor) continue;
       const u0 = Math.min(nu(a0), nu(a1)), b = a1 - a0;
       const yd = vloerHoogte(plan, n) + H + VLOERDIKTE;
-      const bol = cat?.daklichten?.[l.type]?.vorm === 'lichtstraat' ? 24 : Math.min(30, Math.max(16, Math.min(l.b, l.d) * 0.28));
+      const type = cat?.daklichten?.[l.type];
       vormen.push({ code: `daklicht.${l.id}.opstand`, x: r1(u0 - OPSTAND_RAND), y: sy(yd + OPSTAND_HOOGTE), breedte: r1(b + 2 * OPSTAND_RAND), hoogte: OPSTAND_HOOGTE, vulling: '#cfcdc7', lijn: '#55524c' });
+      if (type?.vorm === 'dakraam') {
+        // Plat dakraam (ronde 11b): een vlakke glazen plaat met een donkere rand, die licht helt; met een screen de kast erop.
+        const op = yd + OPSTAND_HOOGTE, hoog = r1(dakraamStijging(l) + 3);
+        vormen.push({ code: `daklicht.${l.id}.glas`, x: r1(u0 - OPSTAND_RAND - 1.5), y: sy(op + hoog), breedte: r1(b + 2 * OPSTAND_RAND + 3), hoogte: hoog, vulling: '#cfe0e6', lijn: '#34373a' });
+        if (l.zonwering === 'screen' && type.zonwering) vormen.push({ code: `daklicht.${l.id}.zonwering`, x: r1(u0 - OPSTAND_RAND - 1.5), y: sy(op + hoog + 8), breedte: r1(b + 2 * OPSTAND_RAND + 3), hoogte: 8, vulling: '#45484b', lijn: '#34373a' });
+        continue;
+      }
+      const bol = type?.vorm === 'lichtstraat' ? 24 : Math.min(30, Math.max(16, Math.min(l.b, l.d) * 0.28));
       vormen.push({ code: `daklicht.${l.id}.glas`, x: r1(u0 - OPSTAND_RAND + 1), y: sy(yd + OPSTAND_HOOGTE + bol), breedte: r1(b + 2 * OPSTAND_RAND - 2), hoogte: r1(bol), afronding: Math.min(12, bol / 2), vulling: '#cfe0e6', lijn: '#55524c' });
     }
     // Hellend dak: in doorsnede aan de kant van de topgevel, als vlak aan de kant van de dakvoet.

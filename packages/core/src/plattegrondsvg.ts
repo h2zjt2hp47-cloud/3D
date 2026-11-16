@@ -203,9 +203,22 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     const gekozen = sel?.soort === 'daklicht' && sel.id === l.id, fout = fouten.has(l.id);
     const kleur = fout ? '#c0392b' : gekozen ? '#2f6fd0' : '#3f6d86';
     const lijn = `stroke="${kleur}" stroke-width="${gekozen || fout ? 2.5 : 1.6}" stroke-dasharray="9 5"`;
-    const binnen = opties.lichtstraten?.has(l.type)
+    const type = cat.daklichten?.[l.type];
+    let binnen = opties.lichtstraten?.has(l.type)
       ? (l.b >= l.d ? `<line x1="${n(l.x)}" y1="${n(l.y + l.d / 2)}" x2="${n(l.x + l.b)}" y2="${n(l.y + l.d / 2)}" ${lijn}/>` : `<line x1="${n(l.x + l.b / 2)}" y1="${n(l.y)}" x2="${n(l.x + l.b / 2)}" y2="${n(l.y + l.d)}" ${lijn}/>`)
       : `<line x1="${n(l.x)}" y1="${n(l.y)}" x2="${n(l.x + l.b)}" y2="${n(l.y + l.d)}" ${lijn}/><line x1="${n(l.x + l.b)}" y1="${n(l.y)}" x2="${n(l.x)}" y2="${n(l.y + l.d)}" ${lijn}/>`;
+    if (type?.vorm === 'dakraam') {
+      // Plat dakraam (ronde 11b): het kruis van een opening en de rand van de glazen plaat erbinnen.
+      binnen += `<rect x="${n(l.x + 8)}" y="${n(l.y + 8)}" width="${n(Math.max(0, l.b - 16))}" height="${n(Math.max(0, l.d - 16))}" fill="none" ${lijn}/>`;
+      if (l.zonwering === 'screen' && type.zonwering) {
+        // Buitenzonwering: de kast als een dikke donkere streep langs de hoge kant (achteraan), het doek als lijnen over het
+        // deel dat dicht is (de helft of alles).
+        const tot = l.y + (l.zonweringStand === 'dicht' ? l.d : l.d / 2);
+        let doek = '';
+        for (let yy = l.y + 10; yy < tot - 2; yy += 10) doek += `<line x1="${n(l.x + 4)}" y1="${n(yy)}" x2="${n(l.x + l.b - 4)}" y2="${n(yy)}" stroke="#3a3c3e" stroke-width="1" stroke-opacity="0.55"/>`;
+        binnen += `<g data-zonwering="screen"><title>Buitenzonwering (screen), ${l.zonweringStand === 'dicht' ? 'helemaal' : 'half'} dicht</title><rect x="${n(l.x - 2)}" y="${n(l.y - 9)}" width="${n(l.b + 4)}" height="9" fill="#3a3c3e"/>${doek}</g>`;
+      }
+    }
     uit.push(`<g data-soort="daklicht" data-id="${esc(l.id)}" style="cursor:move"><rect x="${n(l.x)}" y="${n(l.y)}" width="${n(l.b)}" height="${n(l.d)}" fill="#bfe0ee" fill-opacity="${gekozen ? 0.5 : 0.3}" ${lijn}/>${binnen}</g>`);
   }
   // Techniek (alleen met de optie, een catalogus en iets om te tekenen): leidingen en tekens van de toestellen.

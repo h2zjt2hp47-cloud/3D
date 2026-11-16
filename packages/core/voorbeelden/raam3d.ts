@@ -7,7 +7,7 @@
  */
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type ConfiguratieResultaat, type Scene3D } from '../src/index.js';
 import { GLASKLEUR } from './raam.js';
-import { nieuweIndeling, rasterVan, type RasterVak } from './raamraster.js';
+import { nieuweIndeling, rasterVan, ventilatorHoogte, zonweringVan, type RasterVak } from './raamraster.js';
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
@@ -247,20 +247,49 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
     blok(`${g.code}_rand_r`, 'donker', g.x + g.b - w, g.y + w, z, w, g.h - 2 * w, d, randKleur);
   }
 
-  if (k.rooster === true) blok('rooster', 'donker', f, H - f * 0.65, 7, B - 2 * f, 1.4, 0.4, '#3a3a3a');
+  if (a.vent_rooster === true) blok('rooster', 'donker', f, H - f * 0.65, 7, B - 2 * f, 1.4, 0.4, '#3a3a3a');
 
-  // Zonwering: kast boven het raam (buiten), geleiders en het doek of de lamellen deels neer.
+  // Raamventilator (ronde 11b): een kast binnen tegen de bovenkant van het kader, met sleuven voor de lucht en een knop; buiten
+  // een smal rooster in het kader. Alles binnen de maat van het kader: de opening in de muur blijft dezelfde.
+  if (a.vent_toestel === true) {
+    const vb = cm(a.vent_b), vh = ventilatorHoogte(num(a.f)) / 10, x0 = (B - vb) / 2;
+    blok('ventilator_kast', 'kunststof', x0, H - vh, 7, vb, vh, 5.6, '#e8e7e2', { afronding: 0.8 });
+    for (let i = 0; i < 3; i++) blok(`ventilator_sleuf${i + 1}`, 'donker', x0 + 2.5, H - vh * (0.3 + i * 0.2) - 0.4, 12.6, vb - 9, 0.4, 0.2, '#3b3e40');
+    blok('ventilator_sleuf_onder', 'donker', x0 + 2.5, H - vh - 0.05, 8, vb - 5, 0.1, 4, '#3b3e40');
+    blok('ventilator_knop', 'donker', x0 + vb - 4.5, H - vh * 0.6, 12.6, 2, vh * 0.3, 0.25, '#55585a');
+    blok('ventilator_buiten', 'donker', x0, H - f * 0.8, -0.5, vb, f * 0.6, 0.5, '#2f3133');
+  }
+
+  // Zonwering: kast boven het raam (buiten), geleiders en het doek of de lamellen half of helemaal neer. Twee of drie screens
+  // naast elkaar (ronde 11b): elk een eigen kast, doek en onderlat, met een middengeleider ertussen.
   if (kast > 0) {
     const zk = tekst(a.zonkleur, kb);
-    blok('zonwering_kast', 'metaal', -2, H, -14, B + 4, kast, 14, kb);
-    blok('geleider_l', 'metaal', -2, 0, -12, 4, H, 4, kb);
-    blok('geleider_r', 'metaal', B - 2, 0, -12, 4, H, 4, kb);
-    const onder = H * 0.62;
-    if (k.zonwering === 'lamellen') {
-      for (let y = onder, i = 0; y < H - 2; y += 5, i++) blok(`lamel${i}`, 'metaal', 1, y, -12, B - 2, 0.8, 7, zk, { kantel: { graden: 25, richting: 'z-' } });
+    const zon = zonweringVan(r);
+    const onder = k.zon_stand === 'dicht' ? 2 : H * 0.62;
+    if (zon.length > 1) {
+      // Een smalle naad tussen de kasten, zodat je ziet dat het aparte screens zijn.
+      for (const z of zon) {
+        const x0 = z.nr === 1 ? -2 : z.x0 / 10 + 0.15, x1 = z.nr === zon.length ? B + 2 : z.x1 / 10 - 0.15;
+        blok(`zonwering_kast${z.nr}`, 'metaal', x0, H, -14, x1 - x0, kast, 14, kb);
+      }
+      blok('geleider_l', 'metaal', -2, 0, -12, 4, H, 4, kb);
+      blok('geleider_r', 'metaal', B - 2, 0, -12, 4, H, 4, kb);
+      for (const z of zon.slice(1)) blok(`geleider_m${z.nr - 1}`, 'metaal', z.x0 / 10 - 3, 0, -12, 6, H, 4, kb);
+      for (const z of zon) {
+        const d0 = z.nr === 1 ? 2 : z.x0 / 10 + 3, d1 = z.nr === zon.length ? B - 2 : z.x1 / 10 - 3;
+        blok(`doek${z.nr}`, 'stof', d0, onder, -10.5, d1 - d0, H - onder, 0.6, zk);
+        blok(`onderlat${z.nr}`, 'metaal', d0 - 1, onder - 2, -11.5, d1 - d0 + 2, 3, 3, kb);
+      }
     } else {
-      blok('doek', k.zonwering === 'screen' ? 'stof' : 'metaal', 2, onder, -10.5, B - 4, H - onder, 0.6, zk);
-      blok('onderlat', 'metaal', 1, onder - 2, -11.5, B - 2, 3, 3, kb);
+      blok('zonwering_kast', 'metaal', -2, H, -14, B + 4, kast, 14, kb);
+      blok('geleider_l', 'metaal', -2, 0, -12, 4, H, 4, kb);
+      blok('geleider_r', 'metaal', B - 2, 0, -12, 4, H, 4, kb);
+      if (k.zonwering === 'lamellen') {
+        for (let y = onder, i = 0; y < H - 2; y += 5, i++) blok(`lamel${i}`, 'metaal', 1, y, -12, B - 2, 0.8, 7, zk, { kantel: { graden: 25, richting: 'z-' } });
+      } else {
+        blok('doek', k.zonwering === 'screen' ? 'stof' : 'metaal', 2, onder, -10.5, B - 4, H - onder, 0.6, zk);
+        blok('onderlat', 'metaal', 1, onder - 2, -11.5, B - 2, 3, 3, kb);
+      }
     }
   }
 

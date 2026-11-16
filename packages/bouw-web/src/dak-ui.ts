@@ -1,9 +1,10 @@
 /**
  * Dak van de woning: de kaart "Dak" naast de plattegrond en de 3D (vorm, helling, richting, oversteek, bedekking en
- * kleur), en wat de plattegrond-editor nodig heeft voor lichtkoepels en lichtstraten.
+ * kleur), en wat de plattegrond-editor nodig heeft voor lichtkoepels en lichtstraten. Sinds ronde 11b ook de soort
+ * daklicht van de teller (koepel, lichtstraat of plat dakraam) en de buitenzonwering op de platte dakramen.
  * De keuzes zijn gegevens in het plan (`plan.dak`, `plan.daklichten`); de 3D, de gevels en de controles volgen vanzelf.
  */
-import { dakOpbouw, standaardDak, type DakBedekking, type DakKeuze, type DakVorm, type GevelKant, type PlanSvgOpties } from '../../core/src/index.js';
+import { dakOpbouw, standaardDak, type DakBedekking, type DakKeuze, type DakLicht, type DakVorm, type GevelKant, type PlanSvgOpties } from '../../core/src/index.js';
 import { dakCatalogus, daklichtCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { daklichtenOpDak, verdeelDaklichten } from '../../core/voorbeelden/snelstart.js';
 import { el, getal, getalVeld, keuzelijst } from './hulp.js';
@@ -83,11 +84,80 @@ export function koepelTeller(): HTMLElement | null {
   min.disabled = nu.aantal === 0;
   min.addEventListener('click', () => zetAantal(nu.aantal - 1));
   plus.addEventListener('click', () => zetAantal(nu.aantal + 1));
-  rij.append(el('span', {}, 'Lichtkoepels'), min, el('strong', { 'data-koepels': 'aantal' }, String(nu.aantal)), plus);
-  const naam = daklichtCatalogus[type]?.label.replace(/^Lichtkoepel /, '') ?? '';
+  // Platte dakramen (ronde 11b) heten zo; de rest blijft "Lichtkoepels", zoals vroeger.
+  const dakraam = daklichtCatalogus[type]?.vorm === 'dakraam';
+  if (dakraam) { min.setAttribute('aria-label', 'Een dakraam minder'); plus.setAttribute('aria-label', 'Een dakraam meer'); rij.setAttribute('aria-label', 'Aantal dakramen'); }
+  rij.append(el('span', {}, dakraam ? 'Dakramen' : 'Lichtkoepels'), min, el('strong', { 'data-koepels': 'aantal' }, String(nu.aantal)), plus);
+  const naam = daklichtCatalogus[type]?.label.replace(/^(Lichtkoepel|Plat dakraam) /, '') ?? '';
   rij.append(el('span', { class: 'klein' }, `${naam}, gelijk verdeeld op het grootste platte dak`));
   return rij;
 }
+
+/**
+ * Welk daklicht de teller zet (ronde 11b): een lichtkoepel, een lichtstraat of een plat dakraam, in een gangbare maat. Een
+ * andere keuze vervangt de daklichten op het grootste platte dak door evenveel van de nieuwe soort. Alleen in de kaart Dak.
+ */
+export function daklichtSoort(): HTMLElement | null {
+  const plan = toestand().plan;
+  if (!plan.ruimtes.length) return null;
+  const nu = daklichtenOpDak(plan.dak ? plan : { ...plan, dak: standaardDak() });
+  if (!nu.plat || !nu.aantal) return null;
+  const type = nu.type ?? 'koepel_100';
+  const keuzes = Object.entries(daklichtCatalogus).map(([code, t]): [string, string] => [code, t.label]);
+  const l = el('label', { class: 'eig' });
+  l.append(el('span', {}, 'Soort'), keuzelijst('dak-daklicht-soort', keuzes, type, (w) => wijzig('plan', (t) => {
+    metDak(t);
+    t.plan = verdeelDaklichten(t.plan, nu.aantal, w);
+  })));
+  return l;
+}
+
+/**
+ * Buitenzonwering op de platte dakramen (ronde 11b): een screen boven het glas, met één tik voor alle dakramen, en hoe ver
+ * het in de 3D dicht is (half of helemaal). Per dakraam apart kan onder "Per dakraam". Null zonder dakraam dat zonwering kent.
+ */
+export function dakraamZonwering(): HTMLElement | null {
+  const ramen = (toestand().plan.daklichten ?? []).filter((l) => daklichtCatalogus[l.type]?.zonwering);
+  if (!ramen.length) return null;
+  const zet = (ids: string[], f: (l: DakLicht) => void) => wijzig('plan', (t) => { for (const l of t.plan.daklichten ?? []) if (ids.includes(l.id)) f(l); });
+  const aan = (l: DakLicht) => { l.zonwering = 'screen'; };
+  const uit = (l: DakLicht) => { delete l.zonwering; delete l.zonweringStand; };
+  const knoppen = (label: string, opties: [string, string][], nu: string, kies: (w: string) => void, data: string) => {
+    const rij = el('div', { class: 'tabs', role: 'group', 'aria-label': label });
+    for (const [w, tekst] of opties) {
+      const b = el('button', { type: 'button', 'aria-pressed': String(w === nu), [`data-${data}`]: w }, tekst);
+      b.addEventListener('click', () => kies(w));
+      rij.append(b);
+    }
+    return rij;
+  };
+  const ids = ramen.map((l) => l.id), met = ramen.filter((l) => l.zonwering === 'screen');
+  const vak = el('div', { class: 'dak-zonwering' });
+  const alle = met.length === ramen.length ? 'screen' : met.length ? '' : 'geen';
+  vak.append(
+    el('p', { class: 'klein' }, ramen.length > 1 ? `Buitenzonwering op de dakramen${alle ? '' : ` (${met.length} van ${ramen.length} met screen)`}` : 'Buitenzonwering op het dakraam'),
+    knoppen('Buitenzonwering', [['geen', 'Geen'], ['screen', 'Screen']], alle, (w) => zet(ids, w === 'screen' ? aan : uit), 'dakraam-zon'),
+  );
+  if (met.length) {
+    const stand = met.every((l) => l.zonweringStand === 'dicht') ? 'dicht' : met.every((l) => l.zonweringStand !== 'dicht') ? 'half' : '';
+    vak.append(el('p', { class: 'klein' }, 'In de 3D'), knoppen('Screen in de 3D', [['half', 'Half dicht'], ['dicht', 'Helemaal dicht']], stand,
+      (w) => zet(met.map((l) => l.id), (l) => { if (w === 'dicht') l.zonweringStand = 'dicht'; else delete l.zonweringStand; }), 'dakraam-stand'));
+  }
+  if (ramen.length > 1) {
+    const per = el('details', { class: 'meer-opties', 'data-dakraam-per': '' });
+    if (perDakraamOpen) per.setAttribute('open', '');
+    per.addEventListener('toggle', () => { perDakraamOpen = per.hasAttribute('open'); });
+    per.append(el('summary', {}, 'Per dakraam'));
+    ramen.forEach((l, i) => {
+      per.append(el('p', { class: 'klein' }, `Dakraam ${i + 1} · ${l.b} × ${l.d} cm`),
+        knoppen(`Dakraam ${i + 1}`, [['geen', 'Geen'], ['screen', 'Screen']], l.zonwering === 'screen' ? 'screen' : 'geen', (w) => zet([l.id], w === 'screen' ? aan : uit), `dakraam-zon-${i + 1}`));
+    });
+    vak.append(per);
+  }
+  return vak;
+}
+/** Of "Per dakraam" open staat: blijft open als de kaart opnieuw getekend wordt. */
+let perDakraamOpen = false;
 
 /** Tegels met de bedekkingen die bij de dakvorm passen, en eronder de kleuren van de gekozen bedekking. */
 export function bedekkingKeuze(voor: 'plat' | 'hellend', nu: DakBedekking, kies: (b: DakBedekking) => void): HTMLElement {
@@ -160,6 +230,11 @@ export function toonDak() {
   }
   const teller = koepelTeller();
   if (teller) vak.append(teller);
+  // Ronde 11b: welke soort daklicht de teller zet (ook een plat dakraam), en de buitenzonwering op de platte dakramen.
+  const soort = teller ? daklichtSoort() : null;
+  if (soort) vak.append(soort);
+  const zon = dakraamZonwering();
+  if (zon) vak.append(zon);
   if (opbouw?.terugval) vak.append(el('p', { class: 'melding' }, opbouw.terugval));
   if (opbouw) {
     const dl = el('dl', { class: 'detail' });
@@ -171,6 +246,8 @@ export function toonDak() {
     if (opbouw.m2Plat > 0) regels.push(['Plat dak', `${getal(opbouw.m2Plat, 1)} m²`], ['Dakrand', `${getal(opbouw.mDakrand, 1)} m`]);
     const lichten = opbouw.daklichten.filter((l) => !l.reden).length;
     regels.push(['Daklichten', lichten ? `${lichten} ${lichten === 1 ? 'stuk' : 'stuks'}` : 'geen']);
+    const screens = opbouw.daklichten.filter((l) => !l.reden && l.licht.zonwering === 'screen' && daklichtCatalogus[l.licht.type]?.zonwering).length;
+    if (screens) regels.push(['Buitenzonwering', `${screens} ${screens === 1 ? 'screen' : 'screens'} op de dakramen`]);
     for (const [a, b] of regels) dl.append(el('dt', {}, a), el('dd', {}, b));
     vak.append(dl);
   }
