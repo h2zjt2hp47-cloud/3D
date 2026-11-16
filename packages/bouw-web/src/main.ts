@@ -1,11 +1,13 @@
 /**
- * Bouwdemo: plattegrond (ruimtes, ramen, deuren, inrichting) → posities configureren → offerte.
+ * Bouwdemo: snelstart (wat, hoe groot, welke stijl) → plattegrond en 3D (ruimtes, ramen, deuren, inrichting) →
+ * posities configureren → overzicht (zonder prijzen, met doorsturen).
  * Dezelfde motor als de zetelconfigurator; alles in één HTML-bestand.
  */
-import { $, toonFout } from './hulp.js';
+import { $, PRIJZEN, toonFout } from './hulp.js';
 import { startOfferte, toonOfferte } from './offerte-ui.js';
-import { naWijziging, startPlattegrond, toonPlan } from './plattegrond-ui.js';
-import { herbereken, startPositie, toonPositie } from './positie-ui.js';
+import { naWijziging, startPlattegrond, toonPlan, toonWoning3D } from './plattegrond-ui.js';
+import { herbereken, startPositie, toonPositie, toonPositie3D } from './positie-ui.js';
+import { startSnelstart, toonSnelstart } from './snelstart-ui.js';
 import { startWerf, toonWerf } from './werf-ui.js';
 import { startProjecten, toonProjecten } from './projecten-ui.js';
 import { laatstBewaard, opslagProbleem, opWijziging, toestand } from './staat.js';
@@ -20,21 +22,24 @@ window.addEventListener('error', (e) => {
 });
 window.addEventListener('unhandledrejection', (e) => toonFout('Fout', e.reason));
 
-type Weergave = 'projecten' | 'plan' | 'offerte' | 'positie' | 'werf';
+type Weergave = 'start' | 'projecten' | 'plan' | 'offerte' | 'positie' | 'werf';
 let actief: Weergave = 'plan';
 
 function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) {
   // Een project zonder woning heeft geen plattegrond: dan de ramenlijst (offerte).
   if (w === 'plan' && toestand().meta.zonderWoning) w = 'offerte';
+  // De werf staat niet meer in het menu zolang er geen prijzen getoond worden (inmeting en meerwerk gaan over bedragen).
+  if (w === 'werf' && !PRIJZEN) w = 'offerte';
   actief = w;
-  for (const v of ['projecten', 'plan', 'offerte', 'positie', 'werf'] as const) $(`#view-${v}`).hidden = v !== w;
+  for (const v of ['start', 'projecten', 'plan', 'offerte', 'positie', 'werf'] as const) $(`#view-${v}`).hidden = v !== w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.weergave === w));
   document.body.classList.toggle('zonder-woning', !!toestand().meta.zonderWoning);
   if (w === 'plan') toonPlan(opties.opening);
-  if (w === 'offerte') toonOfferte();
+  if (w === 'offerte') toonOfferte({ nieuwBeeld: true });
   if (w === 'positie') toonPositie(opties.positie);
   if (w === 'werf') toonWerf();
   if (w === 'projecten') toonProjecten();
+  if (w === 'start') toonSnelstart();
   kop();
   try {
     history.replaceState(null, '', `#${w}${opties.positie ? `/${opties.positie}` : ''}`);
@@ -58,6 +63,10 @@ const nav = {
   naarOfferte: () => toon('offerte'),
   naarWerf: () => toon('werf'),
   naarProjecten: () => toon('projecten'),
+  /** De woning in 3D (na de snelstart of een aanbouw die als ruimte in de plattegrond komt). */
+  naarWoning3D: () => { toon('plan'); toonWoning3D(); },
+  /** De configurator met de 3D in beeld (na de snelstart). */
+  naarPositie3D: (id: string) => { toon('positie', { positie: id }); toonPositie3D(); },
 };
 
 /** Projectnaam en bewaarstatus in de kop. */
@@ -76,6 +85,7 @@ veilig('Offerte', () => startOfferte(nav));
 veilig('Positie', () => startPositie(nav));
 veilig('Werf', () => startWerf(nav));
 veilig('Projecten', () => startProjecten(nav));
+veilig('Snelstart', () => startSnelstart(nav));
 
 opWijziging(() => veilig('Bijwerken', () => {
   if (actief === 'plan') naWijziging();
@@ -86,6 +96,9 @@ opWijziging(() => veilig('Bijwerken', () => {
   $('#nav-aantal').textContent = String(toestand().posities.length);
   kop();
 }));
+
+// Prijzen tonen of niet (hulp.ts): de delen met een bedrag dragen de klasse prijsdeel.
+document.body.classList.toggle('met-prijzen', PRIJZEN);
 
 // Klantweergave: scherm tonen aan de klant (bewaard in deze browser).
 function zetKlantweergave(aan: boolean) {
@@ -104,4 +117,4 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]'))
 }
 $('#nav-aantal').textContent = String(toestand().posities.length);
 const [start, id] = location.hash.slice(1).split('/');
-veilig('Opstarten', () => toon((['projecten', 'plan', 'offerte', 'positie', 'werf'] as Weergave[]).includes(start as Weergave) ? (start as Weergave) : 'plan', { positie: id }));
+veilig('Opstarten', () => toon((['start', 'projecten', 'plan', 'offerte', 'positie', 'werf'] as Weergave[]).includes(start as Weergave) ? (start as Weergave) : 'plan', { positie: id }));

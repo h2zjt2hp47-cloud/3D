@@ -9,10 +9,11 @@ import { passendKader, tekenSvg, type ConfiguratieResultaat, type Kenmerk } from
 import { berekenRaam, ruitenVan } from '../../core/voorbeelden/raam.js';
 import { INDELINGEN, indelingVan, pasIndelingToe, type Indeling } from '../../core/voorbeelden/raamindelingen.js';
 import { raamKeuzes } from '../../core/voorbeelden/woning.js';
+import { aanbouwNaarPlan } from '../../core/voorbeelden/snelstart.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
-import { $, el, eur, getal, kopieer, num } from './hulp.js';
+import { $, alleenPrijs, el, eur, getal, kopieer, num, PRIJZEN } from './hulp.js';
 import { positieScene } from './positie-3d.js';
-import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
+import { bewaarInBibliotheek, klantKorting, MODELLEN, nieuweId, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -22,6 +23,7 @@ let weergave: 'voor' | '3d' = 'voor';
 let viewer: Viewer3D | null | undefined;
 let naarPlan: (openingId: string) => void = () => {};
 let naarOfferte: () => void = () => {};
+let naarWoning3D: () => void = () => {};
 
 const huidig = (): Positie | undefined => toestand().posities.find((p) => p.id === huidigId) ?? toestand().posities[0];
 
@@ -124,7 +126,7 @@ function aanbouwControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
   if (p.keuzes.inmeting === true) {
     const afw = num(a.meet_afwijking);
     uit.push({ titel: 'Inmeting op de werf', toestand: afw > 10 ? 'let-op' : 'ok', waarde: `verschil ${getal(afw)} mm`, uitleg: `Bestelmaat: ${getal(num(a.raam_b))} × ${getal(rh)} mm.` });
-  } else uit.push({ titel: 'Inmeting op de werf', toestand: 'let-op', waarde: 'nog niet gebeurd', uitleg: 'Prijs onder voorbehoud van inmeting.' });
+  } else uit.push({ titel: 'Inmeting op de werf', toestand: 'let-op', waarde: 'nog niet gebeurd', uitleg: 'Maten onder voorbehoud van inmeting.' });
   if (muren && num(a.opening_b) > 3000) uit.push({ titel: 'Stalen ligger', toestand: 'let-op', waarde: `${getal(num(a.ligger_lm), 2)} m`, uitleg: 'Stabiliteitsberekening laten maken.' });
   if (muren) uit.push({ titel: 'Vergunning', toestand: num(a.dak_m2) > 40 ? 'let-op' : 'ok', waarde: `${getal(num(a.dak_m2), 1)} m²` });
   return uit;
@@ -168,10 +170,10 @@ export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string]
 }
 
 export function inbegrepen(p: Positie, r: ConfiguratieResultaat): { wel: string[]; niet: string[] } {
-  const wel = r.stuklijst.map((s) => s.omschrijving);
+  const wel = r.stuklijst.filter((s) => !alleenPrijs(s.omschrijving)).map((s) => s.omschrijving);
   const niet: string[] = [];
   if (p.keuzes.montage !== true) niet.push('Plaatsing');
-  if (p.model === 'POORT') return { wel: ['Sectionale garagepoort volgens de tekening (nog zonder prijs in deze demo)'], niet: ['Plaatsing, motor en aansluiting: nog te bepalen'] };
+  if (p.model === 'POORT') return { wel: ['Sectionale garagepoort volgens de tekening'], niet: ['Plaatsing, motor en aansluiting: nog te bepalen'] };
   if (p.model === 'RAAM') {
     if (p.keuzes.situatie === 'renovatie' && p.keuzes.afwerking !== true) niet.push('Afwerking dagkanten binnen');
     if (p.keuzes.zonwering === 'geen') niet.push('Zonwering');
@@ -183,14 +185,22 @@ export function inbegrepen(p: Positie, r: ConfiguratieResultaat): { wel: string[
   return { wel, niet };
 }
 
+/** Kenmerken die alleen over de prijs gaan (het btw-tarief van de aanbouw): niet in het formulier en niet in een samenvatting, zolang er geen prijzen getoond worden. */
+const PRIJSKENMERKEN = new Set(['btw_regime']);
+
+/** De samenvatting van een positie (kenmerk: keuze), zonder wat alleen over de prijs gaat. */
+export function samenvatting(r: ConfiguratieResultaat): string[] {
+  return PRIJZEN ? r.samenvatting : r.kenmerken.filter((k) => k.zichtbaar && !PRIJSKENMERKEN.has(k.code)).map((k) => `${k.label}: ${k.weergave}`);
+}
+
 function offertetekst(p: Positie, r: ConfiguratieResultaat): string {
   const ib = inbegrepen(p, r);
   return [
     `${p.code} ${p.naam} (${p.aantal} st.)`,
-    ...r.samenvatting.map((s) => `- ${s}`),
+    ...samenvatting(r).map((s) => `- ${s}`),
     '', 'Inbegrepen:', ...ib.wel.map((x) => `- ${x}`),
     '', 'Niet inbegrepen:', ...ib.niet.map((x) => `- ${x}`),
-    ...(zonderPrijs(p) ? [] : ['', `Prijs: ${eur(r.prijs.brutoprijsExcl)} per stuk excl. btw`]),
+    ...(!PRIJZEN || zonderPrijs(p) ? [] : ['', `Prijs: ${eur(r.prijs.brutoprijsExcl)} per stuk excl. btw`]),
   ].join('\n');
 }
 
@@ -201,7 +211,11 @@ const velden = new Map<string, { veld: HTMLElement; fout: HTMLElement; update: (
 const SNEL = new Set(['roeden']);
 let meerOpen = false;
 
+/** Voor welke positie het formulier gebouwd is (een andere positie of een ander model vraagt een nieuw formulier). */
+let formulierVan = '';
+
 function bouwFormulier(p: Positie) {
+  formulierVan = `${p.id}:${p.model}`;
   const form = $('#p-formulier');
   form.replaceChildren();
   velden.clear();
@@ -211,7 +225,7 @@ function bouwFormulier(p: Positie) {
     const kop = el('h2', { id: `pst-${stap.code}` });
     kop.append(el('span', { class: 'stapnr' }, String(n + 1)), document.createTextNode(stap.label));
     sectie.append(kop);
-    const kenmerken = model.kenmerken.filter((k) => k.stap === stap.code);
+    const kenmerken = model.kenmerken.filter((k) => k.stap === stap.code && (PRIJZEN || !PRIJSKENMERKEN.has(k.code)));
     if (p.model === 'RAAM' && stap.code === 'indeling') {
       // De snelle weg: een indeling kiezen met één tik. De instelling per vak blijft bereikbaar onder "Meer opties".
       sectie.append(bouwIndelingen());
@@ -459,6 +473,10 @@ export function toonPositie(id?: string) {
   $<HTMLInputElement>('#p-aantal').value = String(p.aantal);
   const o = openingVan(p);
   $('#p-naarplan').hidden = !o;
+  // Een aanbouw (model) kan als ruimte tegen een woning in de plattegrond, om er vrij aan verder te tekenen.
+  $('#p-vrij').hidden = p.model !== 'AANBOUW';
+  $<HTMLButtonElement>('#p-vrij').disabled = toestand().plan.ruimtes.length > 0;
+  $('#p-vrij').title = toestand().plan.ruimtes.length ? 'Kan alleen in een project zonder plattegrond: hier staat er al een.' : 'Zet de aanbouw als ruimte tegen een bestaande woning in de plattegrond (met raampartij, dak, koepel en gevel).';
   $('#p-model').textContent = MODELLEN[p.model].label;
   bouwFormulier(p);
   herbereken();
@@ -467,6 +485,8 @@ export function toonPositie(id?: string) {
 export function herbereken() {
   const p = huidig();
   if (!p || $('#p-inhoud').hidden) return;
+  // De positie van het formulier bestaat niet meer (verwijderd, of een aanbouw die in de plattegrond kwam): opnieuw opbouwen.
+  if (formulierVan !== `${p.id}:${p.model}`) { toonPositie(p.id); return; }
   const r = resultaat(p);
   for (const s of r.kenmerken) {
     const v = velden.get(s.code);
@@ -506,10 +526,15 @@ export function herbereken() {
   const korting = klantKorting();
   const stuk = r.prijs.brutoprijsExcl;
   const geenPrijs = zonderPrijs(p), alleenTonen = MODELLEN[p.model].zonderPrijs === true;
-  $('#p-status').textContent = r.geldig ? (geenPrijs ? 'Klaar om te tonen' : 'Klaar voor offerte') : `${r.meldingen.filter((m) => m.ernst === 'fout').length} fout(en)`;
+  $('#p-status').textContent = r.geldig ? (geenPrijs || !PRIJZEN ? 'Klaar om te tonen' : 'Klaar voor offerte') : `${r.meldingen.filter((m) => m.ernst === 'fout').length} fout(en)`;
   $('#p-status').className = `status ${r.geldig ? 'ok' : 'fout'}`;
+  $('#p-prijskop').textContent = PRIJZEN ? 'Prijs' : 'Status';
   $('#p-prijsdetail').hidden = geenPrijs;
-  if (geenPrijs) {
+  if (!PRIJZEN) {
+    // Zonder prijzen: geen bedrag, ook geen "nog geen prijs".
+    $('#p-prijs').textContent = '';
+    $('#p-prijs-sub').textContent = '';
+  } else if (geenPrijs) {
     // Een model dat alleen toont (nog geen stuklijst) of een raamindeling die de prijsregels nog niet kennen: geen bedrag.
     $('#p-prijs').textContent = 'Nog geen prijs';
     $('#p-prijs-sub').textContent = alleenTonen ? 'dit model toont alleen de tekening en de 3D' : 'deze indeling is nieuw: tekening, 3D en controles kloppen, een prijs volgt later';
@@ -529,7 +554,7 @@ export function herbereken() {
     ['Marge', r.prijs.margeProcent === null ? '—' : `${getal(r.prijs.margeProcent, 1)} %`],
   ];
   if (korting) regels.push([`Korting aannemer op de offerte`, `${korting} %`]);
-  $('#p-prijsdetail').replaceChildren(...regels.flatMap(([x, y]) => [el('dt', {}, x), el('dd', {}, y)]));
+  $('#p-prijsdetail').replaceChildren(...(PRIJZEN ? regels : []).flatMap(([x, y]) => [el('dt', {}, x), el('dd', {}, y)]));
   const alg = r.meldingen.filter((m) => !m.kenmerk);
   $('#p-meldingen').replaceChildren(...alg.map((m) => el('li', { class: m.ernst }, m.melding)));
   $('#p-meldingen').hidden = !alg.length;
@@ -552,11 +577,11 @@ export function herbereken() {
     );
     return tr;
   }));
-  $('#p-stuklijst tbody').replaceChildren(...r.stuklijst.map((s) => {
+  $('#p-stuklijst tbody').replaceChildren(...r.stuklijst.filter((s) => !alleenPrijs(s.omschrijving)).map((s) => {
     const tr = el('tr');
     const maat = s.lengte !== undefined ? `${getal(s.lengte)}${s.breedte !== undefined ? ` × ${getal(s.breedte)}` : ''}` : '';
     tr.append(el('td', {}, s.omschrijving), el('td', { class: 'code' }, s.artikel), el('td', { class: 'num' }, getal(s.aantal, 2)),
-      el('td', { class: 'num' }, maat), el('td', { class: 'num' }, `${getal(s.hoeveelheid, 2)} ${s.eenheid === 'm2' ? 'm²' : s.eenheid}`), el('td', { class: 'num' }, geenPrijs ? '—' : eur(s.kost)));
+      el('td', { class: 'num' }, maat), el('td', { class: 'num' }, `${getal(s.hoeveelheid, 2)} ${s.eenheid === 'm2' ? 'm²' : s.eenheid}`), el('td', { class: 'num prijsdeel' }, !PRIJZEN || geenPrijs ? '—' : eur(s.kost)));
     return tr;
   }));
 }
@@ -600,9 +625,35 @@ function toonWeergave(w: 'voor' | '3d') {
   }
 }
 
-export function startPositie(nav: { naarPlan: (openingId: string) => void; naarOfferte: () => void }) {
+/** De configurator met de 3D in beeld (na de snelstart). */
+export function toonPositie3D() {
+  toonWeergave('3d');
+}
+
+/**
+ * De aanbouw (model) als ruimte tegen een bestaande woning in de plattegrond (`aanbouwNaarPlan`): de positie van het
+ * model vervalt, de raampartij wordt een raam of deur in de achtergevel, dak, koepel en gevel staan in het plan.
+ */
+function aanbouwVrijTekenen() {
+  const p = huidig();
+  if (!p || p.model !== 'AANBOUW' || toestand().plan.ruimtes.length) return;
+  const { plan, posities } = aanbouwNaarPlan(p.keuzes);
+  // Eigen ids, zodat ze nooit samenvallen met posities die al in het project staan.
+  const ids = new Map(posities.map((x) => [x.id, nieuweId('p')]));
+  for (const o of plan.openingen) if (o.positie) o.positie = ids.get(o.positie);
+  wijzig('plan', (t) => {
+    t.plan = plan;
+    t.posities = [...t.posities.filter((x) => x.id !== p.id), ...posities.map((x) => ({ ...x, id: ids.get(x.id)! }))];
+    t.meta.regels = { ...t.meta.regels, gevel: true, dak: true };
+  });
+  naarWoning3D();
+}
+
+export function startPositie(nav: { naarPlan: (openingId: string) => void; naarOfferte: () => void; naarWoning3D: () => void }) {
   naarPlan = nav.naarPlan;
   naarOfferte = nav.naarOfferte;
+  naarWoning3D = nav.naarWoning3D;
+  $('#p-vrij').addEventListener('click', aanbouwVrijTekenen);
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.pWeergave as 'voor' | '3d'));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pStandpunt as 'schuin'));
   $<HTMLSelectElement>('#p-kies').addEventListener('change', (e) => toonPositie((e.target as HTMLSelectElement).value));
@@ -624,7 +675,7 @@ export function startPositie(nav: { naarPlan: (openingId: string) => void; naarO
     const p = huidig();
     if (!p) return;
     const ok = bewaarInBibliotheek(p, p.naam);
-    $('#p-kopieer-melding').textContent = ok ? `"${p.naam}" bewaard in de bibliotheek: in elk project te gebruiken via Offerte → Uit bibliotheek.` : 'Bewaren lukt niet (opslag vol).';
+    $('#p-kopieer-melding').textContent = ok ? `"${p.naam}" bewaard in de bibliotheek: in elk project te gebruiken via Overzicht → Uit bibliotheek.` : 'Bewaren lukt niet (opslag vol).';
   });
   $('#p-kopieer').addEventListener('click', () => {
     const p = huidig();

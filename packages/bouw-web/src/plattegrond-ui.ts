@@ -32,11 +32,13 @@ import {
   type Plattegrond,
   type Ruimte,
   type RuimteType,
+  type Scene3D,
 } from '../../core/src/index.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
-import { maak3D, type Kwaliteit, type Viewer3D } from '../../demo-web/src/drie-d.js';
+import { maak3D, type Kwaliteit, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
+import { isDing, maakVariant, stijlRij, toonDing } from './ding-ui.js';
 import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
-import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
+import { $, el, eur, getal, getalVeld, keuzelijst, PRIJZEN } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
@@ -51,6 +53,7 @@ import {
   nieuweId,
   nieuwePositie,
   ongedaan,
+  opWijziging,
   positieVan,
   resultaat,
   toestand,
@@ -66,7 +69,7 @@ const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: stri
   { code: 'wand', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld.' },
   { code: 'wand_v', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
   { code: 'wand_h', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
-  { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een positie in de offerte bij.' },
+  { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een regel in het overzicht bij.' },
   { code: 'buitendeur', label: 'Buitendeur', toets: '', hint: 'Klik op een buitenmuur. In een hal wordt het een voordeur, anders een terrasdeur.' },
   { code: 'schuifraam', label: 'Schuifraam', toets: '', hint: 'Klik op een buitenmuur.' },
   { code: 'garagepoort', label: 'Garagepoort', toets: '', hint: 'Klik op een buitenmuur. Belijning, vensters en kleur kies je in de configurator.' },
@@ -99,6 +102,21 @@ let melding = '';
 let naarPositie: (id: string) => void = () => {};
 let naarOfferte: () => void = () => {};
 let naarProjecten: () => void = () => {};
+/** Het ding dat in de 3D aangetikt is (zie ding-ui.ts), of null. */
+let gekozenDing: string | null = null;
+/** Standpunt om te zetten zodra de volgende scène in de 3D staat (na de snelstart: een mooier beginbeeld). */
+let volgendStandpunt: Standpunt | undefined;
+/** Ruimer kader voor de camera (na de snelstart), tot je zelf een standpunt kiest. */
+let ruimKader = false;
+/**
+ * Het kader van de woning breder gemaakt (zelfde midden): de kijker zet de camera op anderhalve keer de breedte of de
+ * diepte, wat op ooghoogte de bovenkant van een woning met een hellend dak afsnijdt. Zo staat ze er helemaal op, met
+ * lucht erboven en gras ervoor.
+ */
+function ruimKaderVan(s: Scene3D): Scene3D {
+  const k = s.kader, b = Math.max(k.b * 1.8, k.h * 1.8, k.d * 1.2);
+  return { ...s, kader: { ...k, x: k.x - (b - k.b) / 2, b } };
+}
 
 interface Sleep {
   soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'opening' | 'meubel' | 'daklicht';
@@ -184,6 +202,8 @@ function fouten(): Set<string> {
 
 export function render() {
   const houder = $('#pl-canvas');
+  // Een ander project kan minder verdiepingen hebben.
+  niveau = Math.min(niveau, Math.max(0, verdiepingenVan(toestand().plan).length - 1));
   const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   viewBox = zoom ? zoom.kijkvak() : passendKader();
   houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(), dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN, noordpijl: true });
@@ -272,7 +292,7 @@ function plan3D() {
     wachtend3D = false;
     // Lichtinval: de zon uit de gekozen richting, en wat verborgen is werpt nog schaduw.
     viewer?.zon?.(zonVoorKijker());
-    viewer?.toon(plattegrond3D(toestand().plan, cat, {
+    const scene = plattegrond3D(toestand().plan, cat, {
       laag: laag ? 110 : undefined,
       meubels: toonMeubels,
       dak: toonDakIn3D,
@@ -280,10 +300,45 @@ function plan3D() {
       // Terras en pad horen bij de woning (gegevens); lucht, gras en horizon tekent de kijker (omgeving 'buiten').
       aanleg: true,
       gevelkoppen: true,
+      // Elk blok zegt bij welk ding het hoort: tik op het dak, een raam of een gevel (zie ding-ui.ts).
+      dingen: true,
       totNiveau: alleNiveaus && !laag ? undefined : niveau,
       inhoud: openingInhoud,
-    }));
+    });
+    // Na de snelstart een ruimer kader: de camera staat verder, zodat de hele woning met lucht erboven in beeld komt.
+    viewer?.toon(ruimKader ? ruimKaderVan(scene) : scene);
+    beeldActueel = !!viewer;
+    if (volgendStandpunt) { viewer?.standpunt(volgendStandpunt); volgendStandpunt = undefined; }
   });
+  toonDingKeuzes();
+}
+
+/** Tik in de 3D: het ding aanduiden en alleen zijn keuzes tonen (een tik naast de woning sluit het paneel). */
+function tikIn3D(id: string | null) {
+  gekozenDing = isDing(id) && !id.startsWith('schaduw_') ? id : null;
+  viewer?.markeer?.(gekozenDing);
+  toonDingKeuzes();
+  if (gekozenDing) $('#pl-3d-keuze').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+function toonDingKeuzes() {
+  const vak = $('#pl-3d-keuze');
+  if (weergave !== '3d') { vak.hidden = true; return; }
+  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id) });
+  // Bestaat het ding niet meer (verwijderd, ongedaan gemaakt): ook de aanduiding weg.
+  if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
+}
+
+/** Na de snelstart: de woning in 3D, vanaf de eerste verdieping, met een beginbeeld waarop lucht en voorgevel te zien zijn. */
+export function toonWoning3D(standpunt: Standpunt = 'ooghoogte') {
+  niveau = 0;
+  selectie = undefined;
+  gekozenDing = null;
+  viewer?.markeer?.(null);
+  zoom?.passendMaken();
+  volgendStandpunt = standpunt;
+  ruimKader = true;
+  toonWeergave('3d');
 }
 
 function punt(ev: PointerEvent | MouseEvent): { x: number; y: number } {
@@ -819,7 +874,7 @@ function toonEigenschappen() {
       kaart.append(
         el('strong', {}, `${p.code} · ${p.naam}`),
         el('p', { class: 'klein' }, r.kenmerken.filter((k) => k.zichtbaar && ['type', 'profiel', 'glas', 'zonwering'].includes(k.code)).map((k) => k.weergave).join(' · ')),
-        el('p', {}, `${prijsTekst(p)} ${r.geldig ? '' : '· heeft fouten'}`),
+        el('p', {}, PRIJZEN ? `${prijsTekst(p)} ${r.geldig ? '' : '· heeft fouten'}` : r.geldig ? 'In orde' : 'Heeft fouten: zie de controles'),
       );
       for (const mm of r.meldingen.slice(0, 3)) kaart.append(el('p', { class: `kleinmelding ${mm.ernst}` }, mm.melding));
       kaart.append(knop('Configureren: draairichting, glas, zonwering …', () => naarPositie(p.id), ''));
@@ -848,7 +903,7 @@ function toonEigenschappen() {
     vak.append(l);
     const af = meubelAfstanden(toestand().plan, m);
     if (af) vak.append(el('p', { class: 'klein' }, `Tot de muren: links ${getal(af.links)} · rechts ${getal(af.rechts)} · boven ${getal(af.boven)} · onder ${getal(af.onder)} cm`));
-    if (t?.prijs) vak.append(el('p', { class: 'klein' }, `Richtprijs ${eur(t.prijs)} (alleen in de offerte als "Inrichting" aan staat).`));
+    if (PRIJZEN && t?.prijs) vak.append(el('p', { class: 'klein prijsdeel' }, `Richtprijs ${eur(t.prijs)} (alleen in de offerte als "Inrichting" aan staat).`));
     const r = el('div', { class: 'knoppenrij' });
     r.append(knop('Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
     vak.append(r);
@@ -950,8 +1005,7 @@ function toonOverzicht() {
   const nF = meldingen.filter((m) => m.ernst === 'fout').length;
   $('#pl-controle-status').textContent = nF ? `${nF} fout${nF === 1 ? '' : 'en'}` : meldingen.length ? `${meldingen.length} aandachtspunt${meldingen.length === 1 ? '' : 'en'}` : 'alles in orde';
   $('#pl-controle-status').className = `status ${nF ? 'fout' : meldingen.length ? 'let-op' : 'ok'}`;
-  const o = berekenHuidigeOfferte();
-  $('#pl-offerte').textContent = `${eur(o.excl)} excl. btw`;
+  $('#pl-offerte').textContent = PRIJZEN ? `${eur(berekenHuidigeOfferte().excl)} excl. btw` : '';
   $<HTMLButtonElement>('#pl-ongedaan').disabled = !kanOngedaan();
 }
 
@@ -970,6 +1024,8 @@ function kiesGereedschap(g: Gereedschap) {
 
 function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   weergave = w;
+  // In 3D op een tablet: de 3D over de hele breedte, het gereedschap (voor de plattegrond) eronder.
+  $('#view-plan').classList.toggle('driedmodus', w === '3d');
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.plWeergave === w));
   // Het tekenvlak met zijn zoomknoppen.
   $('#pl-canvas').parentElement!.hidden = w !== 'plan';
@@ -979,10 +1035,12 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   if (w === 'gevels') gevelNaWijziging();
   $('#pl-3d').hidden = w !== '3d';
   $('#pl-3d-knoppen').hidden = w !== '3d';
+  if (w !== '3d') { gekozenDing = null; viewer?.markeer?.(null); }
+  toonDingKeuzes();
   $('#pl-hint').hidden = w !== 'plan';
   if (w === '3d') {
     if (viewer === undefined) {
-      viewer = maak3D($('#pl-3d'));
+      viewer = maak3D($('#pl-3d'), { opKlik: tikIn3D });
       // De woning staat buiten: lucht, gras en horizon. Snel of Mooi volgens de keuze (op een aanraakscherm eerst Snel).
       viewer?.omgeving?.('buiten');
       viewer?.kwaliteit?.(kwaliteit3D());
@@ -992,6 +1050,17 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
     viewer?.formaat();
     plan3D();
   }
+}
+
+/** Toont de 3D het huidige ontwerp? Na elke wijziging (of een ander project) niet meer, tot de 3D opnieuw getekend is. */
+let beeldActueel = false;
+
+/**
+ * Het beeld van de 3D van de woning zoals ze laatst getoond werd (JPEG als data-URL), of null als de 3D nog niet open
+ * was of sindsdien iets veranderde (dan zou het een ander ontwerp tonen).
+ */
+export function ontwerpBeeld(): string | null {
+  return beeldActueel ? viewer?.beeld?.('image/jpeg', 0.85) ?? null : null;
 }
 
 /** Kwaliteit van de 3D van de woning: de bewaarde keuze, anders Snel op een aanraakscherm en Mooi op een computer. */
@@ -1090,7 +1159,11 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     if (voorbeeldOpening || (gereedschap === 'daklicht' && voorbeeld)) { voorbeeldOpening = undefined; voorbeeld = undefined; render(); }
   });
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | 'gevels' | '3d'));
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.plStandpunt as 'schuin'));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-standpunt]')) b.addEventListener('click', () => {
+    // Een standpunt kiezen: terug naar het gewone kader van de woning.
+    if (ruimKader) { ruimKader = false; plan3D(); volgendStandpunt = b.dataset.plStandpunt as Standpunt; return; }
+    viewer?.standpunt(b.dataset.plStandpunt as 'schuin');
+  });
   $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => { laag = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
@@ -1105,6 +1178,22 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   // Lichtinval: aan of uit bouwt de 3D opnieuw op (verborgen delen als schaduwwerper); dag en uur verzetten alleen de zon.
   startZon({ opnieuw: () => plan3D(), zon: () => viewer?.zon?.(zonVoorKijker()) });
   $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
+  // Stijlen (één tik zet het hele ontwerp in een stijl) en een variant (kopie om te vergelijken), onder de 3D.
+  $('#pl-stijlen').replaceChildren(stijlRij());
+  $('#pl-variant').addEventListener('click', () => {
+    const naam = maakVariant();
+    $('#pl-variant-melding').textContent = `Je werkt nu in "${naam}". Het origineel staat bij Projecten.`;
+  });
+  // Een ander project (snelstart, variant, openen): beginnen op het gelijkvloers, zonder keuze, passend in beeld.
+  opWijziging((bron) => {
+    beeldActueel = false;
+    if (bron !== 'vervang') return;
+    niveau = 0;
+    selectie = undefined;
+    gekozenDing = null;
+    viewer?.markeer?.(null);
+    zoom?.passendMaken();
+  });
   $('#pl-ongedaan').addEventListener('click', () => ongedaan());
   $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());
   const wis = $<HTMLButtonElement>('#pl-leeg');
