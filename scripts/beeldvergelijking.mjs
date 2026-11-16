@@ -30,6 +30,7 @@ const REFERENTIE = join(ROOT, 'beeldtest', 'referentie');
 const UITSLAG = join(ROOT, 'beeldtest', 'uitslag');
 const ZETEL = join(ROOT, 'packages', 'demo-web', 'dist', 'configurator-demo.html');
 const BOUW = join(ROOT, 'packages', 'bouw-web', 'dist', 'bouw-configurator.html');
+const KIJKER = join(ROOT, 'packages', 'bouw-web', 'dist', 'bouw-kijker.html');
 
 /**
  * Hoeveel een pixel mag afwijken (kleurverschil, 0–1) en welk deel van het beeld anders mag zijn. Dezelfde versie geeft
@@ -117,6 +118,10 @@ const BOUWBEELDEN = [
   { naam: 'bouw-schuin-plan', schuin: 'plan' },
   { naam: 'bouw-schuin-3d', schuin: '3d', toetsen: 'L9U2Z3' },
   { naam: 'bouw-schuin-binnen', schuin: 'binnen', toetsen: 'R5U4Z1' },
+  // Techniek voor de installateur (ronde 10, 16/11): de configurator toont ze nog niet, dus uit de motor (tsx) in de losse
+  // kijker: de uitgeruste voorbeeldwoning in de uitgezette weergave, en de tekening van het gelijkvloers met de tekens.
+  { naam: 'bouw-techniek', techniek: '3d', toetsen: 'O1' },
+  { naam: 'bouw-techniek-plan', techniek: 'plan' },
 ];
 
 /**
@@ -354,6 +359,36 @@ async function maakBeelden() {
     }
     await p.close();
   }
+  const techniek = bouw.filter((x) => x.techniek);
+  if (techniek.length) {
+    // De gegevens uit de motor (core/voorbeelden/techniekbeeld.ts): het 3D-pakket en de tekening.
+    const tsx = join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'tsx.cmd' : 'tsx');
+    const { pakket, plan } = JSON.parse(execSync(`"${tsx}" packages/core/voorbeelden/techniekbeeld.ts`, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 }).toString());
+    const p = await nieuwePagina(KIJKER);
+    await p.goto(`file://${KIJKER}`);
+    await p.waitForTimeout(1000);
+    for (const b of techniek) {
+      process.stdout.write(`  ${b.naam} … `);
+      if (b.techniek === 'plan') {
+        const t = await browser.newPage({ viewport: { width: 1500, height: 1100 }, deviceScaleFactor: 1 });
+        await t.setContent(`<!doctype html><body style="margin:0;background:#fff">${plan}</body>`);
+        await t.waitForTimeout(300);
+        beelden.set(b.naam, PNG.sync.read(await t.locator('svg').first().screenshot()));
+        await t.close();
+      } else {
+        // Het pakket als bericht aan de kijker (zoals een pagina die hem insluit), dan schuin en een stap verder weg.
+        await p.evaluate((x) => window.postMessage(x, '*'), pakket);
+        await p.waitForTimeout(1000);
+        await p.click('[data-standpunt="schuin"]');
+        await p.locator('#drie-d canvas').focus();
+        const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
+        for (const [, k, n] of (b.toetsen ?? '').matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+        beelden.set(b.naam, png(await wachtTotStil(p, '#drie-d canvas')));
+      }
+      console.log('klaar');
+    }
+    await p.close();
+  }
   await browser.close();
   return { beelden, fouten };
 }
@@ -382,7 +417,7 @@ if (!zonderBouw) {
   console.log('Bouwen …');
   execSync('npm run build -w @configurator/demo-web && npm run build -w @configurator/bouw-web', { cwd: ROOT, stdio: 'ignore' });
 }
-for (const pad of [ZETEL, BOUW]) if (!existsSync(pad)) { console.error(`Niet gevonden: ${pad} (eerst bouwen)`); process.exit(2); }
+for (const pad of [ZETEL, BOUW, KIJKER]) if (!existsSync(pad)) { console.error(`Niet gevonden: ${pad} (eerst bouwen)`); process.exit(2); }
 
 console.log('Beelden maken (Chromium zonder grafische kaart) …');
 const { beelden, fouten } = await maakBeelden();

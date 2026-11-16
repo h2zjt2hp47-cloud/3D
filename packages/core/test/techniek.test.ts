@@ -213,6 +213,9 @@ describe('controles op de techniek (signalen, geen berekening)', () => {
     const ac = tegenWand(plan, t('airco_wand', 'ac', 300, 40, { hoogte: 150 }), tc.toestellen.airco_wand!)!.toestel;
     expect(techniekMeldingen(metTechniek(plan, [ac])).map((m) => m.melding)).toEqual(['Airco binnenunit (wand) hangt in een raam. Verschuif het langs de muur of zet het hoger of lager.']);
     expect(techniekMeldingen(metTechniek(plan, [{ ...ac, x: 100 }]))).toEqual([]);
+    // Een buitenunit voor de buitendeur (rechts, 150 tot 250 cm langs de muur).
+    const wp = tegenWand(plan, t('warmtepomp_buiten', 'wp', 700, 200), tc.toestellen.warmtepomp_buiten!)!.toestel;
+    expect(techniekMeldingen(metTechniek(plan, [wp])).map((m) => m.melding)).toEqual(['Warmtepomp buitenunit (lucht-water) staat voor een deur. Verschuif het langs de muur.']);
     expect(techniekMeldingen(metTechniek(plan, [t('stopcontact', 's', 300, 200)])).map((m) => m.melding)).toEqual(['Stopcontact hangt niet tegen een wand. Zet het tegen de dichtste wand.']);
   });
   it('een leiding die nergens begint of eindigt, of naar een toestel dat er niet meer is', () => {

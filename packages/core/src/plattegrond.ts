@@ -1396,8 +1396,9 @@ function controleerTechniek(plan: Plattegrond, cat: PlanCatalogus | undefined, u
       if (!type) { uit.push({ ernst: 'fout', toestel: t.id, melding: `${pre}Techniek: een toestel van een onbekend type (${t.type}).` }); continue; }
       const naam = naamVan(t, type);
       const binnen = ruimteOp(p, t.x, t.y);
-      // Hangt het waar het hoort?
-      const tegen = t.aan === 'wand' || t.aan === 'buiten' || t.aan === 'vloer' ? wandAchter(t, type, muren, t.aan === 'wand' ? 3 : 25) : undefined;
+      // Hangt het waar het hoort? Een toestel op de vloer of buiten staat tegen een muur als het er hoogstens zijn vrije
+      // ruimte achter plus 25 cm van staat.
+      const tegen = t.aan === 'wand' || t.aan === 'buiten' || t.aan === 'vloer' ? wandAchter(t, type, muren, t.aan === 'wand' ? 3 : 25 + (type.vrij?.achter ?? 0)) : undefined;
       if (t.aan === 'wand' && !tegen) uit.push({ ernst: 'waarschuwing', toestel: t.id, melding: `${pre}${naam} hangt niet tegen een wand. Zet het tegen de dichtste wand.` });
       if ((t.aan === 'plafond' || t.aan === 'vloer' || t.aan === 'dak') && !binnen) uit.push({ ernst: 'waarschuwing', toestel: t.id, melding: `${pre}${naam} staat buiten de woning.` });
       if (t.aan === 'buiten' && binnen) uit.push({ ernst: 'waarschuwing', toestel: t.id, ruimte: binnen.id, melding: `${pre}${naam} staat binnen, in ${binnen.naam}; het hoort buiten.` });
@@ -1434,7 +1435,8 @@ function controleerTechniek(plan: Plattegrond, cat: PlanCatalogus | undefined, u
           const hoog = Math.min(t.hoogte + m3.h, o.borstwering + o.hoogte) - Math.max(t.hoogte, o.borstwering);
           if (langs > 1 && hoog > 1) {
             const wat = o.soort === 'raam' || o.soort === 'schuifraam' ? 'een raam' : o.soort === 'garagepoort' ? 'een garagepoort' : o.soort === 'doorgang' ? 'een doorgang' : 'een deur';
-            uit.push({ ernst: 'waarschuwing', toestel: t.id, opening: o.id, melding: `${pre}${naam} hangt in ${wat}. Verschuif het langs de muur of zet het hoger of lager.` });
+            const melding = t.aan === 'wand' ? `hangt in ${wat}. Verschuif het langs de muur of zet het hoger of lager.` : `staat voor ${wat}. Verschuif het langs de muur.`;
+            uit.push({ ernst: 'waarschuwing', toestel: t.id, opening: o.id, melding: `${pre}${naam} ${melding}` });
           }
         }
       }
