@@ -348,6 +348,8 @@ export function vormVanDeel(q: Deel): Punt[] {
   const k = kaderVanPunten(v);
   const zelfde = (a: number, b: number) => Math.abs(a - b) < 1e-6;
   if (zelfde(k.x, q.x) && zelfde(k.y, q.y) && zelfde(k.b, q.b) && zelfde(k.d, q.d)) return v;
+  // Een kader zonder breedte of diepte (nog niet ingevuld): de omtrek zelf.
+  if (!(q.b > 0) || !(q.d > 0)) return v;
   const fx = k.b > 1e-6 ? q.b / k.b : 1, fy = k.d > 1e-6 ? q.d / k.d : 1;
   return v.map(([x, y]) => fijnPunt([q.x + (x - k.x) * fx, q.y + (y - k.y) * fy]));
 }
@@ -1458,9 +1460,17 @@ function dakrandStukken(plan: Plattegrond, n: number): DakrandStuk[] {
       let vrij: [number, number][] = [[Math.min(...langs), Math.max(...langs)]];
       for (const b of boven) {
         const vb = muurVlak(b, boven);
-        // Het grondvlak van de muur erboven als bolle veelhoek (een schuine muur: haar kader rond de as, schuin).
-        const bv = b.as === 's' ? [langsAs(b, b.van, b.lijn - b.dikte / 2), langsAs(b, b.tot, b.lijn - b.dikte / 2), langsAs(b, b.tot, b.lijn + b.dikte / 2), langsAs(b, b.van, b.lijn + b.dikte / 2)] : rechthoekVorm(vb);
-        const samen = snijVeelhoek(vorm, metDeKlok(bv));
+        // Wat de muur erboven van deze muur bedekt: de doorsnede van de twee grondvlakken (een van beide moet bol zijn; anders
+        // de strook rond de as van de schuine muur erboven).
+        const bv = metDeKlok(vb.punten ?? rechthoekVorm(vb)), hier = metDeKlok(vorm);
+        if (m.as === 's' && b.as === 's' && gelijk(b.lijn, m.lijn) && Math.abs(b.richting![0] * m.richting![1] - b.richting![1] * m.richting![0]) < 1e-3) {
+          // Dezelfde schuine muur erboven: wat haar grondvlak langs de as beslaat.
+          const sb = bv.map((q) => opAs(m, q)[0]);
+          vrij = zonder(vrij, Math.min(...sb), Math.max(...sb));
+          continue;
+        }
+        const samen = isBol(bv) ? snijVeelhoek(hier, bv) : isBol(hier) ? snijVeelhoek(bv, hier)
+          : snijVeelhoek(hier, metDeKlok([langsAs(b, b.van, b.lijn - b.dikte / 2), langsAs(b, b.tot, b.lijn - b.dikte / 2), langsAs(b, b.tot, b.lijn + b.dikte / 2), langsAs(b, b.van, b.lijn + b.dikte / 2)]));
         if (samen.length < 3 || veelhoekOppervlakte(samen) < 1) continue;
         const s = samen.map((q) => opAs(m, q)[0]);
         vrij = zonder(vrij, Math.min(...s), Math.max(...s));

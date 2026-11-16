@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  buitenRichting, controleerPlan, dakOpbouw, gevelAanzichten, gevelKeuzeVan, gevelOppervlaktes, meubelAfstanden, murenVan, opMuur, plattegrond3D,
+  buitenRichting, controleerPlan, dakOpbouw, gevelAanzichten, gevelKeuzeVan, gevelOppervlaktes, meubelAfstanden, murenVan, muurVlak, opMuur, plattegrond3D,
   ruimteMaten, splitsRuimtes, tekenRuimteIn, veelhoekOppervlakte, verfGevel, vlakSleutel, vormenVan, zetOmtrek, zonOpGevels, zonOpRichting,
   type DakKeuze, type Opening, type Plattegrond, type Punt, type Ruimte,
 } from '../src/index.js';
@@ -185,6 +185,44 @@ describe('oppervlaktes, controles en indelen met een vrije vorm', () => {
     expect(rechts!.omtrek?.length).toBe(5);
     expect(ruimteMaten(p, links!).bruto + ruimteMaten(p, rechts!).bruto).toBeCloseTo(25, 6);
     expect(murenVan(p).some((m) => m.as === 'v' && m.lijn === 300 && m.soort === 'binnen')).toBe(true);
+  });
+
+  it('indelen dwars door de schuine zijde: twee schuine muren op één lijn, de wand tot in haar vlak', () => {
+    const p = aanbouw();
+    const voor = murenVan(p).find((m) => m.as === 's')!;
+    const brutoVoor = ruimteMaten(p, p.ruimtes[1]!).bruto;
+    splitsRuimtes(p, 0, 'h', 1000, 300, 300, (oud) => ({ ...oud, id: 'aan2', naam: 'Aanbouw 2', delen: undefined }));
+    const muren = murenVan(p);
+    const schuin = muren.filter((m) => m.as === 's');
+    expect(schuin.length).toBe(2);
+    expect(schuin.every((m) => Math.abs(m.lijn - voor.lijn) < 1e-6)).toBe(true);
+    expect(schuin.reduce((t, m) => t + m.tot - m.van, 0)).toBeCloseTo(voor.tot - voor.van, 6);
+    expect(schuin.map((m) => m.min).sort()).toEqual(['aan', 'aan2']);
+    // De nieuwe wand (10 cm) loopt tot het verste punt waar haar zijvlakken het binnenvlak van de schuine muur raken.
+    const wand = muren.find((m) => m.as === 'h' && m.lijn === 1000)!;
+    expect(wand.soort).toBe('binnen');
+    const v = muurVlak(wand, muren), binnenvlakX = (y: number) => 700 + (y - 800) / 4 - 15 / c;
+    expect(v.x + v.b).toBeCloseTo(binnenvlakX(1005), 6);
+    expect(ruimteMaten(p, p.ruimtes[1]!).bruto + ruimteMaten(p, p.ruimtes[2]!).bruto).toBeCloseTo(brutoVoor, 6);
+    // Het raam in de schuine muur lag over de snede (y = 1000 is het midden van de muur): het staat niet meer op een muur.
+    expect(controleerPlan(p).some((m) => m.opening === 'r' && m.melding.includes('niet (volledig) op een muur'))).toBe(true);
+  });
+
+  it('een vrije vorm op een verdieping: vloerplaat met trapgat, dakrand alleen waar geen muur erboven staat', () => {
+    const v: Punt[] = [[0, 0], [600, 0], [600, 250], [400, 450], [0, 450]];
+    const p = plan([vrij('b0', v), vrij('b1', v, { niveau: 1 })], [], { dak: plat, verdiepingen: [{ naam: 'Gelijkvloers' }, { naam: 'Verdieping 1' }] });
+    p.meubels.push({ id: 'trap', type: 'trap', x: 30, y: 60, b: 100, d: 300, rotatie: 0 });
+    const s = plattegrond3D(p, planCatalogus).blokken;
+    const platen = s.filter((b) => b.code === 'plaat_b1');
+    expect(platen.every((b) => b.vorm === 'prisma' && b.as === 'y')).toBe(true);
+    // De vloerplaat: de vijfhoek min het trapgat (100 × 300).
+    expect(platen.reduce((t, b) => t + veelhoekOppervlakte(b.doorsnede as Punt[]), 0)).toBeCloseTo(250000 - 30000, 3);
+    expect(platen.every((b) => b.y === 270)).toBe(true);
+    // Geen dakrand op het gelijkvloers (de verdieping staat er helemaal op), wel bovenaan, ook langs de schuine muur.
+    const o = dakOpbouw(p)!;
+    expect(o.dakranden.filter((d) => d.niveau === 0).map((d) => [d.muur.id, d.van, d.tot])).toEqual([]);
+    expect(o.dakranden.filter((d) => d.niveau === 1 && d.muur.as === 's').length).toBe(1);
+    expect(controleerPlan(p).some((m) => m.melding.includes('geen trap'))).toBe(false);
   });
 
   it('ruimte in ruimte: een kast in de hoek van een vrije vorm laat één ruimte in twee bolle delen over', () => {

@@ -221,3 +221,25 @@ describe('aanleg voor een schuine gevel', () => {
     expect(Math.abs(t.vlakRichting!)).toBe(45);
   });
 });
+
+describe('de tekening van een vrije vorm', () => {
+  it('vloer als veelhoek, schuine muur als veelhoek, deurboog gedraaid, lengte langs de muur', () => {
+    const r = ruimte('v', 0, 0, 0, 0);
+    zetOmtrek(r, [[0, 380], [820, 380], [820, 900], [300, 900], [0, 600]]);
+    const p: Plattegrond = { ...plan(), ruimtes: [r], openingen: [] };
+    const s = murenVan(p).find((m) => m.as === 's')!;
+    p.openingen.push({ id: 'deur', soort: 'buitendeur', ...opMuur(s, (s.van + s.tot) / 2), breedte: 100, hoogte: 220, borstwering: 0, scharnier: 'begin', naarPlus: false });
+    const svg = tekenPlattegrond(p, planCatalogus);
+    // De vloer: de vijf hoekpunten (met de klok mee).
+    expect(svg).toContain('<polygon data-soort="ruimte" data-id="v" points="0,380 820,380 820,900 300,900 0,600"');
+    // De schuine muur: haar grondvlak als veelhoek (met verstek tegen de liggende en de staande muur).
+    const muur = /<polygon data-soort="muur" data-id="s45_[^"]*" points="([^"]*)"/.exec(svg)!;
+    expect(muur[1]!.split(' ').length).toBeGreaterThanOrEqual(4);
+    // De deur: getekend als in een staande muur, in een groep die naar de richting van de schuine muur draait (45°).
+    const f = Math.round(Math.SQRT1_2 * 1e6) / 1e6;
+    expect(svg).toContain(`<g transform="matrix(${f} ${-f} ${f} ${f} 0 0)"><g data-soort="opening" data-id="deur"`);
+    expect(/data-id="deur"[\s\S]*?<path d="M [^"]* A 92 92 0 0 [01] /.test(svg)).toBe(true);
+    // De lengte van de schuine muur op de as: √(300² + 300²) = 424.
+    expect(svg).toContain('>424</text>');
+  });
+});

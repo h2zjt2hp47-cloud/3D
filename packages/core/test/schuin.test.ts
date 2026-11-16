@@ -103,6 +103,10 @@ describe('een ruimte met een vrije vorm', () => {
     expect(vormVanDeel({ ...r, b: 800 })).toEqual([[0, 0], [800, 0], [600, 300], [0, 300]]);
   });
 
+  it('een kader zonder maat (nog niet ingevuld) laat de omtrek zoals ze is', () => {
+    expect(vormVanDeel({ x: 0, y: 0, b: 0, d: 0, omtrek: [[10, 10], [400, 10], [300, 300], [10, 300]] })).toEqual([[10, 10], [400, 10], [300, 300], [10, 300]]);
+  });
+
   it('vormFouten in gewone taal', () => {
     expect(vormFouten([[0, 0], [400, 0], [300, 300], [0, 300]])).toEqual([]);
     expect(vormFouten([[0, 0], [400, 300], [400, 0], [0, 300]])[0]).toContain('kruisen elkaar');
