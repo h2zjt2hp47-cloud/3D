@@ -131,6 +131,12 @@ function markeerPost(x: { dingen?: string[]; markeer?: string[] } | undefined) {
   viewer.markeer?.(voor.length ? `~${voor.join(',')}` : null);
 }
 
+/** Duidt de delen aan van alle posten die openstaan (of niets). */
+function markeerOpen() {
+  const open = [...document.querySelectorAll<HTMLDetailsElement>('#werklijst details[open]')].map((d) => pakket?.posten?.[Number(d.dataset.post)]).filter((x) => !!x);
+  markeerPost(open.length ? { markeer: [...new Set(open.flatMap((x) => x!.markeer ?? (x!.dingen ?? []).map((d) => `${d}.`)))] } : undefined);
+}
+
 /** De lijst van de posten van het ontwerp (dicht tot je er een openklapt), of niets als het pakket er geen heeft. */
 function toonPosten(p: Pakket3D) {
   const lijst = $('#werklijst');
@@ -163,10 +169,8 @@ function toonPosten(p: Pakket3D) {
       ul.append(li);
     }
     d.append(s, ul);
-    d.addEventListener('toggle', () => {
-      if (d.open) markeerPost(x);
-      else if (!lijst.querySelector('details[open]')) markeerPost(undefined);
-    });
+    // Aangeduid: de delen van alle posten die openstaan (ook na een tik in de 3D, die er meer tegelijk opent).
+    d.addEventListener('toggle', markeerOpen);
     lijst.append(d);
   }
 }
@@ -177,7 +181,8 @@ function tikOpDing(ding: string | null) {
   const deze = new Set(pakket.posten.flatMap((x, i) => (ding && x.dingen?.includes(ding) ? [String(i)] : [])));
   const lijst = [...document.querySelectorAll<HTMLDetailsElement>('#werklijst details')];
   for (const d of lijst) d.open = deze.has(d.dataset.post ?? '');
-  viewer?.markeer?.(deze.size && ding ? ding : null);
+  // De delen van die posten aanduiden (bv. alleen het platte dak van de uitbouw, niet het dak van de bestaande woning).
+  markeerOpen();
   lijst.find((d) => d.open)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
