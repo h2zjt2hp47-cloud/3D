@@ -334,7 +334,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 9 | 2 | **Klaar (16/11, hoofdstukken 20 en 25)**, ook op de schermen: **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
 | 10 | 2 | **Klaar (16/11, hoofdstukken 24 en 28), ook op het scherm; zonwering en avondbeeld nog niet:** **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | *(loopt sinds 16/11)* **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik; de bestaande woning neutraal en buiten de telling; tussen twee buren; werk zonder ding (afbraak, container) als regel; de uitbouw uit hoofdstuk 10 als voorbeeldproject | M |
-| 11b | 2 | *(loopt sinds 16/11, tegelijk met 11)* **Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering | M |
+| 11b | 2 | ~~**Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering~~ **klaar** (hoofdstuk 30; het paneel in de plattegrond heet nog *Lichtkoepel*) | M |
 | 12 | 2 | **Vloerafwerking** (legpatroon, formaat, voeg, plinten), het **plafond** en de rest van de afwerkingen | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
 
@@ -1015,4 +1015,46 @@ rekening met toestellen die er al staan.
 - Na het verslepen van een leidingpunt kiest de app de kortste knik; een lus kan daardoor rechtgetrokken worden.
 - De zoektocht naar de beste volgorde in de technische ruimte is niet gemeten op een echte tablet.
 - Na de technische ruimte melden de controles natte ruimtes zonder afvoer: de collector telt als sanitair (regel van de motor, de melding zegt het).
+
+## 29. Opmerkingen van Jonas op 16/11: techniek in de 3D en zoomen
+
+Jonas: "als techniek wordt toegevoegd dan is dit niet zichtbaar in de 3D, het zoomen is ook wel gevoelig".
+
+**Techniek in de 3D.** De techniek stond wel in de 3D, maar je zag ze niet:
+
+| Weg naar de 3D | Wat je zag | Nu |
+|---|---|---|
+| Vanuit de techniek naar *3D* (*Uitgezet*) | Een stopcontact als stipje van 20 cm op de hele woning; de verdieping zweefde als losse kaders boven het gelijkvloers. | Alleen de verdieping waarop je werkt, groter in beeld. Kleine toestellen zijn 30 cm, in de kleur van hun vak, met een schijf op de vloer en een dun staafje naar het toestel. Een tik op de schijf kiest het toestel. |
+| *In de woning* | Een gesloten woning met dak: alles zit binnen. | Vanzelf de verdieping waarop je werkt, met lage muren en zonder dak; de toestellen zoals in *Uitgezet*. |
+| Eerst *← Gereedschap*, dan *3D* (*Afgewerkt*) | Geen techniek (bewust: zo ziet de klant de woning). | Nog altijd zonder; de knop ernaast heet *Techniek (n)* met het aantal toestellen en leidingen. |
+| Configurator, overzicht, klantweergave, bestand voor de klant | Geen techniek (bewust). | Ongewijzigd; het overzicht heeft de kaart *Techniek*. |
+
+**Zoomen.** In de 3D zoomde elke wielgebeurtenis 10 %, hoe klein de beweging ook was. Een trackpad of knijpen geeft tientallen
+kleine gebeurtenissen per seconde: dan schoot het beeld weg (40 kleine stappen gaven factor 45). Nu zoomen de 3D en de tekening
+evenredig met de beweging: één klik met een muiswiel ±14 %, 40 kleine stappen van een trackpad ±20 %, knijpen volgt de vingers,
+nooit meer dan ±25 % per gebeurtenis. Ctrl met een gewoon muiswiel in de tekening halveerde het beeld per klik, nu ±14 %. Knijpen
+op de trackpad in Safari op een Mac kwam niet binnen (dan zoomde de hele pagina): dat wordt nu opgevangen, zonder dubbel te zoomen
+op een iPad. Geldt ook voor de zeteldemo.
+
+**Nagekeken:** met nagebootste gebeurtenissen in Chromium, niet met een echte trackpad of tablet. **Open:** Jonas probeert het op
+zijn eigen toestel; techniek in het bestand voor de klant (bv. de buitenunit of de laadpaal) is een vraag aan Jonas.
+
+## 30. Gebouwd op 16/11: detail van ramen en dakramen (ronde 11b)
+
+| Wat | Inhoud |
+|---|---|
+| **Twee of drie screens op één raam** | Keuze *Aantal screens* (1, 2 of 3) en *Verdeling*: gelijk, of op de stijlen tussen de vakken (bij een schuifraam waar de delen elkaar raken). Eén berekening voor tekening, 3D, stuklijst en regels: per screen een kast, doek en onderlat, een middengeleider ertussen, één motor per screen. Regels: hoogstens 5 m en minstens 50 cm per screen. *Zonwering in de 3D*: half of helemaal neer. Een tegel breder dan 5 m geeft vanzelf een screen meer; *Screen* in het keuzepaneel van de 3D op een raam van 5,4 m geeft er meteen twee. |
+| **Ventilatie op het raam** | Eén keuze: *Geen*, *Zelfregelend rooster* of *Raamventilator* (een opzetkast van 10 cm boven het kader, binnen, met sleuven en een knop; buiten lamellen). De ventilator komt in de stuklijst; de elektrische aansluiting staat bij "niet inbegrepen". Oude projecten met een rooster blijven een rooster. De controle *droge ruimte zonder ventilatie* telt beide als luchttoevoer. |
+| **Plat dakraam met screen** | Nieuw in de catalogus: platte dakramen 80 × 80, 100 × 100, 120 × 120 en 100 × 150, op een opstand die 3° helt. In de kaart *Dak*: de teller heet *Dakramen*, de keuze *Soort*, *Geen / Screen* voor alle dakramen, *In de 3D* half of helemaal dicht, en per dakraam. Ook in de plattegrond (teken), het gevelaanzicht en het overzicht. |
+| **Wat niet verandert** | Een raam of plan zonder de nieuwe keuzes: zelfde berekening, tekening, 3D en samenvatting (51 vastgelegde gevallen, ook voor de werf), de 54 bestaande beelden gelijk. Het 3D-pakket blijft versie 4. Drie nieuwe beelden: `bouw-twee-screens`, `bouw-ventilator`, `bouw-platte-dakramen`. |
+
+Gemeten (groot scherm en tablet gelijk): hef-schuif 4,00 × 2,35 m met twee screens vanuit de 3D in 8 tikken; een raamventilator in
+5; drie platte dakramen 120 × 120 met screen in 8.
+
+**Wat nog niet kan:** in de plattegrond heet het paneel van een dakraam nog *Lichtkoepel* en staat er geen zonwering in (dat zit in
+de kaart *Dak*); het gevelaanzicht tekent één kast boven een raam met meerdere screens; *Te hoog voor de muur* telt de opzetkast niet
+mee (zoals de zonweringskast); geen zonwering op koepels of lichtstraten.
+
+**Open punten (na te vragen bij een vakman):** 5 m en 50 cm per screen, 3° helling, een opzetkast van 10 cm en een ventilator van
+50 cm zijn eigen richtwaarden; hoe een monteur twee screens op een hef-schuif in drie delen verdeelt ("op de stijlen" geeft ±3,3 + 1,7 m).
 
