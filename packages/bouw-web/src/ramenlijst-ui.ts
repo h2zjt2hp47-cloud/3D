@@ -102,7 +102,11 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
     const k = p.keuzes;
     const td = (inhoud: Node | string, cls = '') => { const c = el('td', cls ? { class: cls } : {}); c.append(inhoud); return c; };
     if (p.model !== 'RAAM') {
-      tr.append(td(p.code, 'code'), td(p.naam), el('td', { colspan: '7', class: 'klein' }, `${MODELLEN[p.model].label}: aanpassen in de configurator`), td(String(p.aantal), 'num'), td(zonderPrijs(p) ? '—' : eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'));
+      // Een ander model (garagepoort, aanbouw): dezelfde kolommen als een raam, zodat de koppen ook op een smal scherm
+      // kloppen, maar alleen om te lezen; aanpassen kan in de configurator.
+      const maat = (code: string) => (typeof k[code] === 'number' ? String(k[code]) : '—');
+      tr.append(td(p.code, 'code'), td(p.naam), td(MODELLEN[p.model].label), td('aanpassen in de configurator', 'klein'), td(maat('breedte'), 'num'), td(maat('hoogte'), 'num'),
+        td('—'), td('—', 'num'), td(String(p.aantal), 'num'), td(zonderPrijs(p) ? '—' : eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'));
     } else {
       const soort = String(k.type ?? 'raam');
       const mini = el('span', { class: 'mini-lijst' });
