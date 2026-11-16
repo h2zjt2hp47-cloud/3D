@@ -32,6 +32,15 @@ export interface ZoomOpties {
   wielZoomt?: () => boolean;
 }
 
+/** Of de Ctrl-toets echt ingedrukt is (niet de ctrlKey die de browser zelf zet bij knijpen op een trackpad). */
+let ctrlToets = false;
+if (typeof window !== 'undefined') {
+  const zet = (e: KeyboardEvent) => { ctrlToets = e.ctrlKey; };
+  window.addEventListener('keydown', zet, true);
+  window.addEventListener('keyup', zet, true);
+  window.addEventListener('blur', () => { ctrlToets = false; });
+}
+
 /**
  * Hoeveel één wielgebeurtenis zoomt (> 1 = inzoomen), evenredig met de beweging. Een muiswiel geeft per klik een grote
  * stap (±100 px), een trackpad tientallen kleine per seconde, en knijpen op een trackpad komt binnen als wiel met Ctrl en
@@ -42,8 +51,11 @@ export interface ZoomOpties {
 export function wielFactor(e: Pick<WheelEvent, 'deltaY' | 'deltaMode' | 'ctrlKey'>): number {
   // Regels of pagina's (Firefox, sommige muizen) naar pixels.
   const px = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
-  // Knijpen: Ctrl met kleine stappen. Ctrl met een gewoon muiswiel (stappen van ±100) zoomt zoals het wiel zonder Ctrl.
-  const knijpen = e.ctrlKey && Math.abs(px) < 50;
+  // Knijpen: Ctrl met kleine stappen, zonder dat de Ctrl-toets echt ingedrukt is (de browser zet ctrlKey zelf bij knijpen
+  // op een trackpad). Met de toets ingedrukt en scrollen op een trackpad (de hint vraagt dat) komen er ook veel kleine
+  // stappen: dat zoomt zoals een muiswiel, rustig (16/11, doorloop A13). Ctrl met een gewoon muiswiel (stappen van ±100)
+  // zoomt ook zoals het wiel zonder Ctrl.
+  const knijpen = e.ctrlKey && !ctrlToets && Math.abs(px) < 50;
   const stap = knijpen ? 0.01 : 0.0015;
   return Math.exp(-Math.max(-0.22, Math.min(0.22, px * stap)));
 }

@@ -4,7 +4,7 @@
  * daklicht van de teller (koepel, lichtstraat of plat dakraam) en de buitenzonwering op de platte dakramen.
  * De keuzes zijn gegevens in het plan (`plan.dak`, `plan.daklichten`); de 3D, de gevels en de controles volgen vanzelf.
  */
-import { dakOpbouw, standaardDak, type DakBedekking, type DakKeuze, type DakLicht, type DakVorm, type GevelKant, type PlanSvgOpties } from '../../core/src/index.js';
+import { dakOpbouw, planMetDak, standaardDak, type DakBedekking, type DakKeuze, type DakLicht, type DakVorm, type GevelKant, type PlanSvgOpties } from '../../core/src/index.js';
 import { dakCatalogus, daklichtCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { daklichtenOpDak, verdeelDaklichten } from '../../core/voorbeelden/snelstart.js';
 import { el, getal, getalVeld, keuzelijst } from './hulp.js';
@@ -13,8 +13,8 @@ import { toestand, wijzig, type Toestand } from './staat.js';
 /** Codes van de daklichten die een lichtstraat zijn (voor de tekening). */
 export const LICHTSTRATEN = new Set(Object.entries(daklichtCatalogus).filter(([, t]) => t.vorm === 'lichtstraat').map(([code]) => code));
 
+// Geen knop "Geen" meer (16/11, doorloop A3): een gebouw zonder dakkeuze staat overal met een plat dak, ook in de 3D.
 const VORMEN: { code: DakVorm | 'geen'; label: string; titel: string }[] = [
-  { code: 'geen', label: 'Geen', titel: 'Zoals vroeger: geen dak op de bovenste verdieping' },
   { code: 'plat', label: 'Plat', titel: 'Plat dak met dakrand; hier kunnen lichtkoepels in' },
   { code: 'lessenaar', label: 'Lessenaar', titel: 'Eén schuin dakvlak, van een hoge naar een lage gevel' },
   { code: 'zadel', label: 'Zadel', titel: 'Twee dakvlakken met een nok, en twee topgevels' },
@@ -52,12 +52,12 @@ export function kiesVorm(vorm: DakVorm | 'geen') {
 const zet = (f: (d: DakKeuze) => void) => wijzig('plan', (t) => f(metDak(t)));
 export const zetDak = zet;
 
-/** De dakvormen als knoppen; `metGeen` = ook "Geen" (zoals vroeger: geen dak op de bovenste verdieping). */
-export function dakVormKnoppen(metGeen = true): HTMLElement {
+/** De dakvormen als knoppen. Zonder keuze staat Plat aan: zo staat het dak in elke weergave (doorloop A3). */
+export function dakVormKnoppen(): HTMLElement {
   const dak = toestand().plan.dak;
   const vormen = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Dakvorm' });
-  for (const v of VORMEN.filter((x) => metGeen || x.code !== 'geen')) {
-    const b = el('button', { type: 'button', 'data-dak-vorm': v.code, 'aria-pressed': String((dak?.vorm ?? 'geen') === v.code), title: v.titel }, v.label);
+  for (const v of VORMEN) {
+    const b = el('button', { type: 'button', 'data-dak-vorm': v.code, 'aria-pressed': String((dak?.vorm ?? 'plat') === v.code), title: v.titel }, v.label);
     b.addEventListener('click', () => kiesVorm(v.code));
     vormen.append(b);
   }
@@ -191,19 +191,17 @@ export function bedekkingKeuze(voor: 'plat' | 'hellend', nu: DakBedekking, kies:
 export function toonDak() {
   const vak = document.getElementById('pl-dak');
   if (!vak) return;
-  const plan = toestand().plan;
+  // Zonder keuze: het standaard platte dak, zoals de 3D, de constructie en het bestand voor de klant het tonen (doorloop A3).
+  const plan = planMetDak(toestand().plan);
+  const gekozen = !!toestand().plan.dak;
   const dak = plan.dak;
   const opbouw = dakOpbouw(plan);
   const kop = el('div', { class: 'kaartkop' });
-  const samenvatting = !dak ? 'niet gekozen' : opbouw?.hellend ? `${dak.vorm === 'zadel' ? 'zadeldak' : 'lessenaarsdak'} ${opbouw.hellend.helling}°` : 'plat dak';
+  const samenvatting = !dak ? 'niet gekozen' : !gekozen ? 'plat dak (nog niet gekozen)' : opbouw?.hellend ? `${dak.vorm === 'zadel' ? 'zadeldak' : 'lessenaarsdak'} ${opbouw.hellend.helling}°` : 'plat dak';
   kop.append(el('h2', {}, 'Dak'), el('span', { class: 'klein' }, samenvatting));
   vak.replaceChildren(kop, dakVormKnoppen());
-  if (!dak) {
-    vak.append(el('p', { class: 'klein' }, plan.daklichten?.length
-      ? 'Er liggen lichtkoepels in het plan: het dak is plat, met EPDM. Kies een vorm om de bedekking te bepalen.'
-      : 'Kies een dakvorm. Zonder keuze blijft de bovenste verdieping in 3D open, zoals vroeger.'));
-    return;
-  }
+  if (!dak) return;
+  if (!gekozen) vak.append(el('p', { class: 'klein' }, 'Nog geen keuze: overal staat een plat dak met EPDM. Kies een vorm of een bedekking om het aan te passen.'));
   const rij = (label: string, inhoud: HTMLElement) => { const l = el('label', { class: 'eig' }); l.append(el('span', {}, label), inhoud); return l; };
   if (dak.vorm !== 'plat') {
     const maten = el('div', { class: 'maten' });
@@ -268,4 +266,4 @@ export function dakLijnen(niveau: number): PlanSvgOpties['dakLijnen'] {
 }
 
 /** Is er iets te tonen met de schakelaar "Dak tonen" in de 3D? */
-export const heeftDak = () => !!dakOpbouw(toestand().plan);
+export const heeftDak = () => !!dakOpbouw(planMetDak(toestand().plan));

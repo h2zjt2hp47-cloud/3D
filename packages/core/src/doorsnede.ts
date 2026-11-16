@@ -114,8 +114,10 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
     if (c.hellend && d.plaats === 'buitenwand' && d.niveau === c.top && m.as !== 's') {
       const dak = c.hellend.dak;
       const dwarsOpNok = (m.as === 'h') !== (dak.nokAs === 'x');
-      if (dwarsOpNok) {
-        const p = richting === 'langs' ? (dak.nokAs === 'x' ? plaats : (uMin + uMax) / 2) : (dak.nokAs === 'x' ? (uMin + uMax) / 2 : plaats);
+      // Evenwijdig met de nok: bij een lessenaarsdak loopt de hoge gevel door tot onder het dak (16/11, doorloop A10:
+      // beide muren stopten op de muurkop en het dak zweefde). Bij een zadeldak staan die muren onder de dakvoet.
+      if (dwarsOpNok || dak.vorm === 'lessenaar') {
+        const p = !dwarsOpNok ? m.lijn : richting === 'langs' ? (dak.nokAs === 'x' ? plaats : (uMin + uMax) / 2) : (dak.nokAs === 'x' ? (uMin + uMax) / 2 : plaats);
         const top = h1 + Math.max(0, dakHoogte(dak, p));
         if (top > h1 + 1) for (const l of lagen) {
           const [a, b] = l.getekend;

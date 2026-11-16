@@ -417,7 +417,8 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
 
   // Controles over de hele offerte.
   const meldingen: { ernst: string; tekst: string; positie?: string }[] = [];
-  for (const p of t.posities) {
+  // Een positie met aantal 0 (een bestaand raam dat blijft) wordt niet gebouwd: geen meldingen (doorloop A25).
+  for (const p of t.posities.filter((x) => x.aantal > 0)) {
     const r = resultaat(p);
     for (const mm of r.meldingen) meldingen.push({ ernst: mm.ernst, tekst: `${p.code} ${p.naam}: ${mm.melding}`, positie: p.id });
   }

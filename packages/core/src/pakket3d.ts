@@ -152,7 +152,7 @@ export interface Zending {
 export function passendKader(s: Scene3D): Scene3D {
   const k = s.kader;
   const b = Math.max(k.b, k.h * 1.3);
-  return { ...s, kader: { ...k, x: k.x - (b - k.b) / 2, b, h: k.h / 0.7 } };
+  return { ...s, kader: { ...k, x: k.x - (b - k.b) / 2, b, h: k.h / 0.7 }, ruimKader: true };
 }
 
 /**
@@ -164,7 +164,7 @@ export function passendKader(s: Scene3D): Scene3D {
  */
 export function gebouwKader(s: Scene3D): Scene3D {
   const k = s.kader, f = Math.max(1.1, (k.h * 1.8) / Math.max(k.b, k.d, 1));
-  return { ...s, kader: { ...k, x: k.x - (k.b * (f - 1)) / 2, z: k.z - (k.d * (f - 1)) / 2, b: k.b * f, d: k.d * f } };
+  return { ...s, kader: { ...k, x: k.x - (k.b * (f - 1)) / 2, z: k.z - (k.d * (f - 1)) / 2, b: k.b * f, d: k.d * f }, ruimKader: true };
 }
 
 function isScene(s: unknown): s is Scene3D {

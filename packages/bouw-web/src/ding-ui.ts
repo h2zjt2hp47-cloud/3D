@@ -51,7 +51,7 @@ function staalKnop(hex: string, label: string, gekozen: boolean, kies: () => voi
 
 function dakKeuzes(vak: HTMLElement) {
   const dak = toestand().plan.dak;
-  vak.append(dakVormKnoppen(false));
+  vak.append(dakVormKnoppen());
   if (dak) vak.append(bedekkingKeuze(dak.vorm === 'plat' ? 'plat' : 'hellend', dak.bedekking, (b) => zetDak((d) => { d.bedekking = b; })));
   else vak.append(el('p', { class: 'klein' }, 'Kies een dakvorm.'));
   const teller = koepelTeller();
@@ -326,7 +326,13 @@ export function stijlRij(): HTMLElement {
     const beeld = el('span', { class: 'snel-stijlbeeld' });
     beeld.innerHTML = stijlBeeld(s);
     b.append(beeld, el('span', {}, s.label));
-    b.addEventListener('click', () => wijzig('plan', (t) => zetStijl(t, s)));
+    b.addEventListener('click', () => wijzig('plan', (t) => {
+      zetStijl(t, s);
+      // De naam uit de snelstart ("Woning 9 × 10 m, klassiek") volgt de stijl (doorloop A24); een eigen naam blijft zoals hij is.
+      const naam = t.meta.project ?? '', nieuw = s.label.toLowerCase();
+      const oud = Object.values(stijlCatalogus).map((x) => x.label.toLowerCase()).find((l) => naam.includes(`, ${l}`));
+      if (oud && oud !== nieuw) t.meta.project = naam.replace(`, ${oud}`, `, ${nieuw}`);
+    }));
     rij.append(b);
   }
   return rij;

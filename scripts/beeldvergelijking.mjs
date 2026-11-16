@@ -158,6 +158,8 @@ const BOUWBEELDEN = [
   // 3D. De bestaande woning en de buren neutraal, de uitbouw in kleur, schuin van boven; en de tekening van het gelijkvloers.
   { naam: 'bouw-uitbouw-3d', uitbouw: '3d' },
   { naam: 'bouw-uitbouw-plan', uitbouw: 'plan' },
+  // Doorloop A1 (16/11): een hoog, smal huis (7 × 8 m, drie bouwlagen) staat in het standpunt Schuin helemaal in beeld.
+  { naam: 'bouw-hoog-schuin', hoog: 'schuin' },
 ];
 
 /**
@@ -607,6 +609,27 @@ async function maakBeelden() {
         await p.click('[data-pl-standpunt="schuin"]');
         beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  // Doorloop A1 (16/11): een hoog, smal huis via de snelstart, dan een vast standpunt. Eigen pagina, vers project.
+  const hoog = BOUWBEELDEN.filter((b) => b.hoog && nodig(b));
+  if (hoog.length) {
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.click('.nav [data-weergave="start"]');
+    await p.click('[data-snel="woning"]');
+    for (const [k, w] of [['breedte', '700'], ['diepte', '800']]) { const e = p.locator(`[data-snel-maat="${k}"]`); await e.fill(w); await e.press('Tab'); }
+    await p.click('[data-snel-plus="verdiepingen"]');
+    await p.click('#ss-verder');
+    await p.click('[data-stijl="klassiek"]');
+    for (const b of hoog) {
+      process.stdout.write(`  ${b.naam} … `);
+      await p.waitForTimeout(1500);
+      await p.click(`[data-pl-standpunt="${b.hoog}"]`);
+      beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       console.log('klaar');
     }
     await p.close();

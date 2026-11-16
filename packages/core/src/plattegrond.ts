@@ -1332,6 +1332,26 @@ export function ruimteOp(plan: Plattegrond, x: number, y: number, niveau?: numbe
   return plan.ruimtes.find((r) => (niveau === undefined || niveauVan(r) === niveau) && delenVan(r).some((p) => binnen(p, x, y)));
 }
 
+/**
+ * Hoeveel m² van ruimte `r` boven niets ligt: niet boven een ruimte van de verdieping eronder (16/11, doorloop A4: een
+ * verdieping boven een L-vorm of een schuine aanbouw stak uit boven de lege hoek, zonder melding). Een raster van punten
+ * om de 20 cm; een punt telt als gedragen als er binnen de dikte van een muur een ruimte onder ligt (een muur tussen twee
+ * ruimtes draagt ook). Op het gelijkvloers altijd 0.
+ */
+export function zonderOndergrond(plan: Plattegrond, r: Ruimte, niveau = niveauVan(r)): number {
+  if (niveau <= 0) return 0;
+  const onder = niveauPlan(plan, niveau - 1).ruimtes.flatMap(delenVan);
+  const m = Math.max(plan.buitenmuur, plan.binnenmuur) + 1, S = 20;
+  const opzij: Punt[] = [[0, 0], [m, 0], [-m, 0], [0, m], [0, -m], [m, m], [m, -m], [-m, m], [-m, -m]];
+  let los = 0;
+  for (const deel of delenVan(r)) {
+    for (let x = deel.x + S / 2; x < deel.x + deel.b; x += S) for (let y = deel.y + S / 2; y < deel.y + deel.d; y += S) {
+      if (binnen(deel, x, y) && !opzij.some(([dx, dy]) => onder.some((q) => binnen(q, x + dx, y + dy)))) los++;
+    }
+  }
+  return (los * S * S) / 10000;
+}
+
 // ---------- controles ----------
 
 export interface PlanMelding {
@@ -1362,6 +1382,14 @@ export function controleerPlan(plan: Plattegrond, cat?: PlanCatalogus): PlanMeld
     const p = niveauPlan(plan, n);
     const pre = niveaus.length > 1 && n > 0 ? `${nv.naam}: ` : '';
     controleerNiveau(p, pre, uit, ingang, verbind);
+    // Een ruimte die (deels) boven niets ligt: een verdieping hangt in de lucht (doorloop A4). Een uitkraging kan, maar
+    // dan weet de verkoper het.
+    if (n > 0) {
+      for (const r of p.ruimtes) {
+        const los = zonderOndergrond(plan, r, n);
+        if (los >= 0.5) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${pre}${r.naam} ligt voor ${los.toFixed(1).replace('.', ',')} m² boven niets: er staat beneden geen ruimte onder. Pas de ruimte aan, of teken beneden een ruimte.` });
+      }
+    }
     // Trap: verbindt de ruimte met de trap met de ruimte erboven.
     if (n + 1 < niveaus.length) {
       for (const t of p.meubels.filter((m) => m.type === 'trap')) {
@@ -1675,6 +1703,16 @@ export const standaardDak = (): DakKeuze => ({ vorm: 'plat', helling: 35, richti
 /** De dakkeuze van het plan. Een plan met daklichten maar zonder keuze heeft een plat dak. */
 export function dakVan(plan: Plattegrond): DakKeuze | undefined {
   return plan.dak ?? (plan.daklichten?.length ? standaardDak() : undefined);
+}
+
+/**
+ * Het plan zoals het getoond wordt: zonder dakkeuze met het standaard platte dak (16/11, doorloop A3). De afgewerkte 3D
+ * liet de bovenste verdieping dan open, terwijl de constructie, de doorsnede en het bestand voor de klant al een plat dak
+ * toonden: de verkoper toonde een open doos en de klant kreeg een gebouw met dak. Alle weergaven gebruiken nu dit. De
+ * rekenmotor (offerte, controles) blijft bij `dakVan`: daar telt het dak pas mee met een keuze.
+ */
+export function planMetDak(plan: Plattegrond): Plattegrond {
+  return dakVan(plan) || !plan.ruimtes.length ? plan : { ...plan, dak: standaardDak() };
 }
 
 /** Soort en kleur van een dakbedekking voor de 3D en de tekening (onbekend = effen donker, zoals EPDM). */
@@ -2246,16 +2284,19 @@ function techniek3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties)
   return techniekBlokken(plan, cat.techniek, {
     vakken: opties.techniek.vakken, niveau: opties.techniek.niveau, totNiveau: opties.totNiveau, dingen: opties.dingen,
     vloerHoogte: (n) => vloerHoogte(plan, n),
-    vloerBoven: opties.techniek.weergave === 'uitgezet', opvallend: opties.techniek.opvallend ?? opties.techniek.weergave === 'uitgezet',
+    // Opvallend (ook in de woning, op het scherm): wat in de vloer zit, ligt zichtbaar op de vloer, zoals uitgezet
+    // (16/11, doorloop A20: de vloerverwarming bleef onder het parket onzichtbaar).
+    vloerBoven: opties.techniek.weergave === 'uitgezet' || !!opties.techniek.opvallend, opvallend: opties.techniek.opvallend ?? opties.techniek.weergave === 'uitgezet',
   });
 }
 
 /** Maten van de uitgezette weergave (cm): de lage wanden, de lijn op plafondhoogte en de kleuren. */
-const UITGEZET = { wand: 12, lijn: 2, vloer: 1, kleurVloer: '#e6e4de', kleurWand: '#bab7af', kleurLijn: '#8a8781' };
+const UITGEZET = { wand: 12, lijn: 2, staander: 4, vloer: 1, kleurVloer: '#e6e4de', kleurWand: '#bab7af', kleurLijn: '#8a8781' };
 
 /**
  * De woning uitgezet, om de installaties te zien (`Plan3DOpties.techniek` met `weergave: 'uitgezet'`): per verdieping de
- * muren als lage wand (12 cm, met de deuropeningen eruit), de buitenmuren ook als dunne lijn op plafondhoogte, de vloeren
+ * muren als lage wand (12 cm, met de deuropeningen eruit), de buitenmuren ook als dunne lijn op plafondhoogte met een
+ * staander op de hoeken (een draadmodel van de verdieping), de vloeren
  * alleen op de onderste getoonde verdieping (een vloer erboven zou de installaties eronder verbergen), zonder dak,
  * vloerplaten, ramen, meubels en aanleg. Alles in effen, lichte kleuren, zodat de kleuren van de leidingen opvallen; een
  * leiding in de vloer ligt zichtbaar op de vloer en kleine toestellen zijn groter (zie `toestelBlokken`). De kijker kent
@@ -2304,6 +2345,20 @@ function uitgezet3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties)
       for (const [a, b] of stukken) stuk(`uitgezet_wand_${n}_${m.id}_${r2(a)}`, a, b, y0, U.wand);
       // De lijn op plafondhoogte alleen langs de buitenmuren: de omtrek van de verdieping, zonder een raster van binnenmuren.
       if (m.soort === 'buiten') stuk(`uitgezet_lijn_${n}_${m.id}`, begin, einde, y0 + H - U.lijn, U.lijn);
+    }
+    // Een dunne staander op elke hoek van de buitenmuren (16/11, doorloop A9): zonder hing de lijn op plafondhoogte als
+    // een los kader boven de woning; zo leest ze als een draadmodel van de verdieping. Alleen waar een liggende en een
+    // staande buitenmuur samenkomen (een schuine muur krijgt er geen).
+    const hoog = H - U.lijn - U.wand, S = U.staander;
+    if (hoog > 0) {
+      const liggend = muren.filter((m) => m.soort === 'buiten' && m.as === 'h'), staand = muren.filter((m) => m.soort === 'buiten' && m.as === 'v');
+      const hoeken: Punt[] = [];
+      for (const h of liggend) for (const v of staand) {
+        const tol = Math.max(h.dikte, v.dikte);
+        const raakt = (Math.abs(v.lijn - h.van) <= tol || Math.abs(v.lijn - h.tot) <= tol) && (Math.abs(h.lijn - v.van) <= tol || Math.abs(h.lijn - v.tot) <= tol);
+        if (raakt && !hoeken.some(([x, y]) => Math.abs(x - v.lijn) < 1 && Math.abs(y - h.lijn) < 1)) hoeken.push([v.lijn, h.lijn]);
+      }
+      for (const [x, y] of hoeken) blokken.push(effen(`uitgezet_staander_${n}_${r2(x)}_${r2(y)}`, U.kleurLijn, { x: x - S / 2, y: y0 + U.wand, z: y - S / 2, b: S, h: hoog, d: S }));
     }
   }
   const kader = kaderVan(blokken);

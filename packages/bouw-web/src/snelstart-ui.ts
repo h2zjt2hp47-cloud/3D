@@ -31,6 +31,8 @@ export interface SnelstartNav {
   naarPositie3D: (id: string) => void;
   /** Een aanbouw met gemeten maten (vrije vorm): de plattegrond met het paneel Ruimte met maten (maten in cm). */
   naarMaten: (maten: { breedte: number; diepte: number }) => void;
+  /** Zelf tekenen: een leeg plan in de plattegrond. */
+  naarPlan: () => void;
 }
 
 let nav: SnelstartNav;
@@ -183,6 +185,15 @@ function toonStap1() {
     }
     return rij;
   }));
+  // Zelf tekenen van nul (16/11, doorloop A11): vroeger alleen via Plattegrond → Nieuw project → Leeg project. Bv. de
+  // bestaande toestand van een verbouwing, of een vorm die geen tegel heeft.
+  const zelf = el('button', { type: 'button', class: 'snel-zelf', 'data-snel-zelf': '' });
+  zelf.append(el('strong', {}, 'Zelf tekenen'), el('span', { class: 'klein' }, ' Een lege plattegrond: teken de ruimtes zelf, met de vinger of met maten.'));
+  zelf.addEventListener('click', () => {
+    nieuwProject(legeToestand(), 'Nieuw project');
+    nav.naarPlan();
+  });
+  $('#ss-inhoud').append(zelf);
 }
 
 function toonStap2() {
@@ -221,13 +232,20 @@ function toonStap2() {
     const plus = el('button', { type: 'button', class: 'snel-knop', 'aria-label': `${m.label} groter`, 'data-snel-plus': m.code }, '+') as HTMLButtonElement;
     min.addEventListener('click', () => { aangeraakt = true; zet(stapMaat(m, maten[m.code]!, -1)); });
     plus.addEventListener('click', () => { aangeraakt = true; zet(stapMaat(m, maten[m.code]!, 1)); });
-    invoer.addEventListener('change', () => { const w = leesMaat(invoer.value, m); aangeraakt = true; zet(w ?? maten[m.code]!); });
+    invoer.addEventListener('change', () => {
+      const w = leesMaat(invoer.value, m);
+      aangeraakt = true;
+      zet(w ?? maten[m.code]!);
+      // Zeggen als een getypte maat begrensd werd (doorloop A17: "4,5 m" werd stil 6 m).
+      melding.textContent = w !== undefined && maten[m.code] !== w ? `${m.label}: ${w < maten[m.code]! ? 'minstens' : 'hoogstens'} ${invoer.value}${eenheidTekst(m) ? ` ${eenheidTekst(m)}` : ''}.` : '';
+    });
     invoer.addEventListener('focus', () => invoer.select());
     const waarde = el('span', { class: 'snel-waarde' });
     waarde.append(invoer, el('span', { class: 'eenheid' }, eenheidTekst(m)));
     const naam = el('span', { class: 'snel-maat-naam' });
     naam.append(el('span', {}, m.label), meter);
-    rij.append(naam, min, waarde, plus);
+    const melding = el('span', { class: 'klein snel-maatmelding', role: 'status' });
+    rij.append(naam, min, waarde, plus, melding);
     vak.append(rij);
     zet(maten[m.code] ?? m.standaard);
   }
@@ -266,13 +284,17 @@ function toonStap3() {
   const vast = vastModel();
   if (vast) return toonVertrekpunten(vast.model, vast.vertrekpunten);
   stap = 3;
-  zetKop('Welke stijl?', 'Eén tik zet gevel, kleur van de ramen, dak, vloer en binnenkleur. Alles blijft daarna aan te passen.');
+  // Bij één raam of een poort telt alleen de kleur (doorloop A27: de tegel sprak over gevelsteen en een zadeldak).
+  const los = tegel.soort === 'positie';
+  zetKop('Welke stijl?', los ? 'Eén tik zet de kleur en het profiel. Alles blijft daarna aan te passen.' : 'Eén tik zet gevel, kleur van de ramen, dak, vloer en binnenkleur. Alles blijft daarna aan te passen.');
+  const kleurNaam = (code: string) => (RAL_KLEUREN.find((k) => k.code === code)?.naam ?? code).toLowerCase();
   const rij = el('div', { class: 'snel-tegels snel-stijlen' });
   for (const [code, s] of Object.entries(stijlCatalogus)) {
     const b = el('button', { type: 'button', class: 'snel-tegel snel-stijl', 'data-stijl': code });
     const beeld = el('span', { class: 'snel-stijlbeeld' });
     beeld.innerHTML = stijlBeeld(s);
-    b.append(beeld, el('strong', {}, s.label), el('span', { class: 'klein' }, s.uitleg));
+    const uitleg = !los ? s.uitleg : tegel.model === 'RAAM' ? `Profiel in ${s.schrijnwerk.profiel.startsWith('alu') ? 'aluminium' : s.schrijnwerk.profiel}, ${kleurNaam(s.schrijnwerk.kleur_buiten)} buiten.` : `Poort in ${kleurNaam(s.poort)}.`;
+    b.append(beeld, el('strong', {}, s.label), el('span', { class: 'klein' }, uitleg));
     b.addEventListener('click', () => maak(s));
     rij.append(b);
   }
@@ -294,7 +316,9 @@ function toonVertrekpunten(model: VastModelCode, punten: SnelVertrekpunt[]) {
     const b = el('button', { type: 'button', class: 'snel-tegel', 'data-vertrekpunt': v.code });
     const beeld = el('span', { class: 'snel-beeld' });
     beeld.innerHTML = tegelBeeld(v.code);
-    b.append(beeld, el('strong', {}, v.label), el('span', { class: 'snel-maatlabel' }, snelModelMaat(model, keuzes)));
+    // Met eigen maten geen gangbare maat in de titel (doorloop A17: "Hal van 15 × 30 m" boven "6 × 30 m").
+    const titel = aangeraakt ? v.label.replace(/ van [\d,.]+ × [\d,.]+ m$/, '') : v.label;
+    b.append(beeld, el('strong', {}, titel), el('span', { class: 'snel-maatlabel' }, snelModelMaat(model, keuzes)));
     if (v.uitleg) b.append(el('span', { class: 'klein' }, v.uitleg));
     b.addEventListener('click', () => maakModel(model, v, keuzes));
     rij.append(b);

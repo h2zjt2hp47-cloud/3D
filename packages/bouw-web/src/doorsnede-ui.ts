@@ -51,7 +51,8 @@ export function toonDoorsnede() {
   schuif.min = String(bereik.min + 5);
   schuif.max = String(bereik.max - 5);
   schuif.value = String(p);
-  $('#pl-snede-waarde').textContent = `${richting === 'dwars' ? 'x' : 'y'} = ${getal(p / 100, 2)} m`;
+  // In gewone woorden (doorloop A32): hoe ver van de linker- of de bovenkant van het gebouw de snede ligt.
+  $('#pl-snede-waarde').textContent = `op ${getal((p - bereik.min) / 100, 2)} m van de ${richting === 'dwars' ? 'linkergevel' : 'gevel bovenaan het plan'}`;
   const tekening = $('#pl-doorsnede-tekening');
   if (!plan.ruimtes.length) { tekening.replaceChildren(el('p', { class: 'klein' }, 'Nog geen ruimtes in de plattegrond.')); return; }
   tekening.innerHTML = tekenDoorsnede(plan, constructieCatalogus, { richting, plaats: p }, { c: huidigeConstructie(), breedtePx: Math.max(600, tekening.clientWidth || 900) });

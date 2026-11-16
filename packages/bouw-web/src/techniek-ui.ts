@@ -820,7 +820,7 @@ export function toonBalk3D() {
   balk3D.hidden = !aan;
   if (!aan) return;
   const weergave = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Techniek in de 3D' });
-  for (const [w, label, uitleg] of [['woning', 'In de woning', 'De verdieping waarop je werkt, met lage muren en zonder dak, en de installaties op hun plaats (een leiding in de muur of de vloer zit erin verstopt)'], ['uitgezet', 'Uitgezet', 'De woning als lage wanden en lijnen, zodat je de installaties ziet']] as const) {
+  for (const [w, label, uitleg] of [['woning', 'In de woning', 'De verdieping waarop je werkt, met lage muren en zonder dak, en de installaties op hun plaats (een leiding in de muur zit erin verstopt, een leiding in de vloer ligt erop)'], ['uitgezet', 'Uitgezet', 'De woning als lage wanden en lijnen, zodat je de installaties ziet']] as const) {
     const b = el('button', { type: 'button', 'data-techniek-3d': w, 'aria-pressed': String((w === 'uitgezet') === uitgezet), title: uitleg }, label);
     b.addEventListener('click', () => { uitgezet = w === 'uitgezet'; toonBalk3D(); omg?.drieD(); });
     weergave.append(b);

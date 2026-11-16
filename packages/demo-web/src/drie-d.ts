@@ -2680,7 +2680,41 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
    * staat zelf al op 50 m; anders sprong de camera bij de eerste tik van het wiel naar 25 m). De zetels houden 25 m.
    */
   function verst() {
-    return opties.zetel ? 2500 : Math.max(2500, Math.max(kader.b, kader.d, 120) * 3);
+    if (opties.zetel) return 2500;
+    // Ook minstens twee keer zo ver als nodig om het hele gebouw in elke richting in beeld te hebben (16/11, doorloop
+    // B12: uitzoomen stopte bij een woning al op half zo groot als het beginbeeld). Hangt niet af van de kijkrichting,
+    // zodat de grens niet verspringt als je draait.
+    const halv = Math.atan(Math.tan((camera.fov * Math.PI) / 360) * Math.min(1, camera.aspect || 1));
+    const straal = Math.hypot(kader.b / 2, kader.d / 2, Math.max(doel.y, kader.h - doel.y));
+    return Math.max(2500, Math.max(kader.b, kader.d, kader.h, 120) * 3, (2 * straal) / Math.sin(halv));
+  }
+  /**
+   * Afstand (cm) waarop het hele kader (breedte, diepte én hoogte) in beeld past vanuit de huidige kijkrichting, met wat
+   * lucht errond (16/11, doorloop A1: met alleen de grootste maat van het grondvlak knipten Zij en Boven een woning van
+   * twee of drie bouwlagen af). Per hoek van het kader: hoe ver de camera moet staan zodat die hoek binnen de kijkhoek
+   * valt, in de breedte en in de hoogte van het beeld (een tablet staand is smal). De zetels gebruiken dit niet.
+   */
+  function passendeAfstand(lucht = 1.12): number {
+    const tanV = Math.tan((camera.fov * Math.PI) / 360) / lucht, tanH = tanV * (camera.aspect || 1);
+    const terug = new THREE.Vector3(Math.cos(hoekV) * Math.sin(hoekH), Math.sin(hoekV), Math.cos(hoekV) * Math.cos(hoekH));
+    const rechts = new THREE.Vector3(0, 1, 0).cross(terug).normalize();
+    const op = terug.clone().cross(rechts);
+    let nodig = 0;
+    const p = new THREE.Vector3();
+    for (const x of [kader.x, kader.x + kader.b]) for (const y of [0, kader.h]) for (const z of [kader.z, kader.z + kader.d]) {
+      p.set(x - doel.x, y - doel.y, z - doel.z);
+      nodig = Math.max(nodig, p.dot(terug) + Math.max(Math.abs(p.dot(rechts)) / tanH, Math.abs(p.dot(op)) / tanV));
+    }
+    return nodig;
+  }
+  /** Het kader van de scène is al ruimer gemaakt om te tonen (`Scene3D.ruimKader`): dan kadreren zoals vroeger. */
+  let kaderRuim = false;
+  /** Past de afstand zich aan het hele kader aan (een gebouw, niet een zetel of een kader dat al ruim gemaakt is)? */
+  const pasAan = () => !opties.zetel && !kaderRuim;
+  /** Afstand na een vast standpunt of een nieuwe scène: zoals vroeger (anderhalve keer de grootste maat), maar een gebouw altijd helemaal. */
+  function standaardAfstand(): number {
+    const vroeger = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5);
+    return pasAan() ? Math.max(vroeger, passendeAfstand()) : vroeger;
   }
   const plaatsCamera = () => {
     hoekV = Math.min(1.45, Math.max(0.05, hoekV));
@@ -3371,6 +3405,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const toestand: EchtToestand = !s.echt ? 'geen' : weergave.echtModel === false ? 'benadering' : echt ? 'getoond' : echteModellen.get(s.echt.bestand) === 'laden' ? 'laden' : 'fout';
       opties.opEcht?.(echt ? s.echt! : null, toestand);
       const nieuw = s.kader;
+      kaderRuim = !!s.ruimKader;
       const veranderd = Math.abs(nieuw.b - kader.b) > 1 || Math.abs(nieuw.d - kader.d) > 1 || Math.abs(nieuw.x - kader.x) > 1 || Math.abs(nieuw.z - kader.z) > 1;
       kader = nieuw;
       zetMaten();
@@ -3379,7 +3414,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const grootte = Math.max(kader.b, kader.d, 120);
       zetZon();
       vul.position.set(doel.x + grootte, grootte * 0.6, doel.z - grootte);
-      if (veranderd) afstand = Math.max(200, grootte * 1.5);
+      if (veranderd) afstand = standaardAfstand();
       // De bouw heeft buiten ook mist (de horizon): daar altijd opnieuw zetten, zoals vroeger zonder mist.
       if (decorNaam !== 'studio' || !scene.fog || !opties.zetel) zetDecor(s);
       plaatsCamera();
@@ -3513,9 +3548,11 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       if (naam === 'zij') { hoekH = Math.PI / 2; hoekV = 0.15; }
       if (naam === 'schuin') { hoekH = -0.6; hoekV = 0.42; }
       if (naam === 'achter') { hoekH = Math.PI + 0.5; hoekV = 0.3; }
-      afstand = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5) * lensFactor();
+      const vroeger = Math.max(200, Math.max(kader.b, kader.d, 120) * 1.5) * lensFactor();
       // Ooghoogte: recht van voren, zoals een staande klant (camera op 155 cm), iets dichterbij.
-      if (naam === 'ooghoogte') { hoekH = -0.25; afstand *= 0.85; hoekV = Math.asin(Math.max(-0.2, Math.min(0.95, (155 - doel.y) / afstand))); }
+      if (naam === 'ooghoogte') { hoekH = -0.25; afstand = vroeger * 0.85; hoekV = Math.asin(Math.max(-0.2, Math.min(0.95, (155 - doel.y) / afstand))); }
+      // Een gebouw komt in elk ander standpunt helemaal in beeld, ook hoog en smal (doorloop A1).
+      else afstand = pasAan() ? Math.max(vroeger, passendeAfstand()) : vroeger;
       plaatsCamera();
     },
     zon(stand) {

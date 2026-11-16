@@ -143,6 +143,11 @@ export interface Scene3D {
   /** Omsluitend kader van de hele zetel. */
   kader: { x: number; z: number; b: number; d: number; h: number };
   /**
+   * Het kader is al ruimer gemaakt om te tonen (`passendKader`, `gebouwKader`, het beginbeeld na de snelstart): de kijker
+   * kadreert dan zoals vroeger en past de afstand niet nog eens aan de hoogte aan (16/11, anders stond een raam ver weg).
+   */
+  ruimKader?: boolean;
+  /**
    * Echt 3D-model (bestand van de fabrikant) voor een rij elementen. De blokken van die elementen blijven in de
    * lijst: de weergave toont ze als het bestand ontbreekt of als de benadering gevraagd wordt.
    */

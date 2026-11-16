@@ -151,7 +151,9 @@ export function voorbeeldToestand(): Toestand {
 
 export function legeToestand(): Toestand {
   const v = voorbeeldToestand();
-  return { plan: { ...v.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] }, posities: [], meta: v.meta };
+  // Zonder de gevels per muurvlak van de voorbeeldwoning (doorloop A28: een leeg plan droeg vlakken mee van ruimtes die er niet zijn).
+  const gevelOntwerp = v.plan.gevelOntwerp ? { ...v.plan.gevelOntwerp, vlakken: {} } : undefined;
+  return { plan: { ...v.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }], ...(gevelOntwerp ? { gevelOntwerp } : {}) }, posities: [], meta: v.meta };
 }
 
 /**

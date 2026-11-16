@@ -8,6 +8,9 @@ import {
   controleerPlan,
   DAKLICHT_GLAS,
   dakOpbouw,
+  kantVan,
+  planMetDak,
+  zonderOndergrond,
   delenVan,
   meubelAfstanden,
   openingAfstanden,
@@ -164,7 +167,7 @@ let ruimKader = false;
  */
 function ruimKaderVan(s: Scene3D): Scene3D {
   const k = s.kader, b = Math.max(k.b * 1.8, k.h * 1.8, k.d * 1.2);
-  return { ...s, kader: { ...k, x: k.x - (b - k.b) / 2, b } };
+  return { ...s, kader: { ...k, x: k.x - (b - k.b) / 2, b }, ruimKader: true };
 }
 
 interface Sleep {
@@ -371,28 +374,59 @@ function toonNiveaus() {
   }
 }
 
-/** Nieuwe verdieping: één ruimte boven de hele verdieping eronder, om daarna in te delen. */
+/**
+ * Nieuwe verdieping: één ruimte boven de hele verdieping eronder, om daarna in te delen. Is de verdieping eronder geen
+ * rechthoek (een L-vorm, een schuine aanbouw), dan stak die ene rechthoek uit boven niets (doorloop A4): dan komt er
+ * boven elke ruimte van beneden een ruimte met dezelfde vorm.
+ */
 function nieuweVerdieping() {
   const t = toestand();
   const lijst = verdiepingenVan(t.plan);
   const n = lijst.length;
-  const onder = niveauPlan(t.plan, n - 1).ruimtes.flatMap(delenVan);
+  const onderRuimtes = niveauPlan(t.plan, n - 1).ruimtes;
+  const onder = onderRuimtes.flatMap(delenVan);
+  let gevolgd = false;
   wijzig('plan', (tt) => {
     tt.plan.verdiepingen = [...lijst, { naam: `Verdieping ${n}` }];
     if (onder.length) {
       const x0 = Math.min(...onder.map((p) => p.x)), y0 = Math.min(...onder.map((p) => p.y));
       const x1 = Math.max(...onder.map((p) => p.x + p.b)), y1 = Math.max(...onder.map((p) => p.y + p.d));
-      tt.plan.ruimtes.push({ id: nieuweId('r'), naam: 'Nieuwe verdieping', type: 'hal', x: x0, y: y0, b: x1 - x0, d: y1 - y0, vloer: 'parket_eik', wand: 'wit', niveau: n });
+      const geheel: Ruimte = { id: nieuweId('r'), naam: 'Nieuwe verdieping', type: 'hal', x: x0, y: y0, b: x1 - x0, d: y1 - y0, vloer: 'parket_eik', wand: 'wit', niveau: n };
+      if (zonderOndergrond(tt.plan, geheel, n) < 0.5) tt.plan.ruimtes.push(geheel);
+      else {
+        gevolgd = true;
+        for (const r of onderRuimtes) {
+          const kopie: Ruimte = structuredClone(r);
+          delete kopie.bestaand;
+          tt.plan.ruimtes.push({ ...kopie, id: nieuweId('r'), naam: `Boven ${r.naam.toLowerCase()}`, type: 'hal', vloer: 'parket_eik', wand: 'wit', niveau: n });
+        }
+      }
     }
   });
   niveau = n;
   selectie = undefined;
   melding = 'Nieuwe verdieping: deel ze in met "Wand tekenen" of teken ruimtes erin. Plaats beneden een trap (Meubel → Trappen).';
+  if (gevolgd) melding = `Nieuwe verdieping met dezelfde vorm als beneden (${onderRuimtes.length} ruimtes). ${melding.replace(/^Nieuwe verdieping: d/, 'D')}`;
   kiesGereedschap('wand');
+}
+
+/**
+ * De namen van de knoppen Voorgevel en Achtergevel volgen de voordeur (16/11, doorloop A5): de 3D kijkt met *Voorgevel*
+ * altijd naar de onderkant van het plan. Staat de voordeur aan de bovenkant (een aanbouw achteraan, onderaan getekend),
+ * dan is dat de achtergevel, en dan heten de knoppen zo, zoals in de gevel-editor.
+ */
+function zetStandpuntNamen() {
+  const plan = toestand().plan;
+  const voordeur = plan.openingen.find((o) => niveauVan(o) === 0 && positieVan(o)?.keuzes.type === 'voordeur');
+  const omgekeerd = !!voordeur && kantVan(plan, voordeur) === 'boven';
+  const voor = document.querySelector<HTMLButtonElement>('[data-pl-standpunt="voor"]'), achter = document.querySelector<HTMLButtonElement>('[data-pl-standpunt="achter"]');
+  if (voor) voor.textContent = omgekeerd ? 'Achtergevel' : 'Voorgevel';
+  if (achter) achter.textContent = omgekeerd ? 'Voorgevel' : 'Achtergevel';
 }
 
 let wachtend3D = false;
 function plan3D() {
+  zetStandpuntNamen();
   // De schakelaar "Dak tonen" heeft alleen zin met een dakkeuze (de constructie heeft altijd een dak).
   $('#pl-toon-dak-label').hidden = !heeftDak() && !constructieAan();
   // De knop Techniek (alleen met techniek in het plan of aan) en de balk eronder.
@@ -405,7 +439,8 @@ function plan3D() {
     viewer?.zon?.(zonVoorKijker());
     // Techniek in de woning: de verdieping waarop je werkt met lage muren en zonder dak, anders zie je niets (16/11).
     const tw = techniekInWoning(), muurLaag = laag || tw;
-    const scene = plattegrond3D(toestand().plan, cat, {
+    // Zonder dakkeuze het standaard platte dak, zoals in de constructie, de doorsnede en het bestand voor de klant (doorloop A3).
+    const scene = plattegrond3D(planMetDak(toestand().plan), cat, {
       laag: muurLaag ? 110 : undefined,
       meubels: toonMeubels,
       dak: toonDakIn3D && !tw,
@@ -613,6 +648,14 @@ function bewaarNieuweOpening(soort: OpeningSoort, o: Opening, ruimte: Ruimte | u
     }
     t.plan.openingen.push(o);
   });
+  // Buigt de tussenstijl te ver door bij de winddruk van die plaats (een breed schuifraam), dan meteen een versterkte
+  // tussenstijl of een koppelprofiel (16/11, doorloop A22: de verkoper kreeg een fout voor iets wat hij niet koos).
+  const nieuw = o.positie;
+  for (const sterker of ['versterkt', 'koppel']) {
+    const p = nieuw ? toestand().posities.find((x) => x.id === nieuw) : undefined;
+    if (!p || p.model !== 'RAAM' || !resultaat(p).meldingen.some((m) => m.code === 'statiek')) break;
+    wijzig('plan', (t) => { const q = t.posities.find((x) => x.id === nieuw); if (q) q.keuzes = { ...q.keuzes, tussenstijl: sterker }; }, { zonderOngedaan: true });
+  }
 }
 
 /** Raam toevoegen vanuit de gevel-editor: op een buitenmuur van een verdieping, op een plaats langs de muur. */
@@ -1800,7 +1843,8 @@ function toonOverzicht() {
   const meldingen = controleerPlan(alles, cat);
   for (const o of alles.openingen) {
     const p = positieVan(o);
-    if (p) for (const m of resultaat(p).meldingen) meldingen.push({ ernst: m.ernst, melding: `${p.code}: ${m.melding}`, opening: o.id });
+    // Een raam met aantal 0 blijft zoals het is (bestaand): geen meldingen over iets wat niet gebouwd wordt (doorloop A25).
+    if (p && p.aantal > 0) for (const m of resultaat(p).meldingen) meldingen.push({ ernst: m.ernst, melding: `${p.code}: ${m.melding}`, opening: o.id });
   }
   meldingen.sort((a, b) => (a.ernst === b.ernst ? 0 : a.ernst === 'fout' ? -1 : 1));
   $('#pl-meldingen').replaceChildren(...meldingen.map((m) => {
@@ -1871,6 +1915,7 @@ function toonGereedschapKaart() {
 function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
   if (w !== weergave) sluitMaatVraag(true);
   weergave = w;
+  try { sessionStorage.setItem(SLEUTEL_WEERGAVE, w); } catch { /* geen opslag */ }
   // In 3D op een tablet: de 3D over de hele breedte, het gereedschap (voor de plattegrond) eronder.
   $('#view-plan').classList.toggle('driedmodus', w === '3d' || w === 'doorsnede');
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.plWeergave === w));
@@ -1927,7 +1972,21 @@ function kwaliteit3D(): Kwaliteit {
   return bewaard === 'snel' || bewaard === 'mooi' ? bewaard : window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi';
 }
 
+/**
+ * Na herladen terug in de weergave waarin je zat (16/11, doorloop A26: na herladen in de 3D stond de plattegrond open).
+ * Alleen de eerste keer na het laden; daarna toont de hoofdknop "Plattegrond" de plattegrond zelf, zoals altijd.
+ */
+const SLEUTEL_WEERGAVE = 'bouw-demo.plattegrond-weergave';
+let weergaveNaHerladen: string | null = null;
+try { weergaveNaHerladen = sessionStorage.getItem(SLEUTEL_WEERGAVE); } catch { /* geen opslag */ }
+
 export function toonPlan(openingId?: string) {
+  const terug = weergaveNaHerladen;
+  weergaveNaHerladen = null;
+  if (!openingId && (terug === '3d' || terug === 'gevels' || terug === 'doorsnede') && toestand().plan.ruimtes.length) {
+    toonWeergave(terug);
+    return;
+  }
   // De hoofdknop "Plattegrond" toont de plattegrond zelf (niet de laatst geopende sub-weergave Gevels of 3D).
   if (weergave !== 'plan') toonWeergave('plan');
   // Leeg plan: meteen het gereedschap om een ruimte te tekenen.
@@ -2028,7 +2087,12 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     if (ruimKader) { ruimKader = false; plan3D(); volgendStandpunt = b.dataset.plStandpunt as Standpunt; return; }
     viewer?.standpunt(b.dataset.plStandpunt as 'schuin');
   });
-  $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => { laag = (e.target as HTMLInputElement).checked; plan3D(); });
+  $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => {
+    laag = (e.target as HTMLInputElement).checked;
+    // Binnenkijken: van schuin boven en dichterbij, anders blijft het huis op ooghoogte een strook aan de horizon (doorloop A12).
+    if (laag) { ruimKader = false; volgendStandpunt = 'schuin'; }
+    plan3D();
+  });
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-dak').addEventListener('change', (e) => { toonDakIn3D = (e.target as HTMLInputElement).checked; plan3D(); });
