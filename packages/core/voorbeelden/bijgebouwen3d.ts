@@ -23,7 +23,7 @@
  *                Zonder deuren en ramen. De buitenmaten zijn dezelfde.
  */
 import {
-  bouwdeelBlokken, dakvlak, kaderVan, ligger, meetstaat, paal, plaatsBouwdeel, prisma, spant, vloervlak, wandvlak,
+  bouwdeelBlokken, bouwdeelOpPlaats as opPlaats, dakvlak, kaderVan, ligger, meetstaat, paal, plaatsBouwdeel, prisma, spant, vloervlak, wandvlak,
   type Balkmaat, type Blok, type BlokSoort, type Bouwdeel, type BouwWeergave, type ConfiguratieResultaat, type MeetstaatRegel, type Opbouw,
   type Scene3D, type VlakRechthoek, type Waarde, type WandOpening,
 } from '../src/index.js';
@@ -99,13 +99,6 @@ const HOEKPLANK = 2;
 const DONKER = '#2b2b2b';
 /** Zoveel is het kader van de scène rondom ruimer dan de blokken, als deel van de grootste maat. */
 const KADER_RUIMTE = 0.12;
-
-/** Draait en verschuift blokken in de eigen assen van een bouwdeel zo dat de minimumhoek op (x, y, z) komt. */
-function opPlaats(blokken: Blok[], maten: Bouwdeel['maten'], p: { x: number; y: number; z: number; draai: Draai }): Blok[] {
-  const dx = p.draai === 90 ? maten.d : p.draai === 180 ? maten.b : 0;
-  const dz = p.draai === 180 ? maten.d : p.draai === 270 ? maten.b : 0;
-  return plaatsBouwdeel(blokken, { x: p.x + dx, y: p.y, z: p.z + dz, draai: p.draai });
-}
 
 const balk = (lengte: number, b: number, h: number, materiaal: string) => ligger({ lengte, doorsnede: { breedte: mm(b), hoogte: mm(h) }, materiaal }, M);
 const stijl = (hoogte: number, b: number, d: number, materiaal: string) => paal({ hoogte, doorsnede: { breedte: mm(b), hoogte: mm(d) }, materiaal }, M);
@@ -197,10 +190,10 @@ class Samensteller {
 function blokkenVan(g: GeplaatstBouwdeel, weergave: BouwWeergave): Blok[] {
   const voorvoegsel = `${g.code}.`;
   if (weergave === 'constructie') return opPlaats(bouwdeelBlokken(g.deel, weergave, { voorvoegsel }), g.deel.maten, g);
-  const kern = (blokken: Blok[]) => (g.kernKleur ? blokken.map((b) => (b.code.includes('.kern.') ? { ...b, kleur: g.kernKleur! } : b)) : blokken);
-  if (!g.open) return opPlaats(kern(bouwdeelBlokken(g.deel, 'afgewerkt', { voorvoegsel })), g.deel.maten, g);
+  const kern = g.kernKleur;
+  if (!g.open) return opPlaats(bouwdeelBlokken(g.deel, 'afgewerkt', { voorvoegsel, kern }), g.deel.maten, g);
   const skelet = bouwdeelBlokken(g.deel, 'constructie', { voorvoegsel, lagen: false });
-  const dek = g.dek ? plaatsBouwdeel(kern(bouwdeelBlokken(g.dek, 'afgewerkt', { voorvoegsel: `${voorvoegsel}dek.` })), { x: 0, y: g.dekOmhoog ?? 0, z: 0 }) : [];
+  const dek = g.dek ? plaatsBouwdeel(bouwdeelBlokken(g.dek, 'afgewerkt', { voorvoegsel: `${voorvoegsel}dek.`, kern }), { x: 0, y: g.dekOmhoog ?? 0, z: 0 }) : [];
   return opPlaats([...skelet, ...dek], g.deel.maten, g);
 }
 
