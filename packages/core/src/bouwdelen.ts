@@ -6,7 +6,8 @@
  * Zo tekent de 3D altijd dezelfde stukken als de meetstaat telt.
  *
  * Dit is een **voorstelling, geen berekening**: de afstanden en doorsneden zijn regels van goed vakmanschap uit de
- * opbouw, geen stabiliteitsstudie. Er wordt hier niets nagerekend (geen U-waarde, geen overspanning).
+ * opbouw, geen stabiliteitsstudie. Er wordt hier niets nagerekend. De aanwijzing voor EPB (U-waarde uit de lagen) staat
+ * in `warmte.ts`, de schatting of een balk, keper of latei volstaat in `stabiliteit.ts`; beide rekenen op een bouwdeel van hier.
  *
  * Eenheden: de maten van een bouwdeel en alle blokken in **cm** (zoals de plattegrond en de 3D); doorsneden van hout en
  * de diktes in een opbouw in **mm**.

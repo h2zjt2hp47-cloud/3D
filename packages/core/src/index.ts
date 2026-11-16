@@ -77,3 +77,6 @@ export * from './werf.js';
 export * from './pakket3d.js';
 export * from './opbouw.js';
 export * from './bouwdelen.js';
+export * from './richtwaarde.js';
+export * from './warmte.js';
+export * from './stabiliteit.js';

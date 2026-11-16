@@ -325,7 +325,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
 | 5 | 2 | **Klaar (16/11), alleen de motor:** bouwdelen en opbouw als gegevens (hoofdstuk 3 en 16); de woning en de schermen gebruiken ze nog niet | – |
 | 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
-| 6b | 2 | **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
+| 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | *(loopt sinds 15/11, naar voren gehaald: de uitbouw uit hoofdstuk 10 heeft het hefschuifraam nodig)* **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
 | 8 | 2 | **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
@@ -602,4 +602,63 @@ gevelplanken; 7,3 m² isolatie.
 10. De volgorde van de lagen in de vloer op volle grond.
 11. Het spant heeft geen verbindingen.
 12. De meetstaat is netto: zonder snijverlies en handelslengtes; isolatie is het vlak min het hout.
+
+---
+
+## 17. Gebouwd op 16/11: aanwijzing voor EPB en schatting van de stabiliteit (ronde 6b, alleen de motor)
+
+De twee uitkomsten uit hoofdstuk 14 staan als rekenfuncties in de motor, bovenop de bouwdelen. Het scherm volgt met de
+constructieweergave. **Geen enkel getal is in een bron nagelezen**: alle waarden zijn richtwaarden uit algemene kennis, staan in
+aparte tabellen en dragen `nagelezen: false`. Elke uitkomst somt haar aannames op als tekst en zegt zelf dat ze een aanwijzing of
+een schatting is.
+
+| Wat | Waar | Inhoud |
+|---|---|---|
+| **U-waarde van een opbouw** | `core/src/warmte.ts` (`uWaarde`), waarden in `core/voorbeelden/warmtewaarden.ts` | Weerstand per laag (dikte gedeeld door warmtegeleiding), overgangsweerstanden, hout tussen de isolatie volgens de gecombineerde methode (gemiddelde van een boven- en een ondergrens), stilstaande luchtlaag uit een tabel, een geventileerde spouw en wat erbuiten ligt telt niet mee. Ontbreekt een waarde, dan komt er geen U-waarde maar een uitleg. Toets tegen een grootste toegelaten waarde: *voldoet*, *voldoet niet* of *niet te zeggen*. |
+| **Schatting voor hout** | `core/src/stabiliteit.ts` (`schatBalk`, `schatBouwdeel`), waarden in `core/voorbeelden/stabiliteitswaarden.ts` | Balk op twee steunpunten met een gelijkmatige last: sterkte en doorbuiging in procent van wat toegelaten is, voor vloerbalk, dakbalk, keper en latei. Oordeel *volstaat*, *te licht* of *niet te zeggen*; bij *te licht* een voorstel uit een lijst van gangbare doorsneden. `schatBouwdeel` loopt een vloer, dak of wand met openingen na. |
+
+**Uitslag voor de voorbeelden** (richtwaarden; grens 0,24 W/m²K uit het geheugen)
+
+| Opbouw | U (W/m²K) | Toets |
+|---|---|---|
+| Houtskeletwand, 14 cm wol, houten gevel of steenstrips | 0,28 | voldoet niet |
+| Houtskeletwand met 6 cm pleisterdragende isolatie erbij | 0,20 | voldoet |
+| Spouwmuur, 12 cm harde isolatie | 0,19 | voldoet |
+| Plat dak (warm dak), 14 cm | 0,16 | voldoet |
+| Hellend dak met pannen, 18 cm wol | 0,23 | voldoet (nipt) |
+| Vloer op volle grond, 10 cm | 0,23 | voldoet (nipt) |
+
+| Geval (hout C24) | Oordeel | Sterkte | Doorbuiging |
+|---|---|---|---|
+| Vloer van 4 m, balken 70 × 220 om de 40 cm | volstaat | 42 % | 58 % |
+| Plat dak van 5 m, zelfde roostering | volstaat | 33 % | 67 % |
+| Hellend dak 40°, kepers 50 × 180 om de 45 cm over 5,2 m zonder gording | te licht | 62 % | 143 % |
+| Zelfde dak met één gording | volstaat | 15 % | 18 % |
+| Latei 140 × 190 boven een opening van 4 m, onder 2,5 m plat dak | te licht | 94 % | 296 % |
+
+Twee handberekeningen heb ik zelf nagerekend (de vloerbalk: spanning 6,2 tegenover 14,8 N/mm², doorbuiging 7,7 tegenover 13,3 mm):
+ze kloppen met de uitkomst. De latei boven een hefschuifraam van 4 m volstaat in hout niet, wat de werkelijkheid is: daar komt een
+stalen of gelijmde ligger. Dat de configurator dat zegt, is het nut van de schatting.
+
+**Waar het oordeel aan één getal hangt** (eerlijk te zeggen aan wie het gebruikt)
+
+- De houtskeletwand met 14 cm wol voldoet of voldoet niet naargelang het aandeel hout: met alleen het raster 0,24, met de toeslag
+  voor regels en lateien (8 %, een eigen getal) 0,28. Een wand met een breed raam heeft nog meer hout (tot 25 %) en komt op 0,32.
+- "Harde isolatieplaat" is aangenomen als PIR (0,025 W/mK); met EPS of XPS vallen spouwmuur, plat dak en vloer slechter uit.
+- De grens voor de doorbuiging van een latei (L/500) is een eigen keuze.
+
+**Na te lezen door een EPB-verslaggever:** elke warmtegeleiding (tegen de fiche of de standaardwaarden), de grootste toegelaten
+U-waarden per soort en jaar, de overgangsweerstanden en de luchtlaag, het aandeel hout, de behandeling van de spouw en van de vloer
+op de grond, de toeslagen voor bevestigingen.
+
+**Na te lezen door een ingenieur:** de belastingen per soort (vooral 1,0 kN/m² voor sneeuw of onderhoud op een dak, zonder wind), de
+houteigenschappen en of C24 een goede standaard is, de factoren, de grenzen voor de doorbuiging, of de weggelaten controles
+(dwarskracht, oplegdruk, kip, trillingen) een "volstaat" kunnen omkeren, de lijst van doorsneden en de aannames over de
+overspanning.
+
+**Buiten bereik, en dat zegt elke uitkomst:** staal, funderingen, windverband, verbindingen, knik van kolommen en stijlen,
+puntlasten, sneeuwophoping, opwaaien; en voor de warmte: E-peil, S-peil, ventilatie, luchtdichtheid en koudebruggen.
+
+**Voor de ronde van het scherm:** de belaste breedte van een balk staat in cm, de hart-op-hart in een opbouw in mm; het echte
+aandeel hout kan uit het bouwdeel gehaald en doorgegeven worden (nu rekent de U-waarde met het raster plus de toeslag).
 

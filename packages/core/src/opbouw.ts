@@ -51,8 +51,8 @@ export interface BouwMateriaal {
   /** Voegkleur bij metselwerk (soort steen). */
   voeg?: string;
   /**
-   * Warmtegeleiding λ in W/(m·K). **Gereserveerd** voor de aanwijzing voor EPB (een latere ronde): er wordt nog nergens
-   * mee gerekend. Vul ze alleen in met een waarde die iemand nagelezen heeft.
+   * Warmtegeleiding λ in W/(m·K), voor de aanwijzing voor EPB (`uWaarde` in warmte.ts): een waarde hier gaat vóór de
+   * tabel met richtwaarden. Vul ze alleen in met een waarde die iemand nagelezen heeft.
    */
   warmtegeleiding?: number;
 }
