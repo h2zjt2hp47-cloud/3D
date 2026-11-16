@@ -852,9 +852,22 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
   #view-plan:not(.groot-scherm) #pl-gereedschap button { padding: 4px 8px; font-size: .84rem; line-height: 1.15; }
   #view-plan:not(.groot-scherm) #pl-gereedschap .techniekknop { grid-column: 1 / -1; margin-top: 2px; }
 }
-/* De weergave en Ongedaan maken boven de tekening en de 3D. */
-.weergavebalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+/* Ongedaan maken naast de tekening en de 3D. In de plattegrond links in de rij van het zoomen (dezelfde rij, de tekening
+   schuift niet: een knop in de kop boven de tekening liet die kop op een laptop over twee rijen lopen); op een smal
+   scherm alleen het pijltje. In de 3D in de linkerbovenhoek van de 3D, ook in het groot scherm. */
+#pl-zoomvlak > #pl-ongedaan, #pl-zoomvlak > .zoomknoppen { grid-row: 1; grid-column: 1; }
+#pl-zoomvlak > #pl-ongedaan { justify-self: start; align-self: center; }
+@media (max-width: 900px) {
+  #pl-zoomvlak > #pl-ongedaan { min-width: 44px; padding: 0 10px; }
+  #pl-zoomvlak > #pl-ongedaan .ongedaan-tekst { display: none; }
+  #pl-zoomvlak > #pl-ongedaan .pijl { margin-right: 0; }
+}
+@media (max-width: 600px) { #pl-zoomvlak > #pl-ongedaan, #pl-zoomvlak > .zoomknoppen { grid-row: auto; grid-column: auto; } }
+#pl-3d > #pl-ongedaan { position: absolute; top: 10px; left: 10px; z-index: 6; background: var(--vlak); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
 #pl-ongedaan:disabled { opacity: .45; cursor: default; }
+/* Het pijltje als tekening, niet als teken: een teken uit een ander lettertype maakte de knop (en de rij boven de tekening)
+   een fractie hoger, en dan schoof de tekening een deel van een beeldpunt. */
+.pijl { width: 14px; height: 14px; vertical-align: -2px; margin-right: 5px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 /* Het palet van een meubel of een daklicht staat op de plaats van het gereedschap (zoals de techniek): naast de tekening. */
 .paletlade { display: grid; gap: 6px; }
 .paletlade[hidden] { display: none; }
@@ -869,12 +882,10 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
 .techniekpalet .tvaktabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .techniekpalet .tvaktabs button { line-height: 1.15; text-align: left; }
 @media (pointer: coarse) { .paletlade .tkop button, .paletlade [data-palet-kies], .paletgroepen button { min-height: 44px; } }
-/* De tekening blijft staan als je de pagina scrolt (bv. naar de controles of het einde van een lang palet). Alleen in de
-   plattegrond: de 3D en de gevels hebben eronder knoppen die je moet kunnen bereiken. */
+/* De kaart met de tekening draagt het maatvenster, de 3D de knop Ongedaan maken. Geen `position: sticky` op de kaart (een
+   tekening die blijft staan als je scrolt): Chromium tekent ze dan in een eigen laag, met net andere randen (de beelden
+   van de tekening veranderden 0,1 à 6 %). */
 #pl-werkvlak, #pl-3d { position: relative; }
-@media (min-height: 600px) {
-  #view-plan:not(.driedmodus):not(.gevelmodus):not(.groot-scherm) #pl-werkvlak { position: sticky; top: 6px; }
-}
 /* Groot scherm in de 3D op een tablet staand: de 3D bovenaan, het gereedschap eronder (liggend en op de laptop staan
    de kolommen naast elkaar, zoals vroeger). */
 @media (max-width: 900px) {
@@ -1017,17 +1028,16 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
     <section class="kaart" id="pl-werkvlak">
       <div class="kaartkop">
         <div id="pl-niveaus" class="tabs niveaus" role="group" aria-label="Verdieping"></div>
-        <div class="weergavebalk">
-          <div class="tabs" role="group" aria-label="Weergave">
-            <button type="button" data-pl-weergave="plan" aria-pressed="true">Plattegrond</button>
-            <button type="button" data-pl-weergave="gevels" aria-pressed="false">Gevels</button>
-            <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
-            <button type="button" data-pl-weergave="doorsnede" aria-pressed="false" title="Een snede door de woning: de lagen van wanden, vloeren en dak">Doorsnede</button>
-          </div>
-          <!-- Altijd naast de tekening en de 3D (ook in het groot scherm); de gevels hebben hun eigen knop in het palet. -->
-          <button type="button" id="pl-ongedaan" class="tweede alleen-plan" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken">↶ Ongedaan</button>
+        <div class="tabs" role="group" aria-label="Weergave">
+          <button type="button" data-pl-weergave="plan" aria-pressed="true">Plattegrond</button>
+          <button type="button" data-pl-weergave="gevels" aria-pressed="false">Gevels</button>
+          <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
+          <button type="button" data-pl-weergave="doorsnede" aria-pressed="false" title="Een snede door de woning: de lagen van wanden, vloeren en dak">Doorsnede</button>
         </div>
       </div>
+      <!-- Ongedaan maken: in de plattegrond links in de rij van het zoomen, in de 3D in de hoek van de 3D (zie toonWeergave).
+           De gevels hebben hun eigen knop in het palet. -->
+      <button type="button" id="pl-ongedaan" class="tweede" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken"><svg class="pijl" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3 2 7l4 4M2.5 7H10a4 4 0 0 1 0 8H8"/></svg><span class="ongedaan-tekst">Ongedaan</span></button>
       <div id="gv-editor" hidden>
         <div id="gv-kanten" class="tabs" role="group" aria-label="Gevel"></div>
         <div id="gv-canvas" role="application" aria-label="Gevelaanzicht: verf muurvlakken, verschuif of voeg ramen toe"></div>

@@ -148,7 +148,7 @@ export function sluitMaatVraag(bevestig = true) {
  * Zet de maatvraag naast de tekening, nooit erop (na het hertekenen, zoomen of een andere maat): net onder de tekening
  * als daar op het scherm plaats is (een tablet staand: daar staat alleen de uitleg), anders net boven de tekening, over
  * de knoppen van de weergave en het zoomen. Zo blijft de tekening vrij voor de volgende tik, en staat de vraag in beeld
- * waar de tekening in beeld staat (de kaart blijft staan als je scrolt).
+ * waar de tekening in beeld staat.
  */
 export function plaatsMaatVraag() {
   if (!vraag || !omg) return;
@@ -220,7 +220,8 @@ export function vraagMaat(v: MaatVraag) {
   doos.append(melding);
   // Rechts onderaan: ongedaan maken (de vraag ligt over de knop boven de tekening), OK en sluiten.
   const acties = el('div', { class: 'maatvraag-acties' });
-  const terug = el('button', { type: 'button', class: 'tweede', 'data-maatvraag-ongedaan': '', title: 'Ongedaan maken (Ctrl+Z): wat je typte, of anders wat je net plaatste', 'aria-label': 'Ongedaan maken' }, '↶ Ongedaan');
+  const terug = el('button', { type: 'button', class: 'tweede', 'data-maatvraag-ongedaan': '', title: 'Ongedaan maken (Ctrl+Z): wat je typte, of anders wat je net plaatste', 'aria-label': 'Ongedaan maken' }, 'Ongedaan');
+  terug.insertAdjacentHTML('afterbegin', '<svg class="pijl" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3 2 7l4 4M2.5 7H10a4 4 0 0 1 0 8H8"/></svg>');
   terug.addEventListener('click', () => { sluitMaatVraag(true); ongedaan(); });
   const ok = el('button', { type: 'button', class: 'maatvraag-ok' }, 'OK');
   ok.addEventListener('click', () => { if (pasToe(true)) sluitMaatVraag(true); });

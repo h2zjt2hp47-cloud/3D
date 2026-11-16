@@ -133,6 +133,8 @@ let daklichtType = 'koepel_100';
 let palet: Palet | undefined;
 /** De groep van het meubelpalet die open staat (Zitten, Slapen, …, Trappen). */
 let meubelGroep: string | undefined;
+/** De knop *Ongedaan maken* (`#pl-ongedaan`): verhuist tussen de rij van het zoomen en de hoek van de 3D. */
+let ongedaanKnop: HTMLButtonElement | undefined;
 /** Dak op de bovenste verdieping tonen in de 3D (uit = erin kijken). */
 let toonDakIn3D = true;
 let selectie: Selectie;
@@ -621,11 +623,12 @@ function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Openin
 
 let tikMeldingKlok = 0;
 /**
- * De uitleg na een tik die niet kan (of wat een tik met de techniek deed) bij de tik zelf, in het zichtbare deel van de
- * tekening. Vroeger stond ze alleen bovenaan de eigenschappen: op een tablet tot 340 beeldpunten onder het scherm, en de
- * verkoper zag alleen dat zijn tik niets deed. Ze vangt zelf geen tik (`pointer-events: none`) en verdwijnt bij de
- * volgende tik op de tekening, bij een ander gereedschap of na een tijd die met de lengte van de tekst meegroeit. De
- * melding blijft ook bij de eigenschappen staan, zoals vroeger.
+ * De uitleg na een tik die niet kan bij de tik zelf, in het zichtbare deel van de tekening; wat een tik met de techniek
+ * deed (`info`: de technische ruimte, een leiding) onderaan dat deel, zodat ze het resultaat niet bedekt. Vroeger stond
+ * de uitleg alleen bovenaan de eigenschappen: op een tablet tot 340 beeldpunten onder het scherm, en de verkoper zag
+ * alleen dat zijn tik niets deed. Ze vangt zelf geen tik (`pointer-events: none`) en verdwijnt bij de volgende tik op de
+ * tekening, bij een ander gereedschap of na een tijd die met de lengte van de tekst meegroeit. De melding blijft ook bij
+ * de eigenschappen staan, zoals vroeger.
  */
 export function tikMelding(tekst: string, bij?: Punt, soort: 'weiger' | 'info' = 'weiger') {
   const vlak = $('#pl-canvas').parentElement;
@@ -638,7 +641,7 @@ export function tikMelding(tekst: string, bij?: Punt, soort: 'weiger' | 'info' =
   m.textContent = tekst;
   m.classList.toggle('info', soort === 'info');
   m.hidden = false;
-  plaatsTikMelding(m, bij);
+  plaatsTikMelding(m, soort === 'info' ? undefined : bij);
   window.clearTimeout(tikMeldingKlok);
   const doos = m;
   tikMeldingKlok = window.setTimeout(() => { doos.hidden = true; }, Math.max(5000, tekst.length * 70));
@@ -649,18 +652,21 @@ function verbergTikMelding() {
   if (m) m.hidden = true;
 }
 
-/** Boven de tik (anders eronder), binnen het deel van de tekening dat op het scherm staat. */
+/** Boven de tik (anders eronder), of zonder tik onderaan; binnen het deel van de tekening dat op het scherm staat. */
 function plaatsTikMelding(m: HTMLElement, bij?: Punt) {
   const vlak = m.parentElement!, svg = $('#pl-canvas').querySelector('svg');
   const v = vlak.getBoundingClientRect(), s = (svg ?? vlak).getBoundingClientRect();
   const boven = Math.max(s.top, 0), onder = Math.min(s.bottom, window.innerHeight);
-  let x = (s.left + s.right) / 2, y = boven + 40;
-  const ctm = svg?.getScreenCTM();
-  if (bij && ctm) { const q = new DOMPoint(bij[0], bij[1]).matrixTransform(ctm); x = q.x; y = q.y; }
   const b = m.offsetWidth, h = m.offsetHeight;
+  let x = (s.left + s.right) / 2, t = onder - h - 6;
+  const ctm = svg?.getScreenCTM();
+  if (bij && ctm) {
+    const q = new DOMPoint(bij[0], bij[1]).matrixTransform(ctm);
+    x = q.x;
+    t = q.y - h - 22;
+    if (t < boven + 6) t = q.y + 22;
+  }
   const l = Math.min(s.right - b - 6, Math.max(s.left + 6, x - b / 2));
-  let t = y - h - 22;
-  if (t < boven + 6) t = y + 22;
   t = Math.max(boven + 6, Math.min(onder - h - 6, t));
   m.style.left = `${Math.round(l - v.left)}px`;
   m.style.top = `${Math.round(t - v.top)}px`;
@@ -1944,7 +1950,7 @@ function toonOverzicht() {
   $('#pl-controle-status').textContent = nF ? `${nF} fout${nF === 1 ? '' : 'en'}` : meldingen.length ? `${meldingen.length} aandachtspunt${meldingen.length === 1 ? '' : 'en'}` : 'alles in orde';
   $('#pl-controle-status').className = `status ${nF ? 'fout' : meldingen.length ? 'let-op' : 'ok'}`;
   $('#pl-offerte').textContent = PRIJZEN ? `${eur(berekenHuidigeOfferte().excl)} excl. btw` : '';
-  $<HTMLButtonElement>('#pl-ongedaan').disabled = !kanOngedaan();
+  if (ongedaanKnop) ongedaanKnop.disabled = !kanOngedaan();
 }
 
 // ---------- gereedschap ----------
@@ -1994,8 +2000,10 @@ function toonGereedschapKaart() {
   if (kop) kop.textContent = tech ? 'Techniek' : open ? PALET_TITEL[open] : 'Gereedschap';
   $('#pl-meubels').hidden = open !== 'meubel';
   $('#pl-daklichten').hidden = open !== 'daklicht';
-  if (nieuw && open === 'meubel') toonMeubelPalet();
-  if (nieuw && open === 'daklicht') toonDaklichtPalet();
+  if (!nieuw) return;
+  // Het open palet opnieuw opbouwen; een dicht palet leeg (zijn knoppen staan dan niet dubbel in de pagina).
+  if (open === 'meubel') toonMeubelPalet(); else $('#pl-meubels').replaceChildren();
+  if (open === 'daklicht') toonDaklichtPalet(); else $('#pl-daklichten').replaceChildren();
 }
 
 /** De kop van een palet: terug naar het gereedschap, en Selecteren (om wat je plaatste te verslepen). */
@@ -2027,7 +2035,7 @@ function toonMeubelPalet() {
   for (const [code, m] of Object.entries(cat.meubels).filter(([, m]) => m.groep === meubelGroep)) {
     const actief = gereedschap === 'meubel' && code === meubelType;
     const b = el('button', { type: 'button', class: 'ttegel', 'data-meubel': code, 'aria-pressed': String(actief) }, m.label);
-    b.addEventListener('click', () => { meubelType = code; kiesGereedschap(actief ? 'kies' : 'meubel'); });
+    b.addEventListener('click', () => { meubelType = code; kiesGereedschap('meubel'); });
     tegels.append(b);
   }
   vak.className = 'paletlade';
@@ -2044,7 +2052,7 @@ function toonDaklichtPalet() {
     for (const [code, t] of Object.entries(cat.daklichten ?? {}).filter(([, t]) => t.groep === g)) {
       const actief = gereedschap === 'daklicht' && code === daklichtType;
       const b = el('button', { type: 'button', class: 'ttegel', 'data-daklicht': code, 'aria-pressed': String(actief) }, t.label);
-      b.addEventListener('click', () => { daklichtType = code; kiesGereedschap(actief ? 'kies' : 'daklicht'); });
+      b.addEventListener('click', () => { daklichtType = code; kiesGereedschap('daklicht'); });
       tegels.append(b);
     }
     delen.push(el('p', { class: 'tsub' }, g), tegels);
@@ -2085,6 +2093,12 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
     viewer?.formaat();
     plan3D();
     toonNaastKnop();
+  }
+  // Ongedaan maken staat bij wat je ziet: in de hoek van de 3D (meteen terug na een stijl of een keuze in het keuzepaneel),
+  // anders in de rij van het zoomen boven de tekening. Bij de gevels en de doorsnede staat ze in een verborgen vak.
+  if (ongedaanKnop) {
+    if (w === '3d') $('#pl-3d').append(ongedaanKnop);
+    else if (w === 'plan') $('#pl-zoomvlak').append(ongedaanKnop);
   }
 }
 
@@ -2161,12 +2175,15 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   });
   const vlak = document.createElement('div');
   vlak.className = 'zoomvlak';
+  vlak.id = 'pl-zoomvlak';
   houder.before(vlak);
   // Het paneel Ruimte met maten staat over de hele breedte boven het gereedschap en de tekening (op een tablet blijft
   // het zo boven het toetsenbord in beeld).
   startMaten(matenOmgeving);
   $('#view-plan .planraster').before(el('section', { id: 'pl-maatpaneel', class: 'maatpaneel', hidden: '', 'aria-label': 'Ruimte met maten' }));
-  vlak.append(houder, zoom.knoppen({ selectie: selectieKader, grootScherm: $('#view-plan') }));
+  // Ongedaan maken links in de rij van het zoomen (in de 3D gaat de knop naar de hoek van de 3D, zie toonWeergave).
+  ongedaanKnop = $<HTMLButtonElement>('#pl-ongedaan');
+  vlak.append(houder, zoom.knoppen({ selectie: selectieKader, grootScherm: $('#view-plan') }), ongedaanKnop);
   houder.addEventListener('pointerdown', naPointerDown);
   houder.addEventListener('pointermove', naPointerMove);
   houder.addEventListener('pointerup', naPointerUp);
