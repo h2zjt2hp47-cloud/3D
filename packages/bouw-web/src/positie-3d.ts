@@ -27,7 +27,18 @@ export function positieScene(p: Positie, r: ConfiguratieResultaat = resultaat(p)
 
 /** Het raam, de deur of de poort van een opening als blokken voor de 3D van de woning. */
 export function openingInhoud(o: Opening): OpeningInhoud | undefined {
-  const p = positieVan(o);
+  return inhoudVan(positieVan(o));
+}
+
+/**
+ * Hetzelfde voor de openingen van een ander project dan het actieve (een variant): de posities komen uit dat project.
+ * Een positie rekent alleen met haar eigen keuzes, dus dat kan zonder van project te wisselen.
+ */
+export function openingInhoudUit(posities: Positie[]): (o: Opening) => OpeningInhoud | undefined {
+  return (o) => inhoudVan(o.positie ? posities.find((p) => p.id === o.positie) : undefined);
+}
+
+function inhoudVan(p: Positie | undefined): OpeningInhoud | undefined {
   if (!p || p.model === 'AANBOUW') return undefined;
   const rb = p.model === 'POORT' ? poortBlokken(resultaat(p)) : raamBlokken(resultaat(p));
   return { blokken: rb.blokken, hoogte: rb.h + rb.kast };

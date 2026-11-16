@@ -579,8 +579,61 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
   .a-meet td { border: 1px solid #999 !important; height: 9mm; width: 25%; }
 }
 
+/* ---------- meegeven aan de klant en varianten naast elkaar (16/11) ---------- */
+.meegeefblok { border-bottom: 1px solid var(--lijn); padding-bottom: 10px; margin-bottom: 4px; }
+.meegeefblok p.klein { margin: 8px 0 0; }
+.acties button.hoofdknop { font-weight: 600; padding: 10px 18px; min-height: 44px; }
+#o-varianten-mee { display: grid; gap: 4px; margin-top: 8px; }
+#o-varianten-mee .klein { margin: 0; }
+#o-varianten-mee > button { justify-self: start; }
+.mee-keuze { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; }
+.mee-keuze input { width: 22px; height: 22px; flex: none; }
+.mee-keuze span small { display: block; color: var(--zacht); font-size: .8rem; }
+.vr-balk { align-items: center; }
+.vr-schakelaar { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 6px; }
+.vr-schakelaar input { width: 22px; height: 22px; }
+.vr-kaarten { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; margin-top: 10px; }
+.variantkaart { border: 1px solid var(--lijn); border-radius: 8px; padding: 10px; background: var(--vlak); display: grid; gap: 8px; align-content: start; min-width: 0; }
+.variantkaart.actief { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+/* Twee regels plaats voor de naam: dan staan de 3D-beelden van de kaarten op dezelfde hoogte. */
+.variantkaart h3 { font-size: 1.05rem; margin: 0; min-height: 2.6em; }
+.variantkaart .verschil { margin: 0; padding-left: 18px; font-size: .92rem; }
+.variantkaart .verschil:empty { display: none; }
+.samen { position: relative; }
+.samen .drie-d { min-height: 200px; }
+.samen-vlak { position: absolute; inset: 0; touch-action: none; cursor: grab; z-index: 1; }
+.samen-vlak:active { cursor: grabbing; }
+.variantkaart .knoppenrij { margin: 0; }
+@media (pointer: coarse) { .variantkaart .knoppenrij button, #vr-keuze button { min-height: 44px; } }
+/* Gaat voor op de algemene regel voor een label met een vinkje op een aanraakscherm (36 px): hier 44 px. */
+#o-varianten-mee label.mee-keuze, #vr-kaarten label.mee-keuze, #view-varianten label.vr-schakelaar { min-height: 44px; }
+
 /* ---------- afdruk ---------- */
 #afdruk { display: none; }
+@media print {
+  .blad { font-size: 10pt; }
+  .b-kop { display: flex; justify-content: space-between; align-items: flex-end; gap: 12mm; border-bottom: 1.5pt solid #34505f; padding-bottom: 3mm; margin-bottom: 4mm; }
+  .b-kop p { margin: 1mm 0 0; color: #444; }
+  .b-aannemer { font-weight: 600; color: #34505f; letter-spacing: .03em; font-size: 10.5pt; }
+  .b-datum { text-align: right; font-size: 9pt; color: #444; white-space: nowrap; }
+  .blad figure { margin: 0; break-inside: avoid; }
+  .blad img { display: block; width: 100%; height: auto; border-radius: 1.5mm; }
+  .blad figcaption { font-size: 9pt; font-weight: 600; margin-top: 1.2mm; }
+  .b-groot img { max-height: 115mm; object-fit: cover; }
+  .b-kort { columns: 2; column-gap: 8mm; margin: 4mm 0 5mm; padding-left: 5mm; font-size: 9.5pt; }
+  .b-kort li { break-inside: avoid; margin-bottom: .8mm; }
+  .b-zichten { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+  .b-nieuw { break-before: page; }
+  .b-gevels { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm 6mm; }
+  .b-gevels svg { width: 100%; height: auto; }
+  .b-boven { display: grid; gap: 6mm; }
+  .b-boven img { max-height: 112mm; object-fit: contain; }
+  .b-ramen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm 4mm; }
+  .b-raam figcaption { font-weight: 400; line-height: 1.3; }
+  .b-raam strong { font-weight: 600; }
+  .b-klein { display: block; font-size: 8pt; color: #555; font-weight: 400; margin-top: 1mm; }
+  .b-voet { margin-top: 6mm; }
+}
 @media print {
   @page { size: A4; margin: 14mm; }
   body { background: #fff; color: #111; font-size: 10pt; }
@@ -745,6 +798,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <span class="klein">Stijl</span>
           <div id="pl-stijlen"></div>
           <button type="button" id="pl-variant" class="tweede" title="Een kopie van dit ontwerp om iets anders te proberen; het origineel blijft">Variant maken</button>
+          <button type="button" id="pl-naast" class="tweede" title="Twee of drie varianten van dit ontwerp in 3D naast elkaar, samen draaiend" hidden>Varianten naast elkaar</button>
           <span id="pl-variant-melding" class="klein" role="status"></span>
         </div>
         <div class="knoppenrij">
@@ -755,6 +809,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <button type="button" data-pl-standpunt="boven">Boven</button>
         </div>
         <div class="schakelaars" style="margin-top:8px">
+          <label title="Breedte, diepte, hoogte en nok van het gebouw; tik op een raam voor zijn maten"><input type="checkbox" id="pl-maten"> Maten tonen</label>
           <label><input type="checkbox" id="pl-laag"> Muren laag (binnenkijken)</label>
           <label><input type="checkbox" id="pl-toon-meubels" checked> Meubels tonen</label>
           <label><input type="checkbox" id="pl-alle-niveaus" checked> Alle verdiepingen</label>
@@ -892,6 +947,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label>Project <input type="text" id="o-project"></label>
           <label>Nummer <input type="text" id="o-nummer"></label>
           <label>Datum <input type="date" id="o-datum"></label>
+          <label title="Staat op het bestand en het blad voor de klant; bewaard in deze browser, voor alle projecten">Uw firma <input type="text" id="o-aannemer" placeholder="Uw bedrijf" autocomplete="organization"></label>
         </div>
       </section>
       <section class="kaart prijsdeel">
@@ -936,6 +992,15 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       <section class="kaart" id="o-meegeven">
         <div class="kaartkop"><h2 id="o-meegeven-kop">Meegeven en doorsturen</h2></div>
         <dl id="o-totalen" class="totaal prijsdeel"></dl>
+        <div class="meegeefblok">
+          <div class="acties" style="margin-top:4px">
+            <button type="button" id="o-klantbestand" class="hoofdknop">Meegeven aan de klant</button>
+            <button type="button" id="o-blad" class="tweede">Blad met beelden (PDF)</button>
+          </div>
+          <p class="klein">Eén bestand met de draaibare 3D, zonder prijzen: de klant opent het op elk toestel, ook zonder internet, en kan niets wijzigen. Het blad met beelden druk je af of bewaar je als PDF.</p>
+          <div id="o-varianten-mee" hidden></div>
+          <p id="o-klantbestand-melding" class="klein" role="status"></p>
+        </div>
         <div class="acties">
           <button type="button" id="o-zending" class="intern" title="Alles voor Missing Link in één bestand: wat er is en hoeveel (zonder prijzen), een beeld per regel en de 3D">Doorsturen naar Missing Link</button>
           <button type="button" id="o-afdruk" class="tweede">Afdrukken / PDF</button>
@@ -989,6 +1054,27 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       </section>
     </div>
   </div>
+</main>
+<main id="view-varianten" class="view" hidden>
+  <section class="kaart">
+    <div class="kaartkop"><h2>Varianten naast elkaar</h2><span id="vr-tekst" class="klein"></span></div>
+    <div id="vr-keuze" class="tabs klein" role="group" aria-label="Welke varianten" hidden></div>
+    <div class="knoppenrij vr-balk">
+      <button type="button" data-vr-standpunt="schuin">Schuin</button>
+      <button type="button" data-vr-standpunt="voor">Voorgevel</button>
+      <button type="button" data-vr-standpunt="achter">Achtergevel</button>
+      <button type="button" data-vr-standpunt="zij">Zij</button>
+      <button type="button" data-vr-standpunt="boven">Boven</button>
+      <label class="vr-schakelaar"><input type="checkbox" id="vr-maten"> Maten tonen</label>
+    </div>
+    <p class="klein">Draai of zoom in één 3D: de andere draaien mee. Zoomen met Ctrl (⌘) + scrollen of knijpen.</p>
+    <div id="vr-kaarten" class="vr-kaarten"></div>
+    <div class="acties">
+      <button type="button" id="vr-meegeven" class="hoofdknop">Meegeven aan de klant</button>
+      <button type="button" id="vr-terug" class="tweede">Terug naar het ontwerp</button>
+      <span id="vr-melding" class="klein" role="status"></span>
+    </div>
+  </section>
 </main>
 <main id="view-werf" class="view" hidden>
   <section class="kaart werfkop">

@@ -17,6 +17,7 @@ import { gevelStaal } from './gevel-ui.js';
 import { el } from './hulp.js';
 import { stijlBeeld } from './snelstart-ui.js';
 import { actiefProject, dupliceerProject, positieVan, toestand, wijzig, type Toestand } from './staat.js';
+import { familie } from './meegeven.js';
 
 /** Is dit een ding dat je kan aantikken? Andere namen (binnenmuur, terras, schaduw) geven geen keuzes. */
 export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:)/.test(id);
@@ -209,9 +210,13 @@ export function stijlRij(): HTMLElement {
 /** Een variant: een kopie van het project om iets anders te proberen; het origineel blijft in Projecten. */
 export function maakVariant(): string {
   const t = toestand();
-  const m = /^(.*?)(?: \(variant (\d+)\))?$/.exec(t.meta.project || 'Ontwerp')!;
+  const basis = (t.meta.project || 'Ontwerp').replace(/ \(variant \d+\)$/, '');
+  // Het volgende nummer in de reeks (ook als je vanuit het origineel een tweede variant maakt), en één groep voor allemaal.
+  const nr = Math.max(1, ...familie().map((v) => Number(/ \(variant (\d+)\)$/.exec(v.naam)?.[1] ?? 1))) + 1;
+  const groep = t.meta.variantGroep ?? actiefProject();
+  if (!t.meta.variantGroep) wijzig('meta', (x) => { x.meta.variantGroep = groep; }, { zonderOngedaan: true });
   dupliceerProject(actiefProject());
-  const naam = `${m[1]} (variant ${m[2] ? Number(m[2]) + 1 : 2})`;
-  wijzig('meta', (x) => { x.meta.project = naam; }, { zonderOngedaan: true });
+  const naam = `${basis} (variant ${nr})`;
+  wijzig('meta', (x) => { x.meta.project = naam; x.meta.variantGroep = groep; }, { zonderOngedaan: true });
   return naam;
 }

@@ -3504,5 +3504,123 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     opties.opLog?.(`3D kon niet starten: ${String(fout).slice(0, 160)}`);
     houder.textContent = '3D kon niet starten in deze browser.';
   });
+
+  // ---------- maatlijnen van de bouw (16/11) ----------
+  // Een scène van een gebouw kan maatlijnen meedragen (`maatlijnen`: Maatlijn3D in core/src/pakket3d.ts, uitgerekend in
+  // core/src/maten3d.ts): de hoofdmaten van de woning of de maten van een raam. Een scène zonder dat veld tekent zoals
+  // altijd. De tekst staat bovenop alles en altijd recht naar de camera; een lijn verdwijnt achter wat ervoor staat, behalve
+  // met `bovenop` (de maten van een raam, in het vlak van de muur). Lijnen en tekst houden op elke afstand dezelfde dikte
+  // en grootte op het scherm. Van een maat die aan meer kanten kan staan
+  // (`groep`: de breedte vóór en achter de woning) is alleen die aan de kant van de camera te zien; draai je, dan schuift
+  // ze mee; een maat die je in haar lengte ziet, valt weg. Eén blok dat niets van hierboven wijzigt: het pakt `toon` in
+  // en schikt de maten vlak voor elk beeld van de eigen camera (de schaduw van de zon wordt met een andere camera
+  // getekend en slaat het over).
+  if (!opties.zetel) {
+    type Maat = { van: number[]; tot: number[]; tekst: string; uit: number[]; afstand: number; groep?: string; kant?: number[]; bovenop?: boolean };
+    type Getekend = { maat: Maat; deel: any; midden: any; richting: any; lijnen: any[]; tikken: any[]; label: any; verhouding: number };
+    const maatGroep = new THREE.Group();
+    scene.add(maatGroep);
+    // Een donkere lijn met een lichte rand: te lezen op gras, op een witte muur en op een donkere gevel of een dak.
+    const verf = (kleur: number, bovenop: boolean, dekking = 1) => new THREE.MeshBasicMaterial({ color: kleur, opacity: dekking, depthTest: !bovenop, depthWrite: false, transparent: true, toneMapped: false, fog: false });
+    const inkt = [verf(0x1f2b31, false), verf(0xffffff, false, 0.8)], inktBovenop = [verf(0x1f2b31, true), verf(0xffffff, true, 0.8)];
+    const staaf = new THREE.CylinderGeometry(1, 1, 1, 8);
+    const omhoog = new THREE.Vector3(0, 1, 0);
+    const v3 = (p: number[]) => new THREE.Vector3(p[0] ?? 0, p[1] ?? 0, p[2] ?? 0);
+    let getekend: Getekend[] = [];
+    /**
+     * Een staaf (eenheidscilinder) rond `midden` in een richting, als kern en lichte rand; de dikte (en de lengte van een
+     * tik) zet `schik`, per beeld.
+     */
+    const staafVan = (deel: any, midden: any, richting: any, lengte: number) => {
+      const [kern, rand] = deel.userData.bovenop ? inktBovenop : inkt;
+      return [[kern, 1.1, 10], [rand, 2.6, 9]].map(([materiaal, dik, volgorde]) => {
+        const m = new THREE.Mesh(staaf, materiaal);
+        m.position.copy(midden);
+        m.quaternion.setFromUnitVectors(omhoog, richting.clone().normalize());
+        m.userData.lengte = lengte;
+        m.userData.dik = dik;
+        m.renderOrder = volgorde;
+        deel.add(m);
+        return m;
+      });
+    };
+    const tussen = (deel: any, a: any, b: any) => staafVan(deel, a.clone().add(b).multiplyScalar(0.5), b.clone().sub(a), a.distanceTo(b));
+    const label = (tekst: string) => {
+      const c = document.createElement('canvas');
+      const g = c.getContext('2d')!;
+      const letter = '600 44px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+      g.font = letter;
+      const b = Math.ceil(g.measureText(tekst).width) + 48, h = 72;
+      c.width = b; c.height = h;
+      g.font = letter;
+      g.fillStyle = 'rgba(255,255,255,0.95)';
+      g.beginPath(); g.roundRect(2, 2, b - 4, h - 4, 18); g.fill();
+      g.strokeStyle = 'rgba(31,43,49,0.6)'; g.lineWidth = 2.5; g.stroke();
+      g.fillStyle = '#1f2b31'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(tekst, b / 2, h / 2 + 2);
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, depthWrite: false, transparent: true, toneMapped: false, fog: false }));
+      sp.renderOrder = 11;
+      return { sp, verhouding: b / h };
+    };
+    const zetMaatlijnen = (lijst: Maat[]) => {
+      for (const g of getekend) { g.label.material.map?.dispose(); g.label.material.dispose(); }
+      maatGroep.clear();
+      getekend = [];
+      for (const maat of lijst) {
+        if (!Array.isArray(maat?.van) || !Array.isArray(maat.tot) || !Array.isArray(maat.uit)) continue;
+        const deel = new THREE.Group();
+        deel.userData.bovenop = maat.bovenop === true;
+        const van = v3(maat.van), tot = v3(maat.tot), uit = v3(maat.uit).normalize(), af = Number(maat.afstand) || 0;
+        const a = van.clone().addScaledVector(uit, af), b = tot.clone().addScaledVector(uit, af);
+        // Hulplijnen van het gemeten stuk (met een kleine opening) tot iets voorbij de maatlijn, de maatlijn zelf en een
+        // schuine tik aan elk uiteinde, zoals op een plan.
+        const open = Math.min(8, af * 0.1), voorbij = Math.max(6, af * 0.16);
+        const lijnen = tussen(deel, a, b);
+        if (af > 0) for (const p of [van, tot]) lijnen.push(...tussen(deel, p.clone().addScaledVector(uit, open), p.clone().addScaledVector(uit, af + voorbij)));
+        const schuin = b.clone().sub(a).normalize().add(uit).normalize();
+        const tikken = [a, b].flatMap((p) => staafVan(deel, p, schuin, 1));
+        const { sp, verhouding } = label(String(maat.tekst ?? ''));
+        sp.position.copy(a).add(b).multiplyScalar(0.5);
+        deel.add(sp);
+        maatGroep.add(deel);
+        getekend.push({ maat, deel, midden: sp.position.clone(), richting: b.clone().sub(a).normalize(), lijnen, tikken, label: sp, verhouding });
+      }
+    };
+    const naarCamera = new THREE.Vector3();
+    const schik = () => {
+      const beste = new Map<string, { g: Getekend; w: number }>();
+      for (const g of getekend) {
+        if (!g.maat.groep) continue;
+        naarCamera.copy(camera.position).sub(g.midden).normalize();
+        const w = g.maat.kant ? naarCamera.dot(v3(g.maat.kant)) : 0;
+        const b = beste.get(g.maat.groep);
+        if (!b || w > b.w) beste.set(g.maat.groep, { g, w });
+      }
+      const hoogte = renderer.domElement.clientHeight || houder.clientHeight || 600;
+      const tanHalf = Math.tan((camera.fov * Math.PI) / 360);
+      for (const g of getekend) {
+        // Een maat die je bijna in haar lengte ziet (de diepte recht van voren, een hoogte van boven), valt weg: ze is
+        // dan niet te lezen en haar tekst zou op de gevel staan.
+        naarCamera.copy(camera.position).sub(g.midden).normalize();
+        g.deel.visible = (!g.maat.groep || beste.get(g.maat.groep)?.g === g) && Math.abs(naarCamera.dot(g.richting)) < 0.88;
+        if (!g.deel.visible) continue;
+        // Hoeveel cm één beeldpunt is op de afstand van deze maat: lijnen ±2 beeldpunten dik, tekst 26 beeldpunten hoog.
+        const px = (2 * camera.position.distanceTo(g.midden) * tanHalf) / hoogte;
+        for (const m of g.lijnen) m.scale.set(px * m.userData.dik, m.userData.lengte, px * m.userData.dik);
+        for (const m of g.tikken) m.scale.set(px * m.userData.dik, px * 14, px * m.userData.dik);
+        g.label.scale.set(px * 26 * g.verhouding, px * 26, 1);
+      }
+      maatGroep.updateMatrixWorld(true);
+    };
+    const eigenToon = viewer.toon;
+    viewer.toon = (s: Scene3D) => {
+      eigenToon.call(viewer, s);
+      zetMaatlijnen((s as Scene3D & { maatlijnen?: Maat[] }).maatlijnen ?? []);
+      render();
+    };
+    scene.onBeforeRender = (_r: unknown, _s: unknown, cam: unknown) => { if (cam === camera && getekend.length) schik(); };
+  }
   return viewer;
 }

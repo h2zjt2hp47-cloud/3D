@@ -4,12 +4,13 @@
  * Dezelfde motor als de zetelconfigurator; alles in één HTML-bestand.
  */
 import { $, PRIJZEN, toonFout } from './hulp.js';
-import { startOfferte, toonOfferte } from './offerte-ui.js';
+import { geefMee, startOfferte, toonOfferte } from './offerte-ui.js';
 import { naWijziging, startPlattegrond, toonPlan, toonWoning3D } from './plattegrond-ui.js';
 import { herbereken, startPositie, toonPositie, toonPositie3D } from './positie-ui.js';
 import { startSnelstart, toonSnelstart } from './snelstart-ui.js';
 import { startWerf, toonWerf } from './werf-ui.js';
 import { startProjecten, toonProjecten } from './projecten-ui.js';
+import { startVarianten, toonVarianten } from './varianten-ui.js';
 import { laatstBewaard, opslagProbleem, opWijziging, toestand } from './staat.js';
 
 window.addEventListener('error', (e) => {
@@ -22,7 +23,7 @@ window.addEventListener('error', (e) => {
 });
 window.addEventListener('unhandledrejection', (e) => toonFout('Fout', e.reason));
 
-type Weergave = 'start' | 'projecten' | 'plan' | 'offerte' | 'positie' | 'werf';
+type Weergave = 'start' | 'projecten' | 'plan' | 'offerte' | 'positie' | 'werf' | 'varianten';
 let actief: Weergave = 'plan';
 
 function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) {
@@ -31,7 +32,7 @@ function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) 
   // De werf staat niet meer in het menu zolang er geen prijzen getoond worden (inmeting en meerwerk gaan over bedragen).
   if (w === 'werf' && !PRIJZEN) w = 'offerte';
   actief = w;
-  for (const v of ['start', 'projecten', 'plan', 'offerte', 'positie', 'werf'] as const) $(`#view-${v}`).hidden = v !== w;
+  for (const v of ['start', 'projecten', 'plan', 'offerte', 'positie', 'werf', 'varianten'] as const) $(`#view-${v}`).hidden = v !== w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.weergave === w));
   document.body.classList.toggle('zonder-woning', !!toestand().meta.zonderWoning);
   if (w === 'plan') toonPlan(opties.opening);
@@ -40,6 +41,7 @@ function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) 
   if (w === 'werf') toonWerf();
   if (w === 'projecten') toonProjecten();
   if (w === 'start') toonSnelstart();
+  if (w === 'varianten') toonVarianten();
   kop();
   try {
     history.replaceState(null, '', `#${w}${opties.positie ? `/${opties.positie}` : ''}`);
@@ -67,6 +69,9 @@ const nav = {
   naarWoning3D: () => { toon('plan'); toonWoning3D(); },
   /** De configurator met de 3D in beeld (na de snelstart). */
   naarPositie3D: (id: string) => { toon('positie', { positie: id }); toonPositie3D(); },
+  /** Varianten van dit ontwerp in 3D naast elkaar. */
+  naarVarianten: () => toon('varianten'),
+  geefMee,
 };
 
 /** Projectnaam en bewaarstatus in de kop. */
@@ -86,6 +91,7 @@ veilig('Positie', () => startPositie(nav));
 veilig('Werf', () => startWerf(nav));
 veilig('Projecten', () => startProjecten(nav));
 veilig('Snelstart', () => startSnelstart(nav));
+veilig('Varianten', () => startVarianten(nav));
 
 opWijziging(() => veilig('Bijwerken', () => {
   if (actief === 'plan') naWijziging();
@@ -117,4 +123,4 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]'))
 }
 $('#nav-aantal').textContent = String(toestand().posities.length);
 const [start, id] = location.hash.slice(1).split('/');
-veilig('Opstarten', () => toon((['start', 'projecten', 'plan', 'offerte', 'positie', 'werf'] as Weergave[]).includes(start as Weergave) ? (start as Weergave) : 'plan', { positie: id }));
+veilig('Opstarten', () => toon((['start', 'projecten', 'plan', 'offerte', 'positie', 'werf', 'varianten'] as Weergave[]).includes(start as Weergave) ? (start as Weergave) : 'plan', { positie: id }));
