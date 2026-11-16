@@ -134,7 +134,7 @@ export function toonVarianten() {
   });
 }
 
-export function startVarianten(nav: { naarWoning3D: () => void; geefMee: (knop: HTMLButtonElement, melding: HTMLElement) => void }) {
+export function startVarianten(nav: { naarWoning3D: () => void; geefMee: (knop: HTMLButtonElement, melding: HTMLElement, leden?: Variant[]) => void }) {
   naarWoning3D = nav.naarWoning3D;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-vr-standpunt]')) {
     b.addEventListener('click', () => {
@@ -147,5 +147,9 @@ export function startVarianten(nav: { naarWoning3D: () => void; geefMee: (knop: 
     toonVarianten();
   });
   $('#vr-terug').addEventListener('click', () => naarWoning3D());
-  $('#vr-meegeven').addEventListener('click', () => nav.geefMee($<HTMLButtonElement>('#vr-meegeven'), $('#vr-melding')));
+  // Mee gaat wat hier naast elkaar staat en aangevinkt is (niets aangevinkt: de gewone keuze, het ontwerp waarin je werkt).
+  $('#vr-meegeven').addEventListener('click', () => {
+    const mee = getoond(familie().filter((v) => !v.t.meta.zonderWoning)).filter((v) => gaatMee(v.id));
+    nav.geefMee($<HTMLButtonElement>('#vr-meegeven'), $('#vr-melding'), mee.length ? mee : undefined);
+  });
 }

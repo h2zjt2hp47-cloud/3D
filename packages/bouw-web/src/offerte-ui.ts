@@ -18,7 +18,7 @@ import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positie
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 import { maakPakket3D, maakZending } from './doorsturen.js';
 import { drukBlad } from './blad.js';
-import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee } from './meegeven.js';
+import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
 const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'dak', 'inrichting'] as const;
@@ -30,13 +30,14 @@ let naarVarianten: () => void = () => {};
 
 /**
  * Meegeven aan de klant: één HTML-bestand met de draaibare 3D (de kijker met het ontwerp en de gekozen varianten erin),
- * zonder prijzen. Meteen klaar (er worden geen beelden getekend); de melding zegt hoe groot het is.
+ * zonder prijzen. Meteen klaar (er worden geen beelden getekend); de melding zegt hoe groot het is. `leden`: welke
+ * ontwerpen mee gaan (van *Varianten naast elkaar*: wat daar staat en aangevinkt is); anders de keuze van `meeTeGeven`.
  */
-export async function geefMee(knop: HTMLButtonElement, melding: HTMLElement) {
+export async function geefMee(knop: HTMLButtonElement, melding: HTMLElement, leden: Variant[] = meeTeGeven()) {
   knop.disabled = true;
   melding.textContent = 'Bestand maken …';
   try {
-    const b = await maakKlantBestand(meeTeGeven(), omschrijving);
+    const b = await maakKlantBestand(leden, omschrijving);
     const uitkomst = await bewaarBestand(b.naam, new Blob([b.inhoud], { type: 'text/html' }));
     melding.textContent = uitkomst === 'bewaard'
       ? `Klaar: "${b.naam}" (${grootteTekst(b.grootte)}${b.varianten > 1 ? `, ${b.varianten} varianten` : ''}). Stuur het door of zet het op een stick: de klant opent het in een browser.`

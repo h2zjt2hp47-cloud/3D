@@ -18,7 +18,8 @@ export interface OntwerpKenmerk {
 /** Wat een ontwerp bevat aan ramen en deuren (zoals een positie van de bouwdemo). */
 export interface OntwerpPositie { model: string; keuzes: Keuzes; aantal: number }
 
-const klein = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+/** Eerste letter klein, midden in een zin; een afkorting (PVC, EPDM) blijft zoals ze is. */
+const klein = (s: string) => (/^[A-Z]{2}/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1));
 const getal = (x: number) => (Math.round(x) / 100).toFixed(2).replace('.', ',');
 const DAKVORM: Record<string, string> = { plat: 'plat dak', lessenaar: 'lessenaarsdak', zadel: 'zadeldak' };
 
