@@ -936,8 +936,8 @@ bestand of op het blad.
 **Wat nog niet kan:** een vast model staat los, niet tegen of in de getekende woning ("tegen een gevel" staat tegen een los stuk
 gevel, en de trap vervangt de trap van de plattegrond niet); de snelstart maakt altijd een nieuw project; varianten bestaan alleen
 bij de plattegrond; de klant ziet alleen de afgewerkte versie. Het zwarte tuinhuis is donker (deur en ramen vallen weg); een glazen
-of polycarbonaat dak blijft zwak in de 3D. **Te beslissen door Jonas:** raakt de verkoper in stap 2 geen maat aan, dan houdt elk
-vertrekpunt zijn eigen maat (de tegel toont welke) in plaats van de maat die stap 2 toonde.
+of polycarbonaat dak blijft zwak in de 3D. **Beslist door Jonas (16/11: "is goed"):** raakt de verkoper in stap 2 geen maat aan, dan houdt elk vertrekpunt zijn eigen
+maat (de tegel toont welke) in plaats van de maat die stap 2 toonde.
 
 ---
 
