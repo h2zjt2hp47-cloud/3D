@@ -10,6 +10,18 @@ export function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<
 
 export const eur = (x: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(x);
 
+/**
+ * Prijzen tonen? In eerste instantie niet (beslissing van 15/11: eerst alleen de 3D tonen aan klanten, zonder prijzen).
+ * De rekenmotor, de formules, de prijslijsten en hun tests blijven bestaan; de schermen tonen alleen geen enkel bedrag:
+ * geen prijs per positie, geen totalen, korting, kostprijs of marge, ook niet in de afdruk, de gekopieerde tekst of een
+ * export. Elk scherm dat een bedrag zou tonen, vraagt het eerst hier; in de opmaak dragen die delen de klasse `prijsdeel`
+ * (verborgen zolang `body` de klasse `met-prijzen` niet heeft, zie main.ts).
+ */
+export const PRIJZEN = false as boolean;
+
+/** Een regel van de stuklijst die alleen over de prijs gaat ("Meerprijs kleur"): zonder prijzen niet tonen. */
+export const alleenPrijs = (omschrijving: string) => !PRIJZEN && /^meerprijs\b/i.test(omschrijving);
+
 /** Zet de kolomkoppen als data-label op de cellen, zodat een tabel op een smal scherm als kaartjes kan staan. */
 export function labelCellen(tabel: HTMLElement) {
   const koppen = [...tabel.querySelectorAll('thead th')].map((th) => th.textContent?.trim() ?? '');

@@ -25,7 +25,7 @@ import {
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { openingenVan } from '../../core/voorbeelden/raamraster.js';
 import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
-import { $, el, eur, getal, getalVeld } from './hulp.js';
+import { $, el, eur, getal, getalVeld, PRIJZEN } from './hulp.js';
 import { kanOngedaan, momentopname, ongedaan, positieVan, resultaat, toestand, wijzig, type Toestand } from './staat.js';
 
 type Gereedschap = 'verf' | 'pipet' | 'ramen' | 'raam';
@@ -34,7 +34,7 @@ const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: stri
   { code: 'verf', label: 'Verven', toets: 'B', hint: 'Kies een materiaal en een kleur, en klik op een muurvlak. Shift+klik verft de hele gevel, Alt+klik neemt een materiaal over (pipet). Klik op de sokkel om die te verven.' },
   { code: 'pipet', label: 'Pipet', toets: 'I', hint: 'Klik op een muurvlak of de sokkel om het materiaal en de kleur over te nemen.' },
   { code: 'ramen', label: 'Ramen verschuiven', toets: 'V', hint: 'Sleep een raam opzij of in de hoogte (deuren alleen opzij). De maten eronder volgen mee. Shift = per cm.' },
-  { code: 'raam', label: 'Raam toevoegen', toets: 'R', hint: 'Klik op een muurvlak: er komt een raam (en een positie in de offerte) op die plaats.' },
+  { code: 'raam', label: 'Raam toevoegen', toets: 'R', hint: 'Klik op een muurvlak: er komt een raam (en een regel in het overzicht) op die plaats.' },
 ];
 const BEREIK: { code: VerfBereik; label: string }[] = [
   { code: 'vlak', label: 'Muurvlak' },
@@ -208,13 +208,13 @@ function toonLegende(plan: Plattegrond, g: Gevel) {
     const blok = el('span', { class: 'staal' });
     blok.style.background = x.hex;
     li.append(blok, el('span', {}, `${x.tekst}: ${getal(x.m2, 1)} m²`));
-    if (x.prijs) li.append(el('span', { class: 'klein intern' }, ` · ${eur(x.prijs * x.m2)}`));
+    if (PRIJZEN && x.prijs) li.append(el('span', { class: 'klein intern prijsdeel' }, ` · ${eur(x.prijs * x.m2)}`));
     lijst.append(li);
   }
   $('#gv-legende').replaceChildren(
     el('p', { class: 'klein' }, `Deze gevel (netto, zonder ramen en deuren):`),
     lijst,
-    el('p', { class: 'klein' }, `Hele woning: ${getal(totaal, 1)} m² gevel. ${toestand().meta.regels.gevel ? 'Staat in de offerte (groep Gevel).' : 'Zet "Gevelafwerking" aan in de offerte om ze mee te rekenen.'}`),
+    el('p', { class: 'klein' }, `Hele woning: ${getal(totaal, 1)} m² gevel. ${toestand().meta.regels.gevel ? 'Staat in het overzicht (groep Gevel).' : 'Zet "Gevelafwerking" aan in het overzicht om ze mee te tellen.'}`),
   );
 }
 
@@ -233,6 +233,15 @@ function staalSvg(soort: string, hex: string, lijn: string): string {
   return `<svg viewBox="0 0 44 30" width="44" height="30" aria-hidden="true">${p ? `<defs><pattern id="${id}" patternUnits="userSpaceOnUse" width="${p[0]}" height="${p[1]}"><path d="${p[2]}" stroke="${lijn}" stroke-width="1" fill="none"/></pattern></defs>` : ''}<rect width="44" height="30" fill="${hex}"/>${p ? `<rect width="44" height="30" fill="url(#${id})"/>` : ''}</svg>`;
 }
 const lijnVan = (soort: string, hex: string, voeg?: string) => voeg ?? (soort === 'steen' ? '#cfc8bb' : `#${hex.slice(1).match(/../g)!.map((x) => Math.round(parseInt(x, 16) * 0.62).toString(16).padStart(2, '0')).join('')}`);
+
+/** Staal (klein beeld, 44 × 30) van een gevelmateriaal in een kleur en met een voeg, zoals in het palet. Leeg als de code niet bestaat. */
+export function gevelStaal(materiaal: string, kleur: string, voeg?: string): string {
+  const m = gevelCatalogus[materiaal];
+  if (!m) return '';
+  const k = m.kleuren[kleur] ?? Object.values(m.kleuren)[0]!;
+  const v = m.voegen ? (m.voegen[voeg ?? ''] ?? Object.values(m.voegen)[0]) : undefined;
+  return staalSvg(m.soort, k.hex, lijnVan(m.soort, k.hex, v?.hex));
+}
 
 function toonPalet() {
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gv-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gvGereedschap === gereedschap));
@@ -257,7 +266,8 @@ function toonPalet() {
       const s = el('span', { class: 'gv-staal' });
       s.innerHTML = staalSvg(m.soort, kleur.hex, lijnVan(m.soort, kleur.hex, voeg?.hex));
       const tekst = el('span', { class: 'gv-naam' });
-      tekst.append(el('span', {}, m.label), el('span', { class: 'klein intern' }, `${eur(m.prijs)}/m²`));
+      tekst.append(el('span', {}, m.label));
+      if (PRIJZEN) tekst.append(el('span', { class: 'klein intern prijsdeel' }, `${eur(m.prijs)}/m²`));
       b.append(s, tekst);
       b.addEventListener('click', () => {
         const k = Object.keys(m.kleuren);
@@ -355,7 +365,7 @@ function toonEigenschappen() {
     vak.append(el('p', {}, `Kwast: ${m.label}, ${kleur.toLowerCase()}${m.voegen && kwast.voeg ? `, voeg ${(m.voegen[kwast.voeg]?.label ?? '').toLowerCase()}` : ''}.`));
     if (m.uitleg) vak.append(el('p', { class: 'klein' }, m.uitleg));
   }
-  vak.append(el('p', { class: 'klein' }, 'Tip: Ctrl+Z maakt ongedaan. In 3D en in de offerte zie je het resultaat meteen. Kleuren en prijzen zijn voorbeelden.'));
+  vak.append(el('p', { class: 'klein' }, 'Tip: Ctrl+Z maakt ongedaan. In 3D en in het overzicht zie je het resultaat meteen. De kleuren zijn voorbeelden.'));
   const b = el('button', { type: 'button', class: 'tweede' }, 'Bekijk in 3D');
   b.addEventListener('click', () => terug?.naar3D());
   vak.append(b);

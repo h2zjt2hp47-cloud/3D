@@ -33,6 +33,8 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* Prijzen uit beeld (zie PRIJZEN in hulp.ts): wat over een bedrag gaat, draagt de klasse prijsdeel. */
+body:not(.met-prijzen) .prijsdeel { display: none !important; }
 html, body { margin: 0; }
 body { background: var(--achtergrond); color: var(--inkt); font: 15px/1.5 var(--tekst); }
 h1, h2, h3 { font-family: var(--display); font-weight: 500; text-wrap: balance; margin: 0; }
@@ -197,7 +199,21 @@ kbd { font: 600 .75rem ui-monospace, monospace; border: 1px solid currentColor; 
 
 /* ---------- offerte ---------- */
 .offerteraster { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 1000px) { .offerteraster { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1000px) { .offerteraster { grid-template-columns: minmax(0, 1fr); } .offerteraster > aside { order: 2; } }
+/* Overzicht: elke regel klapt open en toont dan pas de materialen en de opbouw. */
+.ontwerpbeelden { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; align-items: start; }
+.ontwerpbeelden figure { margin: 0; background: var(--papier); border-radius: 6px; padding: 6px; display: grid; gap: 4px; }
+.ontwerpbeelden figure img, .ontwerpbeelden figure svg { display: block; width: 100%; height: auto; max-height: 320px; object-fit: contain; border-radius: 4px; }
+.ontwerpbeelden figcaption { font-size: .8rem; color: #555; }
+details.regeldetail { border: 0; padding: 0; margin: 2px 0 8px; }
+details.regeldetail > summary, details.regelgroep > summary { font-weight: 500; min-height: 36px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+details.regeldetail > summary .klein, details.regelgroep > summary .klein { font-weight: 400; }
+.regelinhoud { display: grid; gap: 6px; padding: 6px 0 4px 2px; font-size: .88rem; }
+.regelinhoud ul { margin: 0; padding-left: 18px; }
+.regelinhoud h4 { margin: 4px 0 0; font-size: .85rem; font-weight: 600; }
+details.regelgroep { padding: 8px 0; }
+details.regelgroep .stalen { display: inline-flex; gap: 3px; }
+details.regelgroep .stalen svg, details.regelgroep .stalen .dak-staal { width: 32px; height: 22px; border-radius: 3px; display: block; }
 .velden { display: grid; gap: 8px; }
 .velden label { display: grid; gap: 3px; font-size: .85rem; color: var(--zacht); }
 .velden input { width: 100%; }
@@ -541,7 +557,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 <body>
 <header>
   <div>
-    <h1>Ramen, deuren &amp; woning<span class="demo">demoprijzen</span></h1>
+    <h1>Ramen, deuren &amp; woning<span class="demo">demo</span></h1>
     <p><strong id="hd-project"></strong> · <span id="hd-bewaard" class="bewaard"></span></p>
   </div>
   <nav class="nav" aria-label="Onderdelen">
@@ -549,9 +565,8 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
     <button type="button" data-weergave="plan" aria-pressed="true"><span class="nr">1 · </span>Plattegrond</button>
     <button type="button" data-weergave="offerte" aria-pressed="false" class="alleen-ramen"><span class="nr">1 · </span>Ramenlijst</button>
     <button type="button" data-weergave="positie" aria-pressed="false"><span class="nr">2 · </span>Configurator</button>
-    <button type="button" data-weergave="offerte" aria-pressed="false"><span class="nr">3 · </span>Offerte <span class="teller" id="nav-aantal">0</span></button>
-    <button type="button" data-weergave="werf" aria-pressed="false"><span class="nr">4 · </span>Werf</button>
-    <button type="button" id="klantweergave" class="klantknop" aria-pressed="false" title="Scherm tonen aan de klant: zonder marges, kostprijzen en technische details; prijzen inclusief btw">Klantweergave</button>
+    <button type="button" data-weergave="offerte" aria-pressed="false"><span class="nr">3 · </span>Overzicht <span class="teller" id="nav-aantal">0</span></button>
+    <button type="button" id="klantweergave" class="klantknop" aria-pressed="false" title="Scherm tonen aan de klant: zonder technische details">Klantweergave</button>
   </nav>
 </header>
 <noscript><p class="foutmelding">Deze pagina heeft JavaScript nodig. Open het bestand in een browser (Safari, Chrome, Edge), niet in een voorbeeldweergave.</p></noscript>
@@ -595,7 +610,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
     <div class="links">
       <section class="kaart">
         <div class="kaartkop"><h2>Mijn projecten</h2><span class="klein">in deze browser</span></div>
-        <div class="tabelhouder"><table id="pr-lijst"><thead><tr><th>Project</th><th>Klant</th><th>Offerte</th><th class="num">Posities</th><th class="num">Excl. btw</th><th>Gewijzigd</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="tabelhouder"><table id="pr-lijst"><thead><tr><th>Project</th><th>Klant</th><th>Nummer</th><th class="num">Posities</th><th class="num prijsdeel">Excl. btw</th><th>Gewijzigd</th><th></th></tr></thead><tbody></tbody></table></div>
       </section>
       <section class="kaart">
         <div class="kaartkop"><h2>Sjablonen</h2><span class="klein">herbruikbare woningen en projecten</span></div>
@@ -603,7 +618,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       </section>
       <section class="kaart">
         <div class="kaartkop"><h2>Bibliotheek</h2><span class="klein">herbruikbare ramen en deuren</span></div>
-        <p id="pr-bib-leeg" class="klein">Nog leeg. Open een raam in de configurator en kies <strong>Bewaar in bibliotheek</strong>. In elk project voeg je het toe via Offerte → Uit bibliotheek.</p>
+        <p id="pr-bib-leeg" class="klein">Nog leeg. Open een raam in de configurator en kies <strong>Bewaar in bibliotheek</strong>. In elk project voeg je het toe via Overzicht → Uit bibliotheek.</p>
         <ul id="pr-bibliotheek" class="lijst"></ul>
       </section>
     </div>
@@ -687,17 +702,17 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         <div class="kaartkop"><h2>Ruimtes</h2></div>
         <div class="tabelhouder"><table id="pl-ruimtes"><thead><tr><th>Ruimte</th><th>Soort</th><th class="num">m²</th></tr></thead><tbody></tbody></table></div>
         <p id="pl-totaal" class="klein"></p>
-        <div class="acties"><button type="button" id="pl-naarofferte">Naar offerte</button><span id="pl-offerte" class="klein"></span></div>
+        <div class="acties"><button type="button" id="pl-naarofferte">Naar overzicht</button><span id="pl-offerte" class="klein prijsdeel"></span></div>
       </section>
     </aside>
   </div>
 </main>
 
 <main id="view-positie" class="view" hidden>
-  <p id="p-leeg" class="klein" hidden>Er zijn nog geen posities. Plaats een raam in de plattegrond of voeg er een toe in de offerte.</p>
+  <p id="p-leeg" class="klein" hidden>Er zijn nog geen ramen of deuren. Plaats er een in de plattegrond of voeg er een toe in het overzicht.</p>
   <div id="p-inhoud">
     <div class="positiebalk">
-      <button type="button" id="p-terug" class="tweede">← Offerte</button>
+      <button type="button" id="p-terug" class="tweede">← Overzicht</button>
       <label class="klein">Positie <select id="p-kies"></select></label>
       <label class="klein">Naam <input type="text" id="p-naam"></label>
       <label class="klein">Aantal <input type="number" id="p-aantal" min="1" step="1"></label>
@@ -729,9 +744,9 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <ul id="p-controles" class="controles"></ul>
         </section>
         <section class="kaart" aria-live="polite">
-          <div class="kaartkop"><h2>Prijs</h2><span id="p-status" class="status ok"></span></div>
-          <div class="prijs"><span id="p-prijs" class="grote-prijs">€ 0,00</span><span id="p-prijs-sub" class="klein"></span></div>
-          <dl id="p-prijsdetail" class="detail intern"></dl>
+          <div class="kaartkop"><h2 id="p-prijskop">Prijs</h2><span id="p-status" class="status ok"></span></div>
+          <div class="prijs prijsdeel"><span id="p-prijs" class="grote-prijs"></span><span id="p-prijs-sub" class="klein"></span></div>
+          <dl id="p-prijsdetail" class="detail intern prijsdeel"></dl>
           <ul id="p-meldingen" class="meldingen" hidden></ul>
           <div class="acties"><button type="button" id="p-kopieer">Kopieer tekst</button><button type="button" id="p-bibliotheek" class="tweede">Bewaar in bibliotheek</button><span id="p-kopieer-melding" class="klein" role="status"></span></div>
         </section>
@@ -749,7 +764,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         </section>
         <section class="kaart intern">
           <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">maten in mm</span></div>
-          <div class="tabelhouder"><table id="p-stuklijst"><thead><tr><th>Omschrijving</th><th>Artikel</th><th class="num">Aantal</th><th class="num">Maat</th><th class="num">Hoeveelheid</th><th class="num">Kost</th></tr></thead><tbody></tbody></table></div>
+          <div class="tabelhouder"><table id="p-stuklijst"><thead><tr><th>Omschrijving</th><th>Artikel</th><th class="num">Aantal</th><th class="num">Maat</th><th class="num">Hoeveelheid</th><th class="num prijsdeel">Kost</th></tr></thead><tbody></tbody></table></div>
         </section>
       </aside>
     </div>
@@ -759,7 +774,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 <main id="view-offerte" class="view" hidden>
   <section class="kaart alleen-ramen" id="o-ramenlijst-kaart">
     <div class="kaartkop"><h2>Ramenlijst</h2><span class="klein">enkel ramen en deuren, zonder woning · maten in mm</span></div>
-    <div class="tabelhouder"><table id="o-ramenlijst"><thead><tr><th>Pos.</th><th>Omschrijving</th><th>Soort</th><th>Indeling (van binnen)</th><th class="num">Breedte</th><th class="num">Hoogte</th><th>Ruimte</th><th class="num">Verd.</th><th class="num">Aantal</th><th class="num" id="o-ramenlijst-totaal">Totaal</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="tabelhouder"><table id="o-ramenlijst"><thead><tr><th>Pos.</th><th>Omschrijving</th><th>Soort</th><th>Indeling (van binnen)</th><th class="num">Breedte</th><th class="num">Hoogte</th><th>Ruimte</th><th class="num">Verd.</th><th class="num">Aantal</th><th class="num prijsdeel" id="o-ramenlijst-totaal">Totaal</th><th></th></tr></thead><tbody></tbody></table></div>
     <p id="o-ramenlijst-leeg" class="klein">Nog geen ramen. Voeg er een toe of plak hieronder een maatlijst.</p>
     <div class="nieuw">
       <button type="button" class="tweede" data-ramen-nieuw="raam">+ Raam</button>
@@ -786,6 +801,10 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       </div>
     </div>
   </section>
+  <section class="kaart alleen-woning" id="o-ontwerp" aria-label="Het ontwerp">
+    <div class="kaartkop"><h2>Het ontwerp</h2><span id="o-ontwerp-tekst" class="klein"></span></div>
+    <div class="ontwerpbeelden" id="o-ontwerp-beelden"></div>
+  </section>
   <div class="offerteraster">
     <aside class="links">
       <section class="kaart">
@@ -794,11 +813,11 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label>Klant <input type="text" id="o-klant"></label>
           <label>Adres <input type="text" id="o-adres"></label>
           <label>Project <input type="text" id="o-project"></label>
-          <label>Offertenummer <input type="text" id="o-nummer"></label>
+          <label>Nummer <input type="text" id="o-nummer"></label>
           <label>Datum <input type="date" id="o-datum"></label>
         </div>
       </section>
-      <section class="kaart">
+      <section class="kaart prijsdeel">
         <h3>Btw en klant</h3>
         <div class="keuzerij" role="radiogroup" aria-label="Btw">
           <label><input type="radio" name="o-btw" id="o-btw-21"> 21 %</label>
@@ -820,6 +839,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       </section>
       <section class="kaart alleen-woning">
         <h3>Uit de plattegrond</h3>
+        <p class="klein">Wat er in het overzicht komt (hoeveelheden).</p>
         <div class="schakelaars" style="display:grid;gap:6px">
           <label><input type="checkbox" id="o-regel-vloeren"> Vloeren (m² per materiaal)</label>
           <label><input type="checkbox" id="o-regel-wanden"> Wandafwerking (verf, tegels)</label>
@@ -827,7 +847,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label><input type="checkbox" id="o-regel-ruwbouw"> Ruwbouw muren</label>
           <label><input type="checkbox" id="o-regel-gevel"> Gevelafwerking (m² per materiaal, sokkel)</label>
           <label><input type="checkbox" id="o-regel-dak"> Dak (m² bedekking, dakrand, lichtkoepels)</label>
-          <label><input type="checkbox" id="o-regel-inrichting"> Inrichting (richtprijs)</label>
+          <label><input type="checkbox" id="o-regel-inrichting"> Inrichting (meubels)</label>
         </div>
       </section>
       <section class="kaart intern">
@@ -836,10 +856,25 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       </section>
     </aside>
     <div class="links">
+      <section class="kaart" id="o-meegeven">
+        <div class="kaartkop"><h2 id="o-meegeven-kop">Meegeven en doorsturen</h2></div>
+        <dl id="o-totalen" class="totaal prijsdeel"></dl>
+        <div class="acties">
+          <button type="button" id="o-zending" class="intern" title="Alles voor Missing Link in één bestand: wat er is en hoeveel (zonder prijzen), een beeld per regel en de 3D">Doorsturen naar Missing Link</button>
+          <button type="button" id="o-afdruk" class="tweede">Afdrukken / PDF</button>
+          <button type="button" id="o-kopieer" class="tweede">Kopieer tekst</button>
+          <button type="button" id="o-3d" class="tweede intern" title="De 3D van dit project als pakket, om te tonen in een ander systeem (bv. Missing Link) met de 3D-kijker">3D doorsturen (pakket)</button>
+          <button type="button" id="o-export" class="tweede intern">Export voor ERP (JSON)</button>
+          <span id="o-melding" class="klein" role="status"></span>
+        </div>
+        <div class="intern"><h3 style="margin-top:16px">Intern</h3>
+        <dl id="o-intern" class="detail"></dl></div>
+      </section>
       <section class="kaart alleen-woning">
-        <div class="kaartkop"><h2>Posities</h2><span class="klein o-btwlabel"></span><span id="o-status" class="status ok"></span></div>
+        <div class="kaartkop"><h2>Ramen, deuren en poorten</h2><span class="klein o-btwlabel prijsdeel"></span><span id="o-status" class="status ok"></span></div>
+        <p class="klein">Tik op een regel om de materialen en de opbouw te zien.</p>
         <div id="o-posities"></div>
-        <p id="o-leeg" class="klein" hidden>Nog geen posities. Plaats ramen en deuren in de plattegrond of voeg ze hier toe.</p>
+        <p id="o-leeg" class="klein" hidden>Nog geen ramen of deuren. Plaats ze in de plattegrond of voeg ze hier toe.</p>
         <div class="nieuw">
           <button type="button" class="tweede" data-nieuw="raam">+ Raam</button>
           <button type="button" class="tweede" data-nieuw="terrasdeur">+ Terrasdeur</button>
@@ -849,6 +884,10 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <button type="button" class="tweede" data-nieuw="aanbouw">+ Aanbouw</button>
           <select id="o-bibliotheek" aria-label="Positie uit de bibliotheek"></select>
         </div>
+      </section>
+      <section class="kaart" id="o-regels-kaart">
+        <div class="kaartkop"><h2>Afwerking uit de plattegrond</h2><span class="klein o-btwlabel prijsdeel"></span></div>
+        <div id="o-regels"></div>
       </section>
       <section class="kaart intern">
         <div class="kaartkop"><h2>Glasbestelling per ruit</h2><span id="o-glas-totaal" class="klein"></span></div>
@@ -862,25 +901,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <span id="o-glas-melding" class="klein" role="status"></span>
         </div>
       </section>
-      <section class="kaart" id="o-regels-kaart">
-        <div class="kaartkop"><h2>Afwerking uit de plattegrond</h2><span class="klein o-btwlabel"></span></div>
-        <div class="tabelhouder"><table id="o-regels"><thead><tr><th>Omschrijving</th><th class="num">Hoeveelheid</th><th class="num">Prijs</th><th class="num">Totaal</th></tr></thead><tbody></tbody></table></div>
-      </section>
-      <section class="kaart">
-        <div class="kaartkop"><h2>Totaal</h2></div>
-        <dl id="o-totalen" class="totaal"></dl>
-        <div class="acties">
-          <button type="button" id="o-afdruk">Afdrukken / PDF</button>
-          <button type="button" id="o-kopieer" class="tweede">Kopieer offertetekst</button>
-          <button type="button" id="o-export" class="tweede intern">Export voor ERP (JSON)</button>
-          <button type="button" id="o-3d" class="tweede intern" title="De 3D van dit project als pakket, om te tonen in een ander systeem (bv. Missing Link) met de 3D-kijker">3D doorsturen (pakket)</button>
-          <button type="button" id="o-zending" class="tweede intern" title="Alles voor Missing Link in één bestand: wat er is en hoeveel (zonder prijzen), een beeld per regel en de 3D">Zending voor Missing Link</button>
-          <span id="o-melding" class="klein" role="status"></span>
-        </div>
-        <div class="intern"><h3 style="margin-top:16px">Intern</h3>
-        <dl id="o-intern" class="detail"></dl></div>
-      </section>
-      <section class="kaart">
+      <section class="kaart prijsdeel">
         <div class="kaartkop"><h2>Akkoord klant</h2></div>
         <div id="o-akkoord"></div>
       </section>
@@ -907,7 +928,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
   <div id="w-meerwerk" hidden></div>
 </main>
 <div id="afdruk"></div>
-<footer>Demo. Prijzen, gewichten, U-waarden en systeemgrenzen zijn voorbeelden. De controles op veiligheidsglas, EPB, daglicht en vergunning zijn signalen voor de verkoper en vervangen het advies van architect, EPB-verslaggever of stabiliteitsingenieur niet.</footer>
+<footer>Demo. Gewichten, U-waarden en systeemgrenzen zijn voorbeelden. De controles op veiligheidsglas, EPB, daglicht en vergunning zijn signalen voor de verkoper en vervangen het advies van architect, EPB-verslaggever of stabiliteitsingenieur niet.</footer>
 <script>/*BUNDEL*/</script>
 </body>
 </html>

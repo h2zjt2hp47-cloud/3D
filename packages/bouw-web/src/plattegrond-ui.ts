@@ -36,7 +36,7 @@ import {
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { maak3D, type Kwaliteit, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
-import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
+import { $, el, eur, getal, getalVeld, keuzelijst, PRIJZEN } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
@@ -66,7 +66,7 @@ const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: stri
   { code: 'wand', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld.' },
   { code: 'wand_v', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
   { code: 'wand_h', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
-  { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een positie in de offerte bij.' },
+  { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een regel in het overzicht bij.' },
   { code: 'buitendeur', label: 'Buitendeur', toets: '', hint: 'Klik op een buitenmuur. In een hal wordt het een voordeur, anders een terrasdeur.' },
   { code: 'schuifraam', label: 'Schuifraam', toets: '', hint: 'Klik op een buitenmuur.' },
   { code: 'garagepoort', label: 'Garagepoort', toets: '', hint: 'Klik op een buitenmuur. Belijning, vensters en kleur kies je in de configurator.' },
@@ -819,7 +819,7 @@ function toonEigenschappen() {
       kaart.append(
         el('strong', {}, `${p.code} · ${p.naam}`),
         el('p', { class: 'klein' }, r.kenmerken.filter((k) => k.zichtbaar && ['type', 'profiel', 'glas', 'zonwering'].includes(k.code)).map((k) => k.weergave).join(' · ')),
-        el('p', {}, `${prijsTekst(p)} ${r.geldig ? '' : '· heeft fouten'}`),
+        el('p', {}, PRIJZEN ? `${prijsTekst(p)} ${r.geldig ? '' : '· heeft fouten'}` : r.geldig ? 'In orde' : 'Heeft fouten: zie de controles'),
       );
       for (const mm of r.meldingen.slice(0, 3)) kaart.append(el('p', { class: `kleinmelding ${mm.ernst}` }, mm.melding));
       kaart.append(knop('Configureren: draairichting, glas, zonwering …', () => naarPositie(p.id), ''));
@@ -848,7 +848,7 @@ function toonEigenschappen() {
     vak.append(l);
     const af = meubelAfstanden(toestand().plan, m);
     if (af) vak.append(el('p', { class: 'klein' }, `Tot de muren: links ${getal(af.links)} · rechts ${getal(af.rechts)} · boven ${getal(af.boven)} · onder ${getal(af.onder)} cm`));
-    if (t?.prijs) vak.append(el('p', { class: 'klein' }, `Richtprijs ${eur(t.prijs)} (alleen in de offerte als "Inrichting" aan staat).`));
+    if (PRIJZEN && t?.prijs) vak.append(el('p', { class: 'klein prijsdeel' }, `Richtprijs ${eur(t.prijs)} (alleen in de offerte als "Inrichting" aan staat).`));
     const r = el('div', { class: 'knoppenrij' });
     r.append(knop('Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
     vak.append(r);
@@ -950,8 +950,7 @@ function toonOverzicht() {
   const nF = meldingen.filter((m) => m.ernst === 'fout').length;
   $('#pl-controle-status').textContent = nF ? `${nF} fout${nF === 1 ? '' : 'en'}` : meldingen.length ? `${meldingen.length} aandachtspunt${meldingen.length === 1 ? '' : 'en'}` : 'alles in orde';
   $('#pl-controle-status').className = `status ${nF ? 'fout' : meldingen.length ? 'let-op' : 'ok'}`;
-  const o = berekenHuidigeOfferte();
-  $('#pl-offerte').textContent = `${eur(o.excl)} excl. btw`;
+  $('#pl-offerte').textContent = PRIJZEN ? `${eur(berekenHuidigeOfferte().excl)} excl. btw` : '';
   $<HTMLButtonElement>('#pl-ongedaan').disabled = !kanOngedaan();
 }
 
@@ -992,6 +991,11 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
     viewer?.formaat();
     plan3D();
   }
+}
+
+/** Het beeld van de 3D van de woning zoals ze laatst getoond werd (JPEG als data-URL), of null als de 3D nog niet open was. */
+export function ontwerpBeeld(): string | null {
+  return viewer?.beeld?.('image/jpeg', 0.85) ?? null;
 }
 
 /** Kwaliteit van de 3D van de woning: de bewaarde keuze, anders Snel op een aanraakscherm en Mooi op een computer. */

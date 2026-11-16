@@ -5,7 +5,7 @@
  */
 import { berekenOfferte } from '../../core/src/index.js';
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
-import { $, el, eur, labelCellen } from './hulp.js';
+import { $, el, eur, labelCellen, PRIJZEN } from './hulp.js';
 import {
   actiefProject,
   bewaarAlsSjabloon,
@@ -68,7 +68,7 @@ export function toonProjecten() {
   const t = toestand();
   // Huidig project.
   $('#pr-huidig-naam').textContent = t.meta.project || 'Naamloos project';
-  $('#pr-huidig-info').textContent = `${t.meta.klant || 'geen klant'} · ${t.meta.nummer} · ${t.posities.length} posities · ${eur(totaal(t))} excl. btw${t.meta.akkoord ? ' · akkoord' : ''}`;
+  $('#pr-huidig-info').textContent = `${t.meta.klant || 'geen klant'} · ${t.meta.nummer} · ${t.posities.length} posities${PRIJZEN ? ` · ${eur(totaal(t))} excl. btw${t.meta.akkoord ? ' · akkoord' : ''}` : ''}`;
 
   // Sjablonen in de keuzelijst voor een nieuw project.
   const lijst = $<HTMLSelectElement>('#pr-bron');
@@ -90,7 +90,7 @@ export function toonProjecten() {
       gevaarKnop('Verwijderen', 'Zeker verwijderen?', () => verwijderProject(p.id)),
     );
     tr.append(el('td', {}, p.naam), el('td', {}, p.klant || '—'), el('td', { class: 'code' }, p.nummer), el('td', { class: 'num' }, String(p.posities)),
-      el('td', { class: 'num' }, x ? eur(totaal(x)) : '—'), el('td', { class: 'klein' }, datum(p.gewijzigd)), acties);
+      el('td', { class: 'num prijsdeel' }, PRIJZEN && x ? eur(totaal(x)) : '—'), el('td', { class: 'klein' }, datum(p.gewijzigd)), acties);
     return tr;
   }));
 

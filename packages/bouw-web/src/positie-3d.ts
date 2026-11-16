@@ -8,11 +8,15 @@ import { bouwAanbouw3D } from '../../core/voorbeelden/aanbouw3d.js';
 import { poortBlokken, poortScene } from '../../core/voorbeelden/garagepoort3d.js';
 import { raamBlokken, raamScene } from '../../core/voorbeelden/raam3d.js';
 import { rasterVan } from '../../core/voorbeelden/raamraster.js';
-import { eur } from './hulp.js';
+import { eur, PRIJZEN } from './hulp.js';
 import { positieVan, resultaat, zonderPrijs, type Positie } from './staat.js';
 
-/** Prijs van een positie voor een kaartje: het bedrag excl. btw, of "nog geen prijs" (model dat alleen toont, nieuwe raamindeling). */
+/**
+ * Prijs van een positie voor een kaartje: het bedrag excl. btw, of "nog geen prijs" (model dat alleen toont, nieuwe
+ * raamindeling). Zolang de schermen geen prijzen tonen (`PRIJZEN`), is dit een lege tekst.
+ */
 export function prijsTekst(p: Positie): string {
+  if (!PRIJZEN) return '';
   return zonderPrijs(p) ? 'Nog geen prijs' : `${eur(resultaat(p).prijs.brutoprijsExcl)} excl. btw`;
 }
 

@@ -2,7 +2,7 @@
  * Bouwdemo: plattegrond (ruimtes, ramen, deuren, inrichting) → posities configureren → offerte.
  * Dezelfde motor als de zetelconfigurator; alles in één HTML-bestand.
  */
-import { $, toonFout } from './hulp.js';
+import { $, PRIJZEN, toonFout } from './hulp.js';
 import { startOfferte, toonOfferte } from './offerte-ui.js';
 import { naWijziging, startPlattegrond, toonPlan } from './plattegrond-ui.js';
 import { herbereken, startPositie, toonPositie } from './positie-ui.js';
@@ -26,12 +26,14 @@ let actief: Weergave = 'plan';
 function toon(w: Weergave, opties: { positie?: string; opening?: string } = {}) {
   // Een project zonder woning heeft geen plattegrond: dan de ramenlijst (offerte).
   if (w === 'plan' && toestand().meta.zonderWoning) w = 'offerte';
+  // De werf staat niet meer in het menu zolang er geen prijzen getoond worden (inmeting en meerwerk gaan over bedragen).
+  if (w === 'werf' && !PRIJZEN) w = 'offerte';
   actief = w;
   for (const v of ['projecten', 'plan', 'offerte', 'positie', 'werf'] as const) $(`#view-${v}`).hidden = v !== w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.weergave === w));
   document.body.classList.toggle('zonder-woning', !!toestand().meta.zonderWoning);
   if (w === 'plan') toonPlan(opties.opening);
-  if (w === 'offerte') toonOfferte();
+  if (w === 'offerte') toonOfferte({ nieuwBeeld: true });
   if (w === 'positie') toonPositie(opties.positie);
   if (w === 'werf') toonWerf();
   if (w === 'projecten') toonProjecten();
@@ -86,6 +88,9 @@ opWijziging(() => veilig('Bijwerken', () => {
   $('#nav-aantal').textContent = String(toestand().posities.length);
   kop();
 }));
+
+// Prijzen tonen of niet (hulp.ts): de delen met een bedrag dragen de klasse prijsdeel.
+document.body.classList.toggle('met-prijzen', PRIJZEN);
 
 // Klantweergave: scherm tonen aan de klant (bewaard in deze browser).
 function zetKlantweergave(aan: boolean) {
