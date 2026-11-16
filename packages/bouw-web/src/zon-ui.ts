@@ -55,8 +55,10 @@ export function toonZon() {
   kop.append(el('th', {}, 'Gevel'), el('th', {}, 'Kijkt naar'), el('th', {}, 'Zon van … tot'), el('th', { class: 'num' }, 'Uren'));
   const thead = el('thead'), tbody = el('tbody');
   thead.append(kop);
+  // Ronde 11: een gevel die helemaal tegen de buren staat, krijgt geen zon (de buren staan ervoor).
+  const tegenBuren = new Set(aanzichten.filter((x) => !x.schuin && x.vlakken.length && x.vlakken.every((v) => plan.tegenBuren?.includes(v.sleutel))).map((x) => x.kant));
   for (const g of zonOpGevels(d.maand, d.dag, noord)) {
-    if (!namen.has(g.kant)) continue;
+    if (!namen.has(g.kant) || tegenBuren.has(g.kant)) continue;
     const tr = el('tr');
     tr.append(
       el('td', {}, `${namen.get(g.kant)} (${KANT[g.kant]})`),

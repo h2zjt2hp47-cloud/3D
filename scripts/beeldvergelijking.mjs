@@ -154,6 +154,10 @@ const BOUWBEELDEN = [
   // stukken samen getekend), en de doorsnede dwars door de woning (tekening).
   { naam: 'bouw-constructie', constructie: '3d' },
   { naam: 'bouw-doorsnede', constructie: 'doorsnede' },
+  // Het voorbeeldproject van ronde 11 (16/11), op een eigen pagina: *Uitbouw achter een rijwoning* uit Projecten, meteen in
+  // 3D. De bestaande woning en de buren neutraal, de uitbouw in kleur, schuin van boven; en de tekening van het gelijkvloers.
+  { naam: 'bouw-uitbouw-3d', uitbouw: '3d' },
+  { naam: 'bouw-uitbouw-plan', uitbouw: 'plan' },
 ];
 
 /**
@@ -580,6 +584,29 @@ async function maakBeelden() {
       beelden.set(b.naam, png(await wachtTotStil(p, '#p-3d canvas')));
       if (b.klik.includes('[data-p-bouw="constructie"]')) await p.click('[data-p-bouw="afgewerkt"]');
       if (b.klik.includes('#p-maten-label')) await p.click('#p-maten-label');
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  // Ronde 11: het voorbeeldproject (bestaande woning en buren neutraal, de uitbouw in kleur). Eigen pagina, vers project.
+  const uitbouw = BOUWBEELDEN.filter((b) => b.uitbouw && nodig(b));
+  if (uitbouw.length) {
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.click('.nav [data-weergave="projecten"]');
+    await p.click('[data-sjabloon="uitbouw"]');
+    for (const b of uitbouw) {
+      process.stdout.write(`  ${b.naam} … `);
+      if (b.uitbouw === 'plan') {
+        await p.click('[data-pl-weergave="plan"]');
+        await p.waitForTimeout(800);
+        beelden.set(b.naam, PNG.sync.read(await p.locator('#pl-canvas').screenshot()));
+      } else {
+        await p.click('[data-pl-weergave="3d"]');
+        await p.click('[data-pl-standpunt="schuin"]');
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+      }
       console.log('klaar');
     }
     await p.close();

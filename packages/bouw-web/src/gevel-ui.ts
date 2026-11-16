@@ -15,6 +15,7 @@ import {
   niveauVan,
   tekenSvg,
   verfGevel,
+  zetTegenBuren,
   type Gevel,
   type GevelKant,
   type GevelKeuze,
@@ -25,7 +26,7 @@ import {
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { openingenVan } from '../../core/voorbeelden/raamraster.js';
 import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
-import { $, el, eur, getal, getalVeld, PRIJZEN } from './hulp.js';
+import { $, el, eur, getal, getalVeld, PRIJZEN, schakelaar } from './hulp.js';
 import { kanOngedaan, momentopname, ongedaan, positieVan, resultaat, toestand, wijzig, type Toestand } from './staat.js';
 
 type Gereedschap = 'verf' | 'pipet' | 'ramen' | 'raam';
@@ -231,7 +232,18 @@ function toonLegende(plan: Plattegrond, g: Gevel) {
     el('p', { class: 'klein' }, `Deze gevel (netto, zonder ramen en deuren):`),
     lijst,
     el('p', { class: 'klein' }, `Hele woning: ${getal(totaal, 1)} m² gevel. ${toestand().meta.regels.gevel ? 'Staat in het overzicht (groep Gevel).' : 'Zet "Gevelafwerking" aan in het overzicht om ze mee te tellen.'}`),
+    burenSchakelaar(plan, g),
   );
+}
+
+/**
+ * Ronde 11: de hele gevel (alle muurvlakken van deze kant, op elke verdieping) tegen de buren of niet. Een muurvlak apart:
+ * tik erop in de 3D. Tegen de buren = een bestaande scheidingsmuur: niet gebouwd, niet in de m² hierboven.
+ */
+function burenSchakelaar(plan: Plattegrond, g: Gevel): HTMLElement {
+  const sleutels = [...new Set(g.vlakken.filter((v) => !v.sokkel).map((v) => v.sleutel))];
+  const aan = sleutels.length > 0 && sleutels.every((s) => plan.tegenBuren?.includes(s));
+  return schakelaar('Deze gevel staat tegen de buren', aan, (nu) => wijzig('plan', (t) => { for (const s of sleutels) zetTegenBuren(t.plan, s, nu); }), { 'data-gevel-buren': g.kant });
 }
 
 // ---------- palet ----------

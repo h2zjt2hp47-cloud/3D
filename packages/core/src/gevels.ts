@@ -14,8 +14,13 @@ import {
   dakAfwerking,
   dakOpbouw,
   delenVan,
+  alleBestaand,
+  buitenAfwerking,
+  NEUTRAAL,
   gevelAfwerking,
   gevelKeuzeVan,
+  heeftBestaand,
+  muurStatus,
   vlakSleutel,
   type GevelAfwerking,
   type GevelKeuze,
@@ -138,10 +143,12 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
   const t = plan.buitenmuur / 2;
   const sokkel = plan.gevelOntwerp?.sokkel && plan.gevelOntwerp.sokkel.hoogte > 0 ? plan.gevelOntwerp.sokkel : undefined;
   const sokkelAfw = sokkel ? gevelAfwerking(plan, cat, sokkel) : undefined;
+  const oud = heeftBestaand(plan);
   // Dak: het hellende dak op de bovenste verdieping, en de daklichten op de platte daken.
   const dak = dakOpbouw(plan);
   const hellend = dak?.hellend;
-  const dakAfw = dak ? dakAfwerking(cat, dak.keuze.bedekking) : undefined;
+  // Het hellende dak van een bestaande woning (ronde 11): neutraal, zoals in de 3D.
+  const dakAfw = dak ? (alleBestaand(plan, dak.top) && dak.hellend ? { soort: 'gevel' as const, kleur: NEUTRAAL.dak } : dakAfwerking(cat, dak.keuze.bedekking)) : undefined;
 
   // Van planpositie langs de muur naar x in het aanzicht (gezien van buiten, links → rechts).
   const naarU: Record<GevelKant, (v: number) => number> = {
@@ -199,11 +206,12 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
         segs.push([u0, u1]);
         umin = Math.min(umin, u0); umax = Math.max(umax, u1);
         const onder = n > 0 ? VLOERDIKTE : 0;
-        const afw = gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m));
+        // Bestaand of tegen de buren (ronde 11): neutraal, zonder sokkel; anders het gekozen gevelmateriaal.
+        const afw = buitenAfwerking(plan, cat, m);
         const ruimte = m.plus ?? m.min ?? '';
         bak(m).muren.push({ code: `muur.${n}.${m.id}`, x: r1(u0), y: sy(y0 + H), breedte: r1(u1 - u0), hoogte: H + onder, vulling: afw.kleur, lijn: '#55524c', ...patroonVan(afw) });
         vlakken.push({ code: `muur.${n}.${m.id}`, sleutel: vlakSleutel(m), niveau: n, muur: m.id, ruimte });
-        if (n === 0 && sokkel && sokkelAfw) {
+        if (n === 0 && sokkel && sokkelAfw && (!oud || muurStatus(plan, m) === 'nieuw')) {
           bak(m).muren.push({ code: `sokkel.${n}.${m.id}`, x: r1(u0), y: sy(sokkel.hoogte), breedte: r1(u1 - u0), hoogte: sokkel.hoogte, vulling: sokkelAfw.kleur, lijn: '#55524c', ...patroonVan(sokkelAfw) });
           vlakken.push({ code: `sokkel.${n}.${m.id}`, sleutel: vlakSleutel(m), niveau: n, muur: m.id, ruimte, sokkel: true });
         }
@@ -497,6 +505,7 @@ export function gevelOppervlaktes(plan: Plattegrond): GevelOppervlak[] {
   const H = plan.muurhoogte;
   const sokkelH = plan.gevelOntwerp?.sokkel?.hoogte ?? 0;
   const dak = dakOpbouw(plan);
+  const oud = heeftBestaand(plan);
   verdiepingenVan(plan).forEach((_, n) => {
     const p = niveauPlan(plan, n);
     const muren = murenVan(p);
@@ -504,6 +513,8 @@ export function gevelOppervlaktes(plan: Plattegrond): GevelOppervlak[] {
     for (const m of muren) {
       const kant = buitenKant(m);
       if (!kant) continue;
+      // Wat bestaat of van de buren is (ronde 11), wordt niet gebouwd en telt niet mee.
+      if (oud && muurStatus(plan, m) !== 'nieuw') continue;
       // Een schuine muur: de lengte van haar buitenvlak, van hoek tot hoek.
       const lengte = m.as === 's' ? (([a, b]) => b - a)(uiterst(m, muren)) : buitenLengte(m, muren);
       // Onder een hellend dak loopt de gevel door tot tegen het dak (cm²).

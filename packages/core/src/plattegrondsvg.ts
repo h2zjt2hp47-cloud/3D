@@ -5,6 +5,9 @@
 import {
   asVan,
   delenVan,
+  heeftBestaand,
+  muurStatus,
+  NEUTRAAL,
   langsAs,
   verschuifZijden,
   vormVanDeel,
@@ -158,13 +161,14 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     uit.push('</g>');
   }
 
-  // Vloeren (alle delen van een ruimte).
+  // Vloeren (alle delen van een ruimte). Een bestaande ruimte (ronde 11): effen neutraal, wat dichter.
   for (const r of plan.ruimtes) {
     const v = cat.vloeren[r.vloer];
+    const [kleur, dicht] = r.bestaand === true ? [NEUTRAAL.vloer, '0.75'] : [v?.kleur ?? '#e7e4dc', '0.32'];
     for (const p of delenVan(r)) {
       uit.push(p.omtrek
-        ? `<polygon data-soort="ruimte" data-id="${esc(r.id)}" points="${punten(vormVanDeel(p))}" fill="${v?.kleur ?? '#e7e4dc'}" fill-opacity="0.32"/>`
-        : `<rect data-soort="ruimte" data-id="${esc(r.id)}" x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="${v?.kleur ?? '#e7e4dc'}" fill-opacity="0.32"/>`);
+        ? `<polygon data-soort="ruimte" data-id="${esc(r.id)}" points="${punten(vormVanDeel(p))}" fill="${kleur}" fill-opacity="${dicht}"/>`
+        : `<rect data-soort="ruimte" data-id="${esc(r.id)}" x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="${kleur}" fill-opacity="${dicht}"/>`);
     }
   }
   // Trapgat boven een trap van de verdieping eronder.
@@ -181,12 +185,25 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     if (t) uit.push(meubelSvg(m, t, sel?.soort === 'meubel' && sel.id === m.id));
   }
 
-  // Muren.
+  // Muren. Wat bestaat of van de buren is (ronde 11), lichter: het wordt niet gebouwd.
+  const oud = heeftBestaand(plan);
   for (const m of muren) {
     const v = muurVlak(m, muren);
+    const status = oud ? muurStatus(plan, m) : 'nieuw';
+    const kleur = status === 'buren' ? '#9d9a93' : status === 'bestaand' ? '#a9a69f' : m.soort === 'buiten' ? '#383836' : '#86857f';
     uit.push(v.punten
-      ? `<polygon data-soort="muur" data-id="${esc(m.id)}" points="${punten(v.punten)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke-width="0.6" stroke-linejoin="round"/>`
-      : `<rect data-soort="muur" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}"/>`);
+      ? `<polygon data-soort="muur" data-id="${esc(m.id)}" points="${punten(v.punten)}" fill="${kleur}" stroke="${kleur}" stroke-width="0.6" stroke-linejoin="round"/>`
+      : `<rect data-soort="muur" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="${kleur}"/>`);
+    // Tegen de buren: een smalle arcering aan de buitenkant en het woord "buren", zodat je ziet dat daar niet gebouwd wordt.
+    if (status === 'buren' && m.as !== 's') {
+      const buitenMin = !m.min, w = 40;
+      const r = m.as === 'h'
+        ? { x: v.x, y: buitenMin ? v.y - w : v.y + v.d, b: v.b, d: w }
+        : { x: buitenMin ? v.x - w : v.x + v.b, y: v.y, b: w, d: v.d };
+      const cx = r.x + r.b / 2, cy = r.y + r.d / 2, draai = m.as === 'v' ? -90 : 0;
+      uit.push(`<g pointer-events="none"><rect x="${n(r.x)}" y="${n(r.y)}" width="${n(r.b)}" height="${n(r.d)}" fill="${NEUTRAAL.buren}" fill-opacity="0.6"/>`
+        + `<text x="${n(cx)}" y="${n(cy)}" font-size="${n(Math.min(r.b, r.d) * 0.45)}" text-anchor="middle" dominant-baseline="central" fill="#55524c" transform="rotate(${draai} ${n(cx)} ${n(cy)})">buren</text></g>`);
+    }
   }
 
   // Losse wanden (ronde 2d): na de muren en vóór de openingen. Zie `losseWandSvg`.
@@ -252,7 +269,7 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     const [cx, cy] = r.omtrek ? zwaartepunt(vormVanDeel(delenVan(r)[0]!)) : [r.x + r.b / 2, r.y + r.d / 2];
     const fs = Math.max(12, Math.min(22, r.b / 8, r.d / 4)) * k;
     uit.push(`<g pointer-events="none" text-anchor="middle"><text x="${n(cx)}" y="${n(cy - fs * 0.15)}" font-size="${n(fs)}" font-weight="600" fill="#2c2f2d">${esc(r.naam)}</text>`
-      + `<text x="${n(cx)}" y="${n(cy + fs * 1.05)}" font-size="${n(fs * 0.8)}" fill="#5f6763">${m2(mt.netto)}</text></g>`);
+      + `<text x="${n(cx)}" y="${n(cy + fs * 1.05)}" font-size="${n(fs * 0.8)}" fill="#5f6763">${r.bestaand === true ? 'bestaand (blijft)' : m2(mt.netto)}</text></g>`);
   }
 
   // Selectie en fouten.

@@ -390,8 +390,10 @@ const BESTAAND: GevelKeuze = { materiaal: 'crepi', kleur: 'lichtgrijs' };
  * erachter (onderaan het plan), met een brede doorgang, de raampartij in de achtergevel, een plat dak met de koepel of
  * lichtstraat, de zijmuren in het gevelmateriaal en de achtergevel in de bekleding.
  *
- * Grenzen: de bestaande woning is een eenvoudige doos (de buren van een rijwoning staan er niet); haar ramen en deur
- * staan erin met aantal 0 ("bestaand"), zodat ze niet meetellen. Een raampartij van de aanbouw wordt een raam of deur met
+ * De bestaande woning is een eenvoudige doos met de vlag `bestaand` (ronde 11): neutraal, en ze telt nergens mee; haar
+ * ramen en deur staan erin met aantal 0 ("bestaand"). Met `k.buren` ('twee' of 'een', de keuze in de snelstart; een sleutel
+ * die het model AANBOUW zelf niet kent) staan de zijmuren tegen de buren (`Plattegrond.tegenBuren`), met hun volume in de
+ * 3D; zonder staat ze vrij, zoals vroeger. Een raampartij van de aanbouw wordt een raam of deur met
  * een indeling die erop lijkt (een schuifraam van 3 of 4 delen wordt een hef-schuifdeur).
  */
 export function aanbouwNaarPlan(k: Keuzes): { plan: Plattegrond; posities: DemoPositie[] } {
@@ -399,9 +401,10 @@ export function aanbouwNaarPlan(k: Keuzes): { plan: Plattegrond; posities: DemoP
   const B = r5(num(k.breedte, 4650) / 10), Da = r5(num(k.diepte, 4000) / 10);
   const muurhoogte = r5(binnen(num(k.hoogte, 3000) / 10 - 30, 250, 330));
   const W = 900;
+  // De bestaande woning blijft (ronde 11): neutraal, en ze telt nergens mee (meetstaat, constructie, overzicht …).
   const ruimtes: Ruimte[] = [
-    { id: 'bestaand', naam: 'Bestaande woning', type: 'leefruimte', x: 0, y: 0, b: B, d: W, vloer: 'parket_eik', wand: 'wit' },
-    { id: 'bestaand1', naam: 'Bestaande verdieping', type: 'slaapkamer', x: 0, y: 0, b: B, d: W, vloer: 'parket_eik', wand: 'wit', niveau: 1 },
+    { id: 'bestaand', naam: 'Bestaande woning', type: 'leefruimte', x: 0, y: 0, b: B, d: W, vloer: 'parket_eik', wand: 'wit', bestaand: true },
+    { id: 'bestaand1', naam: 'Bestaande verdieping', type: 'slaapkamer', x: 0, y: 0, b: B, d: W, vloer: 'parket_eik', wand: 'wit', niveau: 1, bestaand: true },
     { id: 'uitbouw', naam: 'Uitbouw', type: 'leefruimte', x: 0, y: W, b: B, d: Da, vloer: 'tegel_grijs', wand: 'wit' },
   ];
   const w = bouwer();
@@ -432,6 +435,10 @@ export function aanbouwNaarPlan(k: Keuzes): { plan: Plattegrond; posities: DemoP
   verfGevel(plan, zij, 'vlak', { sleutel: 'uitbouw:links' });
   verfGevel(plan, zij, 'vlak', { sleutel: 'uitbouw:rechts' });
   verfGevel(plan, achter, 'vlak', { sleutel: 'uitbouw:onder' });
+  // Tegen de buren (ronde 11, keuze `buren` van de snelstart): een rijwoning tussen twee buren, of met één buur (links).
+  // De zijmuren van de bestaande woning en van de uitbouw zijn dan scheidingsmuren die al bestaan. Zonder keuze: vrijstaand.
+  const kanten = k.buren === 'twee' ? ['links', 'rechts'] : k.buren === 'een' ? ['links'] : [];
+  if (kanten.length) plan.tegenBuren = ['bestaand', 'bestaand1', 'uitbouw'].flatMap((id) => kanten.map((kant) => `${id}:${kant}`));
   // Koepel of lichtstraat in het midden van het platte dak.
   const type = k.dak === 'koepel' ? 'koepel_100' : k.dak === 'lichtstraat' ? 'lichtstraat_200' : undefined;
   if (type) {
@@ -454,6 +461,7 @@ export function bestaandeWoning(k: Keuzes): { plan: Plattegrond; posities: DemoP
   delete plan.daklichten;
   const vlakken = plan.gevelOntwerp?.vlakken;
   if (vlakken) for (const s of Object.keys(vlakken)) if (s.startsWith('uitbouw:')) delete vlakken[s];
+  if (plan.tegenBuren) plan.tegenBuren = plan.tegenBuren.filter((s) => !s.startsWith('uitbouw:'));
   const nodig = new Set(plan.openingen.map((o) => o.positie));
   return { plan, posities: posities.filter((p) => nodig.has(p.id)) };
 }

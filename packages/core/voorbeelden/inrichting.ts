@@ -4,7 +4,8 @@
  * En de omzetting van een plattegrond naar offerteregels (vloeren, wanden, deuren, ruwbouw, inrichting).
  */
 import {
-  dakOpbouw, gevelOppervlaktes, losseWandHoogte, losseWandLengte, losseWandRuimte, losseWandVlak, murenVan, niveauPlan, niveauVan, ruimteMaten, verdiepingenVan,
+  alleBestaand, dakOpbouw, gevelOppervlaktes, heeftBestaand, isBestaand, losseWandHoogte, losseWandLengte, losseWandRuimte, losseWandVlak, meubelVoetafdruk, murenVan, muurStatus,
+  muurVanOpening, niveauPlan, niveauVan, nieuwPlatDak, ruimteMaten, ruimteOp, verdiepingenVan,
   type DakBedekking, type DakLichtType, type DakMateriaal, type GevelMateriaal, type GevelOntwerp, type Muur, type OfferteRegel, type PlanCatalogus, type Plattegrond,
 } from '../src/index.js';
 import { techniekCatalogus } from './techniek.js';
@@ -155,6 +156,8 @@ export const planCatalogus: PlanCatalogus = {
     blauwgrijs: { label: 'Verf blauwgrijs', soort: 'gevel', kleur: '#aab6bf' },
     tegels_wit: { label: 'Wandtegels wit 30 × 60', soort: 'tegel', kleur: '#efeee9' },
     tegels_groen: { label: 'Wandtegels zellige groen', soort: 'tegel', kleur: '#6f8f7a' },
+    // Ronde 11: gipsplaat die schilderklaar opgeleverd wordt (de klant schildert zelf), zoals in de offertes van een uitbouw.
+    schilderklaar: { label: 'Schilderklaar (gipsplaat, niet geschilderd)', soort: 'gevel', kleur: '#e9e6df' },
   },
   binnendeuren: {
     schilder: { label: 'Schilderdeur wit', soort: 'kunststof', kleur: '#f3f2ee' },
@@ -202,7 +205,7 @@ const PRIJZEN: Record<string, [number, number]> = {
   'vloer:tegel_grijs': [72, 46], 'vloer:tegel_wit': [78, 50], 'vloer:parket_eik': [96, 62], 'vloer:parket_donker': [108, 70],
   'vloer:pvc_grijs': [48, 29], 'vloer:gietvloer': [88, 56], 'vloer:tapijt': [38, 22],
   'wand:wit': [17, 9], 'wand:gebroken_wit': [18, 9.5], 'wand:zachtgrijs': [18, 9.5], 'wand:salie': [19, 10], 'wand:terracotta': [19, 10],
-  'wand:blauwgrijs': [19, 10], 'wand:tegels_wit': [79, 48], 'wand:tegels_groen': [118, 74],
+  'wand:blauwgrijs': [19, 10], 'wand:tegels_wit': [79, 48], 'wand:tegels_groen': [118, 74], 'wand:schilderklaar': [11, 6],
   'deur:schilder': [420, 260], 'deur:eik': [560, 350], 'deur:glas': [690, 430], 'deur:staal': [1450, 920], 'deur:schuif': [890, 560],
   doorgang: [180, 95], buitenmuur: [185, 120], binnenmuur: [68, 42],
   // Buitenmuur zonder gevelafwerking (als de gevel apart in de offerte staat).
@@ -228,11 +231,15 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
   const regels: OfferteRegel[] = [];
   // Muren per verdieping (een muur hoort altijd bij één verdieping).
   const murenPerNiveau = verdiepingenVan(plan).map((_, n) => murenVan(niveauPlan(plan, n)));
-  const muren: (Muur & { niveau: number })[] = murenPerNiveau.flatMap((ms, n) => ms.map((m) => ({ ...m, niveau: n })));
+  // Bestaand en tegen de buren (ronde 11): wat al bestaat of van de buren is, staat niet in het overzicht. Zonder is alles
+  // zoals vroeger.
+  const oud = heeftBestaand(plan);
+  const muren: (Muur & { niveau: number })[] = murenPerNiveau.flatMap((ms, n) => ms.map((m) => ({ ...m, niveau: n }))).filter((m) => !oud || muurStatus(plan, m) === 'nieuw');
   const prijs = (sleutel: string) => PRIJZEN[sleutel] ?? [0, 0];
   const som = new Map<string, number>();
   const tel = (k: string, x: number) => som.set(k, (som.get(k) ?? 0) + x);
   for (const r of plan.ruimtes) {
+    if (oud && r.bestaand === true) continue;
     const m = ruimteMaten(plan, r, murenPerNiveau[niveauVan(r)]);
     tel(`vloer:${r.vloer}`, m.netto);
     tel(`wand:${r.wand}`, m.wand);
@@ -242,7 +249,7 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
     const p = niveauPlan(plan, niveauVan(w));
     const v = losseWandVlak(w, murenPerNiveau[niveauVan(w)] ?? murenVan(p), p.losseWanden);
     return { w, ruimte: losseWandRuimte(p, w), m2: (losseWandLengte(v) * losseWandHoogte(plan, w)) / 10000 };
-  }).filter((x) => x.m2 > 0);
+  }).filter((x) => x.m2 > 0 && x.ruimte?.bestaand !== true);
   for (const x of losse) if (x.ruimte) tel(`wand:${x.w.wand && cat.wanden[x.w.wand] ? x.w.wand : x.ruimte.wand}`, 2 * x.m2);
   const rond1 = (x: number) => Math.round(x * 10) / 10;
   if (opties.vloeren) {
@@ -261,6 +268,11 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
   if (opties.binnendeuren) {
     const deuren = new Map<string, number>();
     for (const o of plan.openingen) {
+      // Een deur in een bestaande woning blijft (een opening in de bestaande gevel naar het nieuwe deel telt wel).
+      if (oud && (o.soort === 'binnendeur' || o.soort === 'doorgang')) {
+        const m = muurVanOpening(o, murenPerNiveau[niveauVan(o)] ?? []);
+        if (m && isBestaand(plan, m.plus) && isBestaand(plan, m.min)) continue;
+      }
       if (o.soort === 'binnendeur') deuren.set(`deur:${o.deurtype ?? 'schilder'}`, (deuren.get(`deur:${o.deurtype ?? 'schilder'}`) ?? 0) + 1);
       if (o.soort === 'doorgang') deuren.set('doorgang', (deuren.get('doorgang') ?? 0) + 1);
     }
@@ -310,9 +322,12 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
       const kleur = mat?.kleuren[b.kleur]?.label ?? b.kleur;
       regels.push({ code: `dak:${soort}:${b.materiaal}:${b.kleur}`, groep: 'Dak', omschrijving: `${mat?.label ?? b.materiaal}, ${kleur.toLowerCase()} (${wat})`, eenheid: 'm²', hoeveelheid: rond1(m2), eenheidsprijs: mat?.prijs ?? 0, kostprijs: mat?.kost ?? 0 });
     };
-    if (dak.hellend) bedekking('hellend', dak.keuze.bedekking, dak.m2Hellend, `${dak.hellend.vorm === 'zadel' ? 'zadeldak' : 'lessenaarsdak'} ${dak.hellend.helling}°, langs de helling gemeten, met ${dak.hellend.oversteek} cm oversteek`);
-    bedekking('plat', dak.platBedekking, dak.m2Plat, 'plat dak, op de as van de muren, zonder de openingen van de daklichten');
-    if (dak.mDakrand > 0) regels.push({ code: 'dakrand', groep: 'Dak', omschrijving: 'Dakrand van het platte dak (opstand met muurkap)', eenheid: 'm', hoeveelheid: rond1(dak.mDakrand), eenheidsprijs: prijs('dakrand')[0], kostprijs: prijs('dakrand')[1] });
+    // Bestaand (ronde 11): het dak van een bestaande ruimte en de dakrand op een muur die niet gebouwd wordt, tellen niet mee.
+    const m2Plat = oud ? nieuwPlatDak(plan, dak) : dak.m2Plat;
+    const mDakrand = oud ? dak.dakranden.filter((s) => muurStatus(niveauPlan(plan, s.niveau), s.muur) === 'nieuw').reduce((t, s) => t + (s.tot - s.van), 0) / 100 : dak.mDakrand;
+    if (dak.hellend && !(oud && alleBestaand(plan, dak.top))) bedekking('hellend', dak.keuze.bedekking, dak.m2Hellend, `${dak.hellend.vorm === 'zadel' ? 'zadeldak' : 'lessenaarsdak'} ${dak.hellend.helling}°, langs de helling gemeten, met ${dak.hellend.oversteek} cm oversteek`);
+    bedekking('plat', dak.platBedekking, m2Plat, 'plat dak, op de as van de muren, zonder de openingen van de daklichten');
+    if (mDakrand > 0) regels.push({ code: 'dakrand', groep: 'Dak', omschrijving: 'Dakrand van het platte dak (opstand met muurkap)', eenheid: 'm', hoeveelheid: rond1(mDakrand), eenheidsprijs: prijs('dakrand')[0], kostprijs: prijs('dakrand')[1] });
     const aantal = new Map<string, number>();
     for (const l of dak.daklichten) if (!l.reden) aantal.set(l.licht.type, (aantal.get(l.licht.type) ?? 0) + 1);
     for (const [type, n] of aantal) {
@@ -359,7 +374,12 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
   }
   if (opties.inrichting) {
     const aantal = new Map<string, number>();
-    for (const m of plan.meubels) aantal.set(m.type, (aantal.get(m.type) ?? 0) + 1);
+    for (const m of plan.meubels) {
+      // Wat in een bestaande ruimte staat (de trap van de bestaande woning), blijft.
+      const v = meubelVoetafdruk(m);
+      if (oud && isBestaand(plan, ruimteOp(plan, v.x + v.b / 2, v.y + v.d / 2, niveauVan(m))?.id)) continue;
+      aantal.set(m.type, (aantal.get(m.type) ?? 0) + 1);
+    }
     for (const [type, n] of aantal) {
       const t = cat.meubels[type];
       if (!t?.prijs) continue;

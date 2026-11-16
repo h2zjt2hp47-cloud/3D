@@ -18,7 +18,9 @@ import {
   type ProductModel,
   type Prijslijst,
   type RuimteType,
+  type HandmatigePost,
 } from '../../core/src/index.js';
+import { UITBOUW_VOORBEELD_NAAM, UITBOUW_VOORBEELD_UITLEG, uitbouwVoorbeeld } from '../../core/voorbeelden/uitbouwvoorbeeld.js';
 import { aanbouw, aanbouwPrijslijst } from '../../core/voorbeelden/aanbouw.js';
 import { garagepoort, poortPrijslijst } from '../../core/voorbeelden/garagepoort.js';
 import type { PlanRegelOpties } from '../../core/voorbeelden/inrichting.js';
@@ -95,6 +97,12 @@ export interface OfferteMeta {
    * tonen en samen mee te geven. Een kopie, een sjabloon of een nieuw project krijgt ze niet mee.
    */
   variantGroep?: string;
+  /**
+   * Werk zonder ding (ronde 11): afbraak van het terras, grondwerken, een container … Posten die de verkoper zelf toevoegt
+   * in de kaart *Werken* van het overzicht, zonder bedrag. Ze gaan mee met het project (bewaren, varianten, export,
+   * ongedaan maken). Ontbreekt = geen.
+   */
+  werken?: HandmatigePost[];
   meerwerk: MeerwerkRegel[];
   meerwerkbon?: { nummer: number; naam: string; datum: string; handtekening?: string; getekend: boolean };
 }
@@ -113,7 +121,8 @@ const SJABLONEN = 'bouw-demo.sjablonen.v1';
 const BIBLIOTHEEK = 'bouw-demo.bibliotheek.v1';
 
 export interface ProjectInfo { id: string; naam: string; klant: string; nummer: string; gewijzigd: string; posities: number }
-export interface Sjabloon { id: string; naam: string; omschrijving: string; gewijzigd: string; ingebouwd?: boolean; toestand: Toestand }
+/** `in3D`: het project opent meteen in 3D (het voorbeeldproject van ronde 11). */
+export interface Sjabloon { id: string; naam: string; omschrijving: string; gewijzigd: string; ingebouwd?: boolean; in3D?: boolean; toestand: Toestand }
 export interface BibliotheekItem { id: string; naam: string; model: ModelCode; keuzes: Keuzes; gewijzigd: string }
 /** Bestandsformaat om een project te bewaren of door te sturen. */
 export interface ProjectBestand { soort: 'woningconfigurator-project'; versie: 1; bewaard: string; toestand: Toestand }
@@ -143,6 +152,23 @@ export function voorbeeldToestand(): Toestand {
 export function legeToestand(): Toestand {
   const v = voorbeeldToestand();
   return { plan: { ...v.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] }, posities: [], meta: v.meta };
+}
+
+/**
+ * Het voorbeeldproject van ronde 11: een uitbouw achter een rijwoning, tussen twee buren, met het werk zonder ding
+ * (`uitbouwVoorbeeld` in core/voorbeelden/uitbouwvoorbeeld.ts). Eén keer gemaakt; een nieuw project is een kopie.
+ */
+let uitbouwVoorbeeldToestand: Toestand | undefined;
+export function uitbouwToestand(): Toestand {
+  if (!uitbouwVoorbeeldToestand) {
+    const { plan, posities, werken } = uitbouwVoorbeeld();
+    const m = standaardMeta();
+    uitbouwVoorbeeldToestand = {
+      plan, posities: posities as Positie[],
+      meta: { ...m, klant: '', adres: '', project: UITBOUW_VOORBEELD_NAAM, regels: { ...m.regels, gevel: true, dak: true }, werken },
+    };
+  }
+  return uitbouwVoorbeeldToestand;
 }
 
 /** Project "enkel ramen en deuren": geen plattegrond, lege ramenlijst, bedoeld voor vervanging of losse ramen. */
@@ -327,6 +353,7 @@ export function sjablonen(): Sjabloon[] {
     { id: 'leeg', naam: 'Leeg project', omschrijving: 'Lege plattegrond, geen posities.', gewijzigd: '', ingebouwd: true, toestand: legeToestand() },
     { id: 'ramen', naam: 'Enkel ramen en deuren (zonder woning)', omschrijving: 'Geen plattegrond: meteen een ramenlijst, of plak een maatlijst uit Excel. Voor vervanging of losse ramen.', gewijzigd: '', ingebouwd: true, toestand: ramenToestand() },
     { id: 'voorbeeld', naam: 'Voorbeeldwoning', omschrijving: 'Gelijkvloers en verdieping, 14 ramen en deuren, inrichting.', gewijzigd: '', ingebouwd: true, toestand: voorbeeldToestand() },
+    { id: 'uitbouw', naam: UITBOUW_VOORBEELD_NAAM, omschrijving: UITBOUW_VOORBEELD_UITLEG, gewijzigd: '', ingebouwd: true, in3D: true, toestand: uitbouwToestand() },
   ];
   return [...ingebouwd, ...(lees<Sjabloon[]>(SJABLONEN) ?? [])];
 }

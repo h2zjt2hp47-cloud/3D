@@ -8,11 +8,12 @@
  * met dezelfde naam op " (variant n)" na en dezelfde klant.
  */
 import kijkerGz from 'virtueel:kijker';
-import { type Pakket3D } from '../../core/src/index.js';
+import { klantPosten, type Pakket3D } from '../../core/src/index.js';
 import { planCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { ontwerpKenmerken, verschillen } from '../../core/voorbeelden/varianten.js';
 import { maakPakket3D } from './doorsturen.js';
 import { actiefProject, laadProject, projecten, toestand, type Positie, type Toestand } from './staat.js';
+import { huidigePosten, postenVanToestand } from './werken-ui.js';
 
 /** Hoeveel ontwerpen hoogstens naast elkaar staan en samen in één bestand gaan. */
 export const MAX_VARIANTEN = 3;
@@ -91,7 +92,11 @@ export function verschilVan(leden: Variant[]): string[][] {
 export function klantPakket(leden: Variant[], omschrijf: (p: Positie) => string): Pakket3D {
   const verschil = leden.length > 1 ? verschilVan(leden) : [];
   const pakketten = leden.map((v, i) => {
-    const p = maakPakket3D(omschrijf, v.t);
+    // Ronde 11: met de dingen in de 3D en de posten van het werk (zonder wat alleen voor de aannemer is), zodat de klant
+    // ziet wat er gebeurt en een tik in de 3D de post toont. Een oudere kijker slaat de posten over.
+    const p = maakPakket3D(omschrijf, v.t, { dingen: true });
+    const posten = klantPosten(v.id === actiefProject() ? huidigePosten() : postenVanToestand(v.t));
+    if (posten.length) p.posten = posten;
     p.project.aannemer = aannemerNaam();
     if (v.t.meta.datum) p.project.datum = v.t.meta.datum;
     if (leden.length > 1) p.variant = { naam: v.naam, verschil: verschil[i] ?? [] };

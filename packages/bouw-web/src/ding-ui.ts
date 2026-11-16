@@ -13,10 +13,11 @@
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
 import { pasStijlToe, raamInStijl, stijlCatalogus, type Stijl } from '../../core/voorbeelden/stijlen.js';
-import { losseWandRuimte, murenVan, niveauPlan, verfGevel, vlakSleutel, type GevelKant, type LosseWand, type VerfBereik } from '../../core/src/index.js';
+import { losseWandRuimte, murenVan, niveauPlan, verfGevel, vlakSleutel, zetTegenBuren, type GevelKant, type LosseWand, type VerfBereik } from '../../core/src/index.js';
 import { bedekkingKeuze, dakVormKnoppen, koepelTeller, metDak, zetDak } from './dak-ui.js';
 import { gevelStaal } from './gevel-ui.js';
-import { el } from './hulp.js';
+import { el, schakelaar } from './hulp.js';
+import { postDetail, postenVoorDing } from './werken-ui.js';
 import { stijlBeeld } from './snelstart-ui.js';
 import { actiefProject, dupliceerProject, positieVan, toestand, wijzig, type Toestand } from './staat.js';
 import { familie } from './meegeven.js';
@@ -61,6 +62,18 @@ function dakKeuzes(vak: HTMLElement) {
 function gevelKeuzes(vak: HTMLElement, sleutel: string) {
   const [ruimte, kant] = sleutel.split(':') as [string, GevelKant];
   const plan = toestand().plan;
+  // Ronde 11: een muurvlak tegen de buren is een bestaande scheidingsmuur (niet gebouwd, neutraal, de buren erachter).
+  const buren = plan.tegenBuren?.includes(sleutel) === true;
+  const burenKnop = () => schakelaar('Tegen de buren (de scheidingsmuur bestaat al)', buren, (aan) => wijzig('plan', (t) => zetTegenBuren(t.plan, sleutel, aan)), { 'data-tegen-buren': sleutel });
+  if (plan.ruimtes.find((r) => r.id === ruimte)?.bestaand === true) {
+    // Een gevel van een bestaande ruimte blijft zoals ze is: geen materiaal kiezen (het zou niets veranderen).
+    vak.append(bestaandUitleg(ruimte), burenKnop());
+    return;
+  }
+  if (buren) {
+    vak.append(burenKnop(), el('p', { class: 'klein' }, 'Niet gebouwd: geen gevelmateriaal, niet in de meetstaat of de constructie. In de 3D neutraal, met de buren erachter.'));
+    return;
+  }
   const ontwerp = plan.gevelOntwerp ?? gevelOntwerpVan(plan);
   const nu = ontwerp.vlakken?.[sleutel] ?? ontwerp.standaard;
   const niveau = plan.ruimtes.find((r) => r.id === ruimte)?.niveau ?? 0;
@@ -98,6 +111,7 @@ function gevelKeuzes(vak: HTMLElement, sleutel: string) {
     for (const [code, k] of Object.entries(mat.kleuren)) rij.append(staalKnop(k.hex, k.label, code === nu.kleur, () => verf(nu.materiaal, code), { 'data-gevel-kleur': code }));
     vak.append(el('p', { class: 'klein' }, `Kleur: ${(mat.kleuren[nu.kleur]?.label ?? nu.kleur).toLowerCase()}`), rij);
   }
+  vak.append(burenKnop());
 }
 
 function openingKeuzes(vak: HTMLElement, id: string, naarPositie: (id: string) => void) {
@@ -127,9 +141,20 @@ function openingKeuzes(vak: HTMLElement, id: string, naarPositie: (id: string) =
   vak.lastElementChild!.append(alles);
 }
 
+/** Ronde 11: wat bestaat, blijft; een korte uitleg en de schakelaar om het toch als nieuw werk te tellen. */
+function bestaandUitleg(id: string): HTMLElement {
+  const blok = el('div');
+  blok.append(
+    el('p', { class: 'klein' }, 'Bestaat al en blijft: neutraal in de 3D, niet in de meetstaat, de constructie of het overzicht.'),
+    schakelaar('Bestaand (blijft)', true, (aan) => wijzig('plan', (t) => { const x = t.plan.ruimtes.find((y) => y.id === id); if (x) { if (aan) x.bestaand = true; else delete x.bestaand; } }), { 'data-ruimte-bestaand': id }),
+  );
+  return blok;
+}
+
 function ruimteKeuzes(vak: HTMLElement, id: string) {
   const r = toestand().plan.ruimtes.find((x) => x.id === id);
   if (!r) return;
+  if (r.bestaand === true) { vak.append(bestaandUitleg(id)); return; }
   const zet = (f: (x: NonNullable<typeof r>) => void) => wijzig('plan', (t) => { const x = t.plan.ruimtes.find((y) => y.id === id); if (x) f(x); });
   const vloer = el('div', { class: 'gv-rij', role: 'group', 'aria-label': 'Vloer' });
   for (const [code, v] of Object.entries(cat.vloeren)) vloer.append(staalKnop(v.kleur, v.label, r.vloer === code, () => zet((x) => { x.vloer = code; }), { 'data-vloer': code }));
@@ -259,6 +284,23 @@ export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: ()
   else if (soort === 'meubel') meubelKeuzes(vak, id, nav.sluit);
   else if (soort === 'wand') wandKeuzes(vak, id, nav.sluit);
   else if (soort === 'toestel' || soort === 'leiding') techniekDingKeuzes(vak, ding, nav);
+  dingPosten(vak, ding);
+}
+
+/**
+ * Ronde 11: de posten van het werk waar dit ding bij hoort, onderaan het keuzepaneel, elk dicht tot je hem openklapt.
+ * Pas ingevuld nadat het paneel er staat (de posten rekenen de constructie uit): zo blijft het paneel even snel.
+ */
+function dingPosten(vak: HTMLElement, ding: string) {
+  const blok = el('div', { class: 'dingposten', 'data-ding-posten': ding });
+  vak.append(blok);
+  setTimeout(() => {
+    if (!blok.isConnected) return;
+    const posten = postenVoorDing(ding);
+    if (!posten.length) { blok.remove(); return; }
+    blok.append(el('p', { class: 'klein' }, posten.length === 1 ? 'Hoort bij de post:' : `Hoort bij ${posten.length} posten:`));
+    for (const p of posten) blok.append(postDetail(p, { toon3D: false }));
+  }, 0);
 }
 
 // ---------- stijlen en varianten ----------
