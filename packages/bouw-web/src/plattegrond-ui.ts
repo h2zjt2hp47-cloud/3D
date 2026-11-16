@@ -35,7 +35,7 @@ import {
 } from '../../core/src/index.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { raamBlokken } from '../../core/voorbeelden/raam3d.js';
-import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
+import { maak3D, type Kwaliteit, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
@@ -281,6 +281,9 @@ function plan3D() {
       meubels: toonMeubels,
       dak: toonDakIn3D,
       lichtinval: lichtinvalAan(),
+      // Terras en pad horen bij de woning (gegevens); lucht, gras en horizon tekent de kijker (omgeving 'buiten').
+      aanleg: true,
+      gevelkoppen: true,
       totNiveau: alleNiveaus && !laag ? undefined : niveau,
       inhoud: (o) => {
         const p = positieVan(o);
@@ -980,10 +983,25 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   $('#pl-3d-knoppen').hidden = w !== '3d';
   $('#pl-hint').hidden = w !== 'plan';
   if (w === '3d') {
-    if (viewer === undefined) viewer = maak3D($('#pl-3d'));
+    if (viewer === undefined) {
+      viewer = maak3D($('#pl-3d'));
+      // De woning staat buiten: lucht, gras en horizon. Snel of Mooi volgens de keuze (op een aanraakscherm eerst Snel).
+      viewer?.omgeving?.('buiten');
+      viewer?.kwaliteit?.(kwaliteit3D());
+      // Voor geautomatiseerde tests en metingen: de kijker van de woning bereikbaar.
+      (window as unknown as { __bouw3d?: Viewer3D | null }).__bouw3d = viewer;
+    }
     viewer?.formaat();
     plan3D();
   }
+}
+
+/** Kwaliteit van de 3D van de woning: de bewaarde keuze, anders Snel op een aanraakscherm en Mooi op een computer. */
+const SLEUTEL_KWALITEIT = 'bouw-demo.3d-kwaliteit';
+function kwaliteit3D(): Kwaliteit {
+  let bewaard: string | null = null;
+  try { bewaard = localStorage.getItem(SLEUTEL_KWALITEIT); } catch { /* geen opslag */ }
+  return bewaard === 'snel' || bewaard === 'mooi' ? bewaard : window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi';
 }
 
 export function toonPlan(openingId?: string) {
@@ -1079,6 +1097,13 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-dak').addEventListener('change', (e) => { toonDakIn3D = (e.target as HTMLInputElement).checked; plan3D(); });
+  const kwaliteit = $<HTMLSelectElement>('#pl-3d-kwaliteit');
+  kwaliteit.value = kwaliteit3D();
+  kwaliteit.addEventListener('change', () => {
+    const k: Kwaliteit = kwaliteit.value === 'snel' ? 'snel' : 'mooi';
+    try { localStorage.setItem(SLEUTEL_KWALITEIT, k); } catch { /* geen opslag */ }
+    viewer?.kwaliteit?.(k);
+  });
   // Lichtinval: aan of uit bouwt de 3D opnieuw op (verborgen delen als schaduwwerper); dag en uur verzetten alleen de zon.
   startZon({ opnieuw: () => plan3D(), zon: () => viewer?.zon?.(zonVoorKijker()) });
   $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));

@@ -59,9 +59,15 @@ function teken() {
   $('#uitleg').hidden = false;
   const s = scene();
   if (!s) return;
-  if (viewer === undefined) viewer = maak3D($('#drie-d'));
+  if (viewer === undefined) {
+    viewer = maak3D($('#drie-d'));
+    // Zoals in de configurator: op een aanraakscherm (tablet) de snelle weergave, op een computer de mooie.
+    viewer?.kwaliteit?.(window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi');
+  }
   if (!viewer) { fout('De 3D kan op dit toestel niet getoond worden.'); return; }
   viewer.formaat();
+  // De woning staat buiten (lucht, gras, horizon); een losse positie blijft een rustig beeld op een effen achtergrond.
+  viewer.omgeving?.(woning ? 'buiten' : 'geen');
   viewer.toon(s);
   // Een positie van voren (het hele raam in beeld), de woning schuin van boven; alleen bij een andere keuze, niet bij elke klik.
   if (keuze !== getoond) viewer.standpunt(woning ? 'schuin' : 'voor');

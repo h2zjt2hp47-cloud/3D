@@ -43,8 +43,10 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `husk-schuin` | strakke arm (eigen doorsnede) |
 | `pebble-schuin` | kuipfauteuil met verdekte voet |
 | `stockholm-schuin` | ronde poef |
-| `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
+| `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code). Sinds 15/11 staat de woning in haar omgeving (gras, schaduw op het gras, terras en stoep); het losse raam blijft op de effen achtergrond |
 | `bouw-dak` | dak en lichtkoepel (15/11): zadeldak met rode pannen op de verdieping (topgevels, oversteek, nokvorst), grind op het lage platte dak en een lichtkoepel erin. Genomen ná de twee beelden hierboven: het zet een dak in het project |
+| `bouw-gevel` | omgeving van een gebouw (15/11): de voorgevel van lager bekeken, met de lucht, de wolken, de bomenrij aan de horizon en het gras dat erin wegloopt; baksteen, hout en pannen met reliëf, glas dat de lucht spiegelt. Genomen ná `bouw-dak` |
+| `bouw-binnen` | binnenkijken met lage muren (15/11): vloeren met nerf en voeg, de schaduw van de zon en, in *Mooi*, schaduw in de hoeken. Genomen ná `bouw-dak` |
 | `bouw-zon` | lichtinval (15/11): 21 juni om 13 u, van boven in het gelijkvloers gekeken. De verdieping en het dak zijn verborgen maar werpen schaduw; de zonnevlekken van het schuifraam, de terrasdeur en de lichtkoepel liggen op de vloer. Genomen ná `bouw-dak` (de koepel komt daar vandaan) |
 | `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame op schuine poten (13/11) |
 | `fraser-schuin` | vier schuine poten met een kruis, zitting in twee lagen, schaal die rond de zitting uitsteekt |

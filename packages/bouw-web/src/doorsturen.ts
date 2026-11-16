@@ -14,6 +14,9 @@ function woningScene(totNiveau: number | undefined, laag: boolean): Scene3D {
   return plattegrond3D(toestand().plan, cat, {
     laag: laag ? 110 : undefined,
     meubels: true,
+    // Terras en pad horen bij de woning: ze gaan mee in het pakket. Lucht en gras tekent de kijker zelf.
+    aanleg: true,
+    gevelkoppen: true,
     totNiveau,
     inhoud: (o: Opening) => {
       const p = positieVan(o);
@@ -72,7 +75,9 @@ export async function maakBeelden(pakket: Pakket3D, opVoortgang?: (klaar: number
   const beelden: Zending['beelden'] = { posities: {} };
   const totaal = pakket.posities.length + (pakket.woning.length ? 1 : 0);
   let klaar = 0;
-  const teken = async (scene: Scene3D, standpunt: 'schuin' | 'voor'): Promise<string | undefined> => {
+  const teken = async (scene: Scene3D, standpunt: 'schuin' | 'voor', woning = false): Promise<string | undefined> => {
+    // De woning in open lucht, een positie op de effen achtergrond (zoals op het scherm en in de kijker).
+    viewer.omgeving?.(woning ? 'buiten' : 'geen');
     viewer.toon(scene);
     viewer.standpunt(standpunt);
     await even();
@@ -81,7 +86,7 @@ export async function maakBeelden(pakket: Pakket3D, opVoortgang?: (klaar: number
     return beeld;
   };
   const heleWoning = pakket.woning[pakket.woning.length - 1];
-  if (heleWoning) beelden.woning = await teken(heleWoning.scene, 'schuin');
+  if (heleWoning) beelden.woning = await teken(heleWoning.scene, 'schuin', true);
   for (const p of pakket.posities) {
     // Een raam of deur van voren, met het hele kader in beeld.
     const beeld = await teken(passendKader(p.scene), 'voor');

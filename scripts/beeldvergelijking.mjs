@@ -99,8 +99,9 @@ const ZETELBEELDEN = [
   { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.04, 0.2, 0.32, 0.8] },
 ];
 // `bouw-dak` komt na de twee oude beelden: het zet een dak in het project, en dat mag `bouw-woning` niet veranderen.
-// `bouw-zon` komt daarna: de lichtinval op het project met dak en koepel.
-const BOUWBEELDEN = [{ naam: 'bouw-woning' }, { naam: 'bouw-raam' }, { naam: 'bouw-dak' }, { naam: 'bouw-zon' }];
+// `bouw-gevel` en `bouw-binnen` (omgeving, 15/11) komen na `bouw-dak` en gebruiken dat dak; `bouw-zon` komt daarna: de
+// lichtinval op het project met dak en koepel.
+const BOUWBEELDEN = [{ naam: 'bouw-woning' }, { naam: 'bouw-raam' }, { naam: 'bouw-dak' }, { naam: 'bouw-gevel' }, { naam: 'bouw-binnen' }, { naam: 'bouw-zon' }];
 
 const nodig = (b) => !alleen || alleen.some((a) => b.naam.startsWith(a));
 
@@ -231,6 +232,27 @@ async function maakBeelden() {
       await p.click('[data-pl-weergave="3d"]');
       await p.click('[data-pl-standpunt="schuin"]');
       beelden.set('bouw-dak', png(await wachtTotStil(p, '#pl-3d canvas')));
+      console.log('klaar');
+    }
+    if (bouw.some((b) => b.naam === 'bouw-gevel')) {
+      // Omgeving van een gebouw (15/11): de voorgevel van lager bekeken, met de lucht, de wolken, de bomenrij aan de
+      // horizon en het gras dat erin wegloopt; glas dat de lucht spiegelt, terras en stoep bij de woning.
+      process.stdout.write('  bouw-gevel … ');
+      await p.click('.nav [data-weergave="plan"]');
+      await p.click('[data-pl-weergave="3d"]');
+      await p.click('[data-pl-standpunt="voor"]');
+      beelden.set('bouw-gevel', png(await wachtTotStil(p, '#pl-3d canvas')));
+      console.log('klaar');
+    }
+    if (bouw.some((b) => b.naam === 'bouw-binnen')) {
+      // Binnenkijken met lage muren (15/11): vloeren met nerf en voeg, schaduw van de zon en schaduw in de hoeken.
+      process.stdout.write('  bouw-binnen … ');
+      await p.click('.nav [data-weergave="plan"]');
+      await p.click('[data-pl-weergave="3d"]');
+      await p.check('#pl-laag');
+      await p.click('[data-pl-standpunt="schuin"]');
+      beelden.set('bouw-binnen', png(await wachtTotStil(p, '#pl-3d canvas')));
+      await p.uncheck('#pl-laag');
       console.log('klaar');
     }
     if (bouw.some((b) => b.naam === 'bouw-zon')) {

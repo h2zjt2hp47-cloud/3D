@@ -122,6 +122,46 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - **Scherm** (`zon-ui.ts`, blok onder de 3D): vinkje *Lichtinval*, dag (vier seizoensdagen of een datum), uur (schuifbalk 4–22 u), de stand in woorden ("zuid, 61° hoog", zonsopgang en -ondergang) en de tabel **zon per gevel** (`zonOpGevels`: per kant de windstreek, de periodes en de uren zon; een noordgevel heeft er in de zomer twee). Aan/uit bouwt de 3D opnieuw op; dag en uur verzetten alleen de zon (`viewer.zon`), zodat schuiven vlot gaat. De instellingen horen bij het kijken, niet bij het project (alleen `plan.noord` wordt bewaard).
 - **Grenzen**: de tabel per gevel is meetkundig (zon boven de horizon en vóór het gevelvlak), zonder buren, bomen of de schaduw van de woning zelf (oversteek, uitbouw). In de 3D geeft de woning zelf wél schaduw. Een screen dat half neer hangt (zoals het schuifraam van de voorbeeldwoning) houdt ook in 3D zon tegen. Geen weerkaatsing van zonlicht binnen (geen globale belichting): een zonnevlek verlicht de kamer errond niet. Zomertijd is een benadering zonder jaartal.
 
+## Omgeving en mooiere 3D (ronde 3, 15/11)
+Doel (Jonas): *"snel een mooie 3D die een verkoper kan tonen na het eerste gesprek"*. De woning staat nu in een omgeving, met rijkere materialen. De zetels zijn niet veranderd (`npm run beelden`: alle zetelbeelden 0,00 %).
+
+- **De keuze is van de aanroeper, niet van de kijker**: `viewer.omgeving('buiten' | 'geen')` (`drie-d.ts`, per scène die je toont; standaard `'geen'`). De kijker gokt nooit op de inhoud.
+  - `'buiten'` = een gebouw in open lucht: lucht met wolken, een wazige bomenrij aan de horizon, gras tot aan de einder (met mist), licht en schaduw die bij de lucht passen, glas dat de lucht spiegelt, en in *Mooi* zachte schaduw in de hoeken.
+  - `'geen'` = de effen achtergrond van altijd: voor een los raam of een losse deur (een rustig beeld).
+  - Wie roept het aan: `plattegrond-ui.ts` (altijd buiten), `kijker.ts` en `doorsturen.ts` (woning buiten, een positie geen). `positie-ui.ts` roept niets aan: een positie blijft dus rustig. **De aanbouw is een positie en krijgt daardoor geen gras**; wil je dat wel, dan is het één regel vóór `viewer.toon(...)` in `positie-ui.ts`: `viewer.omgeving?.(p.model === 'AANBOUW' ? 'buiten' : 'geen')` (en in de kijker een veld op de positie dat zegt dat het een gebouw is).
+  - `maak3D` onthoudt de keuze en zet ze terug na een weggevallen grafisch toestel.
+- **De zon blijft de baas**: `viewer.zon(...)` werkt zoals voorheen. Buiten volgen de lucht, de kleur en sterkte van het licht, de mist en de belichting de stand van de zon (`luchtVan`): hoog = helder blauw, laag = warm licht en lange schaduwen, onder de horizon = het blauwe uur (geen zwart beeld). Zonder gekozen zon geldt `ZON_BUITEN` (schuin van rechts voor, 43° hoog). Het licht en de lucht erachter verzetten meteen; het omgevingsbeeld (weerkaatsing, strooilicht) volgt 140 ms later, zodat schuiven met het uur vlot blijft. `zon(x)` en daarna `zon(null)` geeft exact het beeld van ervoor (nagekeken in de browser), net als `'buiten'` → `'geen'` → `'buiten'`.
+- **Wat bij het gebouw hoort, is gegevens** (`plattegrond3D`), wat weergave is, komt van de kijker:
+  - `Plan3DOpties.aanleg`: per schuifraam van het gelijkvloers een terras (`terras_<opening>`, soort `tegel`, 320 cm diep, 110 cm naast het raam), per buitendeur een stoep (`terras_<opening>`), en bij een buitendeur in een **hal** (de voordeur) ook een pad (`pad_<opening>`, soort `grind`, tot 520 cm). Wat onder de woning valt of een eerder stuk overlapt, valt weg. Het kader (camera) blijft dat van de woning. Maten en plaats zijn een benadering om het beeld af te maken, niet door de gebruiker getekend.
+  - `Plan3DOpties.gevelkoppen`: een binnenmuur die tegen de gevel aansluit, liep tot in het gevelvlak en gaf een witte streep van boven tot onder in de gevel (en een spleet in de dakrand). Met de optie krijgt de kop gevelmateriaal (ook van de sokkel), op een verdieping een stukje voor de vloerplaat (`…_kop`), en loopt de dakrand door.
+  - Beide opties staan **uit** in de motor (de vingerafdrukken in `dak.test.ts` blijven gelijk) en **aan** in `plattegrond-ui.ts` en `doorsturen.ts`. Geen nieuwe soorten en geen nieuwe velden op een blok: een oudere kijker kan deze scènes tekenen.
+- **Rijkere materialen** (`bouwMateriaal` in `drie-d.ts`, alleen als `opties.zetel` niet gezet is, dus in elke kijker van de bouw, ook bij een los raam): gevelsteen, staande en liggende planken, leien, pannen, zink, parket, tegels en hout krijgen een eigen, zelf getekende kleurkaart **en** hoogtekaart (`metRelief`: voegen, groeven, de golf van een pan vangen licht), een grotere tegel (minder herhaling) en een tint per steen of plank die over de rand doorloopt (geen naad). Grind, groendak en roofing gebruiken hun tekening als reliëf. **Wijzig nooit de oude tekenfuncties** (`baksteen`, `parket`, `planken`, `tegels`, `pleister` …): de decors van de zetels gebruiken ze ook, en de beeldvergelijking dekt maar twee decors.
+- **Glas**: buiten spiegelt glas een eigen omgevingsbeeld waarin ook onder de horizon lucht zit (`vulLuchtbeeld(…, alleenLucht)`), 2,6 keer sterker. Reden: je kijkt meestal van boven op een staande ruit, en die spiegelt dan het gras, niet de hemel. Een bewuste vereenvoudiging, zodat een raam als glas leest.
+- **Kwaliteit**: keuze *Snel / Mooi* onder de 3D van de woning (`#pl-3d-kwaliteit`, bewaard in `bouw-demo.3d-kwaliteit`; op een aanraakscherm eerst Snel). De losse kijker heeft geen keuze: Snel op een aanraakscherm, anders Mooi. Het scherm van een positie (`positie-ui.ts`) is niet gewijzigd.
+
+  | | Snel | Mooi |
+  |---|---|---|
+  | Lucht, wolken, bomenrij, gras, mist, terras en pad | ja | ja |
+  | Rijkere materialen met reliëf, glas dat de lucht spiegelt | ja | ja |
+  | Schaduw van de zon | kaart van 1024, licht verzacht | kaart van 2048, zachter |
+  | Schaduw in de hoeken (GTAO, nabewerking) | nee | ja, 180 ms na de laatste beweging |
+  | Scherpte | 1 beeldpunt per punt | tot 2 (scherm met hoge dichtheid) |
+
+  De beelden van de zending (`doorsturen.ts`) worden in *Snel* genomen: daarom zit alles behalve de nabewerking ook in Snel.
+- **Gemeten** (Chromium zonder grafische kaart, 704 × 436, voorbeeldwoning met zadeldak, schuin; de metingen schommelen met de drukte op de machine):
+  - per beeld: Snel ±0,41 → ±0,56 s, Mooi ±0,44 → 0,7 à 1,0 s (de nabewerking);
+  - het eerste beeld na de klik op *3D*: 3 à 4 s → ±7 s. Ruim een seconde daarvan is het tweede omgevingsbeeld (glas); de rest is het klaarmaken van meer en zwaardere tekenprogramma's en texturen, wat zonder grafische kaart traag is. Niet verder kunnen terugbrengen.
+  - Op een echt toestel (tablet, M5) is niets gemeten: daar nakijken.
+- **De lucht is een bol, geen achtergrond**: ze staat op een bol rond de camera (`koepel`, verste diepte) en wordt na de woning en het gras getekend, zodat ze alleen berekend wordt waar ze te zien is. Als achtergrond van de scène (`scene.backgroundNode`) werd elk beeldpunt eerst met lucht gevuld: ±0,25 s per beeld zonder grafische kaart, ook als er geen lucht in beeld was.
+- **Voor tests**: `window.__bouw3d` is de kijker van de woning (`beeld()`, `zon()`, `omgeving()`, `kwaliteit()`).
+- **Niet nagekeken op WebGPU**: met `--enable-unsafe-webgpu` valt het toestel in software weg vóór het eerste beeld, ook in de versie van vóór deze ronde. Wel gezien: na twee keer wegvallen start de 3D op WebGL2 met dezelfde woning, het dak en de omgeving.
+- **Lessen**:
+  - Neem de beelden *vóór* eerst, met één script dat op beide versies draait (zelfde standpunt, zelfde woning), en bekijk ze zelf.
+  - In het standpunt *Schuin* zie je geen lucht: de bovenrand van het beeld ligt onder de horizon. Het gras en de schaduw erop doen daar het werk; de lucht telt in *Voorgevel*, *Zij* en bij een laag standpunt.
+  - De lucht als lichtbron half ontkleuren: met het volle blauw wordt een witte muur in de schaduw koud en grijsblauw.
+  - Twee vlakken op dezelfde hoogte flikkeren (het terras van het losse raam lag precies op de vloer): de grond wijkt nu in de diepte (`polygonOffset`) in plaats van iets te verschuiven.
+  - `scene.fog` was bij de zetels ook een vlag ("decor al gezet"): de bouw zet zijn omgeving daarom bij elke `toon`.
+
 ## Enkel ramen (project zonder woning)
 - `meta.zonderWoning` (sjabloon *Enkel ramen en deuren*, `ramenToestand()`): body-klasse `zonder-woning`.
   - De plattegrond, "Uit de plattegrond", de positiekaarten en "Toon in plattegrond" verdwijnen.
@@ -194,7 +234,8 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 ## Testen
 - `npm test` en `npm run typecheck` in de root (159 tests op 1/11/2026; `core/test/woning.test.ts`, `werf.test.ts`, `gevel.test.ts`, `maatlijst.test.ts`, en sinds 15/11 `dak.test.ts`).
 - `dak.test.ts` begint met **vingerafdrukken** van de voorbeeldwoning zonder dakkeuze (3D-blokken, offerteregels, gevelaanzichten, oppervlaktes, plattegrond, controles), vastgelegd vóór het dak erbij kwam. Verandert er een, dan is een bestaand project veranderd: dat mag niet zonder reden.
-- `npm run beelden`: `bouw-dak` (zadeldak, grind, koepel) wordt ná `bouw-woning` en `bouw-raam` genomen, `bouw-zon` (lichtinval, van boven in het gelijkvloers) daarna.
+- `npm run beelden`: `bouw-dak` (zadeldak, grind, koepel) wordt ná `bouw-woning` en `bouw-raam` genomen, dan `bouw-gevel` (voorgevel met lucht en horizon) en `bouw-binnen` (muren laag), en `bouw-zon` (lichtinval, van boven in het gelijkvloers) als laatste. De woning staat in haar omgeving, het losse raam niet.
+- `aanleg.test.ts`: terras, stoep en pad (alleen met de optie, nooit onder de woning, zonder overlap, kader ongewijzigd) en de kopse kant van een binnenmuur in de gevel.
 - `zon.test.ts`: stand van de zon tegen bekende waarden, zon per gevel, de verborgen schaduwwerpers en de noordpijl.
 - Browser: er zijn nu twee knoppen met `data-weergave="offerte"` (Ramenlijst en Offerte); klik in tests op `.nav [data-weergave="offerte"]:not(.alleen-ramen)`. Coördinaten in een tekenvlak pas berekenen ná klikken in het palet (Playwright scrolt het palet in beeld).
 - Browser: Playwright met Chromium `--use-angle=swiftshader --enable-unsafe-swiftshader` (three.js zit sinds 3/11 in de bundel, geen CDN meer). Klik op een opening met `{ force: true }` (de groep bevat ook bogen in de ruimte).
