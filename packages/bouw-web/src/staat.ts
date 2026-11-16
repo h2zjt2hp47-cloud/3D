@@ -23,6 +23,7 @@ import { aanbouw, aanbouwPrijslijst } from '../../core/voorbeelden/aanbouw.js';
 import { garagepoort, poortPrijslijst } from '../../core/voorbeelden/garagepoort.js';
 import type { PlanRegelOpties } from '../../core/voorbeelden/inrichting.js';
 import { berekenRaam, raamdeur, raamPrijslijst } from '../../core/voorbeelden/raam.js';
+import { nieuweIndeling } from '../../core/voorbeelden/raamraster.js';
 import { raamKeuzes, voorbeeldWoning } from '../../core/voorbeelden/woning.js';
 
 export type ModelCode = 'RAAM' | 'AANBOUW' | 'POORT';
@@ -403,10 +404,27 @@ export function resultaat(p: Positie): ConfiguratieResultaat {
     const m = MODELLEN[p.model];
     // Raam of deur: met de tekening van het raster (alle indelingen); de andere modellen rechtstreeks uit de motor.
     r = p.model === 'RAAM' ? berekenRaam(p.keuzes) : berekenConfiguratie(m.model, p.keuzes, m.prijslijst);
+    // Een raamindeling die nog geen prijs heeft, telt nergens mee (offerte, werf): prijs en kost op nul. De stuklijst
+    // zelf blijft, voor het materiaal.
+    if (p.model === 'RAAM' && nieuweIndeling(r)) {
+      r = {
+        ...r,
+        stuklijst: r.stuklijst.map((s) => ({ ...s, kostprijsPerEenheid: 0, kost: 0 })),
+        prijs: { ...r.prijs, kostprijs: 0, brutoprijsExcl: 0, verkoopprijsExcl: 0, verkoopprijsIncl: 0, margeProcent: null },
+      };
+    }
     if (cache.size > 300) cache.clear();
     cache.set(sleutel, r);
   }
   return r;
+}
+
+/**
+ * Toont deze positie geen bedrag? Een model dat alleen toont (garagepoort), of een raamindeling die sinds 15/11 bestaat
+ * en nog geen prijs heeft (`nieuweIndeling`). Elk scherm vraagt het hier, zodat er nergens een bedrag doorglipt.
+ */
+export function zonderPrijs(p: Positie): boolean {
+  return MODELLEN[p.model].zonderPrijs === true || (p.model === 'RAAM' && nieuweIndeling(resultaat(p)));
 }
 
 export const nieuweId = (prefix: string) => `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;

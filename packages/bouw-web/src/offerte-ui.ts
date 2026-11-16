@@ -11,7 +11,7 @@ import { gevelSvgs } from './plattegrond-ui.js';
 import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
 import { controles, inbegrepen } from './positie-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
-import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, type ModelCode, type Positie } from './staat.js';
+import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zonderPrijs, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 import { maakPakket3D, maakZending } from './doorsturen.js';
 
@@ -142,9 +142,9 @@ export function toonOfferte() {
     }));
     const aantalRij = el('label', { class: 'aantal' });
     // Een model dat alleen toont (garagepoort) heeft nog geen prijs: geen bedrag van nul tonen.
-    const zonderPrijs = MODELLEN[p.model].zonderPrijs === true;
-    aantalRij.append(aantal, el('span', {}, zonderPrijs ? 'stuk' : `× ${eur(toonPrijs(pos.stukprijs, o.btwProcent))}`));
-    prijs.append(aantalRij, el('strong', {}, zonderPrijs ? 'Nog geen prijs' : eur(toonPrijs(pos.totaal, o.btwProcent))));
+    const geenPrijs = zonderPrijs(p);
+    aantalRij.append(aantal, el('span', {}, geenPrijs ? 'stuk' : `× ${eur(toonPrijs(pos.stukprijs, o.btwProcent))}`));
+    prijs.append(aantalRij, el('strong', {}, geenPrijs ? 'Nog geen prijs' : eur(toonPrijs(pos.totaal, o.btwProcent))));
     rij.append(tekening, info, prijs);
     return rij;
   }));
@@ -169,9 +169,11 @@ export function toonOfferte() {
   for (const x of document.querySelectorAll('.o-btwlabel')) x.textContent = `prijzen ${btwLabel()}`;
 
   // Totalen.
+  const nZonder = toestand().posities.filter((p) => p.aantal > 0 && zonderPrijs(p)).length;
   const tot: [string, string, string?][] = [
     ['Ramen en deuren', eur(o.subtotaalPosities)],
   ];
+  if (nZonder) tot.push([`Zonder prijs (niet meegeteld): ${nZonder} positie${nZonder === 1 ? '' : 's'}`, '—']);
   if (o.subtotaalRegels) tot.push(['Afwerking uit de plattegrond', eur(o.subtotaalRegels)]);
   if (o.korting) tot.push([`Korting aannemer ${getal(o.kortingProcent)} %`, `− ${eur(o.korting)}`]);
   tot.push(['Totaal excl. btw', eur(o.excl), 'sterk'], [`Btw ${o.btwProcent} %`, eur(o.btw)], ['Totaal incl. btw', eur(o.incl), 'groot']);
@@ -279,9 +281,10 @@ function offertetekst(): string {
   const t = toestand(), o = berekenHuidigeOfferte();
   return [
     `Offerte ${t.meta.nummer} · ${t.meta.datum}`, `${t.meta.klant}, ${t.meta.adres}`, `Project: ${t.meta.project}`, '',
-    ...t.posities.map((p) => `${p.code} ${p.naam} · ${p.aantal} × ${MODELLEN[p.model].zonderPrijs ? 'nog geen prijs' : eur(o.posities.find((x) => x.id === p.id)!.stukprijs)}\n   ${omschrijving(p)}`),
+    ...t.posities.map((p) => `${p.code} ${p.naam} · ${p.aantal} × ${zonderPrijs(p) ? 'nog geen prijs' : eur(o.posities.find((x) => x.id === p.id)!.stukprijs)}\n   ${omschrijving(p)}`),
     ...(o.regels.length ? ['', 'Afwerking:', ...o.regels.map((r) => `- ${r.omschrijving}: ${getal(r.hoeveelheid, 1)} ${r.eenheid} × ${eur(r.eenheidsprijs)} = ${eur(r.totaal)}`)] : []),
     '', ...(o.korting ? [`Korting: − ${eur(o.korting)}`] : []),
+    ...(t.posities.some((p) => p.aantal > 0 && zonderPrijs(p)) ? ['De posities zonder prijs zijn niet meegeteld in het totaal.'] : []),
     `Totaal excl. btw: ${eur(o.excl)}`, `Btw ${o.btwProcent} %: ${eur(o.btw)}`, `Totaal incl. btw: ${eur(o.incl)}`,
   ].join('\n');
 }
@@ -300,7 +303,8 @@ function exportGegevens(opties: { prijzen: boolean } = { prijzen: true }): Recor
       ...t.posities.map((p) => {
         const r = resultaat(p);
         return {
-          positie: p.code, omschrijving: p.naam, aantal: p.aantal, ...(met ? { eenheidsprijs: r.prijs.brutoprijsExcl, kostprijs: r.prijs.kostprijs } : {}),
+          // Een positie zonder prijs (garagepoort, nieuwe raamindeling) krijgt geen bedrag mee, ook geen nul.
+          positie: p.code, omschrijving: p.naam, aantal: p.aantal, ...(met && !zonderPrijs(p) ? { eenheidsprijs: r.prijs.brutoprijsExcl, kostprijs: r.prijs.kostprijs } : met ? { zonder_prijs: true } : {}),
           configuratie: { model: MODELLEN[p.model].model.code, versie: MODELLEN[p.model].model.versie, keuzes: p.keuzes },
           details: r.samenvatting,
           // De stuklijst hoort bij de prijs (ze bevat ook meerprijzen als regel): zonder prijzen blijft ze weg.
@@ -335,7 +339,7 @@ export function drukAf() {
       <div><h3>${esc(p.code)} · ${esc(p.naam)}</h3><p>${esc(omschrijving(p))}</p>
       <ul>${r.samenvatting.slice(0, 14).map((s) => `<li>${esc(s)}</li>`).join('')}</ul>
       <p class="a-klein">Niet inbegrepen: ${esc(ib.niet.join(', '))}</p></div>
-      <div class="a-prijs">${MODELLEN[p.model].zonderPrijs ? `${pos.aantal} stuk<br><strong>nog geen prijs</strong>` : `${pos.aantal} × ${eur(pos.stukprijs)}<br><strong>${eur(pos.totaal)}</strong>`}</div></section>`;
+      <div class="a-prijs">${zonderPrijs(p) ? `${pos.aantal} stuk<br><strong>nog geen prijs</strong>` : `${pos.aantal} × ${eur(pos.stukprijs)}<br><strong>${eur(pos.totaal)}</strong>`}</div></section>`;
   }).join('');
   const regels = o.regels.length ? `<h2>Afwerking</h2><table><tbody>${o.regels.map((r) => `<tr><td>${esc(r.groep)}</td><td>${esc(r.omschrijving)}</td><td class="num">${getal(r.hoeveelheid, 1)} ${r.eenheid}</td><td class="num">${eur(r.eenheidsprijs)}</td><td class="num">${eur(r.totaal)}</td></tr>`).join('')}</tbody></table>` : '';
   const plan = verdiepingenVan(t.plan).map((v, n) => {
@@ -356,6 +360,7 @@ export function drukAf() {
       ${o.korting ? `<tr><td>Korting ${getal(o.kortingProcent)} %</td><td class="num">− ${eur(o.korting)}</td></tr>` : ''}
       <tr><td>Btw ${o.btwProcent} %</td><td class="num">${eur(o.btw)}</td></tr>
       <tr class="sterk"><td>Totaal incl. btw</td><td class="num">${eur(o.incl)}</td></tr></tbody></table>
+    ${t.posities.some((p) => p.aantal > 0 && zonderPrijs(p)) ? '<p class="a-klein">De posities zonder prijs zijn niet meegeteld in het totaal.</p>' : ''}
     <h2>Voorwaarden</h2><ul class="a-klein"><li>Maten onder voorbehoud van inmeting op de werf.</li><li>Geldig 30 dagen. Voorschot 30 % bij bestelling.</li>
       <li>Levertermijn ± ${planning().weken} weken na inmeting en akkoord.</li>${t.meta.btw === 6 ? '<li>6 % btw onder voorbehoud van het ondertekende attest (woning ouder dan 10 jaar).</li>' : ''}
       <li>Demo-offerte: prijzen en technische waarden zijn voorbeelden.</li></ul>

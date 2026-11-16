@@ -8,7 +8,7 @@ import { controleerModel, tekenSvg, type Keuzes } from '../src/index.js';
 import { berekenRaam, raamdeur, RAL_KLEUREN, ruitenVan } from '../voorbeelden/raam.js';
 import { raamBlokken, raamScene } from '../voorbeelden/raam3d.js';
 import { INDELINGEN, indelingVan, pasIndelingToe } from '../voorbeelden/raamindelingen.js';
-import { openingenVan, rasterVan } from '../voorbeelden/raamraster.js';
+import { nieuweIndeling, openingenVan, rasterVan } from '../voorbeelden/raamraster.js';
 import { raamKeuzes } from '../voorbeelden/woning.js';
 
 const raam = (extra: Keuzes) => berekenRaam(raamKeuzes(extra));
@@ -403,15 +403,27 @@ describe('kant-en-klare indelingen', () => {
 
   it('twee keer na elkaar een andere indeling: niets blijft hangen van de vorige', () => {
     const basis = raamKeuzes({ rooster: true });
-    for (const a of INDELINGEN) {
-      for (const b of [indeling('enkel_dk'), indeling('deur_zij_boven'), indeling('hefschuif4')]) {
+    const symbolen = (r: ReturnType<typeof berekenRaam>) => r.tekening!.vormen.filter((v) => v.symbool).map((v) => `${v.code}:${v.symbool}`);
+    for (const b of [indeling('enkel_dk'), indeling('deur_zij_boven'), indeling('hefschuif4')]) {
+      const rechtstreeks = symbolen(berekenRaam(pasIndelingToe(basis, b)));
+      for (const a of INDELINGEN) {
         const r = berekenRaam(pasIndelingToe(pasIndelingToe(basis, a), b));
         expect(r.meldingen.filter((m) => m.ernst === 'fout').map((m) => m.code), `${a.code} → ${b.code}`).toEqual([]);
-        const rechtstreeks = berekenRaam(pasIndelingToe(basis, b));
-        expect(r.tekening!.vormen.filter((v) => v.symbool).map((v) => `${v.code}:${v.symbool}`), `${a.code} → ${b.code}`)
-          .toEqual(rechtstreeks.tekening!.vormen.filter((v) => v.symbool).map((v) => `${v.code}:${v.symbool}`));
+        expect(symbolen(r), `${a.code} → ${b.code}`).toEqual(rechtstreeks);
       }
     }
+  }, 30000);
+
+  it('welke indelingen nieuw zijn (en dus nog geen prijs tonen): alles wat vroeger niet bestond', () => {
+    const basis = raamKeuzes({});
+    const nieuw = INDELINGEN.filter((i) => nieuweIndeling(berekenRaam(pasIndelingToe(basis, i)))).map((i) => i.code);
+    expect(nieuw).toEqual(['dubbel_stolp', 'vierdelig', 'boven_elkaar', 'onderpaneel', 'dubbele_deur', 'deur_vast', 'deur_zijlicht', 'deur_zij_boven',
+      'hefschuif2', 'hefschuif3', 'hefschuif4', 'vouwwand3', 'vouwwand4', 'vouwwand5', 'vouwwand6', 'glaswand', 'steel_raam', 'steel_deur', 'steel_wand']);
+    // Van de grote glaspartijen bestond alleen het gewone schuifraam al.
+    const groot = INDELINGEN.filter((i) => i.groep === 'Grote glaspartijen');
+    expect(groot.filter((i) => !nieuw.includes(i.code)).map((i) => i.code)).toEqual(['schuif2']);
+    // Kleinhouten, een kleur uit de waaier of een afwerking maken van een bestaande indeling geen nieuwe.
+    expect(nieuweIndeling(berekenRaam(raamKeuzes({ roeden: 'kruis', kleur_buiten: 'ral3005', kleur_binnen: 'ral7035', lak: 'glans' })))).toBe(false);
   });
 
   it('wat de vorige indeling automatisch aanpaste, blijft niet hangen: versterkte stijl en borstwering', () => {

@@ -99,6 +99,18 @@ function vouwOpeningen(n: number, richting: string): string[] {
   });
 }
 
+/**
+ * Bestaat deze indeling pas sinds 15/11: een grote glaspartij (hef-schuif, vouwwand, glaswand), een vrij raster (zijlicht,
+ * vak onderaan, bovenlicht per vak, ongelijke breedtes), een stolp, vier vakken of steellook? Voor de indelingen van
+ * vroeger is dit altijd false: zij houden hun beeld en hun prijs. Een nieuwe indeling heeft nog geen prijs (de
+ * prijsregels kennen haar niet) en de schermen tonen er dan ook geen bedrag voor.
+ */
+export function nieuweIndeling(r: ConfiguratieResultaat): boolean {
+  const a = r.afgeleid, keuze = (code: string) => r.kenmerken.find((x) => x.code === code)?.waarde;
+  const type = String(keuze('type') ?? '');
+  return type === 'hefschuif' || type === 'vouwwand' || type === 'glaswand' || a.raster_vrij === true || a.n_stolp === 1 || Number(a.n) >= 4 || keuze('uitzicht') === 'steellook';
+}
+
 /** Het raster van een berekend raam of een berekende deur. */
 export function rasterVan(r: ConfiguratieResultaat): Raster {
   const a = r.afgeleid as Record<string, unknown>;

@@ -12,7 +12,7 @@ import { raamKeuzes } from '../../core/voorbeelden/woning.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
 import { positieScene } from './positie-3d.js';
-import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, vrijeMuur, wijzig, type Positie } from './staat.js';
+import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -190,7 +190,7 @@ function offertetekst(p: Positie, r: ConfiguratieResultaat): string {
     ...r.samenvatting.map((s) => `- ${s}`),
     '', 'Inbegrepen:', ...ib.wel.map((x) => `- ${x}`),
     '', 'Niet inbegrepen:', ...ib.niet.map((x) => `- ${x}`),
-    ...(MODELLEN[p.model].zonderPrijs ? [] : ['', `Prijs: ${eur(r.prijs.brutoprijsExcl)} per stuk excl. btw`]),
+    ...(zonderPrijs(p) ? [] : ['', `Prijs: ${eur(r.prijs.brutoprijsExcl)} per stuk excl. btw`]),
   ].join('\n');
 }
 
@@ -243,6 +243,9 @@ function indelingTekening(i: Indeling): string {
 
 const SOORTNAAM: Record<string, string> = { raam: 'Raam', terrasdeur: 'Terrasdeur', voordeur: 'Voordeur', schuif: 'Schuifraam', hefschuif: 'Hef-schuifdeur', vouwwand: 'Vouwwand', glaswand: 'Glaswand' };
 
+/** Hoogste bovenkant van een opening in een muur van de plattegrond (cm): 15 cm onder de muurhoogte, voor de latei. */
+const hoogsteBovenkant = (muurhoogte: number) => muurhoogte - 15;
+
 function kiesIndeling(i: Indeling) {
   wijzig('positie', (t) => {
     const p = t.posities.find((x) => x.id === huidigId);
@@ -256,6 +259,12 @@ function kiesIndeling(i: Indeling) {
     if (vrij && typeof nieuweKeuzes.breedte === 'number' && nieuweKeuzes.breedte > (vrij.tot - vrij.van) * 10) {
       const smaller = { ...nieuweKeuzes, breedte: Math.floor(vrij.tot - vrij.van) * 10 };
       if (!berekenRaam(smaller).meldingen.some((m) => m.ernst === 'fout')) nieuweKeuzes = smaller;
+    }
+    // Hetzelfde in de hoogte: boven de opening blijft er plaats voor de latei (de controle van de plattegrond).
+    const top = opening ? hoogsteBovenkant(t.plan.muurhoogte) * 10 - (nieuweKeuzes.type === 'raam' && typeof nieuweKeuzes.borstwering === 'number' ? nieuweKeuzes.borstwering : 0) : undefined;
+    if (top !== undefined && typeof nieuweKeuzes.hoogte === 'number' && nieuweKeuzes.hoogte > top) {
+      const lager = { ...nieuweKeuzes, hoogte: Math.floor(top / 10) * 10 };
+      if (!berekenRaam(lager).meldingen.some((m) => m.ernst === 'fout')) nieuweKeuzes = lager;
     }
     p.keuzes = nieuweKeuzes;
     // Een naam die met de oude soort begint ("Raam leefruimte") volgt de nieuwe soort; een eigen naam blijft.
@@ -485,6 +494,8 @@ export function herbereken() {
   if (opening && vrij) {
     const plaats = vrij.tot - vrij.van, past = opening.breedte <= plaats + 0.05;
     lijst.push({ titel: 'Past op de muur in de plattegrond', toestand: past ? 'ok' : 'fout', waarde: `${getal(opening.breedte)} cm / vrije muur ${getal(plaats)} cm`, uitleg: past ? undefined : 'Maak de opening smaller, of maak plaats in de plattegrond.' });
+    const bovenkant = opening.borstwering + opening.hoogte, hoogst = hoogsteBovenkant(toestand().plan.muurhoogte);
+    if (bovenkant > hoogst + 0.05) lijst.push({ titel: 'Te hoog voor de muur in de plattegrond', toestand: 'fout', waarde: `bovenkant ${getal(bovenkant)} cm / hoogstens ${getal(hoogst)} cm`, uitleg: 'Boven de opening is er plaats nodig voor de latei: maak de opening lager.' });
   }
   $('#p-controles').replaceChildren(...lijst.map(controleLi));
   const nF = lijst.filter((c) => c.toestand === 'fout').length, nL = lijst.filter((c) => c.toestand === 'let-op').length;
@@ -494,14 +505,14 @@ export function herbereken() {
 
   const korting = klantKorting();
   const stuk = r.prijs.brutoprijsExcl;
-  const zonderPrijs = MODELLEN[p.model].zonderPrijs === true;
-  $('#p-status').textContent = r.geldig ? (zonderPrijs ? 'Klaar om te tonen' : 'Klaar voor offerte') : `${r.meldingen.filter((m) => m.ernst === 'fout').length} fout(en)`;
+  const geenPrijs = zonderPrijs(p), alleenTonen = MODELLEN[p.model].zonderPrijs === true;
+  $('#p-status').textContent = r.geldig ? (geenPrijs ? 'Klaar om te tonen' : 'Klaar voor offerte') : `${r.meldingen.filter((m) => m.ernst === 'fout').length} fout(en)`;
   $('#p-status').className = `status ${r.geldig ? 'ok' : 'fout'}`;
-  $('#p-prijsdetail').hidden = zonderPrijs;
-  if (zonderPrijs) {
-    // Dit model dient om te tonen: er is nog geen stuklijst, dus ook geen bedrag.
+  $('#p-prijsdetail').hidden = geenPrijs;
+  if (geenPrijs) {
+    // Een model dat alleen toont (nog geen stuklijst) of een raamindeling die de prijsregels nog niet kennen: geen bedrag.
     $('#p-prijs').textContent = 'Nog geen prijs';
-    $('#p-prijs-sub').textContent = 'dit model toont alleen de tekening en de 3D';
+    $('#p-prijs-sub').textContent = alleenTonen ? 'dit model toont alleen de tekening en de 3D' : 'deze indeling is nieuw: tekening, 3D en controles kloppen, een prijs volgt later';
   } else if (document.body.classList.contains('klantmodus')) {
     // Voor de klant (particulier): prijs inclusief btw.
     const btw = toestand().meta.btw;
@@ -545,7 +556,7 @@ export function herbereken() {
     const tr = el('tr');
     const maat = s.lengte !== undefined ? `${getal(s.lengte)}${s.breedte !== undefined ? ` × ${getal(s.breedte)}` : ''}` : '';
     tr.append(el('td', {}, s.omschrijving), el('td', { class: 'code' }, s.artikel), el('td', { class: 'num' }, getal(s.aantal, 2)),
-      el('td', { class: 'num' }, maat), el('td', { class: 'num' }, `${getal(s.hoeveelheid, 2)} ${s.eenheid === 'm2' ? 'm²' : s.eenheid}`), el('td', { class: 'num' }, eur(s.kost)));
+      el('td', { class: 'num' }, maat), el('td', { class: 'num' }, `${getal(s.hoeveelheid, 2)} ${s.eenheid === 'm2' ? 'm²' : s.eenheid}`), el('td', { class: 'num' }, geenPrijs ? '—' : eur(s.kost)));
     return tr;
   }));
 }

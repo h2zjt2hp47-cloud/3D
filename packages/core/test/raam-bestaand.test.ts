@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { berekenConfiguratie, type Keuzes } from '../src/index.js';
 import { berekenRaam, raamdeur, raamPrijslijst, ruitenVan } from '../voorbeelden/raam.js';
 import { raamBlokken, raamScene } from '../voorbeelden/raam3d.js';
+import { nieuweIndeling } from '../voorbeelden/raamraster.js';
 import { raamKeuzes, voorbeeldWoning } from '../voorbeelden/woning.js';
 import { OUDE_VARIANTEN } from './gegevens/raam-oud-gevallen.js';
 import { vingerafdruk } from './gegevens/vingerafdruk.js';
@@ -26,6 +27,8 @@ describe('bestaande projecten blijven gelijk (model van vóór het raster)', () 
   it.each(gevallen)('%s: zelfde cijfers, meldingen, prijs, tekening, 3D en glasbestelling', (naam, keuzes) => {
     const o = oud[naam]!;
     const r = berekenRaam(keuzes);
+    // Een indeling van vroeger is geen "nieuwe indeling": ze houdt haar prijs en haar beeld.
+    expect(nieuweIndeling(r), 'nieuwe indeling').toBe(false);
     for (const [code, waarde] of Object.entries(o.afgeleid)) {
       if (typeof waarde === 'number') expect(r.afgeleid[code], code).toBeCloseTo(waarde, 6);
       else expect(r.afgeleid[code], code).toEqual(waarde);

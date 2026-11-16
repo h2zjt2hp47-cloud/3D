@@ -7,13 +7,13 @@ import type { ConfiguratieResultaat, Opening, OpeningInhoud, Scene3D } from '../
 import { bouwAanbouw3D } from '../../core/voorbeelden/aanbouw3d.js';
 import { poortBlokken, poortScene } from '../../core/voorbeelden/garagepoort3d.js';
 import { raamBlokken, raamScene } from '../../core/voorbeelden/raam3d.js';
-import { openingenVan } from '../../core/voorbeelden/raamraster.js';
+import { rasterVan } from '../../core/voorbeelden/raamraster.js';
 import { eur } from './hulp.js';
-import { MODELLEN, positieVan, resultaat, type Positie } from './staat.js';
+import { positieVan, resultaat, zonderPrijs, type Positie } from './staat.js';
 
-/** Prijs van een positie voor een kaartje: het bedrag excl. btw, of "nog geen prijs" bij een model dat alleen toont. */
+/** Prijs van een positie voor een kaartje: het bedrag excl. btw, of "nog geen prijs" (model dat alleen toont, nieuwe raamindeling). */
 export function prijsTekst(p: Positie): string {
-  return MODELLEN[p.model].zonderPrijs ? 'Nog geen prijs' : `${eur(resultaat(p).prijs.brutoprijsExcl)} excl. btw`;
+  return zonderPrijs(p) ? 'Nog geen prijs' : `${eur(resultaat(p).prijs.brutoprijsExcl)} excl. btw`;
 }
 
 /** De 3D-scène van één positie (raam of deur in een stuk gevel, garagepoort, aanbouw). */
@@ -29,10 +29,11 @@ export function openingInhoud(o: Opening): OpeningInhoud | undefined {
   return { blokken: rb.blokken, hoogte: rb.h + rb.kast };
 }
 
-/** Label en vakken (opening per vak, van binnen gezien) van een opening, voor de plattegrond. */
-export function openingInfo(o: Opening): { label?: string; vakken?: string[] } | undefined {
+/** Label, vakken (opening per vak, van binnen gezien) en hun breedtes van een opening, voor de plattegrond. */
+export function openingInfo(o: Opening): { label?: string; vakken?: string[]; breedtes?: number[] } | undefined {
   const p = positieVan(o);
   if (!p) return undefined;
   if (p.model !== 'RAAM') return { label: p.code };
-  return { label: p.code, vakken: openingenVan(resultaat(p)) };
+  const hoofd = rasterVan(resultaat(p)).vakken.filter((v) => v.rol === 'vak' || v.rol === 'deur' || v.rol === 'deel');
+  return { label: p.code, vakken: hoofd.map((v) => v.opening), breedtes: hoofd.map((v) => v.b) };
 }

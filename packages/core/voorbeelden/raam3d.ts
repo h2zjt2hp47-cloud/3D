@@ -7,7 +7,7 @@
  */
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type ConfiguratieResultaat, type Scene3D } from '../src/index.js';
 import { GLASKLEUR } from './raam.js';
-import { rasterVan, type RasterVak } from './raamraster.js';
+import { nieuweIndeling, rasterVan, type RasterVak } from './raamraster.js';
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
@@ -294,14 +294,11 @@ export function raamScene(r: ConfiguratieResultaat): Scene3D {
   muur('muur_boven', 0, borst + H + kast, B, top - borst - H - kast);
   const dorpels = rb.blokken.some((b) => b.code === 'vensterbank' || b.code === 'dorpel');
   muur('muur_onder', 0, 0, B, borst - (dorpels ? 3 : 0));
-  // Vloer en terras. Bij de indelingen die sinds 15/11 bestaan (grote glaspartijen, vrij raster, stolp, steellook)
+  // Vloer en terras. Bij de indelingen die sinds 15/11 bestaan (`nieuweIndeling`: grote glaspartijen, vrij raster, stolp, vier vakken, steellook)
   // liggen ze 3 mm boven het grondvlak van de 3D: op dezelfde hoogte flikkeren ze ertegen (strepen). De indelingen
   // van vroeger houden hun vloer op 0, zodat hun beeld exact gelijk blijft (referentiebeeld bouw-raam); zet `op`
   // voor alles op 0.3 bij de volgende vernieuwing van de referentiebeelden.
-  const a = r.afgeleid, keuze = (code: string) => r.kenmerken.find((x) => x.code === code)?.waarde;
-  const type = String(keuze('type') ?? '');
-  const nieuw = type === 'hefschuif' || type === 'vouwwand' || type === 'glaswand' || a.raster_vrij === true || a.n_stolp === 1 || keuze('uitzicht') === 'steellook';
-  const op = nieuw ? 0.3 : 0;
+  const op = nieuweIndeling(r) ? 0.3 : 0;
   blokken.push({ code: 'vloer_binnen', soort: 'parket', vorm: 'blok', x: -80, y: -1, z: 20, b: B + 160, h: 1 + op, d: 140, kleur: '#c49a6c' });
   blokken.push({ code: 'terras', soort: 'tegel', vorm: 'blok', x: -80, y: -1, z: -130, b: B + 160, h: 1 + op, d: 120, kleur: '#b9b5ad' });
   return { blokken, kader: kaderVan(blokken) };

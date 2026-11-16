@@ -7,7 +7,7 @@ import { tekenSvg, type Keuzes } from '../../core/src/index.js';
 import { leesMaatlijst } from '../../core/voorbeelden/maatlijst.js';
 import { raamdeur } from '../../core/voorbeelden/raam.js';
 import { $, btwLabel, el, eur, labelCellen, toonPrijs } from './hulp.js';
-import { MODELLEN, nieuwePositie, resultaat, toestand, wijzig, type Positie } from './staat.js';
+import { MODELLEN, nieuwePositie, resultaat, toestand, wijzig, zonderPrijs, type Positie } from './staat.js';
 
 const SOORTEN: [string, string][] = [['raam', 'Raam'], ['terrasdeur', 'Terrasdeur'], ['voordeur', 'Voordeur'], ['schuif', 'Schuifraam'], ['hefschuif', 'Hef-schuifdeur'], ['vouwwand', 'Vouwwand'], ['glaswand', 'Vaste glaswand']];
 /** Soorten met gelijke delen: de indeling is het aantal delen. */
@@ -102,7 +102,7 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
     const k = p.keuzes;
     const td = (inhoud: Node | string, cls = '') => { const c = el('td', cls ? { class: cls } : {}); c.append(inhoud); return c; };
     if (p.model !== 'RAAM') {
-      tr.append(td(p.code, 'code'), td(p.naam), el('td', { colspan: '7', class: 'klein' }, `${MODELLEN[p.model].label}: aanpassen in de configurator`), td(String(p.aantal), 'num'), td(MODELLEN[p.model].zonderPrijs ? '—' : eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'));
+      tr.append(td(p.code, 'code'), td(p.naam), el('td', { colspan: '7', class: 'klein' }, `${MODELLEN[p.model].label}: aanpassen in de configurator`), td(String(p.aantal), 'num'), td(zonderPrijs(p) ? '—' : eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'));
     } else {
       const soort = String(k.type ?? 'raam');
       const mini = el('span', { class: 'mini-lijst' });
@@ -130,7 +130,7 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
         }))),
         td(invoer('number', String(k.verdieping ?? 0), `Verdieping ${p.code}`, (w) => zet(p.id, (kk) => { kk.verdieping = Math.min(5, Math.max(0, Math.round(Number(w) || 0))); }), { min: '0', max: '5', step: '1', class: 'kort' }), 'num'),
         td(invoer('number', String(p.aantal), `Aantal ${p.code}`, (w) => wijzig('offerte', (tt) => { const x = tt.posities.find((y) => y.id === p.id); if (x) x.aantal = Math.max(0, Math.round(Number(w) || 0)); }), { min: '0', step: '1', class: 'kort' }), 'num'),
-        td(eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'),
+        td(zonderPrijs(p) ? '—' : eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'),
       );
     }
     const nF = r.meldingen.filter((m) => m.ernst === 'fout').length, nW = r.meldingen.filter((m) => m.ernst === 'waarschuwing').length;

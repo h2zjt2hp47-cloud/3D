@@ -5,7 +5,7 @@
 import { niveauVan, tekenSvg, vergelijkOfferte, verdiepingenVan, verwerkMeting, type MeerwerkLijn, type Momentopname } from '../../core/src/index.js';
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
 import { $, el, eur, getal, num } from './hulp.js';
-import { klantKorting, nieuweId, openingVan, resultaat, toestand, wijzig, type Inmeting, type Positie } from './staat.js';
+import { klantKorting, nieuweId, openingVan, resultaat, toestand, wijzig, zonderPrijs, type Inmeting, type Positie } from './staat.js';
 
 let tab: 'inmeting' | 'meerwerk' = 'inmeting';
 let naarPositie: (id: string) => void = () => {};
@@ -39,6 +39,11 @@ export function meerwerk(): { lijnen: MeerwerkLijn[]; vrij: { omschrijving: stri
   const t = toestand();
   if (!t.meta.akkoord) return undefined;
   const lijnen = vergelijkOfferte(t.meta.akkoord, momentopname());
+  // Een positie zonder prijs (garagepoort, nieuwe raamindeling) telt als € 0: zeg dat erbij, zodat het bedrag niet misleidt.
+  for (const l of lijnen) {
+    const p = t.posities.find((x) => x.code === l.code);
+    if (p && zonderPrijs(p)) l.wijzigingen.push('Nog geen prijs voor deze positie: ze telt hier als € 0, het bedrag bepaal je zelf.');
+  }
   const vrij = t.meta.meerwerk.map((r) => ({ omschrijving: `${r.omschrijving} (${getal(r.hoeveelheid, 2)} ${r.eenheid} × ${eur(r.eenheidsprijs)})`, bedrag: Math.round(r.hoeveelheid * r.eenheidsprijs * 100) / 100 }));
   const subtotaal = [...lijnen, ...vrij].reduce((s, l) => s + l.bedrag, 0);
   const korting = Math.round(subtotaal * klantKorting()) / 100;
