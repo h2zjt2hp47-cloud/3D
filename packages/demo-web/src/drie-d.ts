@@ -1855,6 +1855,62 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     return geo;
   }
 
+  /**
+   * Prisma met as 'y' (woning: een schuine muur, de vloer of het dak van een vrije vorm): het grondvlak `doorsnede`
+   * [x, z], verticaal doorgetrokken van y tot y + h. Groep 0 = het ondervlak, dan het bovenvlak en per zijde het staande
+   * vlak, elk met het materiaal op plaats `index` in de lijst. Textuur op een staand vlak langs het vlak in ware lengte
+   * (u = de plaats langs de zijde, altijd in dezelfde zin, zodat twee stukken van dezelfde muur op elkaar aansluiten; v =
+   * de hoogte), op het boven- en ondervlak zoals bij een balk (x en z), gedraaid over `vlakRichting`.
+   */
+  function grondPrismaGeometrie(b: Blok, boven: number, randen: number[], maten: ({ b: number; h: number } | undefined)[]) {
+    const pts = b.doorsnede!, y0 = b.y, y1 = b.y + b.h;
+    const pos: number[] = [], nor: number[] = [], uv: number[] = [];
+    type P3 = [number, number, number];
+    const driehoek = (A: P3, B: P3, C: P3, n: P3, uvs: [number, number][]) => {
+      const ux = B[0] - A[0], uy = B[1] - A[1], uz = B[2] - A[2], vx = C[0] - A[0], vy = C[1] - A[1], vz = C[2] - A[2];
+      const om = (uy * vz - uz * vy) * n[0] + (uz * vx - ux * vz) * n[1] + (ux * vy - uy * vx) * n[2] < 0;
+      const hoeken = om ? [A, C, B] : [A, B, C], uvVolg = om ? [uvs[0]!, uvs[2]!, uvs[1]!] : uvs;
+      for (let i = 0; i < 3; i++) { pos.push(...hoeken[i]!); nor.push(...n); uv.push(...uvVolg[i]!); }
+    };
+    let opp = 0;
+    for (let i = 0; i < pts.length; i++) { const a = pts[i]!, c = pts[(i + 1) % pts.length]!; opp += a[0] * c[1] - c[0] * a[1]; }
+    const zin = opp > 0 ? 1 : -1;
+    const groepen: [number, number, number][] = [];
+    // Onder- en bovenvlak.
+    const hoek = ((b.vlakRichting ?? 0) * Math.PI) / 180, co = Math.cos(hoek), si = Math.sin(hoek);
+    const plat = (x: number, z: number, maat?: { b: number; h: number }): [number, number] => (maat ? [(x * co + z * si) / maat.b, (-x * si + z * co) / maat.h] : [0, 0]);
+    const driehoeken: number[][] = THREE.ShapeUtils.triangulateShape(pts.map(([x, z]) => new THREE.Vector2(x, z)), []);
+    for (const [y, n, groep, maat] of [[y0, -1, 0, maten[0]], [y1, 1, boven, maten[1]]] as const) {
+      const begin = pos.length / 3;
+      for (const d of driehoeken) {
+        const h = d.map((i) => pts[i]!);
+        driehoek([h[0]![0], y, h[0]![1]], [h[1]![0], y, h[1]![1]], [h[2]![0], y, h[2]![1]], [0, n, 0], h.map(([x, z]) => plat(x, z, maat)));
+      }
+      groepen.push([begin, pos.length / 3 - begin, groep]);
+    }
+    // Staande vlakken, een per zijde, met de normaal naar buiten.
+    for (let i = 0; i < pts.length; i++) {
+      const [xa, za] = pts[i]!, [xb, zb] = pts[(i + 1) % pts.length]!;
+      const dx = xb - xa, dz = zb - za, l = Math.hypot(dx, dz);
+      if (l < 0.01) continue;
+      const n: P3 = [(zin * dz) / l, 0, (-zin * dx) / l];
+      // Richting langs het vlak, altijd met x mee (of met z mee als het vlak langs z ligt), zoals bij een balk.
+      const e: [number, number] = dx / l > 1e-9 || (Math.abs(dx / l) <= 1e-9 && dz > 0) ? [dx / l, dz / l] : [-dx / l, -dz / l];
+      const maat = maten[2 + i];
+      const UV = (x: number, y: number, z: number): [number, number] => (maat ? [(x * e[0] + z * e[1]) / maat.b, y / maat.h] : [0, 0]);
+      const begin = pos.length / 3;
+      driehoek([xa, y0, za], [xb, y0, zb], [xb, y1, zb], n, [UV(xa, y0, za), UV(xb, y0, zb), UV(xb, y1, zb)]);
+      driehoek([xa, y0, za], [xb, y1, zb], [xa, y1, za], n, [UV(xa, y0, za), UV(xb, y1, zb), UV(xa, y1, za)]);
+      groepen.push([begin, pos.length / 3 - begin, randen[i]!]);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    for (const [start, aantal, m] of groepen) geo.addGroup(start, aantal, m);
+    return geo;
+  }
+
   function mesh(b: Blok) {
     // Alleen schaduw (woning, lichtinval): dezelfde vorm, maar niet te zien; ze houdt het zonlicht tegen.
     if (b.alleenSchaduw) {
@@ -1865,6 +1921,24 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
         o.castShadow = true;
         o.receiveShadow = false;
       });
+      return m;
+    }
+    // Prisma met as 'y' (woning: een schuine muur, de vloer of het dak van een vrije vorm): grondvlak verticaal doorgetrokken,
+    // met een eigen materiaal per staand vlak (`randen`) en voor het bovenvlak (`zijden['y+']`).
+    if (b.vorm === 'prisma' && b.as === 'y' && b.doorsnede && b.doorsnede.length >= 3) {
+      const lijst: any[] = [materiaal(b)];
+      const index = (afw?: { soort: Blok['soort']; kleur: string; voeg?: string } | null) => {
+        if (!afw) return 0;
+        const m = materiaal(afw);
+        const i = lijst.indexOf(m);
+        return i >= 0 ? i : lijst.push(m) - 1;
+      };
+      const boven = index(b.zijden?.['y+']), randen = b.doorsnede.map((_, i) => index(b.randen?.[i]));
+      const maten = [textuurMaat[b.soort], textuurMaat[b.zijden?.['y+']?.soort ?? b.soort], ...b.doorsnede.map((_, i) => textuurMaat[b.randen?.[i]?.soort ?? b.soort])];
+      const m = new THREE.Mesh(grondPrismaGeometrie(b, boven, randen, maten), lijst);
+      m.name = b.code;
+      m.castShadow = b.soort !== 'glas' && b.soort !== 'matglas';
+      m.receiveShadow = true;
       return m;
     }
     // Prisma (woning): harde doorsnede, in wereldmaat; de kopse vlakken kunnen een eigen materiaal hebben.

@@ -40,29 +40,46 @@ export interface Ruimte {
   wand: string;
   /** Verdieping (0 = gelijkvloers). */
   niveau?: number;
-  /** Extra rechthoeken van dezelfde ruimte (L- of U-vorm); tussen de delen staat geen muur. */
-  delen?: Rechthoek[];
+  /** Extra rechthoeken van dezelfde ruimte (L- of U-vorm); tussen de delen staat geen muur. Een deel kan ook een vrije vorm zijn. */
+  delen?: Deel[];
+  /**
+   * Vrije vorm (schuine muren): de hoekpunten [x, y] in cm op de as van de muren, met de klok mee zoals op de tekening
+   * (een omtrek in de andere zin wordt omgedraaid). Ontbreekt = de rechthoek x, y, b, d, zoals altijd. Met een omtrek
+   * zijn x, y, b, d het omsluitende kader (zie `zetOmtrek`). Klopt dat kader niet met de omtrek, dan is het kader de baas
+   * over plaats en maat: de omtrek schuift en rekt mee (zo werkt slepen in een scherm dat alleen x, y, b, d kent).
+   * Een convexe veelhoek (vierhoek, vijfhoek); zie `vormFouten`.
+   */
+  omtrek?: Punt[];
 }
 
 export interface Rechthoek { x: number; y: number; b: number; d: number }
+/** Een punt op het plan [x, y] (cm). */
+export type Punt = [number, number];
+/** Een deel van een ruimte: een rechthoek, of een vrije vorm in het kader x, y, b, d (zie `Ruimte.omtrek`). */
+export interface Deel extends Rechthoek { omtrek?: Punt[] }
 
 export type OpeningSoort = 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'garagepoort';
 
 export interface Opening {
   id: string;
   soort: OpeningSoort;
-  /** Muur waarin de opening zit: horizontaal (as 'h', lijn = y) of verticaal (as 'v', lijn = x). */
-  as: 'h' | 'v';
+  /**
+   * Muur waarin de opening zit: horizontaal (as 'h', lijn = y) of verticaal (as 'v', lijn = x), of schuin (as 's', met
+   * `richting`; lijn en midden zoals bij de schuine muur, zie `Muur`).
+   */
+  as: 'h' | 'v' | 's';
   lijn: number;
   /** Midden van de opening langs de muur (cm). */
   midden: number;
+  /** Schuine muur (as 's'): de richting van haar as als eenheidsvector [dx, dy] met dy > 0, zoals `Muur.richting`. */
+  richting?: Punt;
   breedte: number;
   hoogte: number;
   /** Hoogte van de onderkant boven de vloer (cm); 0 bij deuren. */
   borstwering: number;
-  /** Scharnieren aan het begin (kleinste coördinaat) of het einde van de opening. */
+  /** Scharnieren aan het begin (kleinste coördinaat langs de muur) of het einde van de opening. */
   scharnier: 'begin' | 'einde';
-  /** Draait de deur naar de kant met de grotere coördinaat (onder of rechts op de tekening)? */
+  /** Draait de deur naar de plus-kant (onder of rechts op de tekening; bij een schuine muur: zie `Muur`)? */
   naarPlus: boolean;
   /** Offertepositie (raam of buitendeur) die bij deze opening hoort. */
   positie?: string;
@@ -150,15 +167,31 @@ export interface GevelMateriaal {
 /** Afwerking zoals de 3D en de tekening ze nodig hebben. */
 export interface GevelAfwerking { soort: BlokSoort; kleur: string; voeg?: string }
 
-/** Naar welke kant van de woning kijkt de buitenkant van een buitenmuur? */
+/** Naar welke kant van de woning kijkt de buitenkant van een buitenmuur? Bij een schuine muur: de dichtste kant. */
 export function buitenKant(m: Muur): GevelKant | undefined {
   if (m.soort !== 'buiten') return undefined;
   if (m.as === 'h') return m.min ? 'onder' : 'boven';
+  if (m.as === 's') return (['boven', 'rechts', 'onder', 'links'] as const)[Math.round(buitenRichting(m)! / 90) % 4];
   return m.min ? 'rechts' : 'links';
 }
 
-/** Sleutel van een muurvlak: de ruimte binnen en de kant van de woning. Blijft gelijk als de ruimte verschuift. */
+/**
+ * Waar de buitenkant van een buitenmuur naar kijkt, in graden met de klok mee vanaf de bovenkant van het plan (0 = boven,
+ * 90 = rechts), zoals de noordrichting in zon.ts. Een schuine muur kijkt schuin, bv. 104°.
+ */
+export function buitenRichting(m: Muur): number | undefined {
+  if (m.soort !== 'buiten') return undefined;
+  const { n } = asVan(m), z = m.plus ? -1 : 1;
+  const k = Math.round((Math.atan2(z * n[0], -z * n[1]) * GRAAD) * 1e6) / 1e6;
+  return ((k % 360) + 360) % 360;
+}
+
+/**
+ * Sleutel van een muurvlak: de ruimte binnen en de kant van de woning. Blijft gelijk als de ruimte verschuift. Een schuine
+ * muur: de ruimte en de richting waarin ze kijkt (`ruimte:s104`), zodat ze los van de rechte muren te verven is.
+ */
 export function vlakSleutel(m: Muur): string {
+  if (m.as === 's' && m.soort === 'buiten') return `${m.plus ?? m.min}:s${Math.round(buitenRichting(m)!)}`;
   return `${m.plus ?? m.min}:${buitenKant(m)}`;
 }
 
@@ -213,17 +246,28 @@ export const VLOERDIKTE = 30;
 /** Dikte van de laag bedekking bovenop een plat dak met dakkeuze (cm, binnen de dikte van de dakplaat). */
 const DAK_LAAG = 8;
 
+/**
+ * Een muur, afgeleid uit de randen van de ruimtes. Horizontaal (as 'h': lijn = y, van–tot langs x), verticaal (as 'v':
+ * lijn = x, van–tot langs y) of schuin (as 's'). Een schuine muur is een gekantelde verticale muur: haar as loopt in de
+ * richting d = `richting` (eenheidsvector, dy > 0, dus van boven naar onder op de tekening), haar plus-kant ligt langs
+ * n = (dy, −dx) (bij een verticale muur is dat rechts). Een punt van de muur is p = s·d + w·n: `lijn` = w van de as,
+ * `van` en `tot` = s van de eindpunten (`punten`). Zo blijft tot − van de lengte, ook bij een schuine muur.
+ */
 export interface Muur {
   id: string;
-  as: 'h' | 'v';
+  as: 'h' | 'v' | 's';
   lijn: number;
   van: number;
   tot: number;
   soort: 'buiten' | 'binnen';
   dikte: number;
-  /** Ruimte aan de kant met de grotere coördinaat (onder/rechts) en aan de andere kant. */
+  /** Ruimte aan de kant met de grotere coördinaat (onder/rechts; bij een schuine muur langs n) en aan de andere kant. */
   plus?: string;
   min?: string;
+  /** Schuine muur: richting van de as (eenheidsvector, dy > 0). */
+  richting?: Punt;
+  /** Schuine muur: begin- en eindpunt van de as (cm). */
+  punten?: [Punt, Punt];
 }
 
 /** Afwerkingen en meubels die de plattegrond kent (komt uit de catalogus van de klant). */
@@ -258,6 +302,308 @@ export interface MeubelType {
 const r2 = (x: number) => Math.round(x * 100) / 100;
 const gelijk = (a: number, b: number) => Math.abs(a - b) < 0.5;
 
+// ---------- vrije vorm: veelhoeken ----------
+
+/** Rekenfoutjes van berekende punten wegwerken (op 0,01 µm): 300,00000000000006 wordt 300. */
+const fijn = (x: number) => { const y = Math.round(x * 1e6) / 1e6; return y === 0 ? 0 : y; };
+const fijnPunt = ([x, y]: Punt): Punt => [fijn(x), fijn(y)];
+const GRAAD = 180 / Math.PI;
+
+/** Dubbele oppervlakte met teken: positief = met de klok mee op de tekening (y naar onder). */
+function dubbeleOppervlakte(v: Punt[]): number {
+  let s = 0;
+  for (let i = 0; i < v.length; i++) {
+    const [x0, y0] = v[i]!, [x1, y1] = v[(i + 1) % v.length]!;
+    s += x0 * y1 - x1 * y0;
+  }
+  return s;
+}
+
+/** Oppervlakte van een veelhoek (cm²). */
+export const veelhoekOppervlakte = (v: Punt[]) => Math.abs(dubbeleOppervlakte(v)) / 2;
+
+/** De punten met de klok mee (de vaste draairichting), zonder punten die samenvallen met het vorige. */
+export function metDeKlok(v: Punt[]): Punt[] {
+  const uit = v.filter((p, i) => {
+    const q = v[(i + v.length - 1) % v.length]!;
+    return v.length < 2 || Math.hypot(p[0] - q[0], p[1] - q[1]) > 0.01;
+  });
+  return dubbeleOppervlakte(uit) < 0 ? uit.reverse() : uit;
+}
+
+/** Omsluitend kader van punten. */
+export function kaderVanPunten(v: Punt[]): Rechthoek {
+  const xs = v.map((p) => p[0]), ys = v.map((p) => p[1]);
+  const x = Math.min(...xs), y = Math.min(...ys);
+  return { x, y, b: Math.max(...xs) - x, d: Math.max(...ys) - y };
+}
+
+/**
+ * De vorm van een deel als veelhoek, met de klok mee. Een rechthoek geeft haar vier hoeken (vanaf linksboven); een vrije
+ * vorm haar omtrek, in het kader x, y, b, d gezet (zie `Ruimte.omtrek`: klopt het kader niet, dan schuift en rekt ze mee).
+ */
+export function vormVanDeel(q: Deel): Punt[] {
+  if (!q.omtrek || q.omtrek.length < 3) return [[q.x, q.y], [q.x + q.b, q.y], [q.x + q.b, q.y + q.d], [q.x, q.y + q.d]];
+  const v = metDeKlok(q.omtrek);
+  const k = kaderVanPunten(v);
+  const zelfde = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+  if (zelfde(k.x, q.x) && zelfde(k.y, q.y) && zelfde(k.b, q.b) && zelfde(k.d, q.d)) return v;
+  const fx = k.b > 1e-6 ? q.b / k.b : 1, fy = k.d > 1e-6 ? q.d / k.d : 1;
+  return v.map(([x, y]) => fijnPunt([q.x + (x - k.x) * fx, q.y + (y - k.y) * fy]));
+}
+
+/** Alle delen van een ruimte als veelhoek (hoofddeel eerst). */
+export const vormenVan = (r: Ruimte): Punt[][] => delenVan(r).map(vormVanDeel);
+
+/** Heeft de ruimte (of een van haar delen) een vrije vorm? */
+export const heeftVrijeVorm = (r: Ruimte) => !!r.omtrek || !!r.delen?.some((q) => q.omtrek);
+
+/** Zet de omtrek van een ruimte (of een deel) en werk het kader x, y, b, d bij. Punten met de klok mee of tegen. */
+export function zetOmtrek(r: Deel, punten: Punt[]): void {
+  const v = metDeKlok(punten.map(fijnPunt));
+  r.omtrek = v;
+  Object.assign(r, kaderVanPunten(v));
+}
+
+/** Afstand van een punt tot een lijnstuk. */
+function afstandTotStuk([px, py]: Punt, [ax, ay]: Punt, [bx, by]: Punt): number {
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+  return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+}
+
+/**
+ * Ligt een punt binnen de veelhoek? Een punt op (of binnen `marge` cm van) de rand telt niet mee; met een negatieve marge
+ * telt het wel mee (bv. −1: tot 1 cm buiten de rand is nog binnen).
+ */
+export function binnenVeelhoek(v: Punt[], x: number, y: number, marge = 0.01): boolean {
+  let binnen = false, rand = Infinity;
+  for (let i = 0, j = v.length - 1; i < v.length; j = i++) {
+    const [xi, yi] = v[i]!, [xj, yj] = v[j]!;
+    rand = Math.min(rand, afstandTotStuk([x, y], v[j]!, v[i]!));
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) binnen = !binnen;
+  }
+  return rand <= Math.abs(marge) ? marge < 0 : binnen;
+}
+
+/** Knipt een veelhoek af op het halfvlak a·x + b·y ≤ c (Sutherland–Hodgman); de draairichting blijft. */
+export function knipVeelhoek(v: Punt[], a: number, b: number, c: number): Punt[] {
+  const uit: Punt[] = [];
+  const f = ([x, y]: Punt) => a * x + b * y - c;
+  for (let i = 0; i < v.length; i++) {
+    const p = v[i]!, q = v[(i + 1) % v.length]!;
+    const fp = f(p), fq = f(q);
+    if (fp <= 1e-9) uit.push(p);
+    if ((fp < -1e-9 && fq > 1e-9) || (fp > 1e-9 && fq < -1e-9)) {
+      const t = fp / (fp - fq);
+      uit.push([p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])]);
+    }
+  }
+  return uit.filter((p, i) => { const q = uit[(i + uit.length - 1) % uit.length]!; return uit.length < 2 || Math.hypot(p[0] - q[0], p[1] - q[1]) > 1e-6; });
+}
+
+/** De halfvlakken van een bolle veelhoek met de klok mee: binnen = a·x + b·y ≤ c (a, b = de normaal naar buiten). */
+function halfvlakken(v: Punt[]): [number, number, number][] {
+  return v.map((p, i) => {
+    const q = v[(i + 1) % v.length]!;
+    const dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy) || 1;
+    const a = dy / l, b = -dx / l;
+    return [a, b, a * p[0] + b * p[1]];
+  });
+}
+
+/** Doorsnede van een veelhoek met een bolle veelhoek (beide met de klok mee). */
+export function snijVeelhoek(a: Punt[], b: Punt[]): Punt[] {
+  return halfvlakken(b).reduce((v, [x, y, c]) => (v.length ? knipVeelhoek(v, x, y, c) : v), a);
+}
+
+/** Veelhoek a min een bolle veelhoek b (beide met de klok mee): hoogstens één stuk per zijde van b, elk bol als a bol is. */
+export function trekVeelhoekAf(a: Punt[], b: Punt[]): Punt[][] {
+  if (veelhoekOppervlakte(snijVeelhoek(a, b)) < 0.5) return [a];
+  const uit: Punt[][] = [];
+  let rest = a;
+  for (const [x, y, c] of halfvlakken(b)) {
+    if (rest.length < 3) break;
+    const stuk = knipVeelhoek(rest, -x, -y, -c);
+    if (stuk.length >= 3 && veelhoekOppervlakte(stuk) > 0.5) uit.push(stuk);
+    rest = knipVeelhoek(rest, x, y, c);
+  }
+  return uit;
+}
+
+/** Is de veelhoek bol (convex)? Een gestrekte hoek (een punt midden op een rechte zijde) mag. */
+export function isBol(v: Punt[]): boolean {
+  const w = metDeKlok(v);
+  return w.every((p, i) => {
+    const o = w[(i + w.length - 1) % w.length]!, q = w[(i + 1) % w.length]!;
+    const kruis = (p[0] - o[0]) * (q[1] - p[1]) - (p[1] - o[1]) * (q[0] - p[0]);
+    return kruis >= -1e-6 * Math.hypot(p[0] - o[0], p[1] - o[1]) * Math.hypot(q[0] - p[0], q[1] - p[1]);
+  });
+}
+
+/** Lengte van elke zijde (zijde i loopt van punt i naar punt i + 1), in cm. */
+export const zijdenVan = (v: Punt[]) => v.map((p, i) => { const q = v[(i + 1) % v.length]!; return Math.hypot(q[0] - p[0], q[1] - p[1]); });
+
+/** Binnenhoek bij elk punt (graden), voor een veelhoek met de klok mee. */
+export function hoekenVan(v: Punt[]): number[] {
+  return v.map((p, i) => {
+    const o = v[(i + v.length - 1) % v.length]!, q = v[(i + 1) % v.length]!;
+    const inn = Math.atan2(p[1] - o[1], p[0] - o[0]), uit = Math.atan2(q[1] - p[1], q[0] - p[0]);
+    // Met de klok mee (y naar onder) draai je op een bolle hoek naar rechts: de buitenhoek is uit − in.
+    let buiten = (uit - inn) * GRAAD;
+    while (buiten <= -180) buiten += 360;
+    while (buiten > 180) buiten -= 360;
+    return 180 - buiten;
+  });
+}
+
+/** Snijden twee lijnstukken elkaar (niet alleen in een gemeenschappelijk eindpunt)? */
+function snijden(a: Punt, b: Punt, c: Punt, d: Punt): boolean {
+  const kant = (p: Punt, q: Punt, r: Punt) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  const d1 = kant(c, d, a), d2 = kant(c, d, b), d3 = kant(a, b, c), d4 = kant(a, b, d);
+  return ((d1 > 1e-6 && d2 < -1e-6) || (d1 < -1e-6 && d2 > 1e-6)) && ((d3 > 1e-6 && d4 < -1e-6) || (d3 < -1e-6 && d4 > 1e-6));
+}
+
+/** Wat er niet klopt aan een vrije vorm, in gewone taal (leeg = in orde). */
+export function vormFouten(punten: Punt[]): string[] {
+  const v = metDeKlok(punten);
+  if (v.length < 3) return ['De vorm heeft minstens drie hoekpunten nodig.'];
+  for (let i = 0; i < v.length; i++) for (let j = i + 2; j < v.length; j++) {
+    if (i === 0 && j === v.length - 1) continue;
+    if (snijden(v[i]!, v[(i + 1) % v.length]!, v[j]!, v[(j + 1) % v.length]!)) return ['De muren van de vorm kruisen elkaar: kijk de volgorde van de hoekpunten na.'];
+  }
+  if (zijdenVan(v).some((l) => l < 20)) return ['Een muur van de vorm is korter dan 20 cm.'];
+  if (veelhoekOppervlakte(v) < 1e4) return ['De vorm is kleiner dan 1 m².'];
+  if (!isBol(v)) return ['De vorm heeft een inspringende hoek: dat kan nog niet in één vrije vorm (maak er twee delen van).'];
+  return [];
+}
+
+/** Snijpunt van twee lijnen (punt + richting); undefined als ze evenwijdig zijn. */
+function snijpunt([px, py]: Punt, [dx, dy]: Punt, [qx, qy]: Punt, [ex, ey]: Punt): Punt | undefined {
+  const det = dx * ey - dy * ex;
+  if (Math.abs(det) < 1e-9) return undefined;
+  const t = ((qx - px) * ey - (qy - py) * ex) / det;
+  return [px + t * dx, py + t * dy];
+}
+
+/**
+ * De zijden van een veelhoek een eind naar buiten (positief) of naar binnen (negatief) verschuiven, per zijde (zijde i
+ * loopt van punt i naar i + 1, met de klok mee); de nieuwe hoekpunten zijn de snijpunten. Bv. van de binnenmaten naar
+ * de as van de muren (+ een halve muurdikte), of van de as naar het binnenvlak (− een halve muurdikte).
+ */
+export function verschuifZijden(punten: Punt[], afstand: number | number[]): Punt[] {
+  const v = metDeKlok(punten);
+  const n = v.length;
+  const lijnen = v.map((p, i) => {
+    const q = v[(i + 1) % n]!;
+    const dx = q[0] - p[0], dy = q[1] - p[1], l = Math.hypot(dx, dy) || 1;
+    const t = typeof afstand === 'number' ? afstand : afstand[i] ?? 0;
+    // De normaal naar buiten: met de klok mee op de tekening ligt de ruimte rechts van de looprichting.
+    return { p: [p[0] + (dy / l) * t, p[1] - (dx / l) * t] as Punt, d: [dx / l, dy / l] as Punt };
+  });
+  return v.map((_, i) => {
+    const a = lijnen[(i + n - 1) % n]!, b = lijnen[i]!;
+    return snijpunt(a.p, a.d, b.p, b.d) ?? b.p;
+  });
+}
+
+// ---------- vrije vorm uit gemeten maten ----------
+
+/** Een vierhoek uit gemeten maten (zie `vierhoekUitZijden` en `vierhoekUitHoeken`). */
+export interface VormUitMaten {
+  /** Hoekpunten A, B, C, D (cm), met de klok mee: A = (0, 0), B rechts ervan op de x-as, C en D eronder. Leeg als het niet kan. */
+  punten: Punt[];
+  /** Binnenhoeken bij A, B, C en D (graden, op 0,1°). */
+  hoeken: number[];
+  /** De zijden AB, BC, CD en DA (cm, op 0,1 cm). */
+  zijden: number[];
+  /** De diagonalen AC en BD (cm, op 0,1 cm): meet de tweede na als controle. */
+  diagonalen: [number, number];
+  /** Waarom de maten niet kunnen, in gewone taal. Leeg = in orde. */
+  fouten: string[];
+  /** Wat je best nakijkt (een inspringende of bijna gestrekte hoek). */
+  waarschuwingen: string[];
+}
+
+const cm1 = (x: number) => Math.round(x * 10) / 10;
+const tekstCm = (x: number) => `${String(cm1(x)).replace('.', ',')} cm`;
+
+function uitkomst(punten: Punt[], fouten: string[]): VormUitMaten {
+  if (fouten.length) return { punten: [], hoeken: [], zijden: [], diagonalen: [0, 0], fouten, waarschuwingen: [] };
+  const p = punten.map(fijnPunt);
+  const hoeken = hoekenVan(p).map(cm1);
+  const waarschuwingen: string[] = [];
+  'ABCD'.split('').forEach((naam, i) => {
+    if (hoeken[i]! > 180.05) waarschuwingen.push(`De hoek bij ${naam} is ${String(hoeken[i]).replace('.', ',')}°: een inspringende hoek. Kijk de diagonaal na; zo'n vorm kan nog niet als één vrije vorm.`);
+    else if (hoeken[i]! > 178) waarschuwingen.push(`De hoek bij ${naam} is ${String(hoeken[i]).replace('.', ',')}°, bijna gestrekt: is dat wel een hoek?`);
+  });
+  const afst = (a: Punt, b: Punt) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+  return { punten: p, hoeken, zijden: zijdenVan(p).map(cm1), diagonalen: [cm1(afst(p[0]!, p[2]!)), cm1(afst(p[1]!, p[3]!))], fouten: [], waarschuwingen };
+}
+
+/**
+ * Een vierhoek ABCD uit vier gemeten zijden en één diagonaal, zoals een inmeter meet: AB, BC, CD, DA en de diagonaal AC.
+ * De diagonaal deelt de vierhoek in twee driehoeken (ABC en ACD); elke driehoek moet kunnen bestaan (de som van twee
+ * zijden is groter dan de derde). A ligt op (0, 0), B rechts ervan; de vorm loopt met de klok mee. Verschuif of draai
+ * de punten daarna naar hun plaats (zie `plaatsVorm`). Maten in cm, op dezelfde plaats gemeten (bv. op de as van de muren).
+ */
+export function vierhoekUitZijden(ab: number, bc: number, cd: number, da: number, ac: number): VormUitMaten {
+  const fouten: string[] = [];
+  for (const [naam, l] of [['AB', ab], ['BC', bc], ['CD', cd], ['DA', da], ['De diagonaal AC', ac]] as const) {
+    if (!(l > 0)) fouten.push(`${naam.startsWith('De') ? naam : `Zijde ${naam}`} moet langer zijn dan 0 cm.`);
+  }
+  if (fouten.length) return uitkomst([], fouten);
+  const driehoek = (p: string, lp: number, q: string, lq: number) => {
+    if (lp + lq <= ac + 0.05) fouten.push(`${p} en ${q} samen (${tekstCm(lp + lq)}) zijn niet langer dan de diagonaal AC (${tekstCm(ac)}): zo'n driehoek bestaat niet. Meet de diagonaal of een van die zijden na.`);
+    else if (lp + ac <= lq + 0.05) fouten.push(`${q} (${tekstCm(lq)}) is langer dan ${p} en de diagonaal AC samen (${tekstCm(lp + ac)}): zo'n driehoek bestaat niet. Meet ${q} na.`);
+    else if (lq + ac <= lp + 0.05) fouten.push(`${p} (${tekstCm(lp)}) is langer dan ${q} en de diagonaal AC samen (${tekstCm(lq + ac)}): zo'n driehoek bestaat niet. Meet ${p} na.`);
+  };
+  driehoek('AB', ab, 'BC', bc);
+  driehoek('DA', da, 'CD', cd);
+  if (fouten.length) return uitkomst([], fouten);
+  // Hoek bij A tussen AB en AC (driehoek ABC) en tussen AC en AD (driehoek ACD): de cosinusregel.
+  const hoek = (naast1: number, naast2: number, over: number) => Math.acos(Math.max(-1, Math.min(1, (naast1 * naast1 + naast2 * naast2 - over * over) / (2 * naast1 * naast2))));
+  const t = hoek(ab, ac, bc), f = hoek(ac, da, cd);
+  // Met de klok mee op de tekening (y naar onder): C en D liggen onder AB, D aan de andere kant van AC dan B.
+  return uitkomst([[0, 0], [ab, 0], [ac * Math.cos(t), ac * Math.sin(t)], [da * Math.cos(t + f), da * Math.sin(t + f)]], []);
+}
+
+/**
+ * Een vierhoek ABCD uit drie zijden en de twee hoeken ertussen: AB, BC, CD en de binnenhoeken bij B en C (graden). De
+ * vierde zijde DA volgt eruit. A ligt op (0, 0), B rechts ervan; de vorm loopt met de klok mee.
+ */
+export function vierhoekUitHoeken(ab: number, bc: number, cd: number, hoekB: number, hoekC: number): VormUitMaten {
+  const fouten: string[] = [];
+  for (const [naam, l] of [['AB', ab], ['BC', bc], ['CD', cd]] as const) if (!(l > 0)) fouten.push(`Zijde ${naam} moet langer zijn dan 0 cm.`);
+  for (const [naam, h] of [['B', hoekB], ['C', hoekC]] as const) if (!(h > 0 && h < 180)) fouten.push(`De hoek bij ${naam} moet tussen 0° en 180° liggen.`);
+  if (fouten.length) return uitkomst([], fouten);
+  // Lopen langs de omtrek: op elke hoek draai je (met de klok mee) 180° min de binnenhoek.
+  const koers1 = (180 - hoekB) / GRAAD, koers2 = koers1 + (180 - hoekC) / GRAAD;
+  const A: Punt = [0, 0], B: Punt = [ab, 0];
+  const C: Punt = [B[0] + bc * Math.cos(koers1), B[1] + bc * Math.sin(koers1)];
+  const D: Punt = [C[0] + cd * Math.cos(koers2), C[1] + cd * Math.sin(koers2)];
+  const da = Math.hypot(D[0], D[1]);
+  if (da < 1) fouten.push('Met deze maten komt D op A uit: er blijft geen vierde muur over.');
+  else if (snijden(A, B, C, D) || snijden(B, C, D, A)) fouten.push('Met deze maten kruisen de muren elkaar: kijk de hoeken na (gemeten aan de binnenkant van de vorm?).');
+  else {
+    // De hoeken bij A en D moeten ook binnen de vorm liggen (de vorm loopt met de klok mee).
+    if (dubbeleOppervlakte([A, B, C, D]) <= 0) fouten.push('Met deze maten draait de vorm de verkeerde kant op: kijk de hoeken na (gemeten aan de binnenkant van de vorm?).');
+  }
+  return uitkomst([A, B, C, D], fouten);
+}
+
+/**
+ * Zet een vorm op haar plaats: het eerste punt op `naar`, en (met `richting`, graden met de klok mee vanaf de x-as) de
+ * eerste zijde in die richting. Zo komt een gemeten vierhoek bv. met AB tegen de gevel van de woning.
+ */
+export function plaatsVorm(punten: Punt[], naar: Punt, richting = 0): Punt[] {
+  if (!punten.length) return [];
+  const [ox, oy] = punten[0]!;
+  const nu = punten.length > 1 ? Math.atan2(punten[1]![1] - oy, punten[1]![0] - ox) : 0;
+  const a = richting / GRAAD - nu, c = Math.cos(a), s = Math.sin(a);
+  return punten.map(([x, y]) => fijnPunt([naar[0] + (x - ox) * c - (y - oy) * s, naar[1] + (x - ox) * s + (y - oy) * c]));
+}
+
 // ---------- verdiepingen en samengestelde ruimtes ----------
 
 export const niveauVan = (x: { niveau?: number }) => x.niveau ?? 0;
@@ -282,12 +628,15 @@ export function niveauPlan(plan: Plattegrond, niveau: number): Plattegrond {
 /** Hoogte van de vloer van een verdieping boven het maaiveld (cm). */
 export const vloerHoogte = (plan: Plattegrond, niveau: number) => niveau * (plan.muurhoogte + VLOERDIKTE);
 
-/** Alle rechthoeken van een ruimte (hoofddeel eerst). */
-export function delenVan(r: Ruimte): Rechthoek[] {
-  return [{ x: r.x, y: r.y, b: r.b, d: r.d }, ...(r.delen ?? [])];
+/**
+ * Alle delen van een ruimte (hoofddeel eerst), als rechthoek: bij een vrije vorm is dat haar omsluitende kader, met de
+ * omtrek erbij (`omtrek`; de vorm zelf geeft `vormVanDeel`).
+ */
+export function delenVan(r: Ruimte): Deel[] {
+  return [r.omtrek ? { x: r.x, y: r.y, b: r.b, d: r.d, omtrek: r.omtrek } : { x: r.x, y: r.y, b: r.b, d: r.d }, ...(r.delen ?? [])];
 }
 
-const binnen = (p: Rechthoek, x: number, y: number) => x > p.x && x < p.x + p.b && y > p.y && y < p.y + p.d;
+const binnen = (p: Deel, x: number, y: number) => (p.omtrek ? binnenVeelhoek(vormVanDeel(p), x, y) : x > p.x && x < p.x + p.b && y > p.y && y < p.y + p.d);
 
 /** Rechthoek a min rechthoek r: hoogstens 4 stukken (boven, onder, links, rechts). */
 export function trekAf(a: Rechthoek, r: Rechthoek): Rechthoek[] {
@@ -302,11 +651,12 @@ export function trekAf(a: Rechthoek, r: Rechthoek): Rechthoek[] {
   return uit;
 }
 
-/** Zet de delen van een ruimte: het grootste deel wordt het hoofddeel. */
-function zetDelen(r: Ruimte, delen: Rechthoek[]) {
-  const s = [...delen].sort((a, b) => b.b * b.d - a.b * a.d);
+/** Zet de delen van een ruimte: het grootste deel wordt het hoofddeel (met zijn omtrek als het een vrije vorm is). */
+function zetDelen(r: Ruimte, delen: Deel[]) {
+  const s = [...delen].sort((a, b) => deelOppervlakte(b) - deelOppervlakte(a));
   const [hoofd, ...rest] = s;
   Object.assign(r, { x: hoofd!.x, y: hoofd!.y, b: hoofd!.b, d: hoofd!.d });
+  if (hoofd!.omtrek) r.omtrek = hoofd!.omtrek; else delete r.omtrek;
   if (rest.length) r.delen = rest; else delete r.delen;
 }
 
@@ -316,12 +666,18 @@ function zetDelen(r: Ruimte, delen: Rechthoek[]) {
  */
 export function tekenRuimteIn(plan: Plattegrond, nieuw: Ruimte): void {
   const n = niveauVan(nieuw);
-  const opp = (x: Rechthoek[]) => x.reduce((t, p) => t + p.b * p.d, 0);
+  const opp = (x: Deel[]) => x.reduce((t, p) => t + deelOppervlakte(p), 0);
   const geraakt: { id: string; overlap: number }[] = [];
+  // Een vrije vorm: de rechthoek eruit knippen; wat overblijft, zijn bolle stukken (delen van dezelfde ruimte).
+  const zonder = (p: Deel): Deel[] => {
+    if (!p.omtrek) return trekAf(p, nieuw);
+    const v = vormVanDeel(p), stukken = trekVeelhoekAf(v, rechthoekVorm(nieuw));
+    return stukken.length === 1 && stukken[0] === v ? [p] : stukken.map(alsDeel);
+  };
   for (const r of [...plan.ruimtes]) {
     if (niveauVan(r) !== n) continue;
     const oud = delenVan(r);
-    const rest = oud.flatMap((p) => trekAf(p, nieuw)).filter((p) => p.b >= 1 && p.d >= 1);
+    const rest = oud.flatMap(zonder).filter((p) => p.b >= 1 && p.d >= 1);
     if (rest.length === oud.length && rest.every((p, i) => p === oud[i])) continue;
     geraakt.push({ id: r.id, overlap: opp(oud) - opp(rest) });
     if (!rest.length) plan.ruimtes.splice(plan.ruimtes.indexOf(r), 1);
@@ -343,6 +699,11 @@ export function erfGevel(plan: Plattegrond, van: string, naar: string, overschri
     const k = v[`${van}:${kant}`];
     if (k && (overschrijven || !v[`${naar}:${kant}`])) v[`${naar}:${kant}`] = { ...k };
   }
+  // Schuine muurvlakken (`ruimte:s104`) ook.
+  for (const sleutel of Object.keys(v).filter((x) => x.startsWith(`${van}:s`))) {
+    const doel = `${naar}:${sleutel.slice(van.length + 1)}`;
+    if (overschrijven || !v[doel]) v[doel] = { ...v[sleutel]! };
+  }
 }
 
 /**
@@ -357,8 +718,28 @@ export function splitsRuimtes(
   const nieuw: Ruimte[] = [];
   for (const r of [...plan.ruimtes]) {
     if (niveauVan(r) !== niveau) continue;
-    const blijft: Rechthoek[] = [], gaat: Rechthoek[] = [];
+    const blijft: Deel[] = [], gaat: Deel[] = [];
     for (const p of delenVan(r)) {
+      if (p.omtrek) {
+        // Vrije vorm: de wand knipt de veelhoek in twee (bij een bolle vorm zijn beide stukken weer bol).
+        const v = vormVanDeel(p), i = as === 'v' ? 0 : 1;
+        const langs = v.map((q) => q[i]!);
+        // Waar de wand de vorm snijdt (van–tot langs de wand).
+        const snij: number[] = [];
+        v.forEach((q, k) => {
+          const w = v[(k + 1) % v.length]!;
+          if ((q[i]! - lijn) * (w[i]! - lijn) > 0 || q[i] === w[i]) return;
+          const t = (lijn - q[i]!) / (w[i]! - q[i]!);
+          snij.push(q[1 - i]! + t * (w[1 - i]! - q[1 - i]!));
+        });
+        const d0 = Math.min(...snij), d1 = Math.max(...snij);
+        const raakt = snij.length > 0 && (van === tot ? van > d0 && van < d1 : Math.min(tot, d1) - Math.max(van, d0) > 1);
+        if (!(lijn > Math.min(...langs) + minimum && lijn < Math.max(...langs) - minimum && raakt)) { blijft.push(p); continue; }
+        const [a, b] = as === 'v' ? [1, 0] : [0, 1];
+        blijft.push(alsDeel(knipVeelhoek(v, a, b, lijn)));
+        gaat.push(alsDeel(knipVeelhoek(v, -a, -b, -lijn)));
+        continue;
+      }
       const [a0, a1, d0, d1] = as === 'v' ? [p.x, p.x + p.b, p.y, p.y + p.d] : [p.y, p.y + p.d, p.x, p.x + p.b];
       // Een klik (van = tot) moet in het deel liggen; een getekende wand moet het deel echt overlappen.
       const raakt = van === tot ? van > d0 && van < d1 : Math.min(tot, d1) - Math.max(van, d0) > 1;
@@ -381,16 +762,56 @@ export function splitsRuimtes(
 
 // ---------- muren afleiden ----------
 
+/** Richting d langs de as en normaal n naar de plus-kant van een muur of opening (h: x en y, v: y en x, s: zie `Muur`). */
+export function asVan(x: { as: 'h' | 'v' | 's'; richting?: Punt }): { d: Punt; n: Punt } {
+  if (x.as === 'h') return { d: [1, 0], n: [0, 1] };
+  if (x.as === 'v' || !x.richting) return { d: [0, 1], n: [1, 0] };
+  const [dx, dy] = x.richting;
+  return { d: [dx, dy], n: [dy, -dx] };
+}
+
+/** Het punt op het plan bij s langs de as en w dwars erop (w = `lijn` is de as zelf). */
+export function langsAs(x: { as: 'h' | 'v' | 's'; richting?: Punt }, s: number, w: number): Punt {
+  const { d, n } = asVan(x);
+  return [s * d[0] + w * n[0], s * d[1] + w * n[1]];
+}
+
+/** Omgekeerd: s (langs de as) en w (dwars) van een punt op het plan. */
+export function opAs(x: { as: 'h' | 'v' | 's'; richting?: Punt }, [px, py]: Punt): [number, number] {
+  const { d, n } = asVan(x);
+  return [px * d[0] + py * d[1], px * n[0] + py * n[1]];
+}
+
 /** Alle muren van de plattegrond, afgeleid uit de randen van de ruimtes. */
 export function murenVan(plan: Plattegrond): Muur[] {
   interface Rand { as: 'h' | 'v'; lijn: number; van: number; tot: number; kant: '+' | '-'; ruimte: string }
   const randen: Rand[] = [];
+  /** Schuine randen van een vrije vorm: richting d (dy > 0), begin- en eindpunt, kant van de ruimte. */
+  const schuin: { d: Punt; a: Punt; b: Punt; kant: '+' | '-'; ruimte: string }[] = [];
   for (const r of plan.ruimtes) {
     for (const p of delenVan(r)) {
-      randen.push({ as: 'h', lijn: p.y, van: p.x, tot: p.x + p.b, kant: '+', ruimte: r.id });
-      randen.push({ as: 'h', lijn: p.y + p.d, van: p.x, tot: p.x + p.b, kant: '-', ruimte: r.id });
-      randen.push({ as: 'v', lijn: p.x, van: p.y, tot: p.y + p.d, kant: '+', ruimte: r.id });
-      randen.push({ as: 'v', lijn: p.x + p.b, van: p.y, tot: p.y + p.d, kant: '-', ruimte: r.id });
+      if (!p.omtrek) {
+        randen.push({ as: 'h', lijn: p.y, van: p.x, tot: p.x + p.b, kant: '+', ruimte: r.id });
+        randen.push({ as: 'h', lijn: p.y + p.d, van: p.x, tot: p.x + p.b, kant: '-', ruimte: r.id });
+        randen.push({ as: 'v', lijn: p.x, van: p.y, tot: p.y + p.d, kant: '+', ruimte: r.id });
+        randen.push({ as: 'v', lijn: p.x + p.b, van: p.y, tot: p.y + p.d, kant: '-', ruimte: r.id });
+        continue;
+      }
+      // Vrije vorm (met de klok mee: de ruimte ligt rechts van de looprichting). Een rand die toch horizontaal of
+      // verticaal ligt, gaat de gewone weg, zodat ze een muur deelt met een rechthoekige ruimte ernaast.
+      const v = vormVanDeel(p);
+      v.forEach((a, i) => {
+        const b = v[(i + 1) % v.length]!;
+        const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy);
+        if (l < 0.5) return;
+        if (Math.abs(dy) < 0.5) randen.push({ as: 'h', lijn: (a[1] + b[1]) / 2, van: Math.min(a[0], b[0]), tot: Math.max(a[0], b[0]), kant: dx > 0 ? '+' : '-', ruimte: r.id });
+        else if (Math.abs(dx) < 0.5) randen.push({ as: 'v', lijn: (a[0] + b[0]) / 2, van: Math.min(a[1], b[1]), tot: Math.max(a[1], b[1]), kant: dy < 0 ? '+' : '-', ruimte: r.id });
+        else {
+          const d: Punt = dy > 0 ? [dx / l, dy / l] : [-dx / l, -dy / l];
+          // De ruimte ligt langs (−dy, dx); de plus-kant van de muur langs n = (d.y, −d.x).
+          schuin.push({ d, a, b, kant: (-dy * d[1] - dx * d[0]) / l > 0 ? '+' : '-', ruimte: r.id });
+        }
+      });
     }
   }
   const groepen = new Map<string, Rand[]>();
@@ -423,16 +844,72 @@ export function murenVan(plan: Plattegrond): Muur[] {
     }
   }
   muren.forEach((m) => (m.id = `${m.as}${Math.round(m.lijn)}_${Math.round(m.van)}`));
+  // Schuine muren: per lijn (zelfde richting en zelfde afstand tot de oorsprong, met wat speling voor afrondingen),
+  // en dan net zoals hierboven in stukken geknipt op alle eindpunten.
+  const lijnen: { d: Punt; n: Punt; lijn: number; randen: { van: number; tot: number; kant: '+' | '-'; ruimte: string }[] }[] = [];
+  for (const s of schuin) {
+    const w = (q: Punt, n: Punt) => q[0] * n[0] + q[1] * n[1];
+    let g = lijnen.find((x) => Math.abs(x.d[0] * s.d[1] - x.d[1] * s.d[0]) < 1e-3 && Math.abs(w(s.a, x.n) - x.lijn) < 0.5 && Math.abs(w(s.b, x.n) - x.lijn) < 0.5);
+    if (!g) {
+      const n: Punt = [s.d[1], -s.d[0]];
+      g = { d: s.d, n, lijn: w(s.a, n), randen: [] };
+      lijnen.push(g);
+    }
+    const ta = w(s.a, g.d), tb = w(s.b, g.d);
+    g.randen.push({ van: Math.min(ta, tb), tot: Math.max(ta, tb), kant: s.kant, ruimte: s.ruimte });
+  }
+  const ids = new Set(muren.map((m) => m.id));
+  for (const g of lijnen) {
+    const punten = g.randen.flatMap((r) => [r.van, r.tot]).sort((a, b) => a - b).filter((x, i, l) => !i || x - l[i - 1]! > 0.01);
+    const hoek = Math.round(Math.atan2(g.d[1], g.d[0]) * GRAAD);
+    let huidig: Muur | undefined;
+    for (let i = 0; i + 1 < punten.length; i++) {
+      const a = punten[i]!, b = punten[i + 1]!;
+      if (b - a < 0.5) continue;
+      const dekt = (kant: '+' | '-') => g.randen.find((r) => r.kant === kant && r.van <= a + 0.05 && r.tot >= b - 0.05)?.ruimte;
+      const plus = dekt('+'), min = dekt('-');
+      if ((!plus && !min) || plus === min) { huidig = undefined; continue; }
+      const soort = plus && min ? 'binnen' : 'buiten';
+      if (huidig && gelijk(huidig.tot, a) && huidig.soort === soort && huidig.plus === plus && huidig.min === min) {
+        huidig.tot = b;
+        huidig.punten![1] = langsAs(huidig, b, g.lijn);
+        continue;
+      }
+      huidig = { id: '', as: 's', lijn: g.lijn, van: a, tot: b, soort, dikte: soort === 'buiten' ? plan.buitenmuur : plan.binnenmuur, plus, min, richting: g.d, punten: [[0, 0], [0, 0]] };
+      huidig.punten = [langsAs(huidig, a, g.lijn), langsAs(huidig, b, g.lijn)];
+      let id = `s${hoek}_${Math.round(g.lijn)}_${Math.round(a)}`;
+      for (let k = 2; ids.has(id); k++) id = `s${hoek}_${Math.round(g.lijn)}_${Math.round(a)}_${k}`;
+      ids.add(id);
+      huidig.id = id;
+      muren.push(huidig);
+    }
+  }
   return muren;
 }
 
-/** Rechthoek van een muur in de plattegrond, met hoeken netjes aangesloten. */
-export interface MuurVlak { x: number; y: number; b: number; d: number; verlengdBegin: boolean; verlengdEinde: boolean }
+/**
+ * Vlak van een muur in de plattegrond, met hoeken netjes aangesloten. Een rechte muur is een rechthoek (x, y, b, d); een
+ * schuine muur heeft daarnaast haar grondvlak als veelhoek (`punten`, x, y, b, d is dan het omsluitende kader) en per zijde
+ * van die veelhoek wat ze is (`randen`, voor het materiaal in de 3D).
+ */
+export interface MuurVlak {
+  x: number; y: number; b: number; d: number; verlengdBegin: boolean; verlengdEinde: boolean;
+  punten?: Punt[];
+  randen?: MuurRand[];
+}
+
+/**
+ * Wat een zijde van het grondvlak van een schuine muur is: haar min- of plus-kant, een kopse kant tegen een andere muur
+ * (`kop`, niet te zien), een naad waar dezelfde muur verder loopt (`naad`), een snede bij een opening (`snede`, de dagkant),
+ * of de voortzetting van een zijde van een rechte muur op de hoek (die zijde van die muur: zelfde materiaal).
+ */
+export type MuurRand = 'min' | 'plus' | 'kop' | 'naad' | 'snede' | { muur: string; kant: 'min' | 'plus' };
 
 export function muurVlak(m: Muur, muren: Muur[]): MuurVlak {
+  if (m.as === 's') return schuinVlak(m, muren);
   const half = m.dikte / 2;
   let begin = m.van, einde = m.tot, verlengdBegin = false, verlengdEinde = false;
-  const loodrecht = muren.filter((x) => x.as !== m.as);
+  const loodrecht = muren.filter((x) => x.as !== m.as && x.as !== 's');
   if (m.as === 'h') {
     for (const [p, isBegin] of [[m.van, true], [m.tot, false]] as const) {
       const verder = muren.some((x) => x !== m && x.as === 'h' && gelijk(x.lijn, m.lijn) && (isBegin ? gelijk(x.tot, p) : gelijk(x.van, p)));
@@ -445,6 +922,9 @@ export function muurVlak(m: Muur, muren: Muur[]): MuurVlak {
       } else if (eindigt.length) {
         const t = Math.max(...eindigt.map((v) => v.dikte)) / 2;
         if (isBegin) { begin = p - t; verlengdBegin = true; } else { einde = p + t; verlengdEinde = true; }
+      } else {
+        const tot = totSchuin(m, p, isBegin, muren);
+        if (tot !== undefined) { if (isBegin) begin = tot; else einde = tot; }
       }
     }
     return { x: begin, y: m.lijn - half, b: einde - begin, d: m.dikte, verlengdBegin, verlengdEinde };
@@ -454,26 +934,177 @@ export function muurVlak(m: Muur, muren: Muur[]): MuurVlak {
     if (h.length) {
       const t = Math.max(...h.map((x) => x.dikte)) / 2;
       if (isBegin) begin = p + t; else einde = p - t;
+    } else if (!muren.some((x) => x !== m && x.as === 'v' && gelijk(x.lijn, m.lijn) && (isBegin ? gelijk(x.tot, p) : gelijk(x.van, p)))) {
+      const tot = totSchuin(m, p, isBegin, muren);
+      if (tot !== undefined) { if (isBegin) begin = tot; else einde = tot; }
     }
   }
   return { x: m.lijn - half, y: begin, b: m.dikte, d: einde - begin, verlengdBegin, verlengdEinde };
 }
 
+/** Schuine muren die door punt q lopen (q ligt binnen hun as, niet op een eindpunt van de hele lijn). */
+function schuinDoor(q: Punt, muren: Muur[], behalve?: Muur): Muur | undefined {
+  return muren.find((x) => {
+    if (x.as !== 's' || x === behalve) return false;
+    const [s, w] = opAs(x, q);
+    if (!gelijk(w, x.lijn)) return false;
+    if (s > x.van + 0.5 && s < x.tot - 0.5) return true;
+    // Op een eindpunt: loopt dezelfde lijn daar verder (de muur is daar alleen in stukken geknipt)?
+    const randpunt = gelijk(s, x.van) ? x.van : gelijk(s, x.tot) ? x.tot : undefined;
+    return randpunt !== undefined && muren.some((y) => y !== x && y !== behalve && y.as === 's' && gelijk(y.lijn, x.lijn)
+      && Math.abs(y.richting![0] * x.richting![1] - y.richting![1] * x.richting![0]) < 1e-3 && (gelijk(y.tot, randpunt) || gelijk(y.van, randpunt)));
+  });
+}
+
+/** Waar het binnenvlak (plus- of min-kant) van een rechte muur het vlak van een schuine muur raakt (langs de muur). */
+function binnenTotSchuin(m: Muur, p: number, isBegin: boolean, binnenPlus: boolean, muren: Muur[]): number | undefined {
+  const s = schuinDoor(langsAs(m, p, m.lijn), muren) ?? muren.find((x) => x.as === 's' && x.punten!.some((q) => Math.hypot(q[0] - langsAs(m, p, m.lijn)[0], q[1] - langsAs(m, p, m.lijn)[1]) < 0.5));
+  if (!s) return undefined;
+  const { d } = asVan(m), as = asVan(s);
+  const naarLijf: Punt = isBegin ? d : [-d[0], -d[1]];
+  const kant = naarLijf[0] * as.n[0] + naarLijf[1] * as.n[1] > 0 ? 1 : -1;
+  const x = snijpunt(langsAs(m, p, m.lijn + ((binnenPlus ? 1 : -1) * m.dikte) / 2), d, langsAs(s, 0, s.lijn + (kant * s.dikte) / 2), as.d);
+  return x ? x[0] * d[0] + x[1] * d[1] : undefined;
+}
+
+/**
+ * Een rechte muur die midden op een schuine muur eindigt (bv. een binnenwand in een vrije vorm): tot waar loopt ze door?
+ * Tot de verste van de twee plaatsen waar haar zijvlakken het vlak van de schuine muur raken, zodat er geen spleet is
+ * (het stukje dat in de schuine muur steekt, valt binnen die muur).
+ */
+function totSchuin(m: Muur, p: number, isBegin: boolean, muren: Muur[]): number | undefined {
+  const q = langsAs(m, p, m.lijn);
+  const s = schuinDoor(q, muren);
+  if (!s) return undefined;
+  const { d, n } = asVan(m), as = asVan(s);
+  // Het vlak van de schuine muur aan de kant van deze muur.
+  const naarLijf: Punt = isBegin ? d : [-d[0], -d[1]];
+  const kant = naarLijf[0] * as.n[0] + naarLijf[1] * as.n[1] > 0 ? 1 : -1;
+  const vlakPunt = langsAs(s, 0, s.lijn + (kant * s.dikte) / 2);
+  const raak = [-1, 1].map((z) => {
+    const start = langsAs(m, p, m.lijn + (z * m.dikte) / 2);
+    const x = snijpunt(start, d, vlakPunt, as.d);
+    return x ? x[0] * d[0] + x[1] * d[1] : p;
+  });
+  return isBegin ? Math.min(...raak) : Math.max(...raak);
+}
+
+/**
+ * Het grondvlak van een schuine muur: een strook langs haar as, met aan elk einde een aansluiting op wat daar staat.
+ *   - een muur die er doorloopt (T): afgeknipt op het vlak van die muur;
+ *   - dezelfde lijn loopt verder: recht afgeknipt (`naad`);
+ *   - één andere schuine muur eindigt er: verstek (de zijvlakken snijden elkaar);
+ *   - één rechte muur eindigt er: die blijft een rechthoek die recht stopt op de hoek; de schuine muur vult de hoek op
+ *     (in een trapje rond het einde van de rechte muur), zodat er geen gat en geen overlap is;
+ *   - niets: recht afgeknipt.
+ * `extra` maakt de muur (en de muren waarop ze aansluit) aan elke kant zoveel breder (de muurkap van de dakrand).
+ */
+function schuinVlak(m: Muur, muren: Muur[], extra = 0): MuurVlak {
+  const { d, n } = asVan(m);
+  const half = m.dikte / 2 + extra;
+  const zijde = (w: number) => ({ p: langsAs(m, 0, m.lijn + w), d });
+  const zMin = zijde(-half), zPlus = zijde(half);
+  type Kap = { punten: Punt[]; randen: MuurRand[] };
+  const recht = (s: number, rand: MuurRand): Kap => ({ punten: [langsAs(m, s, m.lijn - half), langsAs(m, s, m.lijn + half)], randen: [rand] });
+  const kap = (s: number, isBegin: boolean): Kap => {
+    const P = langsAs(m, s, m.lijn);
+    const naarLijf: Punt = isBegin ? d : [-d[0], -d[1]];
+    const op = (x: Muur) => { const [t, w] = opAs(x, P); return gelijk(w, x.lijn) && t > x.van - 0.5 && t < x.tot + 0.5; };
+    const rond = muren.filter((x) => x !== m && op(x));
+    // Loopt er een muur door dit punt (ook als ze daar in stukken geknipt is)? Wisselt ze daar van dikte (binnen- naar
+    // buitenmuur), dan de dunste: dan blijft er geen spleet, en wat in de dikkere muur steekt, valt erbinnen.
+    const door = rond.filter((x) => {
+      const t = opAs(x, P)[0];
+      if (t > x.van + 0.5 && t < x.tot - 0.5) return true;
+      return rond.some((y) => y !== x && y.as === x.as && gelijk(y.lijn, x.lijn) && (x.as !== 's' || Math.abs(y.richting![0] * x.richting![1] - y.richting![1] * x.richting![0]) < 1e-3)
+        && ((gelijk(t, x.van) && gelijk(opAs(y, P)[0], y.tot)) || (gelijk(t, x.tot) && gelijk(opAs(y, P)[0], y.van))));
+    }).sort((x, y) => x.dikte - y.dikte)[0];
+    const zelfdeLijn = (x: Muur) => x.as === 's' && gelijk(x.lijn, m.lijn) && Math.abs(x.richting![0] * d[1] - x.richting![1] * d[0]) < 1e-3;
+    if (door && !zelfdeLijn(door)) {
+      // T: afknippen op het vlak van de doorlopende muur aan deze kant.
+      const ax = asVan(door);
+      const kant = naarLijf[0] * ax.n[0] + naarLijf[1] * ax.n[1] > 0 ? 1 : -1;
+      const vlak = { p: langsAs(door, 0, door.lijn + kant * (door.dikte / 2 + extra)), d: ax.d };
+      const a = snijpunt(zMin.p, d, vlak.p, vlak.d), b = snijpunt(zPlus.p, d, vlak.p, vlak.d);
+      return a && b ? { punten: [a, b], randen: ['kop'] } : recht(s, 'kop');
+    }
+    if (rond.some(zelfdeLijn)) return recht(s, 'naad');
+    const eindigen = rond.filter((x) => !zelfdeLijn(x));
+    if (eindigen.length !== 1) return recht(s, 'kop');
+    const R = eindigen[0]!;
+    const ar = asVan(R), tR = opAs(R, P)[0];
+    const naarR: Punt = gelijk(tR, R.van) ? ar.d : [-ar.d[0], -ar.d[1]];
+    const hR = R.dikte / 2 + extra;
+    // Kant van deze muur naar R toe (σS) en kant van R naar deze muur toe (σR).
+    const sS = naarR[0] * n[0] + naarR[1] * n[1] > 0 ? 1 : -1;
+    const sR = naarLijf[0] * ar.n[0] + naarLijf[1] * ar.n[1] > 0 ? 1 : -1;
+    const vlakR = (z: number) => ({ p: langsAs(R, 0, R.lijn + z * hR), d: ar.d });
+    const I = snijpunt(zijde(sS * half).p, d, vlakR(sR).p, ar.d), O = snijpunt(zijde(-sS * half).p, d, vlakR(-sR).p, ar.d);
+    const ver = (q?: Punt) => !q || Math.hypot(q[0] - P[0], q[1] - P[1]) > 6 * Math.max(half, hR);
+    if (ver(I) || ver(O)) return recht(s, 'kop');
+    const rKant = (z: number): MuurRand => ({ muur: R.id, kant: z * sR > 0 ? 'plus' : 'min' });
+    let punten: Punt[], randen: MuurRand[];
+    if (R.as === 's') {
+      // Verstek: de zijvlakken van beide muren snijden elkaar.
+      punten = [I!, O!];
+      randen = ['kop'];
+    } else {
+      // Rechte muur R stopt recht op de hoek: A en B zijn haar twee hoeken daar.
+      const A = langsAs(R, tR, R.lijn + sR * hR), B = langsAs(R, tR, R.lijn - sR * hR);
+      const dieper = (q: Punt) => (q[0] - P[0]) * naarR[0] + (q[1] - P[1]) * naarR[1];
+      if (dieper(I!) > 0.01 && dieper(O!) > 0.01) {
+        // Beide snijpunten liggen in R: afknippen op het vlak van R aan deze kant.
+        const a = snijpunt(zijde(sS * half).p, d, A, ar.d)!, b = snijpunt(zijde(-sS * half).p, d, A, ar.d)!;
+        punten = [a, b];
+        randen = ['kop'];
+      } else {
+        punten = [I!, A, B, O!];
+        randen = [dieper(I!) < -0.01 ? rKant(1) : 'kop', 'kop', dieper(O!) < -0.01 ? rKant(-1) : 'kop'];
+      }
+    }
+    // Van de kant naar R (σS) naar de andere kant; de kap gaat van de min- naar de plus-kant.
+    return sS > 0 ? { punten: [...punten].reverse(), randen: [...randen].reverse() } : { punten, randen };
+  };
+  const a = kap(m.van, true), b = kap(m.tot, false);
+  // Rondom: de min-kant van begin tot einde, de kap aan het einde, de plus-kant terug, de kap aan het begin terug.
+  const punten: Punt[] = [a.punten[0]!, ...b.punten, ...[...a.punten].reverse().slice(0, -1)];
+  const randen: MuurRand[] = ['min', ...b.randen, 'plus', ...[...a.randen].reverse()];
+  // Samenvallende punten weg (met de zijde die erop volgt).
+  const p2: Punt[] = [], r2l: MuurRand[] = [];
+  punten.forEach((p, i) => {
+    const q = punten[(i + 1) % punten.length]!;
+    if (Math.hypot(q[0] - p[0], q[1] - p[1]) < 0.01) return;
+    p2.push(p.map(fijn) as Punt);
+    r2l.push(randen[i]!);
+  });
+  const k = kaderVanPunten(p2);
+  return { ...k, verlengdBegin: false, verlengdEinde: false, punten: p2, randen: r2l };
+}
+
 /** De muur waarin een opening zit (of undefined als ze niet (meer) op een muur staat). */
 export function muurVanOpening(o: Opening, muren: Muur[]): Muur | undefined {
+  if (o.as === 's') {
+    return muren.find((m) => m.as === 's' && gelijk(m.lijn, o.lijn) && (!o.richting || Math.abs(m.richting![0] * o.richting[1] - m.richting![1] * o.richting[0]) < 1e-3)
+      && m.van <= o.midden - o.breedte / 2 + 0.5 && m.tot >= o.midden + o.breedte / 2 - 0.5);
+  }
   return muren.find((m) => m.as === o.as && gelijk(m.lijn, o.lijn) && m.van <= o.midden - o.breedte / 2 + 0.5 && m.tot >= o.midden + o.breedte / 2 - 0.5);
 }
 
-/** Dichtstbijzijnde muur bij een punt (voor het plaatsen van ramen en deuren). */
+/** Dichtstbijzijnde muur bij een punt (voor het plaatsen van ramen en deuren); `midden` = de plaats langs die muur. */
 export function dichtsteMuur(muren: Muur[], x: number, y: number, maxAfstand = 40): { muur: Muur; midden: number; afstand: number } | undefined {
   let beste: { muur: Muur; midden: number; afstand: number } | undefined;
   for (const m of muren) {
-    const langs = m.as === 'h' ? x : y, dwars = m.as === 'h' ? y : x;
+    const [langs, dwars] = m.as === 's' ? opAs(m, [x, y]) : m.as === 'h' ? [x, y] : [y, x];
     if (langs < m.van || langs > m.tot) continue;
     const afstand = Math.abs(dwars - m.lijn);
     if (afstand <= maxAfstand && (!beste || afstand < beste.afstand)) beste = { muur: m, midden: langs, afstand };
   }
   return beste;
+}
+
+/** Een opening op deze muur, op plaats `midden` langs de muur (zet as, lijn en bij een schuine muur de richting). */
+export function opMuur(m: Muur, midden: number): Pick<Opening, 'as' | 'lijn' | 'midden' | 'richting'> {
+  return m.as === 's' ? { as: 's', lijn: m.lijn, midden, richting: m.richting } : { as: m.as, lijn: m.lijn, midden };
 }
 
 // ---------- oppervlaktes ----------
@@ -501,9 +1132,18 @@ export function ruimteMaten(plan: Plattegrond, r: Ruimte, muren = murenVan(nivea
   // Daglicht telt alleen via ramen en deuren in een buitenmuur.
   const glas = openingen.filter((o) => ['raam', 'buitendeur', 'schuifraam'].includes(o.soort) && muurVanOpening(o, muren)?.soort === 'buiten').reduce((t, o) => t + (o.breedte * o.hoogte * (o.soort === 'buitendeur' ? 0.3 : 0.7)) / 10000, 0);
   const delen = delenVan(r);
-  const bruto = delen.reduce((t, p) => t + p.b * p.d, 0);
-  let netto: number, nb: number, nd: number;
-  if (delen.length === 1) {
+  const bruto = delen.reduce((t, p) => t + deelOppervlakte(p), 0);
+  let netto: number, nb: number, nd: number, binnenOmtrek: number | undefined;
+  if (delen.length === 1 && delen[0]!.omtrek) {
+    // Vrije vorm: elke zijde schuift een halve muurdikte naar binnen (de dikste muur op die rand), zoals bij een rechthoek.
+    const v = vormVanDeel(delen[0]!);
+    const binnen = binnenVorm(v, muren);
+    netto = veelhoekOppervlakte(binnen);
+    const k = kaderVanPunten(binnen);
+    nb = k.b;
+    nd = k.d;
+    binnenOmtrek = zijdenVan(binnen).reduce((t, l) => t + l, 0);
+  } else if (delen.length === 1) {
     const dikte = (as: 'h' | 'v', lijn: number, van: number, tot: number) => {
       const op = muren.filter((m) => m.as === as && gelijk(m.lijn, lijn) && m.tot > van + 0.5 && m.van < tot - 0.5);
       return op.length ? Math.max(...op.map((m) => m.dikte)) : 0;
@@ -519,7 +1159,7 @@ export function ruimteMaten(plan: Plattegrond, r: Ruimte, muren = murenVan(nivea
     nb = r.b;
     nd = r.d;
   }
-  const omtrek = delen.length === 1 ? (2 * (nb + nd)) / 100 : eigen.reduce((t, m) => t + (m.tot - m.van), 0) / 100;
+  const omtrek = binnenOmtrek !== undefined ? binnenOmtrek / 100 : delen.length === 1 ? (2 * (nb + nd)) / 100 : eigen.reduce((t, m) => t + (m.tot - m.van), 0) / 100;
   return {
     bruto: r2(bruto / 10000),
     netto: r2(netto / 10000),
@@ -530,6 +1170,23 @@ export function ruimteMaten(plan: Plattegrond, r: Ruimte, muren = murenVan(nivea
     glas: r2(glas),
     daklicht: r2(daklichtenBoven(plan, r).reduce((t, l) => t + (l.b * l.d * DAKLICHT_GLAS) / 10000, 0)),
   };
+}
+
+/** Dikte van de dikste muur op de rand van p naar q (0 als er geen is), voor een rand in elke richting. */
+function randDikte(p: Punt, q: Punt, muren: Muur[]): number {
+  const l = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, e: Punt = [(q[0] - p[0]) / l, (q[1] - p[1]) / l];
+  const op = muren.filter((m) => {
+    const { d } = asVan(m);
+    if (Math.abs(d[0] * e[1] - d[1] * e[0]) > 1e-3) return false;
+    const [sp, wp] = opAs(m, p), sq = opAs(m, q)[0];
+    return gelijk(wp, m.lijn) && Math.min(m.tot, Math.max(sp, sq)) - Math.max(m.van, Math.min(sp, sq)) > 0.5;
+  });
+  return op.length ? Math.max(...op.map((m) => m.dikte)) : 0;
+}
+
+/** Het binnenvlak van een vrije vorm (elke zijde een halve muurdikte naar binnen), op de as als er geen muren zijn. */
+export function binnenVorm(v: Punt[], muren: Muur[]): Punt[] {
+  return verschuifZijden(v, v.map((p, i) => -randDikte(p, v[(i + 1) % v.length]!, muren) / 2));
 }
 
 /** Lichtkoepels en lichtstraten waarvan het midden boven deze ruimte ligt. */
@@ -650,6 +1307,8 @@ function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], in
       const a = plan.ruimtes[i]!, b = plan.ruimtes[j]!;
       const overlap = delenVan(a).some((p) => delenVan(b).some((q) => {
         const ox = Math.min(p.x + p.b, q.x + q.b) - Math.max(p.x, q.x), oy = Math.min(p.y + p.d, q.y + q.d) - Math.max(p.y, q.y);
+        // Een vrije vorm: de veelhoeken zelf (een rand van 1 cm breed telt niet, zoals bij twee rechthoeken).
+        if (ox > 1 && oy > 1 && (p.omtrek || q.omtrek)) return veelhoekOppervlakte(snijVeelhoek(vormVanDeel(p), vormVanDeel(q))) > Math.max(ox, oy);
         return ox > 1 && oy > 1;
       }));
       if (overlap) uit.push({ ernst: 'fout', ruimte: a.id, melding: `${pre}${a.naam} en ${b.naam} overlappen elkaar.` });
@@ -676,8 +1335,25 @@ function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], in
     for (let j = i + 1; j < plan.openingen.length; j++) {
       const a = plan.openingen[i]!, b = plan.openingen[j]!;
       if (a.as !== b.as || !gelijk(a.lijn, b.lijn)) continue;
+      if (a.as === 's' && a.richting && b.richting && Math.abs(a.richting[0] * b.richting[1] - a.richting[1] * b.richting[0]) > 1e-3) continue;
       if (Math.abs(a.midden - b.midden) < (a.breedte + b.breedte) / 2 + 5) uit.push({ ernst: 'fout', opening: b.id, melding: `${pre}Twee openingen overlappen elkaar of staan te dicht bij elkaar.` });
     }
+  }
+
+  // Vrije vormen: de vorm zelf, en meubels die (deels) buiten de muren staan.
+  for (const r of plan.ruimtes.filter(heeftVrijeVorm)) {
+    for (const q of delenVan(r).filter((x) => x.omtrek)) {
+      for (const f of vormFouten(vormVanDeel(q))) uit.push({ ernst: f.includes('inspringende') ? 'waarschuwing' : 'fout', ruimte: r.id, melding: `${pre}${r.naam}: ${f.charAt(0).toLowerCase()}${f.slice(1)}` });
+    }
+  }
+  for (const mb of plan.meubels) {
+    if (mb.type === 'tapijt') continue;
+    const v = meubelVoetafdruk(mb);
+    const r = ruimteOp(plan, v.x + v.b / 2, v.y + v.d / 2);
+    if (!r || !heeftVrijeVorm(r)) continue;
+    const vormen = vormenVan(r).map((x) => binnenVorm(x, muren));
+    const buiten = rechthoekVorm(v).some(([x, y]) => !vormen.some((w) => binnenVeelhoek(w, x, y, -1)));
+    if (buiten) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${pre}Een meubel in ${r.naam} staat (deels) in of buiten een muur. Verschuif het.` });
   }
 
   // Daglicht en ventilatie.
@@ -713,15 +1389,34 @@ export function dakAfwerking(cat: PlanCatalogus | undefined, keuze: DakBedekking
 }
 
 /** Delen van een verdieping waar geen ruimte van de verdieping erboven op ligt: daar ligt een plat dak. */
-function vrijeDakstukken(plan: Plattegrond, n: number): { ruimte: Ruimte; stuk: Rechthoek }[] {
+function vrijeDakstukken(plan: Plattegrond, n: number): { ruimte: Ruimte; stuk: Deel }[] {
   const boven = niveauPlan(plan, n + 1).ruimtes.flatMap(delenVan);
-  const uit: { ruimte: Ruimte; stuk: Rechthoek }[] = [];
+  const uit: { ruimte: Ruimte; stuk: Deel }[] = [];
+  const vrijBoven = boven.some((q) => q.omtrek);
   for (const r of niveauPlan(plan, n).ruimtes) for (const deel of delenVan(r)) {
+    if (deel.omtrek || vrijBoven) {
+      // Een vrije vorm (hier of erboven): de veelhoeken van de verdieping erboven eruit knippen.
+      const vrij = boven.reduce<Punt[][]>((stukken, q) => stukken.flatMap((v) => trekVeelhoekAf(v, vormVanDeel(q))), [vormVanDeel(deel)]);
+      for (const v of vrij) uit.push({ ruimte: r, stuk: alsDeel(v) });
+      continue;
+    }
     const vrij = boven.reduce<Rechthoek[]>((stukken, q) => stukken.flatMap((s) => trekAf(s, q)), [deel]);
     for (const s of vrij) uit.push({ ruimte: r, stuk: s });
   }
   return uit;
 }
+
+/** Een veelhoek als deel: een rechthoek als ze er een is (vier hoeken langs x en y), anders met haar omtrek. */
+function alsDeel(v: Punt[]): Deel {
+  const k = kaderVanPunten(v);
+  const recht = v.length === 4 && Math.abs(veelhoekOppervlakte(v) - k.b * k.d) < 0.5;
+  return recht ? { x: fijn(k.x), y: fijn(k.y), b: fijn(k.b), d: fijn(k.d) } : { ...k, omtrek: v.map(fijnPunt) };
+}
+
+/** Oppervlakte van een deel (cm²). */
+const deelOppervlakte = (q: Deel) => (q.omtrek ? veelhoekOppervlakte(vormVanDeel(q)) : q.b * q.d);
+/** De vier hoeken van een rechthoek, met de klok mee. */
+const rechthoekVorm = (q: Rechthoek): Punt[] => [[q.x, q.y], [q.x + q.b, q.y], [q.x + q.b, q.y + q.d], [q.x, q.y + q.d]];
 
 /** Voegt rechthoeken die aan elkaar sluiten samen tot zo weinig mogelijk stroken (liggend, van boven naar onder). */
 export function voegSamen(stukken: Rechthoek[]): Rechthoek[] {
@@ -751,8 +1446,27 @@ export interface DakrandStuk { muur: Muur; vlak: MuurVlak; van: number; tot: num
 function dakrandStukken(plan: Plattegrond, n: number): DakrandStuk[] {
   const hier = murenVan(niveauPlan(plan, n)), boven = murenVan(niveauPlan(plan, n + 1));
   const uit: DakrandStuk[] = [];
+  const zonder = (vrij: [number, number][], b0: number, b1: number) =>
+    vrij.flatMap(([x, y]): [number, number][] => (b1 <= x || b0 >= y ? [[x, y]] : ([[x, Math.max(x, b0)], [Math.min(y, b1), y]] as [number, number][]).filter(([u, v]) => v - u > 0.5)));
   for (const m of hier.filter((x) => x.soort === 'buiten')) {
     const vlak = muurVlak(m, hier);
+    if (m.as === 's' || boven.some((b) => b.as === 's')) {
+      // Met een schuine muur (hier of erboven): langs de as van deze muur, met de grondvlakken als veelhoek.
+      const vorm = vlak.punten ?? rechthoekVorm(vlak);
+      const langs = vorm.map((q) => opAs(m, q)[0]);
+      let vrij: [number, number][] = [[Math.min(...langs), Math.max(...langs)]];
+      for (const b of boven) {
+        const vb = muurVlak(b, boven);
+        // Het grondvlak van de muur erboven als bolle veelhoek (een schuine muur: haar kader rond de as, schuin).
+        const bv = b.as === 's' ? [langsAs(b, b.van, b.lijn - b.dikte / 2), langsAs(b, b.tot, b.lijn - b.dikte / 2), langsAs(b, b.tot, b.lijn + b.dikte / 2), langsAs(b, b.van, b.lijn + b.dikte / 2)] : rechthoekVorm(vb);
+        const samen = snijVeelhoek(vorm, metDeKlok(bv));
+        if (samen.length < 3 || veelhoekOppervlakte(samen) < 1) continue;
+        const s = samen.map((q) => opAs(m, q)[0]);
+        vrij = zonder(vrij, Math.min(...s), Math.max(...s));
+      }
+      for (const [x, y] of vrij) uit.push({ muur: m, vlak, van: x, tot: y });
+      continue;
+    }
     const a0 = m.as === 'h' ? vlak.x : vlak.y, a1 = a0 + (m.as === 'h' ? vlak.b : vlak.d);
     let vrij: [number, number][] = [[a0, a1]];
     // Alle muren van de verdieping erboven die op deze muur staan (ook loodrechte, op een hoek).
@@ -761,7 +1475,7 @@ function dakrandStukken(plan: Plattegrond, n: number): DakrandStuk[] {
       const ox = Math.min(vlak.x + vlak.b, vb.x + vb.b) - Math.max(vlak.x, vb.x), oz = Math.min(vlak.y + vlak.d, vb.y + vb.d) - Math.max(vlak.y, vb.y);
       if (ox <= 0.5 || oz <= 0.5) continue;
       const b0 = m.as === 'h' ? Math.max(vlak.x, vb.x) : Math.max(vlak.y, vb.y), b1 = b0 + (m.as === 'h' ? ox : oz);
-      vrij = vrij.flatMap(([x, y]): [number, number][] => (b1 <= x || b0 >= y ? [[x, y]] : ([[x, Math.max(x, b0)], [Math.min(y, b1), y]] as [number, number][]).filter(([u, v]) => v - u > 0.5)));
+      vrij = zonder(vrij, b0, b1);
     }
     for (const [x, y] of vrij) uit.push({ muur: m, vlak, van: x, tot: y });
   }
@@ -779,8 +1493,11 @@ export interface DakOpbouw {
   terugval?: string;
   /** Bedekking van de platte stukken. */
   platBedekking: DakBedekking;
-  /** Platte dakstukken (op de as van de muren) per verdieping en ruimte; de openingen van de daklichten zitten er nog in. */
-  plat: (Rechthoek & { niveau: number; ruimte: string })[];
+  /**
+   * Platte dakstukken (op de as van de muren) per verdieping en ruimte; de openingen van de daklichten zitten er nog in.
+   * Een stuk van een vrije vorm heeft zijn `omtrek` (x, y, b, d is dan het kader).
+   */
+  plat: (Deel & { niveau: number; ruimte: string })[];
   /** Dakrand: de stukken buitenmuur onder een plat dak, per verdieping. */
   dakranden: (DakrandStuk & { niveau: number })[];
   /**
@@ -808,8 +1525,11 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
     const delen = niveauPlan(plan, top).ruimtes.flatMap(delenVan);
     const x0 = Math.min(...delen.map((q) => q.x)), y0 = Math.min(...delen.map((q) => q.y));
     const x1 = Math.max(...delen.map((q) => q.x + q.b)), y1 = Math.max(...delen.map((q) => q.y + q.d));
-    // Eén rechthoek: de delen van alle ruimtes vullen samen hun omsluitende kader.
-    const open = delen.reduce<Rechthoek[]>((st, q) => st.flatMap((s) => trekAf(s, q)), [{ x: x0, y: y0, b: x1 - x0, d: y1 - y0 }]).filter((s) => s.b > 1 && s.d > 1);
+    // Eén rechthoek: de delen van alle ruimtes vullen samen hun omsluitende kader (een vrije vorm telt met haar omtrek).
+    const kader = { x: x0, y: y0, b: x1 - x0, d: y1 - y0 };
+    const open = delen.some((q) => q.omtrek)
+      ? delen.reduce<Punt[][]>((st, q) => st.flatMap((v) => trekVeelhoekAf(v, vormVanDeel(q))), [rechthoekVorm(kader)]).filter((v) => veelhoekOppervlakte(v) > 100)
+      : delen.reduce<Rechthoek[]>((st, q) => st.flatMap((s) => trekAf(s, q)), [kader]).filter((s) => s.b > 1 && s.d > 1);
     if (open.length) {
       terugval = `Het ${keuze.vorm === 'zadel' ? 'zadeldak' : 'lessenaarsdak'} kan nog niet op deze vorm: ${top > 0 ? `de bovenste verdieping (${verdiepingenVan(plan)[top]?.naam})` : 'de woning'} is geen rechthoek. De 3D, de gevels en de offerte tonen een plat dak.`;
     } else {
@@ -833,8 +1553,10 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
     else if (hellend && n === top) reden = 'ligt onder het hellende dak: daar kan geen lichtkoepel (dakramen zijn voor later). Verwijder hem of kies een plat dak.';
     else {
       // Volledig op de platte dakstukken van één ruimte?
-      const rest = plat.filter((s) => s.niveau === n && s.ruimte === r.id)
-        .reduce<Rechthoek[]>((st, q) => st.flatMap((s) => trekAf(s, q)), [vak]).filter((s) => s.b > 0.5 && s.d > 0.5);
+      const stukken = plat.filter((s) => s.niveau === n && s.ruimte === r.id);
+      const rest = stukken.some((q) => q.omtrek)
+        ? stukken.reduce<Punt[][]>((st, q) => st.flatMap((v) => trekVeelhoekAf(v, vormVanDeel(q))), [rechthoekVorm(vak)]).filter((v) => veelhoekOppervlakte(v) > 0.5)
+        : stukken.reduce<Rechthoek[]>((st, q) => st.flatMap((s) => trekAf(s, q)), [vak]).filter((s) => s.b > 0.5 && s.d > 0.5);
       if (rest.length) {
         reden = niveauPlan(plan, n + 1).ruimtes.flatMap(delenVan).some((q) => overlapt(q, vak))
           ? 'ligt onder een verdieping; een koepel kan alleen in een dak.'
@@ -842,6 +1564,14 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
       } else {
         for (const m of murenVan(niveauPlan(plan, n))) {
           if (m.plus !== r.id && m.min !== r.id) continue;
+          if (m.as === 's') {
+            // Schuine muur: de kleinste afstand van een hoek van het daklicht tot haar as, als die hoek naast de muur ligt.
+            for (const q of rechthoekVorm(vak)) {
+              const [t, w] = opAs(m, q);
+              if (t > m.van - 0.5 && t < m.tot + 0.5) rand = Math.min(rand, Math.abs(w - m.lijn));
+            }
+            continue;
+          }
           const [a, b, v0, v1] = m.as === 'h' ? [vak.x, vak.x + vak.b, vak.y, vak.y + vak.d] : [vak.y, vak.y + vak.d, vak.x, vak.x + vak.b];
           if (Math.min(b, m.tot) - Math.max(a, m.van) > 0.5) rand = Math.min(rand, Math.abs(v0 - m.lijn), Math.abs(v1 - m.lijn));
         }
@@ -849,7 +1579,7 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
     }
     return { licht, reden, rand };
   });
-  const m2 = (x: Rechthoek) => (x.b * x.d) / 10000;
+  const m2 = (x: Deel) => deelOppervlakte(x) / 10000;
   return {
     keuze, top, hellend, terugval,
     platBedekking: keuze.vorm === 'plat' ? keuze.bedekking : keuze.plat ?? standaardDak().bedekking,
@@ -905,6 +1635,74 @@ function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: 
 }
 
 // ---------- 3D ----------
+
+/**
+ * Een prisma dat verticaal doorgetrokken is (`as: 'y'`): het grondvlak `punten` [x, z] in planmaat (plan-y is de z-as),
+ * van y tot y + h. Voor een schuine muur, en voor de vloer en het dak van een vrije vorm.
+ */
+export function grondPrisma(code: string, soort: BlokSoort, kleur: string, punten: Punt[], y: number, h: number, extra: Partial<Blok> = {}): Blok {
+  const k = kaderVanPunten(punten);
+  return {
+    code, soort, vorm: 'prisma', as: 'y', kleur,
+    x: r2(k.x), y: r2(y), z: r2(k.y), b: r2(k.b), h: r2(h), d: r2(k.d),
+    doorsnede: punten.map(([x, z]) => [fijn(x), fijn(z)]),
+    ...extra,
+  };
+}
+
+/**
+ * Draait blokken rond de verticale as over `graden` (van x naar z, zoals `Blok.draai`), rond het punt `rond` [x, z]: het
+ * midden van elk blok draait mee en het blok krijgt die draaiing erbij. Voor een raam, deur of meubel in een schuine
+ * muur. Een prisma met as 'y' draait zijn grondvlak mee. Vormen die in wereldmaat staan en niet om hun midden kunnen
+ * draaien (een liggend prisma, een omtrek, een kuipwand, een schuine poot) gebruikt de woning hier niet; ze blijven staan.
+ */
+export function draaiBlokken(blokken: Blok[], graden: number, rond: Punt = [0, 0]): Blok[] {
+  if (!graden) return blokken;
+  const a = graden / GRAAD, c = Math.cos(a), s = Math.sin(a);
+  const draai = ([x, z]: Punt): Punt => [rond[0] + (x - rond[0]) * c - (z - rond[1]) * s, rond[1] + (x - rond[0]) * s + (z - rond[1]) * c];
+  return blokken.map((b) => {
+    if (b.vorm === 'prisma' && b.as === 'y' && b.doorsnede) {
+      const p = b.doorsnede.map((q) => draai(q));
+      const k = kaderVanPunten(p);
+      return { ...b, x: r2(k.x), z: r2(k.y), b: r2(k.b), d: r2(k.d), doorsnede: p.map(([x, z]) => [fijn(x), fijn(z)]) };
+    }
+    if (b.vorm === 'prisma' || b.omtrek || b.pad || b.schuin) return b;
+    const [cx, cz] = draai([b.x + b.b / 2, b.z + b.d / 2]);
+    const totaal = (((b.draai ?? 0) + graden) % 360 + 360) % 360;
+    return { ...b, x: fijn(cx - b.b / 2), z: fijn(cz - b.d / 2), draai: fijn(totaal) };
+  });
+}
+
+/** Knipt een grondvlak met zijden af op het halfvlak a·x + b·y ≤ c; de nieuwe zijde langs de snede krijgt `nieuw`. */
+function knipMetRanden<T>(punten: Punt[], randen: T[], a: number, b: number, c: number, nieuw: T): [Punt[], T[]] {
+  const p: Punt[] = [], r: T[] = [];
+  const f = ([x, y]: Punt) => a * x + b * y - c;
+  for (let i = 0; i < punten.length; i++) {
+    const v = punten[i]!, w = punten[(i + 1) % punten.length]!, fv = f(v), fw = f(w);
+    const snij = (): Punt => { const t = fv / (fv - fw); return [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])]; };
+    if (fv <= 1e-9) {
+      p.push(v); r.push(randen[i]!);
+      if (fw > 1e-9 && fv < -1e-9) { p.push(snij()); r.push(nieuw); }
+      else if (fw > 1e-9) r[r.length - 1] = nieuw;
+    } else if (fw < -1e-9) { p.push(snij()); r.push(randen[i]!); }
+  }
+  // Samenvallende punten weg.
+  const pp: Punt[] = [], rr: T[] = [];
+  p.forEach((q, i) => { const n = p[(i + 1) % p.length]!; if (Math.hypot(n[0] - q[0], n[1] - q[1]) > 1e-6) { pp.push(q); rr.push(r[i]!); } });
+  return [pp, rr];
+}
+
+/** Richting van de textuur op de vloer van een vrije vorm: die van haar langste zijde, tot op 45° bij x (zoals een rechthoek). */
+function vloerRichting(v: Punt[]): number {
+  let lang = 0, hoek = 0;
+  v.forEach((p, i) => {
+    const q = v[(i + 1) % v.length]!, l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    if (l > lang + 0.5) { lang = l; hoek = Math.atan2(q[1] - p[1], q[0] - p[0]) * GRAAD; }
+  });
+  hoek = ((hoek % 90) + 90) % 90;
+  if (hoek > 45) hoek -= 90;
+  return Math.abs(hoek) < 0.01 ? 0 : fijn(hoek);
+}
 
 export interface OpeningInhoud {
   /** Blokken van raam of deur in lokale coördinaten (x langs de muur vanaf het begin van de opening, z = 0 buitenkant kader). */
@@ -964,14 +1762,21 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     // Trapgaten: voetafdruk van de trappen op de verdieping eronder.
     const gaten = n > 0 ? plan.meubels.filter((m) => m.type === 'trap' && niveauVan(m) === n - 1).map(meubelVoetafdruk) : [];
     const zonderGaten = (r: Rechthoek) => gaten.reduce<Rechthoek[]>((stukken, g) => stukken.flatMap((s) => trekAf(s, g)), [r]);
+    const zonderGatenVorm = (v: Punt[]) => gaten.reduce<Punt[][]>((stukken, g) => stukken.flatMap((q) => trekVeelhoekAf(q, rechthoekVorm(g))), [v]);
     if (n > 0) {
-      for (const r of p.ruimtes) for (const deel of delenVan(r)) for (const s of zonderGaten(deel)) {
-        blokken.push({ code: `plaat_${r.id}`, soort: 'gevel', vorm: 'blok', x: s.x, y: y0 - VLOERDIKTE, z: s.y, b: s.b, h: VLOERDIKTE, d: s.d, kleur: '#c9c6bf' });
+      for (const r of p.ruimtes) for (const deel of delenVan(r)) {
+        if (deel.omtrek) {
+          for (const v of zonderGatenVorm(vormVanDeel(deel))) blokken.push(grondPrisma(`plaat_${r.id}`, 'gevel', '#c9c6bf', v, y0 - VLOERDIKTE, VLOERDIKTE));
+          continue;
+        }
+        for (const s of zonderGaten(deel)) {
+          blokken.push({ code: `plaat_${r.id}`, soort: 'gevel', vorm: 'blok', x: s.x, y: y0 - VLOERDIKTE, z: s.y, b: s.b, h: VLOERDIKTE, d: s.d, kleur: '#c9c6bf' });
+        }
       }
     }
     const isTop = !!opbouw && n === opbouw.top;
     const hellendHier = isTop && topDak && !!opbouw.hellend;
-    const scene = niveau3D(p, cat, { ...opties, laag: n === laatste ? opties.laag : undefined }, zonderGaten, n, hellendHier);
+    const scene = niveau3D(p, cat, { ...opties, laag: n === laatste ? opties.laag : undefined }, zonderGaten, n, hellendHier, zonderGatenVorm);
     for (const b of scene) blokken.push({ ...b, y: r2(b.y + y0) });
     // Plat dak: boven de delen die niet onder een hogere (getoonde) verdieping liggen, en met een dakkeuze ook
     // op de bovenste verdieping.
@@ -984,7 +1789,16 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
       const onderbroken = (m: Muur, punt: number) => m.as === 'v'
         && murenHier.some((h) => h.as === 'h' && h.soort === 'binnen' && gelijk(h.lijn, punt) && (gelijk(h.van, m.lijn) || gelijk(h.tot, m.lijn)))
         && !murenHier.some((h) => h.as === 'h' && h.soort === 'buiten' && gelijk(h.lijn, punt) && h.van <= m.lijn + 0.5 && h.tot >= m.lijn - 0.5);
+      const murenN = murenVan(p);
       for (const { muur: m, vlak, van, tot } of dakrandStukken(plan, n)) {
+        if (m.as === 's') {
+          // Schuine muur: haar grondvlak (met dakkeuze 1,5 cm breder aan elke kant, zoals de muurkap) tussen van en tot.
+          const g = schuinVlak(m, murenN, opbouw ? 1.5 : 0), { d } = asVan(m);
+          let [pts] = knipMetRanden(g.punten!, g.randen!, -d[0], -d[1], -van, 'snede' as MuurRand);
+          [pts] = knipMetRanden(pts, pts.map(() => 'snede' as MuurRand), d[0], d[1], tot, 'snede');
+          if (pts.length >= 3) blokken.push(grondPrisma(`dakrand_${m.id}_${r2(van)}`, 'kunststof', '#2b2b2b', pts, opbouw ? y0 + H - 1 : y0 + H, opbouw ? VLOERDIKTE + 3 : VLOERDIKTE + 2));
+          continue;
+        }
         const x = gelijk(van, vlak.y) && onderbroken(m, m.van) ? m.van : van, y = gelijk(tot, vlak.y + vlak.d) && onderbroken(m, m.tot) ? m.tot : tot;
         const basis = { code: `dakrand_${m.id}_${van}`, soort: 'kunststof' as BlokSoort, vorm: 'blok' as const, kleur: '#2b2b2b', y: y0 + H, h: VLOERDIKTE + 2 };
         if (!opbouw) {
@@ -999,8 +1813,18 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     }
     if (platHier) {
       const lichten = opbouw ? opbouw.daklichten.filter((l) => !l.reden && niveauVan(l.licht) === n).map((l) => l.licht) : [];
-      const bedekt: Rechthoek[] = [];
+      const bedekt: Rechthoek[] = [], bedektVorm: Punt[][] = [];
       for (const { ruimte: r, stuk } of vrijeDakstukken(plan, n)) {
+        if (stuk.omtrek) {
+          // Vrije vorm: dezelfde opbouw, als prisma's met het grondvlak van het stuk (min de openingen van de daklichten).
+          const v = vormVanDeel(stuk);
+          if (!opbouw) { blokken.push(grondPrisma(`dak_${r.id}`, 'dak', '#2e2e2e', v, y0 + H, VLOERDIKTE)); continue; }
+          for (const q of lichten.reduce<Punt[][]>((st, l) => st.flatMap((x) => trekVeelhoekAf(x, rechthoekVorm(l))), [v])) {
+            blokken.push(grondPrisma(`dakplaat_${r.id}`, 'gevel', '#c9c6bf', q, y0 + H, VLOERDIKTE - DAK_LAAG, { zijden: { 'y+': platAfw }, randen: q.map(() => platAfw) }));
+            bedektVorm.push(q);
+          }
+          continue;
+        }
         if (!opbouw) {
           // Zonder dakkeuze: het effen donkere blok van altijd.
           blokken.push({ code: `dak_${r.id}`, soort: 'dak', vorm: 'blok', x: stuk.x, y: y0 + H, z: stuk.y, b: stuk.b, h: VLOERDIKTE, d: stuk.d, kleur: '#2e2e2e' });
@@ -1022,6 +1846,7 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
       for (const s of voegSamen(bedekt)) {
         blokken.push({ code: `dak_${n}`, soort: platAfw.soort, vorm: 'blok', x: s.x - 0.5, y: y0 + H + VLOERDIKTE - DAK_LAAG, z: s.y - 0.5, b: s.b + 1, h: DAK_LAAG, d: s.d + 1, kleur: platAfw.kleur });
       }
+      for (const v of bedektVorm) blokken.push(grondPrisma(`dak_${n}`, platAfw.soort, platAfw.kleur, verschuifZijden(v, 0.5), y0 + H + VLOERDIKTE - DAK_LAAG, DAK_LAAG));
       for (const l of lichten) blokken.push(...daklichtBlokken(l, cat.daklichten?.[l.type]?.vorm ?? 'koepel', y0 + H + VLOERDIKTE, VLOERDIKTE));
     }
     if (hellendHier) blokken.push(...hellendDak3D(plan, cat, p, opbouw.hellend!, y0 + H, dakAfwerking(cat, opbouw.keuze.bedekking)));
@@ -1078,6 +1903,37 @@ function aanlegBlokken(plan: Plattegrond): Blok[] {
     const b0 = naarPlus ? rand + vanaf : rand - vanaf - diep;
     return m.as === 'h' ? { x: a, y: b0, b: lang, d: diep } : { x: b0, y: a, b: diep, d: lang };
   };
+  if (p.ruimtes.some(heeftVrijeVorm)) {
+    // Met een vrije vorm: alles als veelhoek (een terras voor een schuine gevel ligt schuin, in de richting van de gevel).
+    const woningV = p.ruimtes.flatMap(vormenVan).map((v) => verschuifZijden(v, half));
+    const gelegdV: Punt[][] = [];
+    const legV = (code: string, soort: BlokSoort, kleur: string, v: Punt[], m: Muur) => {
+      const stukken = [...woningV, ...gelegdV].reduce<Punt[][]>((st, w) => st.flatMap((x) => trekVeelhoekAf(x, w)), [metDeKlok(v)]);
+      const hoek = Math.atan2(asVan(m).d[1], asVan(m).d[0]) * GRAAD;
+      stukken.forEach((x, i) => {
+        if (veelhoekOppervlakte(x) < 25) return;
+        uit.push(grondPrisma(stukken.length > 1 ? `${code}_${i}` : code, soort, kleur, x, AANLEG.boven - AANLEG.dik, AANLEG.dik, m.as === 'h' ? {} : { vlakRichting: fijn(hoek) }));
+        gelegdV.push(x);
+      });
+    };
+    // Vlak tegen de gevel, in de assen van de muur (s langs, w dwars), naar buiten.
+    const vlakV = (o: Opening, m: Muur, naast: number, vanaf: number, diep: number): Punt[] => {
+      const naarPlus = !m.min, rand = m.lijn + (naarPlus ? m.dikte / 2 : -m.dikte / 2);
+      const a = o.midden - o.breedte / 2 - naast, b = a + o.breedte + 2 * naast;
+      const w0 = naarPlus ? rand + vanaf : rand - vanaf - diep, w1 = w0 + diep;
+      return [langsAs(m, a, w0), langsAs(m, b, w0), langsAs(m, b, w1), langsAs(m, a, w1)];
+    };
+    const buitenV = p.openingen
+      .map((o) => ({ o, m: muurVanOpening(o, muren) }))
+      .filter((x): x is { o: Opening; m: Muur } => !!x.m && x.m.soort === 'buiten' && (x.o.soort === 'schuifraam' || x.o.soort === 'buitendeur'));
+    for (const { o, m } of buitenV) if (o.soort === 'schuifraam') legV(`terras_${o.id}`, 'tegel', '#b5b0a6', vlakV(o, m, AANLEG.terrasNaast, 0, AANLEG.terrasDiep), m);
+    for (const { o, m } of buitenV) {
+      if (o.soort !== 'buitendeur') continue;
+      legV(`terras_${o.id}`, 'tegel', '#b5b0a6', vlakV(o, m, AANLEG.stoepNaast, 0, AANLEG.stoepDiep), m);
+      if (ruimte.get(m.plus ?? m.min ?? '')?.type === 'hal') legV(`pad_${o.id}`, 'grind', '#b9b1a0', vlakV(o, m, AANLEG.padNaast, AANLEG.stoepDiep, AANLEG.padLang - AANLEG.stoepDiep), m);
+    }
+    return uit;
+  }
   const buiten = p.openingen
     .map((o) => ({ o, m: muurVanOpening(o, muren) }))
     .filter((x): x is { o: Opening; m: Muur } => !!x.m && x.m.soort === 'buiten' && (x.o.soort === 'schuifraam' || x.o.soort === 'buitendeur'));
@@ -1093,7 +1949,7 @@ function aanlegBlokken(plan: Plattegrond): Blok[] {
 }
 
 /** Eén verdieping (vloer op y = 0). */
-function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, zonderGaten: (r: Rechthoek) => Rechthoek[], n = 0, onderHellendDak = false): Blok[] {
+function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, zonderGaten: (r: Rechthoek) => Rechthoek[], n = 0, onderHellendDak = false, zonderGatenVorm: (v: Punt[]) => Punt[][] = (v) => [v]): Blok[] {
   const blokken: Blok[] = [];
   const muren = murenVan(plan);
   const H = plan.muurhoogte;
@@ -1115,11 +1971,18 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     if (k && k.b > 0.05 && k.h > 0.05 && k.d > 0.05) blokken.push(k);
   };
 
-  // Vloeren (met trapgat).
+  // Vloeren (met trapgat). Een vrije vorm is een prisma met haar grondvlak; de textuur volgt haar langste muur.
   for (const r of plan.ruimtes) {
     const v = cat.vloeren[r.vloer];
-    for (const s of delenVan(r).flatMap(zonderGaten)) {
-      voeg({ code: `vloer_${r.id}`, soort: v?.soort ?? 'gevel', vorm: 'blok', x: s.x, y: 0, z: s.y, b: s.b, h: 1.5, d: s.d, kleur: v?.kleur ?? '#cfccc4' });
+    for (const deel of delenVan(r)) {
+      if (deel.omtrek) {
+        const vorm = vormVanDeel(deel);
+        for (const stuk of zonderGatenVorm(vorm)) voeg(grondPrisma(`vloer_${r.id}`, v?.soort ?? 'gevel', v?.kleur ?? '#cfccc4', stuk, 0, 1.5, { vlakRichting: vloerRichting(vorm) }));
+        continue;
+      }
+      for (const s of zonderGaten(deel)) {
+        voeg({ code: `vloer_${r.id}`, soort: v?.soort ?? 'gevel', vorm: 'blok', x: s.x, y: 0, z: s.y, b: s.b, h: 1.5, d: s.d, kleur: v?.kleur ?? '#cfccc4' });
+      }
     }
   }
 
@@ -1131,10 +1994,13 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   const hoekMuur = (m: Muur, p: number) => muren.find((v) => v.as !== m.as && v.soort === 'buiten' && gelijk(v.lijn, p) && (gelijk(v.van, m.lijn) || gelijk(v.tot, m.lijn)));
 
   // Muren met openingen.
+  const muurAfw = new Map(muren.map((x) => [x.id, x]));
   for (const m of muren) {
     const vlak = muurVlak(m, muren);
     const plusWand = wandVan(m.plus), minWand = wandVan(m.min);
-    const begin = m.as === 'h' ? vlak.x : vlak.y, einde = begin + (m.as === 'h' ? vlak.b : vlak.d);
+    // Een schuine muur: begin en einde van haar grondvlak langs haar as.
+    const langs = vlak.punten?.map((q) => opAs(m, q)[0]);
+    const begin = langs ? Math.min(...langs) : m.as === 'h' ? vlak.x : vlak.y, einde = langs ? Math.max(...langs) : begin + (m.as === 'h' ? vlak.b : vlak.d);
     // Op een verdieping loopt de buitenmuur door voor de rand van de vloerplaat.
     const onderkant = n > 0 && m.soort === 'buiten' ? -VLOERDIKTE : 0;
     const stuk = (code: string, a: number, b: number, y0: number, y1: number) => {
@@ -1148,6 +2014,28 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
         return;
       }
       const buiten = m.soort === 'buiten' ? buitenAfw(m, y0) : undefined;
+      if (m.as === 's') {
+        // Schuine muur: haar grondvlak tussen a en b langs de as, als prisma; elke zijde haar eigen materiaal.
+        const { d } = asVan(m);
+        let [pts, rnd] = knipMetRanden<MuurRand>(vlak.punten!, vlak.randen!, -d[0], -d[1], -a, 'snede');
+        [pts, rnd] = knipMetRanden(pts, rnd, d[0], d[1], b, 'snede');
+        if (pts.length < 3) return;
+        const plusAfw = m.plus || !buiten ? plusWand : buiten, minAfw = m.min || !buiten ? minWand : buiten;
+        const afw = (r: MuurRand): GevelAfwerking | null => {
+          if (r === 'min') return minAfw;
+          if (r === 'plus') return plusAfw;
+          if (r === 'snede') return null;
+          if (r === 'kop' || r === 'naad') return buiten ?? null;
+          // De voortzetting van een zijde van de rechte muur op de hoek: het materiaal van die zijde.
+          const R = muurAfw.get(r.muur);
+          if (!R) return null;
+          const ruimte = R[r.kant];
+          return ruimte ? wandVan(ruimte) : R.soort === 'buiten' ? buitenAfw(R, y0) : null;
+        };
+        const top = onderHellendDak && buiten && y1 >= H - 0.1 ? { zijden: { 'y+': buiten } } : {};
+        voeg(grondPrisma(code, 'gevel', pleister, pts, y0, y1 - y0, { randen: rnd.map(afw), ...top }));
+        return;
+      }
       // Binnenmuur die tot in het gevelvlak loopt (zie `Plan3DOpties.gevelkoppen`): de buitenmuur aan haar begin en einde.
       const kopIn = opties.gevelkoppen && m.soort === 'binnen' && m.as === 'h'
         ? [vlak.verlengdBegin && gelijk(a, begin) ? hoekMuur(m, m.van) : undefined, vlak.verlengdEinde && gelijk(b, einde) ? hoekMuur(m, m.tot) : undefined]
@@ -1221,6 +2109,12 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
 
 /** Raam, deur of doorgang op de juiste plaats en in de juiste richting in de muur. */
 function openingBlokken(o: Opening, m: Muur, inhoud: OpeningInhoud | undefined, cat: PlanCatalogus): Blok[] {
+  if (m.as === 's') {
+    // Schuine muur: zoals in een staande muur op dezelfde lijn (die heeft d = (0, 1) en n = (1, 0)), en dan gedraaid tot
+    // n en d van de schuine muur, rond de oorsprong.
+    const { n } = asVan(m);
+    return draaiBlokken(openingBlokken({ ...o, as: 'v' }, { ...m, as: 'v' }, inhoud, cat), Math.atan2(n[1], n[0]) * GRAAD);
+  }
   const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
   const half = m.dikte / 2;
   if (o.soort === 'doorgang') return [];
@@ -1452,12 +2346,47 @@ export interface OpeningAfstanden {
 export function openingAfstanden(plan: Plattegrond, o: Opening, muren = murenVan(niveauPlan(plan, niveauVan(o)))): OpeningAfstanden | undefined {
   const m = muurVanOpening(o, muren);
   if (!m) return undefined;
-  const vlakBegin = m.van + dwarsDikte(m, m.van, muren) / 2, vlakEinde = m.tot - dwarsDikte(m, m.tot, muren) / 2;
+  const binnenPlus = m.soort === 'buiten' ? !!m.plus : o.naarPlus;
+  let vlakBegin = m.van + dwarsDikte(m, m.van, muren) / 2, vlakEinde = m.tot - dwarsDikte(m, m.tot, muren) / 2;
+  if (m.as === 's') {
+    // Schuine muur: het binnenvlak loopt van hoek tot hoek in haar grondvlak (de zijde aan de kant van de ruimte), en stopt
+    // eerder waar een andere muur er aan de binnenkant op uitkomt (zoals de dwarsmuur bij een rechte muur).
+    const v = muurVlak(m, muren), i = v.randen!.indexOf(binnenPlus ? 'plus' : 'min');
+    const s1 = opAs(m, v.punten![i]!)[0], s2 = opAs(m, v.punten![(i + 1) % v.punten!.length]!)[0];
+    [vlakBegin, vlakEinde] = [Math.min(s1, s2), Math.max(s1, s2)];
+    const { d } = asVan(m), binnenLijn = langsAs(m, 0, m.lijn + ((binnenPlus ? 1 : -1) * m.dikte) / 2);
+    for (const [p, isBegin] of [[m.van, true], [m.tot, false]] as const) {
+      const P = langsAs(m, p, m.lijn);
+      for (const x of muren) {
+        if (x === m || (x.as === 's' && gelijk(x.lijn, m.lijn) && Math.abs(x.richting![0] * d[1] - x.richting![1] * d[0]) < 1e-3)) continue;
+        const [t, w] = opAs(x, P);
+        if (!gelijk(w, x.lijn) || t < x.van - 0.5 || t > x.tot + 0.5) continue;
+        const ax = asVan(x);
+        if (Math.abs(ax.d[0] * d[1] - ax.d[1] * d[0]) < 1e-3) continue;
+        // Het vlak van die muur aan de kant van deze muur.
+        const naarLijf: Punt = isBegin ? d : [-d[0], -d[1]];
+        const kant = naarLijf[0] * ax.n[0] + naarLijf[1] * ax.n[1] > 0 ? 1 : -1;
+        const q = snijpunt(binnenLijn, d, langsAs(x, 0, x.lijn + (kant * x.dikte) / 2), ax.d);
+        // Alleen als het binnenvlak die muur ook echt raakt (niet het stuk ernaast, bv. een dikkere buitenmuur voorbij de hoek).
+        if (!q) continue;
+        const tq = opAs(x, q)[0];
+        if (tq < x.van - 0.5 || tq > x.tot + 0.5) continue;
+        const sq = q[0] * d[0] + q[1] * d[1];
+        if (isBegin) vlakBegin = Math.max(vlakBegin, sq); else vlakEinde = Math.min(vlakEinde, sq);
+      }
+    }
+  } else {
+    // Een rechte muur die op een schuine muur uitkomt: tot waar haar binnenvlak het vlak van die muur raakt.
+    for (const [p, isBegin] of [[m.van, true], [m.tot, false]] as const) {
+      if (dwarsDikte(m, p, muren)) continue;
+      const tot = binnenTotSchuin(m, p, isBegin, binnenPlus, muren);
+      if (tot !== undefined) { if (isBegin) vlakBegin = tot; else vlakEinde = tot; }
+    }
+  }
   const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
   const anderen = plan.openingen.filter((x) => x.id !== o.id && niveauVan(x) === niveauVan(o) && muurVanOpening(x, [m]) === m);
   const punten = [vlakBegin, vlakEinde, a, b, ...anderen.flatMap((x) => [x.midden - x.breedte / 2, x.midden + x.breedte / 2])]
     .map((x) => Math.round(x * 10) / 10).filter((x, i, l) => l.indexOf(x) === i).sort((p, q) => p - q);
-  const binnenPlus = m.soort === 'buiten' ? !!m.plus : o.naarPlus;
   return { muur: m, vlakBegin, vlakEinde, begin: a - vlakBegin, einde: vlakEinde - b, ketting: punten, binnenPlus };
 }
 
@@ -1473,7 +2402,22 @@ export function meubelAfstanden(plan: Plattegrond, m: Meubel, muren = murenVan(n
   const cx = v.x + v.b / 2, cy = v.y + v.d / 2;
   const r = ruimteOp(plan, cx, cy, niveauVan(m));
   if (!r) return undefined;
-  const deel = delenVan(r).find((p) => cx > p.x && cx < p.x + p.b && cy > p.y && cy < p.y + p.d) ?? delenVan(r)[0]!;
+  const deel = delenVan(r).find((p) => binnen(p, cx, cy)) ?? delenVan(r)[0]!;
+  if (deel.omtrek) {
+    // Vrije vorm: vanuit het midden van het meubel recht naar links, rechts, boven en onder tot het binnenvlak van de muren
+    // (bij een schuine muur dus niet loodrecht op die muur gemeten).
+    const w = binnenVorm(vormVanDeel(deel), muren);
+    const snij = (i: 0 | 1, lijn: number) => w.flatMap((q, k) => {
+      const z = w[(k + 1) % w.length]!;
+      if ((q[i] - lijn) * (z[i] - lijn) > 0 || q[i] === z[i]) return [];
+      return [q[1 - i]! + ((lijn - q[i]) / (z[i] - q[i])) * (z[1 - i]! - q[1 - i]!)];
+    });
+    const hor = snij(1, cy), ver = snij(0, cx);
+    if (!hor.length || !ver.length) return undefined;
+    const x0 = Math.max(...hor.filter((x) => x <= v.x + 0.01), Math.min(...hor)), x1 = Math.min(...hor.filter((x) => x >= v.x + v.b - 0.01), Math.max(...hor));
+    const y0 = Math.max(...ver.filter((y) => y <= v.y + 0.01), Math.min(...ver)), y1 = Math.min(...ver.filter((y) => y >= v.y + v.d - 0.01), Math.max(...ver));
+    return { x0, x1, y0, y1, links: v.x - x0, rechts: x1 - (v.x + v.b), boven: v.y - y0, onder: y1 - (v.y + v.d) };
+  }
   const dikte = (as: 'h' | 'v', lijn: number, van: number, tot: number) => {
     const op = muren.filter((x) => x.as === as && gelijk(x.lijn, lijn) && x.tot > van + 0.5 && x.van < tot - 0.5);
     return op.length ? Math.max(...op.map((x) => x.dikte)) : 0;

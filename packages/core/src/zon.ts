@@ -150,18 +150,25 @@ export interface ZonOpGevel {
  * zonwering, geen zonnestudie. Stappen van 5 minuten.
  */
 export function zonOpGevels(maand: number, dag: number, noord = 0, plaats: ZonPlaats = BELGIE, utc: number = utcVerschil(maand, dag)): ZonOpGevel[] {
+  return (Object.keys(KIJKT) as ZonKant[]).map((kant) => ({ kant, ...zonOpRichting(maand, dag, KIJKT[kant], noord, plaats, utc) }));
+}
+
+/**
+ * Zon op een gevel die in een willekeurige richting kijkt, bv. een schuine gevel (`kijkt` = graden met de klok mee vanaf
+ * de bovenkant van het plan, zoals `buitenRichting` van een muur en `Gevel.schuin.kijkt`). Zelfde rekenwijze als
+ * `zonOpGevels`, die dit voor de vier kanten doet.
+ */
+export function zonOpRichting(maand: number, dag: number, kijkt: number, noord = 0, plaats: ZonPlaats = BELGIE, utc: number = utcVerschil(maand, dag)): Omit<ZonOpGevel, 'kant'> {
   const stap = 5;
-  return (Object.keys(KIJKT) as ZonKant[]).map((kant) => {
-    const richting = gevelRichting(kant, noord);
-    const periodes: { van: number; tot: number }[] = [];
-    let open: number | undefined;
-    for (let m = 0; m <= 24 * 60; m += stap) {
-      const s = zonnestand({ maand, dag, uur: m / 60 }, plaats, utc);
-      // De zon schijnt op de gevel als ze boven de horizon staat en minder dan 90° van de kijkrichting van de gevel.
-      const op = m < 24 * 60 && s.hoogte > 0 && Math.cos((s.azimut - richting) * RAD) > 0.02;
-      if (op && open === undefined) open = m / 60;
-      if (!op && open !== undefined) { periodes.push({ van: open, tot: m / 60 }); open = undefined; }
-    }
-    return { kant, richting, windstreek: windrichting(richting), periodes, uren: periodes.reduce((t, p) => t + p.tot - p.van, 0) };
-  });
+  const richting = (((kijkt - noord) % 360) + 360) % 360;
+  const periodes: { van: number; tot: number }[] = [];
+  let open: number | undefined;
+  for (let m = 0; m <= 24 * 60; m += stap) {
+    const s = zonnestand({ maand, dag, uur: m / 60 }, plaats, utc);
+    // De zon schijnt op de gevel als ze boven de horizon staat en minder dan 90° van de kijkrichting van de gevel.
+    const op = m < 24 * 60 && s.hoogte > 0 && Math.cos((s.azimut - richting) * RAD) > 0.02;
+    if (op && open === undefined) open = m / 60;
+    if (!op && open !== undefined) { periodes.push({ van: open, tot: m / 60 }); open = undefined; }
+  }
+  return { richting, windstreek: windrichting(richting), periodes, uren: periodes.reduce((t, p) => t + p.tot - p.van, 0) };
 }

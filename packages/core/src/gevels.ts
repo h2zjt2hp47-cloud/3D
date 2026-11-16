@@ -5,7 +5,11 @@
  */
 import { DAK_BEDEKKING, DAK_OPBOUW, OPSTAND_HOOGTE, OPSTAND_RAND, dakHoogte, gevelOnderDak, oppervlakOnderDak } from './dak.js';
 import {
+  asVan,
   buitenKant,
+  buitenRichting,
+  muurVlak,
+  opAs,
   dakAfwerking,
   dakOpbouw,
   delenVan,
@@ -66,6 +70,11 @@ export interface Gevel {
   /** Hoogte boven het maaiveld (cm) → y in de tekening, en terug. */
   naarY: (h: number) => number;
   vanY: (y: number) => number;
+  /**
+   * Een schuine gevel (na de vier kanten): waar ze naar kijkt. `kant` is dan de dichtste van de vier, en `naarU`/`vanU`
+   * werken met de plaats langs de schuine muur (`midden` van een opening, zie `Muur`).
+   */
+  schuin?: SchuineGevel;
 }
 
 /** Patroon en lijnkleur van een gevelmateriaal in de tekening. */
@@ -85,6 +94,28 @@ const SPIEGEL: Record<string, string> = {
   draai_l: 'draai_r', draai_r: 'draai_l', draaikip_l: 'draaikip_r', draaikip_r: 'draaikip_l', schuif_l: 'schuif_r', schuif_r: 'schuif_l',
 };
 const r1 = (x: number) => Math.round(x * 10) / 10;
+
+/** Een schuine gevel: de richting waarin ze kijkt (graden met de klok mee vanaf de bovenkant van het plan). */
+export interface SchuineGevel { kijkt: number }
+
+/** Een richting op het plan in woorden: boven, rechtsboven, rechts … (acht streken). */
+export function richtingNaam(graden: number): string {
+  return ['boven', 'rechtsboven', 'rechts', 'rechtsonder', 'onder', 'linksonder', 'links', 'linksboven'][Math.round((((graden % 360) + 360) % 360) / 45) % 8]!;
+}
+
+/**
+ * Van waar tot waar een buitenmuur in een aanzicht loopt (langs de muur): een rechte muur van as tot as plus een halve
+ * muurdikte aan elk einde, een schuine muur haar buitenvlak (van hoek tot hoek in haar grondvlak).
+ */
+function uiterst(m: Muur, muren: Muur[]): [number, number] {
+  if (m.as !== 's') return [m.van - m.dikte / 2, m.tot + m.dikte / 2];
+  const v = muurVlak(m, muren), i = v.randen!.indexOf(m.plus ? 'min' : 'plus');
+  const a = opAs(m, v.punten![i]!)[0], b = opAs(m, v.punten![(i + 1) % v.punten!.length]!)[0];
+  return [Math.min(a, b), Math.max(a, b)];
+}
+
+/** Verdieping van een muur: die van de ruimte erachter. */
+const niveauVanMuur = (plan: Plattegrond, m: Muur) => niveauVan(plan.ruimtes.find((r) => r.id === (m.plus ?? m.min)) ?? {});
 
 export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelInfo | undefined = () => undefined, cat?: PlanCatalogus): Gevel[] {
   const delen = plan.ruimtes.flatMap(delenVan);
@@ -115,7 +146,11 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
   const tegenover: Record<GevelKant, GevelKant> = { boven: 'onder', onder: 'boven', links: 'rechts', rechts: 'links' };
 
   const uit: Gevel[] = [];
-  for (const kant of ['boven', 'onder', 'links', 'rechts'] as GevelKant[]) {
+  /**
+   * Eén aanzicht: de buitenmuren die `kies` aanduidt, met `nu` van een plaats langs de muur naar x in het aanzicht (gezien
+   * van buiten, links → rechts) en `vu` terug. Een schuine gevel (`schuin`) krijgt geen hellend dak en geen daklichten.
+   */
+  const maak = (kant: GevelKant, kies: (m: Muur) => boolean, nu: (v: number) => number, vu: (u: number) => number, schuin?: SchuineGevel): Gevel | undefined => {
     const vormen: VormResultaat[] = [];
     // Ramen en deuren komen na alle muren en sokkels (anders tekent een volgende muur erover).
     const openingVormen: VormResultaat[] = [];
@@ -127,11 +162,12 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
 
     for (let n = 0; n < niveaus; n++) {
       const p = niveauPlan(plan, n);
-      const muren = murenVan(p).filter((m) => m.soort === 'buiten' && m.as === as && (kant === 'boven' || kant === 'links' ? !m.min : !m.plus));
+      const alleMuren = murenVan(p), muren = alleMuren.filter(kies);
       const y0 = vloerHoogte(plan, n);
       const segs: [number, number][] = [];
       for (const m of muren) {
-        const a = naarU[kant](m.van - t), b = naarU[kant](m.tot + t);
+        const [e0, e1] = uiterst(m, alleMuren);
+        const a = nu(e0), b = nu(e1);
         const u0 = Math.min(a, b), u1 = Math.max(a, b);
         segs.push([u0, u1]);
         umin = Math.min(umin, u0); umax = Math.max(umax, u1);
@@ -145,10 +181,10 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
           vlakken.push({ code: `sokkel.${n}.${m.id}`, sleutel: vlakSleutel(m), niveau: n, muur: m.id, ruimte, sokkel: true });
         }
         // Onder een hellend dak loopt de muur door tot tegen het dak: de topgevel hoort bij hetzelfde muurvlak.
-        if (hellend && dak && n === dak.top) {
+        if (!schuin && hellend && dak && n === dak.top) {
           const code = `topgevel.${n}.${m.id}`;
           if ((m.as === 'h') !== (hellend.nokAs === 'x')) {
-            const punten = gevelOnderDak(hellend, Math.max(m.van - t, hellend.p0), Math.min(m.tot + t, hellend.p1)).map(([a, h]) => [naarU[kant](a), sy(y0 + H + h)] as const);
+            const punten = gevelOnderDak(hellend, Math.max(m.van - t, hellend.p0), Math.min(m.tot + t, hellend.p1)).map(([a, h]) => [nu(a), sy(y0 + H + h)] as const);
             if (punten.length) {
               const us = punten.map((q) => q[0]), ys = punten.map((q) => q[1]);
               vormen.push({
@@ -169,7 +205,7 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
         // Ramen en deuren in deze muur.
         for (const o of p.openingen.filter((x) => muurVanOpening(x, [m]) === m)) {
           const i = info(o) ?? {};
-          const a1 = naarU[kant](o.midden - o.breedte / 2), b1 = naarU[kant](o.midden + o.breedte / 2);
+          const a1 = nu(o.midden - o.breedte / 2), b1 = nu(o.midden + o.breedte / 2);
           const ox = Math.min(a1, b1), ob = o.breedte;
           const onderkant = y0 + o.borstwering, bovenkant = onderkant + o.hoogte;
           if (i.kast) openingVormen.push({ code: `kast.${o.id}`, x: r1(ox - 2), y: sy(bovenkant + i.kast), breedte: ob + 4, hoogte: i.kast, vulling: i.kleur ?? '#383e42' });
@@ -187,7 +223,7 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
       }
       segmentenPerNiveau.push(segs);
     }
-    if (!vormen.length) continue;
+    if (!vormen.length) return undefined;
     vormen.push(...openingVormen);
 
     // Dakrand boven elk stuk dat niet onder een hogere verdieping ligt.
@@ -208,7 +244,7 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
       }
     });
     // Daklichten op de platte daken: opstand en glas boven de dakrand (niet als een hogere verdieping ervoor staat).
-    for (const { licht: l, reden } of dak?.daklichten ?? []) {
+    for (const { licht: l, reden } of schuin ? [] : dak?.daklichten ?? []) {
       if (reden) continue;
       const n = niveauVan(l);
       const [a0, a1] = as === 'h' ? [l.x, l.x + l.b] : [l.y, l.y + l.d];
@@ -218,14 +254,14 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
         return kant === 'boven' ? q.y < l.y : kant === 'onder' ? q.y + q.d > l.y + l.d : kant === 'links' ? q.x < l.x : q.x + q.b > l.x + l.b;
       });
       if (ervoor) continue;
-      const u0 = Math.min(naarU[kant](a0), naarU[kant](a1)), b = a1 - a0;
+      const u0 = Math.min(nu(a0), nu(a1)), b = a1 - a0;
       const yd = vloerHoogte(plan, n) + H + VLOERDIKTE;
       const bol = cat?.daklichten?.[l.type]?.vorm === 'lichtstraat' ? 24 : Math.min(30, Math.max(16, Math.min(l.b, l.d) * 0.28));
       vormen.push({ code: `daklicht.${l.id}.opstand`, x: r1(u0 - OPSTAND_RAND), y: sy(yd + OPSTAND_HOOGTE), breedte: r1(b + 2 * OPSTAND_RAND), hoogte: OPSTAND_HOOGTE, vulling: '#cfcdc7', lijn: '#55524c' });
       vormen.push({ code: `daklicht.${l.id}.glas`, x: r1(u0 - OPSTAND_RAND + 1), y: sy(yd + OPSTAND_HOOGTE + bol), breedte: r1(b + 2 * OPSTAND_RAND - 2), hoogte: r1(bol), afronding: Math.min(12, bol / 2), vulling: '#cfe0e6', lijn: '#55524c' });
     }
     // Hellend dak: in doorsnede aan de kant van de topgevel, als vlak aan de kant van de dakvoet.
-    if (hellend && dak && dakAfw && segmentenPerNiveau[dak.top]?.length) {
+    if (!schuin && hellend && dak && dakAfw && segmentenPerNiveau[dak.top]?.length) {
       const yb = vloerHoogte(plan, dak.top) + H, o = hellend.oversteek;
       const dikte = (DAK_OPBOUW + DAK_BEDEKKING) / Math.cos((hellend.helling * Math.PI) / 180);
       const pa = hellend.p0 - o, pb = hellend.p1 + o;
@@ -235,8 +271,8 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
           ? [[pa, dakHoogte(hellend, pa)], [hellend.nokP, hellend.nok], [pb, dakHoogte(hellend, pb)]]
           : [[pa, dakHoogte(hellend, pa)], [pb, dakHoogte(hellend, pb)]];
         const punten = [
-          ...onder.map(([p, h]) => [naarU[kant](p), sy(yb + h)] as const),
-          ...[...onder].reverse().map(([p, h]) => [naarU[kant](p), sy(yb + h + dikte)] as const),
+          ...onder.map(([p, h]) => [nu(p), sy(yb + h)] as const),
+          ...[...onder].reverse().map(([p, h]) => [nu(p), sy(yb + h + dikte)] as const),
         ];
         const us = punten.map((q) => q[0]), ys = punten.map((q) => q[1]);
         vormen.push({
@@ -244,7 +280,7 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
           pad: `M ${punten.map(([u, y]) => `${r1(u)} ${y}`).join(' L ')} Z`, vulling: dakAfw.kleur, lijn: '#2b2b28',
         });
       } else {
-        const u0 = Math.min(naarU[kant](hellend.q0 - o), naarU[kant](hellend.q1 + o)), b = hellend.q1 - hellend.q0 + 2 * o;
+        const u0 = Math.min(nu(hellend.q0 - o), nu(hellend.q1 + o)), b = hellend.q1 - hellend.q0 + 2 * o;
         if (hellend.vorm === 'zadel' || dak.keuze.richting === kant) {
           // Kant van de dakvoet: je kijkt op het dakvlak, van de onderkant van de oversteek tot de nok.
           vormen.push({ code: 'dak.vlak', x: r1(u0), y: sy(yb + hellend.top), breedte: r1(b), hoogte: r1(hellend.top + o * hellend.tan), vulling: dakAfw.kleur, lijn: '#2b2b28', ...patroon });
@@ -263,7 +299,7 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
     segmentenPerNiveau.forEach((segs, n) => {
       if (!segs.length) return;
       const p = niveauPlan(plan, n);
-      const muren = murenVan(p).filter((m) => m.soort === 'buiten' && m.as === as && (kant === 'boven' || kant === 'links' ? !m.min : !m.plus));
+      const muren = murenVan(p).filter(kies);
       // Alleen de uiteinden van de gevel en de randen van de openingen (geen muuraansluitingen).
       const gevelStukken = [...segs].sort((x, y) => x[0] - y[0]).reduce<[number, number][]>((acc, [a, b]) => {
         const laatste = acc[acc.length - 1];
@@ -273,8 +309,8 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
       const punten = new Set<number>(gevelStukken.flatMap(([a, b]) => [r1(a), r1(b)]));
       for (const o of p.openingen) {
         if (!muren.some((m) => muurVanOpening(o, [m]) === m)) continue;
-        punten.add(r1(naarU[kant](o.midden - o.breedte / 2)));
-        punten.add(r1(naarU[kant](o.midden + o.breedte / 2)));
+        punten.add(r1(nu(o.midden - o.breedte / 2)));
+        punten.add(r1(nu(o.midden + o.breedte / 2)));
       }
       const lijst = [...punten].sort((a, b) => a - b);
       for (let i = 0; i + 1 < lijst.length; i++) {
@@ -297,12 +333,41 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
       maatlijnen.push({ code: `hoogte.${i}`, x1: r1(umax), y1: sy(hoogtes[i + 1]!), x2: r1(umax), y2: sy(hoogtes[i]!), afstand: 70, tekst: `${Math.round(hoogtes[i + 1]! - hoogtes[i]!)}` });
     }
 
-    const rol = voordeurKant === kant ? 'Voorgevel' : voordeurKant && tegenover[voordeurKant] === kant ? 'Achtergevel' : voordeurKant ? 'Zijgevel' : 'Gevel';
-    const naam = `${rol} (${kant === 'boven' ? 'bovenkant' : kant === 'onder' ? 'onderkant' : kant === 'links' ? 'linkerkant' : 'rechterkant'} van het plan)`;
-    uit.push({
+    const voordeurHier = schuin && plan.openingen.some((o) => niveauVan(o) === 0 && info(o)?.voordeur && murenVan(niveauPlan(plan, 0)).some((m) => kies(m) && muurVanOpening(o, [m]) === m));
+    const rol = schuin ? (voordeurHier ? 'Voorgevel' : 'Schuine gevel')
+      : voordeurKant === kant ? 'Voorgevel' : voordeurKant && tegenover[voordeurKant] === kant ? 'Achtergevel' : voordeurKant ? 'Zijgevel' : 'Gevel';
+    const naam = schuin ? `${rol} (${voordeurHier ? 'schuin, ' : ''}kijkt naar ${richtingNaam(schuin.kijkt)})`
+      : `${rol} (${kant === 'boven' ? 'bovenkant' : kant === 'onder' ? 'onderkant' : kant === 'links' ? 'linkerkant' : 'rechterkant'} van het plan)`;
+    return {
       kant, naam, tekening: { titel: `${naam} · cm`, eenheid: 'cm', vormen, maatlijnen }, vlakken,
-      naarU: naarU[kant], vanU: vanU[kant], naarY: sy, vanY: (y) => top - y,
-    });
+      naarU: nu, vanU: vu, naarY: sy, vanY: (y) => top - y,
+      ...(schuin ? { schuin } : {}),
+    };
+  };
+  for (const kant of ['boven', 'onder', 'links', 'rechts'] as GevelKant[]) {
+    const as = kant === 'boven' || kant === 'onder' ? 'h' : 'v';
+    const g = maak(kant, (m) => m.soort === 'buiten' && m.as === as && (kant === 'boven' || kant === 'links' ? !m.min : !m.plus), naarU[kant], vanU[kant]);
+    if (g) uit.push(g);
+  }
+  // Schuine gevels: per richting waarin ze kijken een eigen aanzicht, recht ervoor bekeken (na de vier kanten).
+  const groepen = new Map<number, Muur[]>();
+  for (let n = 0; n < niveaus; n++) {
+    for (const m of murenVan(niveauPlan(plan, n))) {
+      const k = m.as === 's' ? buitenRichting(m) : undefined;
+      if (k === undefined) continue;
+      const sleutel = Math.round(k * 10);
+      groepen.set(sleutel, [...(groepen.get(sleutel) ?? []), m]);
+    }
+  }
+  for (const [sleutel, muren] of groepen) {
+    const kijkt = sleutel / 10, a = (kijkt * Math.PI) / 180;
+    // Van buiten bekeken: je kijkt tegen de richting in; rechts van je ligt (o.y, −o.x) met o = (sin, −cos) de richting.
+    const rechts: [number, number] = [-Math.cos(a), -Math.sin(a)];
+    const d = asVan(muren[0]!).d, zin = d[0] * rechts[0] + d[1] * rechts[1] > 0 ? 1 : -1;
+    const s0 = Math.min(...muren.flatMap((m) => uiterst(m, murenVan(niveauPlan(plan, niveauVanMuur(plan, m)))).map((x) => zin * x)));
+    const kies = (m: Muur) => m.as === 's' && m.soort === 'buiten' && Math.round((buitenRichting(m) ?? -1) * 10) === sleutel;
+    const g = maak(buitenKant(muren[0]!)!, kies, (v) => zin * v - s0, (u) => zin * (u + s0), { kijkt });
+    if (g) uit.push(g);
   }
   return uit;
 }
@@ -311,6 +376,7 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
 export function kantVan(plan: Plattegrond, o: Opening): GevelKant | undefined {
   const m = muurVanOpening(o, murenVan(niveauPlan(plan, niveauVan(o))));
   if (!m || m.soort !== 'buiten') return undefined;
+  if (m.as === 's') return buitenKant(m);
   if (m.as === 'h') return m.min ? 'onder' : 'boven';
   return m.min ? 'rechts' : 'links';
 }
@@ -332,6 +398,8 @@ export interface GevelOppervlak {
    * lessenaarsdak. Ontbreekt zonder hellend dak.
    */
   topgevel?: number;
+  /** Een schuine gevel: waar ze naar kijkt (graden met de klok mee vanaf de bovenkant van het plan); `kant` is de dichtste. */
+  kijkt?: number;
 }
 
 /**
@@ -363,7 +431,8 @@ export function gevelOppervlaktes(plan: Plattegrond): GevelOppervlak[] {
     for (const m of muren) {
       const kant = buitenKant(m);
       if (!kant) continue;
-      const lengte = buitenLengte(m, muren);
+      // Een schuine muur: de lengte van haar buitenvlak, van hoek tot hoek.
+      const lengte = m.as === 's' ? (([a, b]) => b - a)(uiterst(m, muren)) : buitenLengte(m, muren);
       // Onder een hellend dak loopt de gevel door tot tegen het dak (cm²).
       let top = 0;
       if (hellend && (m.as === 'h') !== (hellend.nokAs === 'x')) {
@@ -387,6 +456,7 @@ export function gevelOppervlaktes(plan: Plattegrond): GevelOppervlak[] {
         netto: Math.max(0, bruto + top - sokkelBruto - (open - openSokkel)) / 10000,
         sokkel: Math.max(0, sokkelBruto - openSokkel) / 10000,
         ...(top > 0 ? { topgevel: top / 10000 } : {}),
+        ...(m.as === 's' ? { kijkt: buitenRichting(m) } : {}),
       });
     }
   });
