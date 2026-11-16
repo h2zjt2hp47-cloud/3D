@@ -23,6 +23,7 @@ import {
   type VerfBereik,
 } from '../../core/src/index.js';
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus } from '../../core/voorbeelden/inrichting.js';
+import { openingenVan } from '../../core/voorbeelden/raamraster.js';
 import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld } from './hulp.js';
 import { kanOngedaan, momentopname, ongedaan, positieVan, resultaat, toestand, wijzig, type Toestand } from './staat.js';
@@ -65,14 +66,15 @@ let terug: { voegRaamToe: (niveau: number, muur: string, midden: number) => stri
 /** Info per opening voor de gevelaanzichten (kleur, vakken, zonweringskast). */
 export function gevelInfo(o: Opening) {
   const p = positieVan(o);
-  if (!p || p.model !== 'RAAM') return undefined;
+  if (!p || p.model === 'AANBOUW') return undefined;
   const r = resultaat(p);
   const a = r.afgeleid;
-  const n = Math.max(1, Number(a.n) || 1);
+  // Garagepoort: één dicht vlak in de kleur van de poort (het aanzicht tekent geen belijning).
+  if (p.model === 'POORT') return { label: p.code, kleur: String(a.kleur_hex ?? '#383e42'), vakken: ['vast'], paneel: true };
   return {
     label: p.code,
     kleur: String(a.kb ?? '#383e42'),
-    vakken: [a.op1, a.op2, a.op3].slice(0, n).map(String),
+    vakken: openingenVan(r),
     kast: (Number(a.zon_kast) || 0) / 10,
     paneel: p.keuzes.type === 'voordeur' && p.keuzes.paneel !== 'glasstrook',
     voordeur: p.keuzes.type === 'voordeur',

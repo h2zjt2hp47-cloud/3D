@@ -17,7 +17,9 @@ export type BlokSoort =
   // Gevelbekleding: liggende planken, leien, zink met staande naad, natuursteen, sierpleister.
   | 'planken_h' | 'leien' | 'zink' | 'natuursteen' | 'pleister'
   // Dakbedekking (woning): dakpannen, roofing (bitumen in banen), grind en groendak. EPDM is de effen soort `dak`.
-  | 'pannen' | 'roofing' | 'grind' | 'groendak';
+  | 'pannen' | 'roofing' | 'grind' | 'groendak'
+  // Gelakt schrijnwerk (ramen, deuren): mat, structuurlak met een fijne korrel, of glanzend.
+  | 'lak_mat' | 'lak_structuur' | 'lak_glans';
 
 /** Zijde van een blok (balk), voor een ander materiaal op één zijvlak (bv. baksteen buiten, verf binnen). */
 export type BlokZijde = 'x+' | 'x-' | 'z+' | 'z-' | 'y+';

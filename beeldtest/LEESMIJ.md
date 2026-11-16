@@ -46,6 +46,8 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
 | `bouw-dak` | dak en lichtkoepel (15/11): zadeldak met rode pannen op de verdieping (topgevels, oversteek, nokvorst), grind op het lage platte dak en een lichtkoepel erin. Genomen ná de twee beelden hierboven: het zet een dak in het project |
 | `bouw-zon` | lichtinval (15/11): 21 juni om 13 u, van boven in het gelijkvloers gekeken. De verdieping en het dak zijn verborgen maar werpen schaduw; de zonnevlekken van het schuifraam, de terrasdeur en de lichtkoepel liggen op de vloer. Genomen ná `bouw-dak` (de koepel komt daar vandaan) |
+| `bouw-stolp`, `bouw-deur-zijlicht`, `bouw-hefschuif`, `bouw-vouwwand`, `bouw-steellook` | de raamtypes van 15/11: een raam van de voorbeeldwoning krijgt met één tegel een andere indeling (stolp, deur met zij- en bovenlicht, hef-schuif 3-delig, vouwwand 4-delig, steellook) |
+| `bouw-garagepoort` | sectionale garagepoort met cassettes en vensters (eigen model, 15/11) |
 | `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame op schuine poten (13/11) |
 | `fraser-schuin` | vier schuine poten met een kruis, zitting in twee lagen, schaal die rond de zitting uitsteekt |
 | `satie-schuin`, `quin-schuin` | trommel tot op de vloer of op een lage voet, met één of vier losse kussens tegen de schaal |

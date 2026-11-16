@@ -31,8 +31,11 @@ export interface PlanSvgOpties {
   voorbeeld?: { x: number; y: number; b: number; d: number };
   /** Voorbeeld van een nieuwe opening op een muur. */
   voorbeeldOpening?: Opening;
-  /** Extra info per opening met een offertepositie: label (bv. P3) en de opening per vak. */
-  raamInfo?: (o: Opening) => { label?: string; vakken?: string[] } | undefined;
+  /**
+   * Extra info per opening met een offertepositie: label (bv. P3), de opening per vak (links → rechts gezien van binnen)
+   * en de breedte per vak (in dezelfde volgorde; alleen de verhouding telt). Zonder breedtes zijn de vakken even breed.
+   */
+  raamInfo?: (o: Opening) => { label?: string; vakken?: string[]; breedtes?: number[] } | undefined;
   /** Ids van ruimtes/openingen met een fout (rood omlijnd). */
   fouten?: Set<string>;
   /** Raster en grepen weglaten (voor de afdruk). */
@@ -274,11 +277,27 @@ function openingSvg(o: Opening, m: Muur | undefined, opties: PlanSvgOpties, geko
   const binnenPlus = m ? (m.soort === 'buiten' ? !!m.plus : o.naarPlus) : o.naarPlus;
   const s = binnenPlus ? 1 : -1;
   const info = opties.raamInfo?.(o);
+  // Loopt lokaal x (links → rechts gezien van binnen) tegen de planrichting in?
+  const lokaalNaarPlan = o.as === 'h' ? !binnenPlus : binnenPlus;
+  /** Van–tot langs de muur per vak (in de volgorde van de vakken), met de breedtes van de positie of gelijk verdeeld. */
+  const stukken = (vakken: string[]): [number, number][] => {
+    const breedtes = info?.breedtes?.length === vakken.length ? info.breedtes : vakken.map(() => 1);
+    const som = breedtes.reduce((t, x) => t + x, 0) || 1;
+    let c = a;
+    const plan = (lokaalNaarPlan ? [...breedtes].reverse() : breedtes).map((x): [number, number] => { const van = c; c += (o.breedte * x) / som; return [van, c]; });
+    return lokaalNaarPlan ? plan.reverse() : plan;
+  };
   if (o.soort === 'raam' || o.soort === 'schuifraam') {
     delen.push(rect(a, b, -half, half, `fill="#fbfbf9" ${stijl} stroke-width="1.6"`));
     delen.push(lijn(a, b, -2.5, `${stijl} stroke-width="1.4"`), lijn(a, b, 2.5, `${stijl} stroke-width="1.4"`));
     const vakken = info?.vakken ?? [];
-    if (o.soort === 'schuifraam' || vakken.some((v) => v.startsWith('schuif'))) {
+    if (o.soort === 'schuifraam' && vakken.length >= 3 && vakken.every((v) => v.startsWith('draai'))) {
+      // Vouwwand: de delen half opengevouwen, als een zigzag naar binnen.
+      const grenzen = [a, ...stukken(vakken).map(([, tot]) => tot).sort((p, q) => p - q)];
+      const uit = Math.min(45, (o.breedte / vakken.length) * 0.45);
+      const punten = grenzen.map((c, i) => { const d = s * (half + (i % 2 ? uit : 0)); return o.as === 'h' ? `${n(c)},${n(L + d)}` : `${n(L + d)},${n(c)}`; });
+      delen.push(`<polyline data-symbool="vouw" points="${punten.join(' ')}" fill="none" ${stijl} stroke-width="2.4" stroke-linejoin="round"/>`);
+    } else if (o.soort === 'schuifraam' || vakken.some((v) => v.startsWith('schuif'))) {
       const d = s * (half + 18), pijl = Math.min(30, o.breedte / 6);
       delen.push(lijn(o.midden - o.breedte / 4, o.midden + o.breedte / 4, d, `${stijl} stroke-width="2"`));
       const [px, py] = o.as === 'h' ? [o.midden + o.breedte / 4, L + d] : [L + d, o.midden + o.breedte / 4];
@@ -287,12 +306,10 @@ function openingSvg(o: Opening, m: Muur | undefined, opties: PlanSvgOpties, geko
         : `<path d="M ${n(px - pijl / 3)} ${n(py - pijl / 2)} L ${n(px)} ${n(py)} L ${n(px + pijl / 3)} ${n(py - pijl / 2)}" fill="none" ${stijl} stroke-width="2"/>`);
     } else if (vakken.length) {
       // Draaiende vakken: boog naar binnen. "Links gezien van binnen" hangt af van de kant van de muur.
-      const nv = vakken.length, w = o.breedte / nv;
-      const lokaalNaarPlan = o.as === 'h' ? !binnenPlus : binnenPlus; // true: lokaal x loopt tegen de planrichting in
+      const stuk = stukken(vakken);
       vakken.forEach((op, i) => {
         if (!op.startsWith('draai')) return;
-        const j = lokaalNaarPlan ? nv - 1 - i : i;
-        const va = a + j * w, vb = va + w;
+        const [va, vb] = stuk[i]!;
         const linksLokaal = op.endsWith('_l');
         const scharnierBegin = lokaalNaarPlan ? !linksLokaal : linksLokaal;
         delen.push(boog(o.as, L + s * half, va, vb, scharnierBegin, s, `stroke="${kleur}" stroke-dasharray="6 5" stroke-opacity="0.75"`));
@@ -301,14 +318,33 @@ function openingSvg(o: Opening, m: Muur | undefined, opties: PlanSvgOpties, geko
   } else if (o.soort === 'doorgang') {
     delen.push(lijn(a, a, 0, ''), rect(a - 1, a + 1, -half, half, `fill="${kleur}"`), rect(b - 1, b + 1, -half, half, `fill="${kleur}"`));
     delen.push(lijn(a, b, -half, `${stijl} stroke-dasharray="6 6" stroke-width="1.2"`), lijn(a, b, half, `${stijl} stroke-dasharray="6 6" stroke-width="1.2"`));
+  } else if (o.soort === 'garagepoort') {
+    // Sectionale poort: het blad in de opening (buitenkant) en, gestippeld, waar het geopend onder het plafond hangt.
+    delen.push(rect(a, a + 4, -half, half, `fill="${kleur}"`), rect(b - 4, b, -half, half, `fill="${kleur}"`));
+    delen.push(lijn(a + 4, b - 4, -s * Math.max(0, half - 12), `${stijl} stroke-width="4"`));
+    const diep = Math.min(o.hoogte, 240);
+    delen.push(rect(a + 6, b - 6, s > 0 ? half : -half - diep, s > 0 ? half + diep : -half, `fill="none" ${stijl} stroke-dasharray="8 6" stroke-opacity="0.7" stroke-width="1.4"`));
   } else {
     // Deur: kader in de muur, blad en draaicirkel naar de draaikant.
-    const k = o.soort === 'buitendeur' && info?.vakken?.[0] ? info.vakken[0] : undefined;
+    const vakken = o.soort === 'buitendeur' ? info?.vakken ?? [] : [];
     delen.push(rect(a, a + 4, -half, half, `fill="${kleur}"`), rect(b - 4, b, -half, half, `fill="${kleur}"`));
     const ds = o.naarPlus ? 1 : -1;
-    const scharnierBegin = o.scharnier === 'begin';
-    void k;
-    delen.push(boog(o.as, L + ds * half, a + 4, b - 4, scharnierBegin, ds, stijl));
+    if (vakken.length >= 2) {
+      // Buitendeur met meer vakken (dubbele deur, deur met zijlicht): per vak een deurblad met draaicirkel of vast glas.
+      for (const [i, [va, vb]] of stukken(vakken).entries()) {
+        const op = vakken[i]!;
+        if (va > a + 0.5) delen.push(rect(va - 2, va + 2, -half, half, `fill="${kleur}"`));
+        if (op.startsWith('draai')) {
+          const linksLokaal = op.endsWith('_l');
+          delen.push(boog(o.as, L + ds * half, va + 2, vb - 2, lokaalNaarPlan ? !linksLokaal : linksLokaal, ds, stijl));
+        } else {
+          delen.push(lijn(va, vb, -half, `${stijl} stroke-width="1.6"`), lijn(va, vb, half, `${stijl} stroke-width="1.6"`));
+          delen.push(lijn(va, vb, -2.5, `${stijl} stroke-width="1.4"`), lijn(va, vb, 2.5, `${stijl} stroke-width="1.4"`));
+        }
+      }
+    } else {
+      delen.push(boog(o.as, L + ds * half, a + 4, b - 4, o.scharnier === 'begin', ds, stijl));
+    }
   }
   if (info?.label) {
     const k = opties.schaal ? Math.min(1, Math.max(0.06, opties.schaal / 1.6)) : 1;

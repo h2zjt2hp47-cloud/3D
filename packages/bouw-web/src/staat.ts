@@ -20,14 +20,18 @@ import {
   type RuimteType,
 } from '../../core/src/index.js';
 import { aanbouw, aanbouwPrijslijst } from '../../core/voorbeelden/aanbouw.js';
+import { garagepoort, poortPrijslijst } from '../../core/voorbeelden/garagepoort.js';
 import type { PlanRegelOpties } from '../../core/voorbeelden/inrichting.js';
-import { raamdeur, raamPrijslijst } from '../../core/voorbeelden/raam.js';
+import { berekenRaam, raamdeur, raamPrijslijst } from '../../core/voorbeelden/raam.js';
+import { nieuweIndeling } from '../../core/voorbeelden/raamraster.js';
 import { raamKeuzes, voorbeeldWoning } from '../../core/voorbeelden/woning.js';
 
-export type ModelCode = 'RAAM' | 'AANBOUW';
-export const MODELLEN: Record<ModelCode, { model: ProductModel; prijslijst: Prijslijst; label: string }> = {
+export type ModelCode = 'RAAM' | 'AANBOUW' | 'POORT';
+/** `zonderPrijs`: het model dient alleen om te tonen (nog geen stuklijst); de schermen tonen dan geen bedrag. */
+export const MODELLEN: Record<ModelCode, { model: ProductModel; prijslijst: Prijslijst; label: string; zonderPrijs?: boolean }> = {
   RAAM: { model: raamdeur, prijslijst: raamPrijslijst, label: 'Raam of deur' },
   AANBOUW: { model: aanbouw, prijslijst: aanbouwPrijslijst, label: 'Aanbouw met schuifraam' },
+  POORT: { model: garagepoort, prijslijst: poortPrijslijst, label: 'Sectionale garagepoort', zonderPrijs: true },
 };
 
 export interface Inmeting {
@@ -398,11 +402,29 @@ export function resultaat(p: Positie): ConfiguratieResultaat {
   let r = cache.get(sleutel);
   if (!r) {
     const m = MODELLEN[p.model];
-    r = berekenConfiguratie(m.model, p.keuzes, m.prijslijst);
+    // Raam of deur: met de tekening van het raster (alle indelingen); de andere modellen rechtstreeks uit de motor.
+    r = p.model === 'RAAM' ? berekenRaam(p.keuzes) : berekenConfiguratie(m.model, p.keuzes, m.prijslijst);
+    // Een raamindeling die nog geen prijs heeft, telt nergens mee (offerte, werf): prijs en kost op nul. De stuklijst
+    // zelf blijft, voor het materiaal.
+    if (p.model === 'RAAM' && nieuweIndeling(r)) {
+      r = {
+        ...r,
+        stuklijst: r.stuklijst.map((s) => ({ ...s, kostprijsPerEenheid: 0, kost: 0 })),
+        prijs: { ...r.prijs, kostprijs: 0, brutoprijsExcl: 0, verkoopprijsExcl: 0, verkoopprijsIncl: 0, margeProcent: null },
+      };
+    }
     if (cache.size > 300) cache.clear();
     cache.set(sleutel, r);
   }
   return r;
+}
+
+/**
+ * Toont deze positie geen bedrag? Een model dat alleen toont (garagepoort), of een raamindeling die sinds 15/11 bestaat
+ * en nog geen prijs heeft (`nieuweIndeling`). Elk scherm vraagt het hier, zodat er nergens een bedrag doorglipt.
+ */
+export function zonderPrijs(p: Positie): boolean {
+  return MODELLEN[p.model].zonderPrijs === true || (p.model === 'RAAM' && nieuweIndeling(resultaat(p)));
 }
 
 export const nieuweId = (prefix: string) => `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
@@ -424,7 +446,7 @@ export function nieuwePositie(model: ModelCode, extra: Keuzes = {}, naam?: strin
     code: '',
     naam: naam ?? MODELLEN[model].label,
     model,
-    keuzes: model === 'RAAM' ? raamKeuzes({ winddruk: t.meta.winddruk ?? 800, ...extra }) : { ...standaardKeuzes(aanbouw), ...extra },
+    keuzes: model === 'RAAM' ? raamKeuzes({ winddruk: t.meta.winddruk ?? 800, ...extra }) : { ...standaardKeuzes(MODELLEN[model].model), ...extra },
     aantal: 1,
   };
   return p;
@@ -448,10 +470,15 @@ export function lokaalTegenPlan(o: Opening): { tegen: boolean; binnenPlus: boole
 
 /** Zet maten, ruimte en draairichting van de opening over naar de positie. */
 export function openingNaarPositie(o: Opening, p: Positie) {
+  if (p.model === 'POORT') {
+    p.keuzes.breedte = Math.round(o.breedte * 10);
+    p.keuzes.hoogte = Math.round(o.hoogte * 10);
+    return;
+  }
   if (p.model !== 'RAAM') return;
   p.keuzes.breedte = Math.round(o.breedte * 10);
   p.keuzes.hoogte = Math.round(o.hoogte * 10);
-  if (o.soort === 'raam') p.keuzes.borstwering = Math.round(o.borstwering * 10);
+  if (o.soort === 'raam' && p.keuzes.type === 'raam') p.keuzes.borstwering = Math.round(o.borstwering * 10);
   p.keuzes.verdieping = niveauVan(o);
   const muren = murenVan(niveauPlan(t.plan, niveauVan(o)));
   const m = muurVanOpening(o, muren);
@@ -472,16 +499,49 @@ export function openingNaarPositie(o: Opening, p: Positie) {
   }
 }
 
+/**
+ * De vrije plaats voor een opening op haar muur (cm langs de muur): van 10 cm voorbij de hoek, of 5 cm voorbij de
+ * opening ernaast, tot hetzelfde aan de andere kant. Zo weet de configurator of een bredere indeling nog past.
+ */
+export function vrijeMuur(o: Opening): { van: number; tot: number } | undefined {
+  const m = murenVan(niveauPlan(t.plan, niveauVan(o))).find((x) => x.as === o.as && Math.abs(x.lijn - o.lijn) < 0.5 && x.van <= o.midden && x.tot >= o.midden);
+  if (!m) return undefined;
+  let van = m.van + 10, tot = m.tot - 10;
+  for (const b of t.plan.openingen) {
+    if (b.id === o.id || b.as !== o.as || Math.abs(b.lijn - o.lijn) > 0.5 || niveauVan(b) !== niveauVan(o)) continue;
+    if (b.midden < o.midden) van = Math.max(van, b.midden + b.breedte / 2 + 5);
+    else tot = Math.min(tot, b.midden - b.breedte / 2 - 5);
+  }
+  return { van, tot };
+}
+
+/** Een opening die breder of smaller werd, schuift op tot ze weer op haar muur staat (als ze erop past). */
+function houdOpMuur(o: Opening) {
+  const vrij = vrijeMuur(o);
+  if (vrij && vrij.tot - vrij.van >= o.breedte) o.midden = Math.min(vrij.tot - o.breedte / 2, Math.max(vrij.van + o.breedte / 2, o.midden));
+}
+
 /** Zet maten, soort en draairichting van de positie over naar de opening. */
 export function positieNaarOpening(p: Positie, o: Opening) {
+  const breedteVoor = o.breedte;
+  if (p.model === 'POORT') {
+    if (typeof p.keuzes.breedte === 'number') o.breedte = p.keuzes.breedte / 10;
+    if (typeof p.keuzes.hoogte === 'number') o.hoogte = p.keuzes.hoogte / 10;
+    o.soort = 'garagepoort';
+    o.borstwering = 0;
+    if (Math.abs(o.breedte - breedteVoor) > 0.05) houdOpMuur(o);
+    return;
+  }
   if (p.model !== 'RAAM') return;
   const k = p.keuzes;
   if (typeof k.breedte === 'number') o.breedte = k.breedte / 10;
+  if (Math.abs(o.breedte - breedteVoor) > 0.05) houdOpMuur(o);
   if (typeof k.hoogte === 'number') o.hoogte = k.hoogte / 10;
   const type = String(k.type);
-  o.soort = type === 'raam' ? 'raam' : type === 'schuif' ? 'schuifraam' : 'buitendeur';
-  if (o.soort === 'raam' && typeof k.borstwering === 'number') o.borstwering = k.borstwering / 10;
-  if (o.soort !== 'raam') o.borstwering = 0;
+  // Schuivende en vouwende delen tekent de plattegrond als schuifraam; een vaste glaswand is een raam tot op de vloer.
+  o.soort = type === 'raam' || type === 'glaswand' ? 'raam' : type === 'schuif' || type === 'hefschuif' || type === 'vouwwand' ? 'schuifraam' : 'buitendeur';
+  if (type === 'raam' && typeof k.borstwering === 'number') o.borstwering = k.borstwering / 10;
+  if (type !== 'raam') o.borstwering = 0;
   if (o.soort === 'buitendeur') {
     const { tegen, binnenPlus } = lokaalTegenPlan(o);
     let links: boolean | undefined;

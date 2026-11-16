@@ -13,9 +13,11 @@ export const PAKKET3D_SOORT = 'bouw-3d-pakket';
  * kijker weigert het pakket dan met een uitleg, in plaats van het verkeerd te tonen.
  *   1  de blokken zoals op 15/11/2026 (woning met plat dak, ramen, deuren, meubels);
  *   2  dak en lichtkoepels: de vorm `prisma` met een `doorsnede`, de daksoorten (pannen, roofing, grind, groendak) en
- *      blokken die alleen schaduw werpen (`alleenSchaduw`).
+ *      blokken die alleen schaduw werpen (`alleenSchaduw`);
+ *   3  de raamtypes van 16/11: gelakt schrijnwerk als eigen soorten (`lak_mat`, `lak_structuur`, `lak_glans`); een
+ *      oudere kijker zou die als stof tekenen.
  */
-export const PAKKET3D_VERSIE = 2;
+export const PAKKET3D_VERSIE = 3;
 
 /** De woning tot en met één verdieping; `laag` is dezelfde scène met de muren op 110 cm (om binnen te kijken). */
 export interface Pakket3DNiveau {

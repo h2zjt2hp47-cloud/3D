@@ -1,14 +1,18 @@
 /**
- * Positie bewerken: formulier uit het productmodel (raam/deur of aanbouw), met controles,
+ * Positie bewerken: formulier uit het productmodel (raam/deur, garagepoort of aanbouw), met controles,
  * prijs, technische gegevens, inbegrepen/niet inbegrepen, bestellijst, vooraanzicht en 3D.
+ *
+ * Ramen en deuren: bovenaan de indeling staan kant-en-klare indelingen als tegels met een tekening (één tik);
+ * de instelling per vak zit eronder achter "Meer opties". Kleuren staan als een waaier van stalen.
  */
 import { tekenSvg, type ConfiguratieResultaat, type Kenmerk } from '../../core/src/index.js';
-import { bouwAanbouw3D } from '../../core/voorbeelden/aanbouw3d.js';
-import { ruitenVan } from '../../core/voorbeelden/raam.js';
-import { raamScene } from '../../core/voorbeelden/raam3d.js';
+import { berekenRaam, ruitenVan } from '../../core/voorbeelden/raam.js';
+import { INDELINGEN, indelingVan, pasIndelingToe, type Indeling } from '../../core/voorbeelden/raamindelingen.js';
+import { raamKeuzes } from '../../core/voorbeelden/woning.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, el, eur, getal, kopieer, num } from './hulp.js';
-import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, wijzig, type Positie } from './staat.js';
+import { positieScene } from './positie-3d.js';
+import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -34,7 +38,7 @@ function keuzeLabel(p: Positie, kenmerk: string): string {
 
 // ---------- controles per model ----------
 export function controles(p: Positie, r: ConfiguratieResultaat): Controle[] {
-  return p.model === 'AANBOUW' ? aanbouwControles(p, r) : raamControles(p, r);
+  return p.model === 'AANBOUW' ? aanbouwControles(p, r) : p.model === 'POORT' ? poortControles(r) : raamControles(p, r);
 }
 
 function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
@@ -43,16 +47,27 @@ function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
   const type = String(p.keuzes.type);
   const n = num(a.n), vb = num(a.vb), vh = num(a.vh), kg = num(a.vleugel_kg), uw = num(a.uw);
   if (type === 'raam' || type === 'terrasdeur') {
+    // Per vak zijn eigen breedte en hoogte (ongelijke vakken, een bovenlicht boven één vak …).
     for (let i = 1; i <= n; i++) {
       const op = String(a[`op${i}`]);
       const maxb = num(eigenschap(p, `vak${i}`, 'maxb')), maxh = num(eigenschap(p, `vak${i}`, 'maxh'));
       if (op === 'vast') continue;
-      const ok = vb <= maxb && vh <= maxh;
-      uit.push({ titel: `Vak ${i}: maat binnen de grens van het beslag`, toestand: ok ? 'ok' : 'fout', waarde: `${getal(vb)} × ${getal(vh)} / max ${getal(maxb)} × ${getal(maxh)} mm` });
+      const b = num(a[`kb${i}`]), h = num(a[`kh${i}`]);
+      const ok = b <= maxb && h <= maxh;
+      uit.push({ titel: `Vak ${i}: maat binnen de grens van het beslag`, toestand: ok ? 'ok' : 'fout', waarde: `${getal(b)} × ${getal(h)} / max ${getal(maxb)} × ${getal(maxh)} mm` });
     }
+    if (num(a.n_stolp) > 0) uit.push({ titel: 'Stolp: vleugels scharnieren aan de buitenkant', toestand: a.stolp_ok === true ? 'ok' : 'fout', waarde: a.stolp_ok === true ? 'links en rechts' : 'draairichting klopt niet' });
+  }
+  if (eigenschap(p, 'type', 'delen') === true) {
+    const maxb = num(eigenschap(p, 'type', 'deelb')), maxh = num(eigenschap(p, 'type', 'deelh'));
+    uit.push({ titel: 'Delen: maat binnen de grens van het systeem', toestand: vb <= maxb && vh <= maxh ? 'ok' : 'fout', waarde: `${getal(n)} × ${getal(vb)} × ${getal(vh)} / max ${getal(maxb)} × ${getal(maxh)} mm` });
+  }
+  if (type === 'voordeur' && num(a.nzl) > 0) {
+    const b = num(a.wb);
+    uit.push({ titel: 'Breedte van de deur naast het zijlicht', toestand: b >= 800 && b <= 1200 ? 'ok' : 'fout', waarde: `${getal(b)} mm (80 tot 120 cm)` });
   }
   if (num(a.beweeg) > 0 || type === 'voordeur') {
-    const max = type === 'schuif' ? 250 : 130;
+    const max = num(eigenschap(p, 'type', 'maxkg')) || 130;
     uit.push({ titel: 'Gewicht zwaarste vleugel', toestand: kg > max ? 'fout' : kg > max * 0.85 ? 'let-op' : 'ok', waarde: `${getal(kg)} / max ${max} kg` });
   }
   if (a.veilig_nodig === true && num(a.glas_m2) > 0) {
@@ -66,7 +81,7 @@ function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
   if (a.heeft_stijl === true) {
     const nodig = num(a.i_nodig), aanwezig = num(a.i_aanwezig);
     const benut = aanwezig > 0 ? nodig / aanwezig : 9;
-    const wat = type === 'schuif' ? 'Ontmoetingsstijlen schuifraam' : num(a.stijl_l) > 0 ? 'Tussenstijl' : 'Regel onder het bovenlicht';
+    const wat = type === 'schuif' || type === 'hefschuif' ? 'Ontmoetingsstijlen schuifraam' : num(a.stijl_l) > 0 ? 'Tussenstijl' : num(a.bl) > 0 ? 'Regel onder het bovenlicht' : 'Regel boven het vak onderaan';
     uit.push({
       titel: `Statiek: ${wat.toLowerCase()}`, toestand: benut > 1 ? 'fout' : benut > 0.85 ? 'let-op' : 'ok',
       waarde: `nodig ${getal(nodig, 1)} · aanwezig ${getal(aanwezig, 1)} cm⁴ (${getal(benut * 100)} %)`,
@@ -82,6 +97,16 @@ function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
   }
   if (p.keuzes.rc2 === true) uit.push({ titel: 'Inbraakwerend RC2', toestand: eigenschap(p, 'glas', 'veilig') === true || num(a.glas_m2) === 0 ? 'ok' : 'fout', waarde: 'beslag + gelaagd glas' });
   return uit;
+}
+
+function poortControles(r: ConfiguratieResultaat): Controle[] {
+  const a = r.afgeleid;
+  const b = num(r.kenmerken.find((k) => k.code === 'breedte')?.waarde), h = num(r.kenmerken.find((k) => k.code === 'hoogte')?.waarde);
+  return [
+    { titel: 'Secties', toestand: 'ok', waarde: `${getal(num(a.ns))} × ${getal(num(a.sh))} mm hoog` },
+    { titel: 'Latei boven de opening', toestand: b > 5000 ? 'let-op' : 'ok', waarde: `opening ${getal(b / 1000, 2)} m breed`, uitleg: b > 5000 ? 'Breder dan 5 m: laat de latei berekenen.' : undefined },
+    { titel: 'Doorrijhoogte', toestand: h < 2000 ? 'let-op' : 'ok', waarde: `${getal(h / 10)} cm` },
+  ];
 }
 
 function aanbouwControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
@@ -117,9 +142,17 @@ export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string]
       ['Levertermijn', `± ${getal(num(a.levertermijn))} weken`],
     ];
   }
+  if (p.model === 'POORT') {
+    return [
+      ['Maat (b × h)', `${getal(num(p.keuzes.breedte))} × ${getal(num(p.keuzes.hoogte))} mm`],
+      ['Secties', `${getal(num(a.ns))} × ${getal(num(a.sh))} mm hoog`],
+      ['Oppervlakte', `${getal(num(a.poort_m2), 2)} m²`],
+    ];
+  }
+  const ongelijk = a.raster_vrij === true && num(a.n) >= 2;
   const t: [string, string][] = [
     ['Maat (b × h)', `${getal(num(p.keuzes.breedte))} × ${getal(num(p.keuzes.hoogte))} mm`],
-    ['Vakken', `${getal(num(a.n))} × ${getal(num(a.vb))} mm breed`],
+    ['Vakken', ongelijk ? `${[a.kb1, a.kb2, a.kb3, a.kb4].slice(0, num(a.n)).map((x) => getal(num(x))).join(' + ')} mm breed` : `${getal(num(a.n))} × ${getal(num(a.vb))} mm breed`],
     ['Opendraaiende vleugels', getal(num(a.beweeg))],
     ['Glas per vak', `${getal(num(a.gb))} × ${getal(num(a.gh))} mm`],
     ['Glasoppervlakte', `${getal(num(a.glas_m2), 2)} m²`],
@@ -138,6 +171,7 @@ export function inbegrepen(p: Positie, r: ConfiguratieResultaat): { wel: string[
   const wel = r.stuklijst.map((s) => s.omschrijving);
   const niet: string[] = [];
   if (p.keuzes.montage !== true) niet.push('Plaatsing');
+  if (p.model === 'POORT') return { wel: ['Sectionale garagepoort volgens de tekening (nog zonder prijs in deze demo)'], niet: ['Plaatsing, motor en aansluiting: nog te bepalen'] };
   if (p.model === 'RAAM') {
     if (p.keuzes.situatie === 'renovatie' && p.keuzes.afwerking !== true) niet.push('Afwerking dagkanten binnen');
     if (p.keuzes.zonwering === 'geen') niet.push('Zonwering');
@@ -156,12 +190,16 @@ function offertetekst(p: Positie, r: ConfiguratieResultaat): string {
     ...r.samenvatting.map((s) => `- ${s}`),
     '', 'Inbegrepen:', ...ib.wel.map((x) => `- ${x}`),
     '', 'Niet inbegrepen:', ...ib.niet.map((x) => `- ${x}`),
-    '', `Prijs: ${eur(r.prijs.brutoprijsExcl)} per stuk excl. btw`,
+    ...(zonderPrijs(p) ? [] : ['', `Prijs: ${eur(r.prijs.brutoprijsExcl)} per stuk excl. btw`]),
   ].join('\n');
 }
 
 // ---------- formulier ----------
 const velden = new Map<string, { veld: HTMLElement; fout: HTMLElement; update: (r: ConfiguratieResultaat) => void }>();
+
+/** Kenmerken van de indeling die zichtbaar blijven; de rest (instelling per vak) zit achter "Meer opties". */
+const SNEL = new Set(['roeden']);
+let meerOpen = false;
 
 function bouwFormulier(p: Positie) {
   const form = $('#p-formulier');
@@ -173,12 +211,103 @@ function bouwFormulier(p: Positie) {
     const kop = el('h2', { id: `pst-${stap.code}` });
     kop.append(el('span', { class: 'stapnr' }, String(n + 1)), document.createTextNode(stap.label));
     sectie.append(kop);
-    for (const k of model.kenmerken.filter((k) => k.stap === stap.code)) sectie.append(bouwVeld(p, k));
+    const kenmerken = model.kenmerken.filter((k) => k.stap === stap.code);
+    if (p.model === 'RAAM' && stap.code === 'indeling') {
+      // De snelle weg: een indeling kiezen met één tik. De instelling per vak blijft bereikbaar onder "Meer opties".
+      sectie.append(bouwIndelingen());
+      const meer = el('details', { class: 'meer-opties', id: 'p-meer-opties' });
+      meer.append(el('summary', {}, 'Meer opties: per vak, bovenlicht, onderaan, uitzicht'));
+      if (meerOpen) meer.setAttribute('open', '');
+      meer.addEventListener('toggle', () => { meerOpen = meer.hasAttribute('open'); });
+      for (const k of kenmerken) (SNEL.has(k.code) ? sectie : meer).append(bouwVeld(p, k));
+      sectie.append(meer);
+    } else {
+      for (const k of kenmerken) sectie.append(bouwVeld(p, k));
+    }
     form.append(sectie);
   });
 }
 
+// ---------- kant-en-klare indelingen (tegels met een tekening) ----------
+const tegelSvg = new Map<string, string>();
+/** Kleine tekening van een indeling, in neutrale kleuren (één keer berekend). */
+function indelingTekening(i: Indeling): string {
+  let svg = tegelSvg.get(i.code);
+  if (svg === undefined) {
+    const t = berekenRaam(pasIndelingToe(raamKeuzes({ kleur_buiten: 'antraciet', kleur_binnen: 'zelfde', vensterbank: 'geen', breedte: i.breedte, hoogte: i.hoogte }), i)).tekening;
+    svg = t ? tekenSvg({ ...t, maatlijnen: [] }, { breedtePx: 120, lijnkleur: '#2b2b28' }) : '';
+    tegelSvg.set(i.code, svg);
+  }
+  return svg;
+}
+
+const SOORTNAAM: Record<string, string> = { raam: 'Raam', terrasdeur: 'Terrasdeur', voordeur: 'Voordeur', schuif: 'Schuifraam', hefschuif: 'Hef-schuifdeur', vouwwand: 'Vouwwand', glaswand: 'Glaswand' };
+
+/** Hoogste bovenkant van een opening in een muur van de plattegrond (cm): 15 cm onder de muurhoogte, voor de latei. */
+const hoogsteBovenkant = (muurhoogte: number) => muurhoogte - 15;
+
+function kiesIndeling(i: Indeling) {
+  wijzig('positie', (t) => {
+    const p = t.posities.find((x) => x.id === huidigId);
+    if (!p || p.model !== 'RAAM') return;
+    const oud = String(p.keuzes.type ?? 'raam');
+    let nieuweKeuzes = pasIndelingToe(p.keuzes, i);
+    // Staat de positie in de plattegrond en is de nieuwe indeling breder dan de vrije muur, dan zo breed als er plaats is
+    // (als de indeling dat toelaat). De opening schuift zelf op tot ze weer op haar muur staat (staat.ts).
+    const opening = t.plan.openingen.find((x) => x.positie === p.id);
+    const vrij = opening ? vrijeMuur(opening) : undefined;
+    if (vrij && typeof nieuweKeuzes.breedte === 'number' && nieuweKeuzes.breedte > (vrij.tot - vrij.van) * 10) {
+      const smaller = { ...nieuweKeuzes, breedte: Math.floor(vrij.tot - vrij.van) * 10 };
+      if (!berekenRaam(smaller).meldingen.some((m) => m.ernst === 'fout')) nieuweKeuzes = smaller;
+    }
+    // Hetzelfde in de hoogte: boven de opening blijft er plaats voor de latei (de controle van de plattegrond).
+    const top = opening ? hoogsteBovenkant(t.plan.muurhoogte) * 10 - (nieuweKeuzes.type === 'raam' && typeof nieuweKeuzes.borstwering === 'number' ? nieuweKeuzes.borstwering : 0) : undefined;
+    if (top !== undefined && typeof nieuweKeuzes.hoogte === 'number' && nieuweKeuzes.hoogte > top) {
+      const lager = { ...nieuweKeuzes, hoogte: Math.floor(top / 10) * 10 };
+      if (!berekenRaam(lager).meldingen.some((m) => m.ernst === 'fout')) nieuweKeuzes = lager;
+    }
+    p.keuzes = nieuweKeuzes;
+    // Een naam die met de oude soort begint ("Raam leefruimte") volgt de nieuwe soort; een eigen naam blijft.
+    const nieuw = String(p.keuzes.type ?? 'raam');
+    const kop = Object.values(SOORTNAAM).find((n) => p.naam === n || p.naam.startsWith(`${n} `));
+    if (nieuw !== oud && kop && SOORTNAAM[nieuw]) p.naam = SOORTNAAM[nieuw] + p.naam.slice(kop.length);
+  });
+  const p = huidig();
+  if (p) {
+    $<HTMLInputElement>('#p-naam').value = p.naam;
+    const optie = $<HTMLSelectElement>('#p-kies').selectedOptions[0];
+    if (optie) optie.textContent = `${p.code} · ${p.naam}`;
+  }
+}
+
+function bouwIndelingen(): HTMLElement {
+  const vak = el('div', { class: 'indelingen', role: 'group', 'aria-label': 'Kies een indeling' });
+  vak.append(el('p', { class: 'hulp' }, 'Tik op een indeling. De maat, het glas en het profiel passen zich aan als dat nodig is; verfijnen kan onder "Meer opties".'));
+  for (const groep of [...new Set(INDELINGEN.map((i) => i.groep))]) {
+    vak.append(el('h3', { class: 'indeling-groep' }, groep));
+    const rij = el('div', { class: 'indeling-rij' });
+    for (const i of INDELINGEN.filter((x) => x.groep === groep)) {
+      const knop = el('button', { type: 'button', class: 'indeling', 'data-indeling': i.code, 'aria-pressed': 'false' });
+      const beeld = el('span', { class: 'indeling-beeld', 'aria-hidden': 'true' });
+      beeld.innerHTML = indelingTekening(i);
+      knop.append(beeld, el('span', { class: 'indeling-naam' }, i.label));
+      knop.addEventListener('click', () => kiesIndeling(i));
+      rij.append(knop);
+    }
+    vak.append(rij);
+  }
+  return vak;
+}
+
+/** De indeling waarmee een soort begint als je ze in de stap "Soort" kiest (de eerste tegel van die soort). */
+const EERSTE_INDELING: Record<string, string> = { raam: 'enkel_dk', terrasdeur: 'terrasdeur', voordeur: 'voordeur', schuif: 'schuif2', hefschuif: 'hefschuif3', vouwwand: 'vouwwand4', glaswand: 'glaswand' };
+
 function zet(code: string, w: unknown) {
+  // Een andere soort kiezen is een andere indeling kiezen: zo passen maat, glas en profiel zich meteen aan
+  // (een raam van 1,2 m dat een hef-schuifdeur wordt, zou anders vol fouten staan).
+  const p = huidig();
+  const start = p?.model === 'RAAM' && code === 'type' && p.keuzes.type !== w ? INDELINGEN.find((i) => i.code === EERSTE_INDELING[String(w)]) : undefined;
+  if (start) { kiesIndeling(start); return; }
   wijzig('positie', (t) => {
     const p = t.posities.find((x) => x.id === huidigId);
     if (p) p.keuzes[code] = w as never;
@@ -212,29 +341,38 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
     };
   }
   if (k.type === 'keuze') {
-    const groep = el('fieldset', { class: 'keuzes' });
+    // Kleurwaaier: veel kleuren als een raster van stalen met het RAL-nummer; de naam van de gekozen kleur staat eronder.
+    const waaier = k.keuzes.filter((kz) => typeof kz.eigenschappen?.kleur === 'string' && kz.eigenschappen.kleur).length > 8;
+    const groep = el('fieldset', { class: waaier ? 'keuzes waaier' : 'keuzes' });
     groep.append(el('legend', {}, k.label));
+    const gekozen = el('p', { class: 'waaier-keuze', 'aria-live': 'polite' });
     const knoppen = new Map<string, { knop: HTMLInputElement; tegel: HTMLElement; reden: HTMLElement }>();
     for (const kz of k.keuzes) {
       const kid = `${id}-${kz.code}`;
-      const tegel = el('label', { class: 'tegel', for: kid });
+      const kleur = kz.eigenschappen?.kleur;
+      const metKleur = typeof kleur === 'string' && !!kleur;
+      const tegel = el('label', { class: waaier && metKleur ? 'tegel staaltegel' : 'tegel', for: kid, title: kz.label });
       const knop = el('input', { type: 'radio', name: id, id: kid, value: kz.code }) as HTMLInputElement;
       knop.addEventListener('change', () => zet(k.code, kz.code));
       tegel.append(knop);
-      const kleur = kz.eigenschappen?.kleur;
-      if (typeof kleur === 'string' && kleur) {
+      if (metKleur) {
         const staal = el('span', { class: 'staal', 'aria-hidden': 'true' });
         staal.style.background = kleur;
         tegel.append(staal);
       }
-      // Openingssymbool als klein pictogram bij de vakkeuzes.
+      // Openingssymbool als klein pictogram bij de vakkeuzes, en de verdeling bij de kleinhouten.
       if (/^vak\d$/.test(k.code)) tegel.append(symbool(kz.code));
+      if (k.code === 'roeden') tegel.append(roedenBeeld(num(kz.eigenschappen?.kol) || 1, num(kz.eigenschappen?.rij) || 1));
       const reden = el('span', { class: 'reden' });
-      tegel.append(el('span', {}, kz.label), reden);
+      const ral = /RAL (\d{4})/.exec(kz.label)?.[1];
+      // Onder het staal: het RAL-nummer, of bij een houtkleur het eerste woord van de naam.
+      if (waaier && metKleur) tegel.append(el('span', { class: 'ral', 'aria-hidden': 'true' }, ral ?? kz.label.split(' ')[0]!.toLowerCase()), el('span', { class: 'verborgen' }, kz.label), reden);
+      else tegel.append(el('span', {}, kz.label), reden);
       groep.append(tegel);
       knoppen.set(kz.code, { knop, tegel, reden });
     }
     veld.append(groep);
+    if (waaier) veld.append(gekozen);
     if (k.helptekst) veld.append(el('p', { class: 'hulp' }, k.helptekst));
     update = (r) => {
       const s = r.kenmerken.find((x) => x.code === k.code)!;
@@ -244,7 +382,9 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
         kn.knop.checked = w === ks.code;
         kn.tegel.classList.toggle('onbeschikbaar', !ks.beschikbaar);
         kn.reden.textContent = ks.beschikbaar ? '' : ks.reden ?? 'niet mogelijk';
+        kn.tegel.title = ks.beschikbaar ? ks.label : `${ks.label} (${ks.reden ?? 'niet mogelijk'})`;
       }
+      gekozen.textContent = `Gekozen: ${s.weergave}`;
     };
   }
   if (k.type === 'janee') {
@@ -284,6 +424,25 @@ function symbool(code: string): SVGSVGElement {
   return s as SVGSVGElement;
 }
 
+/** Klein pictogram van een verdeling met kleinhouten: kol × rij ruiten. */
+function roedenBeeld(kol: number, rij: number): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const s = document.createElementNS(ns, 'svg');
+  s.setAttribute('viewBox', '0 0 20 26');
+  s.setAttribute('class', 'symbool');
+  s.setAttribute('aria-hidden', 'true');
+  let d = 'M1 1 H19 V25 H1 Z';
+  for (let i = 1; i < kol; i++) d += ` M${1 + (18 * i) / kol} 1 V25`;
+  for (let i = 1; i < rij; i++) d += ` M1 ${1 + (24 * i) / rij} H19`;
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('d', d);
+  p.setAttribute('fill', 'none');
+  p.setAttribute('stroke', 'currentColor');
+  p.setAttribute('stroke-width', '1.4');
+  s.append(p);
+  return s as SVGSVGElement;
+}
+
 // ---------- tonen ----------
 export function toonPositie(id?: string) {
   if (id) huidigId = id;
@@ -319,12 +478,25 @@ export function herbereken() {
     v.veld.classList.toggle('heeft-fout', f.length > 0);
   }
   for (const sectie of document.querySelectorAll<HTMLElement>('#p-formulier .stap')) {
-    sectie.hidden = ![...sectie.querySelectorAll<HTMLElement>('.veld')].some((v) => !v.hidden);
+    sectie.hidden = !sectie.querySelector('.indelingen') && ![...sectie.querySelectorAll<HTMLElement>('.veld')].some((v) => !v.hidden);
   }
+  // De tegel van de huidige indeling aanduiden; een fout in een verborgen veld opent "Meer opties".
+  const gekozen = p.model === 'RAAM' ? indelingVan(p.keuzes)?.code : undefined;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#p-formulier [data-indeling]')) b.setAttribute('aria-pressed', String(b.dataset.indeling === gekozen));
+  const meer = document.getElementById('p-meer-opties');
+  if (meer && !meer.hasAttribute('open') && meer.querySelector('.veld.heeft-fout:not([hidden])')) meer.setAttribute('open', '');
   $('#p-tekening').innerHTML = r.tekening ? tekenSvg(r.tekening, { breedtePx: 640, lijnkleur: '#2b2b28', maatkleur: '#34505f' }) : '';
   if (weergave === '3d' && viewer) viewer.toon(scene(p, r));
 
   const lijst = controles(p, r);
+  // Staat de positie in de plattegrond: past de opening nog op haar muur, tussen de hoeken en de openingen ernaast?
+  const opening = openingVan(p), vrij = opening ? vrijeMuur(opening) : undefined;
+  if (opening && vrij) {
+    const plaats = vrij.tot - vrij.van, past = opening.breedte <= plaats + 0.05;
+    lijst.push({ titel: 'Past op de muur in de plattegrond', toestand: past ? 'ok' : 'fout', waarde: `${getal(opening.breedte)} cm / vrije muur ${getal(plaats)} cm`, uitleg: past ? undefined : 'Maak de opening smaller, of maak plaats in de plattegrond.' });
+    const bovenkant = opening.borstwering + opening.hoogte, hoogst = hoogsteBovenkant(toestand().plan.muurhoogte);
+    if (bovenkant > hoogst + 0.05) lijst.push({ titel: 'Te hoog voor de muur in de plattegrond', toestand: 'fout', waarde: `bovenkant ${getal(bovenkant)} cm / hoogstens ${getal(hoogst)} cm`, uitleg: 'Boven de opening is er plaats nodig voor de latei: maak de opening lager.' });
+  }
   $('#p-controles').replaceChildren(...lijst.map(controleLi));
   const nF = lijst.filter((c) => c.toestand === 'fout').length, nL = lijst.filter((c) => c.toestand === 'let-op').length;
   const cs = $('#p-controle-status');
@@ -333,9 +505,15 @@ export function herbereken() {
 
   const korting = klantKorting();
   const stuk = r.prijs.brutoprijsExcl;
-  $('#p-status').textContent = r.geldig ? 'Klaar voor offerte' : `${r.meldingen.filter((m) => m.ernst === 'fout').length} fout(en)`;
+  const geenPrijs = zonderPrijs(p), alleenTonen = MODELLEN[p.model].zonderPrijs === true;
+  $('#p-status').textContent = r.geldig ? (geenPrijs ? 'Klaar om te tonen' : 'Klaar voor offerte') : `${r.meldingen.filter((m) => m.ernst === 'fout').length} fout(en)`;
   $('#p-status').className = `status ${r.geldig ? 'ok' : 'fout'}`;
-  if (document.body.classList.contains('klantmodus')) {
+  $('#p-prijsdetail').hidden = geenPrijs;
+  if (geenPrijs) {
+    // Een model dat alleen toont (nog geen stuklijst) of een raamindeling die de prijsregels nog niet kennen: geen bedrag.
+    $('#p-prijs').textContent = 'Nog geen prijs';
+    $('#p-prijs-sub').textContent = alleenTonen ? 'dit model toont alleen de tekening en de 3D' : 'deze indeling is nieuw: tekening, 3D en controles kloppen, een prijs volgt later';
+  } else if (document.body.classList.contains('klantmodus')) {
     // Voor de klant (particulier): prijs inclusief btw.
     const btw = toestand().meta.btw;
     // Zoals de prijs excl. btw: zonder de korting, die op het offertetotaal komt.
@@ -378,7 +556,7 @@ export function herbereken() {
     const tr = el('tr');
     const maat = s.lengte !== undefined ? `${getal(s.lengte)}${s.breedte !== undefined ? ` × ${getal(s.breedte)}` : ''}` : '';
     tr.append(el('td', {}, s.omschrijving), el('td', { class: 'code' }, s.artikel), el('td', { class: 'num' }, getal(s.aantal, 2)),
-      el('td', { class: 'num' }, maat), el('td', { class: 'num' }, `${getal(s.hoeveelheid, 2)} ${s.eenheid === 'm2' ? 'm²' : s.eenheid}`), el('td', { class: 'num' }, eur(s.kost)));
+      el('td', { class: 'num' }, maat), el('td', { class: 'num' }, `${getal(s.hoeveelheid, 2)} ${s.eenheid === 'm2' ? 'm²' : s.eenheid}`), el('td', { class: 'num' }, geenPrijs ? '—' : eur(s.kost)));
     return tr;
   }));
 }
@@ -391,7 +569,7 @@ export function controleLi(c: Controle): HTMLElement {
 }
 
 function scene(p: Positie, r: ConfiguratieResultaat) {
-  return p.model === 'AANBOUW' ? bouwAanbouw3D(r) : raamScene(r);
+  return positieScene(p, r);
 }
 
 function toonWeergave(w: 'voor' | '3d') {

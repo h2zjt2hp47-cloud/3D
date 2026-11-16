@@ -99,8 +99,19 @@ const ZETELBEELDEN = [
   { naam: 'zora-arm', model: 'Zora zetelbed', familie: 'Zetelbedden', standpunt: 'schuin', decor: 'studio', licht: 'studio', uitsnede: [0.04, 0.2, 0.32, 0.8] },
 ];
 // `bouw-dak` komt na de twee oude beelden: het zet een dak in het project, en dat mag `bouw-woning` niet veranderen.
-// `bouw-zon` komt daarna: de lichtinval op het project met dak en koepel.
-const BOUWBEELDEN = [{ naam: 'bouw-woning' }, { naam: 'bouw-raam' }, { naam: 'bouw-dak' }, { naam: 'bouw-zon' }];
+// `bouw-zon` komt daarna: de lichtinval op het project met dak en koepel. De raamtypes en de garagepoort komen als
+// laatste: ze wijzigen een raam van de voorbeeldwoning, en dat mag de beelden van de hele woning hierboven niet veranderen.
+const BOUWBEELDEN = [
+  { naam: 'bouw-woning' }, { naam: 'bouw-raam' }, { naam: 'bouw-dak' }, { naam: 'bouw-zon' },
+  // Nieuwe raamtypes (15/11): een raam van de voorbeeldwoning krijgt met één tegel een andere indeling; dan de 3D van de positie.
+  { naam: 'bouw-stolp', indeling: 'dubbel_stolp', standpunt: 'schuin' },
+  { naam: 'bouw-deur-zijlicht', indeling: 'deur_zij_boven', standpunt: 'achter' },
+  { naam: 'bouw-hefschuif', indeling: 'hefschuif3', standpunt: 'achter' },
+  { naam: 'bouw-vouwwand', indeling: 'vouwwand4', standpunt: 'schuin' },
+  { naam: 'bouw-steellook', indeling: 'steel_deur', standpunt: 'achter' },
+  // Sectionale garagepoort (eigen model), met cassettes en vensters.
+  { naam: 'bouw-garagepoort', poort: true, standpunt: 'achter' },
+];
 
 const nodig = (b) => !alleen || alleen.some((a) => b.naam.startsWith(a));
 
@@ -250,6 +261,26 @@ async function maakBeelden() {
       await p.uncheck('#pl-alle-niveaus');
       await p.click('[data-pl-standpunt="boven"]');
       beelden.set('bouw-zon', png(await wachtTotStil(p, '#pl-3d canvas')));
+      console.log('klaar');
+    }
+    // Na de beelden hierboven: die mogen niet veranderen door wat hier aan het voorbeeldproject gewijzigd wordt.
+    for (const b of bouw.filter((x) => x.indeling || x.poort)) {
+      process.stdout.write(`  ${b.naam} … `);
+      if (b.poort) {
+        await p.click('.nav [data-weergave="offerte"]:not(.alleen-ramen)');
+        await p.click('[data-nieuw="poort"]');
+        await p.click('label[for="pk-belijning-cassettes"]');
+        await p.click('label[for="pk-vensters"]');
+      } else {
+        await p.click('.nav [data-weergave="positie"]');
+        const namen = await p.locator('#p-kies option').allTextContents();
+        await p.selectOption('#p-kies', { index: Math.max(0, namen.findIndex((t) => /leefruimte zijgevel/.test(t))) });
+        await p.click('[data-p-weergave="voor"]');
+        await p.click(`[data-indeling="${b.indeling}"]`);
+      }
+      await p.click('[data-p-weergave="3d"]');
+      await p.click(`[data-p-standpunt="${b.standpunt}"]`);
+      beelden.set(b.naam, png(await wachtTotStil(p, '#p-3d canvas')));
       console.log('klaar');
     }
     await p.close();

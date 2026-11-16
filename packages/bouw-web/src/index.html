@@ -239,6 +239,47 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 .tegel.onbeschikbaar { opacity: .55; }
 .symbool { width: 16px; height: 21px; flex: none; color: var(--accent); }
 
+/* ---------- indelingen als tegels, "Meer opties" en de kleurwaaier (ramen, deuren, garagepoort) ---------- */
+.indelingen { margin-bottom: 14px; }
+.indeling-groep { font-family: var(--tekst); font-size: .78rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--zacht); margin: 12px 0 6px; }
+.indeling-rij { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.indeling { display: grid; grid-template-rows: 62px auto; gap: 4px; justify-items: center; align-items: start; min-width: 0; min-height: 96px; padding: 8px 6px 6px; border: 1px solid var(--lijn); border-radius: 8px; background: var(--vlak); color: inherit; cursor: pointer; font: inherit; }
+.indeling:hover { border-color: var(--accent); }
+.indeling[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-zacht); box-shadow: inset 0 0 0 1px var(--accent); }
+.indeling-beeld { display: grid; place-items: center; width: 100%; height: 62px; background: var(--papier); border-radius: 5px; padding: 4px; }
+.indeling-beeld svg { display: block; max-width: 100%; max-height: 54px; width: auto; height: auto; }
+/* De lijnen blijven even dun, hoe klein de tekening ook is. */
+.indeling-beeld svg * { vector-effect: non-scaling-stroke; stroke-width: 1px; }
+.indeling-beeld svg polyline[stroke-dasharray] { stroke-dasharray: 3 2; }
+.indeling-naam { font-size: .78rem; line-height: 1.2; text-align: center; text-wrap: balance; }
+.meer-opties { border: 1px solid var(--lijn); border-radius: 8px; padding: 0 12px; margin: 4px 0 14px; }
+.meer-opties > summary { min-height: 44px; display: flex; align-items: center; }
+.meer-opties[open] > summary { margin-bottom: 10px; border-bottom: 1px solid var(--lijn); }
+fieldset.waaier { gap: 6px; }
+.staaltegel { flex-direction: column; flex-wrap: nowrap; gap: 3px; padding: 4px; width: 52px; min-height: 58px; justify-content: flex-start; }
+.staaltegel .staal { width: 42px; height: 34px; }
+.staaltegel .ral { font-size: .68rem; color: var(--zacht); font-variant-numeric: tabular-nums; line-height: 1; }
+.staaltegel:has(input:checked) .ral { color: var(--inkt); font-weight: 600; }
+.staaltegel .reden { display: none; }
+.verborgen { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.waaier-keuze { margin: 6px 0 0; font-size: .9rem; font-weight: 600; }
+#pl-canvas[data-gereedschap="garagepoort"] { cursor: copy; }
+/* Aanraakscherm: de keuzetegels en schakelaars van de configurator minstens 44 px hoog. De algemene regel voor labels met
+   een keuzerondje (36 px) won het hier van `.tegel`, waardoor de tegels 38 px bleven. */
+@media (pointer: coarse) {
+  #p-formulier fieldset.keuzes label.tegel:has(> input), #p-formulier label.schakelaar:has(> input) { min-height: 44px; }
+}
+@media (max-width: 900px) {
+  /* Smal scherm: de tekening staat eerst en blijft in beeld, zodat je bij elke tik het resultaat ziet. */
+  .positieraster > .resultaat { display: contents; }
+  .positieraster > form { order: 2; }
+  .positieraster > .resultaat > * { order: 3; }
+  .positieraster > .resultaat > .kaart:first-child { order: 1; }
+  .positieraster > .resultaat > .kaart:first-child:has(#p-3d[hidden]) { position: sticky; top: 0; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
+  .positieraster > .resultaat > .kaart:first-child .tekening { min-height: 0; }
+  .positieraster > .resultaat > .kaart:first-child .tekening svg { max-height: 250px; }
+}
+
 
 
 /* Groot scherm (tekenen op het volledige scherm) */
@@ -724,6 +765,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       <button type="button" class="tweede" data-ramen-nieuw="terrasdeur">+ Terrasdeur</button>
       <button type="button" class="tweede" data-ramen-nieuw="voordeur">+ Voordeur</button>
       <button type="button" class="tweede" data-ramen-nieuw="schuif">+ Schuifraam</button>
+      <button type="button" class="tweede" data-ramen-nieuw="poort">+ Garagepoort</button>
     </div>
     <details class="plakken" open>
       <summary>Maatlijst plakken (uit Excel, een mail of een opmeting)</summary>
@@ -802,6 +844,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <button type="button" class="tweede" data-nieuw="terrasdeur">+ Terrasdeur</button>
           <button type="button" class="tweede" data-nieuw="voordeur">+ Voordeur</button>
           <button type="button" class="tweede" data-nieuw="schuif">+ Schuifraam</button>
+          <button type="button" class="tweede" data-nieuw="poort">+ Garagepoort</button>
           <button type="button" class="tweede" data-nieuw="aanbouw">+ Aanbouw</button>
           <select id="o-bibliotheek" aria-label="Positie uit de bibliotheek"></select>
         </div>

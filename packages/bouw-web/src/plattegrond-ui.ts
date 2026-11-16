@@ -34,11 +34,11 @@ import {
   type RuimteType,
 } from '../../core/src/index.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
-import { raamBlokken } from '../../core/voorbeelden/raam3d.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, el, eur, getal, getalVeld, keuzelijst } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
+import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
 import { dakLijnen, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
@@ -57,7 +57,7 @@ import {
   wijzig,
 } from './staat.js';
 
-type Gereedschap = 'kies' | 'ruimte' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
+type Gereedschap = 'kies' | 'ruimte' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'garagepoort' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
 type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht'; id: string } | undefined;
 
 const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
@@ -69,6 +69,7 @@ const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: stri
   { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een positie in de offerte bij.' },
   { code: 'buitendeur', label: 'Buitendeur', toets: '', hint: 'Klik op een buitenmuur. In een hal wordt het een voordeur, anders een terrasdeur.' },
   { code: 'schuifraam', label: 'Schuifraam', toets: '', hint: 'Klik op een buitenmuur.' },
+  { code: 'garagepoort', label: 'Garagepoort', toets: '', hint: 'Klik op een buitenmuur. Belijning, vensters en kleur kies je in de configurator.' },
   { code: 'binnendeur', label: 'Binnendeur', toets: 'D', hint: 'Klik op een binnenmuur. Draairichting wissel je in de eigenschappen.' },
   { code: 'doorgang', label: 'Doorgang (zonder deur)', toets: '', hint: 'Klik op een binnenmuur.' },
   { code: 'meubel', label: 'Meubel', toets: 'M', hint: 'Kies een meubel hieronder en klik in de plattegrond.' },
@@ -168,12 +169,7 @@ function selectieKader(): Kader | undefined {
 
 // ---------- tekenen ----------
 function raamInfo(o: Opening) {
-  const p = positieVan(o);
-  if (!p) return undefined;
-  if (p.model !== 'RAAM') return { label: p.code };
-  const r = resultaat(p);
-  const n = Math.max(1, Number(r.afgeleid.n) || 1);
-  return { label: p.code, vakken: [r.afgeleid.op1, r.afgeleid.op2, r.afgeleid.op3].slice(0, n).map(String) };
+  return openingInfo(o);
 }
 
 function fouten(): Set<string> {
@@ -282,12 +278,7 @@ function plan3D() {
       dak: toonDakIn3D,
       lichtinval: lichtinvalAan(),
       totNiveau: alleNiveaus && !laag ? undefined : niveau,
-      inhoud: (o) => {
-        const p = positieVan(o);
-        if (!p || p.model !== 'RAAM') return undefined;
-        const rb = raamBlokken(resultaat(p));
-        return { blokken: rb.blokken, hoogte: rb.h + rb.kast };
-      },
+      inhoud: openingInhoud,
     }));
   });
 }
@@ -338,6 +329,8 @@ function standaardOpening(soort: OpeningSoort, type?: RuimteType): { b: number; 
         : { b: 90, h: 230, borst: 0, extra: { type: 'terrasdeur', vak1: 'draai_l', glas: 'dubbel_gelaagd' } };
     case 'schuifraam':
       return { b: 300, h: 230, borst: 0, extra: { type: 'schuif', glas: 'dubbel_gelaagd' } };
+    case 'garagepoort':
+      return { b: 250, h: 215, borst: 0, extra: {} };
     case 'binnendeur':
       return { b: 90, h: 211, borst: 0, extra: {} };
     default:
@@ -351,7 +344,7 @@ function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Openin
   const d = dichtsteMuur(muren, x, y, 45);
   if (!d) return undefined;
   const m = d.muur;
-  const buiten = soort === 'raam' || soort === 'buitendeur' || soort === 'schuifraam';
+  const buiten = soort === 'raam' || soort === 'buitendeur' || soort === 'schuifraam' || soort === 'garagepoort';
   const binnenRuimteId = m.soort === 'buiten' ? (m.plus ?? m.min) : (m.as === 'h' ? (y > m.lijn ? m.plus : m.min) : (x > m.lijn ? m.plus : m.min));
   const ruimte = plan().ruimtes.find((r) => r.id === binnenRuimteId);
   const std = standaardOpening(soort, ruimte?.type);
@@ -384,6 +377,11 @@ function plaatsOpening(soort: OpeningSoort, x: number, y: number) {
 function bewaarNieuweOpening(soort: OpeningSoort, o: Opening, ruimte: Ruimte | undefined) {
   const r = { ruimte };
   wijzig('plan', (t) => {
+    if (soort === 'garagepoort') {
+      const p = nieuwePositie('POORT', { breedte: o.breedte * 10, hoogte: o.hoogte * 10 }, `Garagepoort ${r.ruimte?.naam.toLowerCase() ?? ''}`.trim());
+      o.positie = p.id;
+      t.posities.push(p);
+    }
     if (soort === 'raam' || soort === 'buitendeur' || soort === 'schuifraam') {
       const std = standaardOpening(soort, r.ruimte?.type);
       const naam = `${soort === 'raam' ? 'Raam' : soort === 'schuifraam' ? 'Schuifraam' : std.extra.type === 'voordeur' ? 'Voordeur' : 'Terrasdeur'} ${r.ruimte?.naam.toLowerCase() ?? ''}`.trim();
@@ -524,7 +522,7 @@ function naPointerMove(ev: PointerEvent) {
   const p = punt(ev);
   if (!sleep) {
     // Voorbeeld van een nieuwe opening onder de muisaanwijzer.
-    if (['raam', 'buitendeur', 'schuifraam', 'binnendeur', 'doorgang'].includes(gereedschap)) {
+    if (['raam', 'buitendeur', 'schuifraam', 'garagepoort', 'binnendeur', 'doorgang'].includes(gereedschap)) {
       const r = openingOp(gereedschap as OpeningSoort, p.x, p.y);
       voorbeeldOpening = r && !r.fout ? r.opening : undefined;
       render();
@@ -778,7 +776,7 @@ function toonEigenschappen() {
     const o = pl.openingen.find((x) => x.id === s.id);
     if (!o) { selectie = undefined; return toonEigenschappen(); }
     const zet = (f: (x: Opening) => void) => wijzig('plan', (t) => { const x = t.plan.openingen.find((y) => y.id === o.id); if (x) f(x); });
-    const titel: Record<OpeningSoort, string> = { raam: 'Raam', buitendeur: 'Buitendeur', schuifraam: 'Schuifraam', binnendeur: 'Binnendeur', doorgang: 'Doorgang' };
+    const titel: Record<OpeningSoort, string> = { raam: 'Raam', buitendeur: 'Buitendeur', schuifraam: 'Schuifraam', binnendeur: 'Binnendeur', doorgang: 'Doorgang', garagepoort: 'Garagepoort' };
     const p = positieVan(o);
     vak.append(el('h3', {}, `${titel[o.soort]}${p ? ` · ${p.code}` : ''}`));
     const maten = el('div', { class: 'maten' });
@@ -818,7 +816,7 @@ function toonEigenschappen() {
       kaart.append(
         el('strong', {}, `${p.code} · ${p.naam}`),
         el('p', { class: 'klein' }, r.kenmerken.filter((k) => k.zichtbaar && ['type', 'profiel', 'glas', 'zonwering'].includes(k.code)).map((k) => k.weergave).join(' · ')),
-        el('p', {}, `${eur(r.prijs.brutoprijsExcl)} excl. btw ${r.geldig ? '' : '· heeft fouten'}`),
+        el('p', {}, `${prijsTekst(p)} ${r.geldig ? '' : '· heeft fouten'}`),
       );
       for (const mm of r.meldingen.slice(0, 3)) kaart.append(el('p', { class: `kleinmelding ${mm.ernst}` }, mm.melding));
       kaart.append(knop('Configureren: draairichting, glas, zonwering …', () => naarPositie(p.id), ''));

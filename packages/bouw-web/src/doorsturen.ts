@@ -2,12 +2,11 @@
  * 3D doorsturen: maakt van het huidige project een 3D-pakket (zie core/src/pakket3d.ts), de 3D als gewone gegevens.
  * Een ander systeem (bv. Missing Link) toont het met de losse kijker (kijker.ts → dist/bouw-kijker.html).
  */
-import { passendKader, plattegrond3D, verdiepingenVan, PAKKET3D_SOORT, PAKKET3D_VERSIE, ZENDING_SOORT, ZENDING_VERSIE, type Opening, type Pakket3D, type Scene3D, type Zending } from '../../core/src/index.js';
+import { passendKader, plattegrond3D, verdiepingenVan, PAKKET3D_SOORT, PAKKET3D_VERSIE, ZENDING_SOORT, ZENDING_VERSIE, type Pakket3D, type Scene3D, type Zending } from '../../core/src/index.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
-import { bouwAanbouw3D } from '../../core/voorbeelden/aanbouw3d.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
-import { raamBlokken, raamScene } from '../../core/voorbeelden/raam3d.js';
-import { positieVan, resultaat, toestand, type Positie } from './staat.js';
+import { openingInhoud, positieScene } from './positie-3d.js';
+import { resultaat, toestand, type Positie } from './staat.js';
 
 /** De woning in 3D, zoals het plattegrondscherm ze toont: met de echte ramen en deuren van de posities. */
 function woningScene(totNiveau: number | undefined, laag: boolean): Scene3D {
@@ -15,12 +14,7 @@ function woningScene(totNiveau: number | undefined, laag: boolean): Scene3D {
     laag: laag ? 110 : undefined,
     meubels: true,
     totNiveau,
-    inhoud: (o: Opening) => {
-      const p = positieVan(o);
-      if (!p || p.model !== 'RAAM') return undefined;
-      const rb = raamBlokken(resultaat(p));
-      return { blokken: rb.blokken, hoogte: rb.h + rb.kast };
-    },
+    inhoud: openingInhoud,
   });
 }
 
@@ -41,7 +35,7 @@ export function maakPakket3D(omschrijf: (p: Positie) => string): Pakket3D {
     })),
     posities: t.posities.map((p) => {
       const r = resultaat(p);
-      return { code: p.code, naam: p.naam, omschrijving: omschrijf(p), aantal: p.aantal, scene: p.model === 'AANBOUW' ? bouwAanbouw3D(r) : raamScene(r) };
+      return { code: p.code, naam: p.naam, omschrijving: omschrijf(p), aantal: p.aantal, scene: positieScene(p, r) };
     }),
   };
 }

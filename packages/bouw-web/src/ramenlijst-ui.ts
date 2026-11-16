@@ -7,14 +7,19 @@ import { tekenSvg, type Keuzes } from '../../core/src/index.js';
 import { leesMaatlijst } from '../../core/voorbeelden/maatlijst.js';
 import { raamdeur } from '../../core/voorbeelden/raam.js';
 import { $, btwLabel, el, eur, labelCellen, toonPrijs } from './hulp.js';
-import { nieuwePositie, resultaat, toestand, wijzig, type Positie } from './staat.js';
+import { MODELLEN, nieuwePositie, resultaat, toestand, wijzig, zonderPrijs, type Positie } from './staat.js';
 
-const SOORTEN: [string, string][] = [['raam', 'Raam'], ['terrasdeur', 'Terrasdeur'], ['voordeur', 'Voordeur'], ['schuif', 'Schuifraam']];
+const SOORTEN: [string, string][] = [['raam', 'Raam'], ['terrasdeur', 'Terrasdeur'], ['voordeur', 'Voordeur'], ['schuif', 'Schuifraam'], ['hefschuif', 'Hef-schuifdeur'], ['vouwwand', 'Vouwwand'], ['glaswand', 'Vaste glaswand']];
+/** Soorten met gelijke delen: de indeling is het aantal delen. */
+const DELEN = new Set(['hefschuif', 'vouwwand', 'glaswand']);
 const STANDAARD: Record<string, Keuzes> = {
   raam: { breedte: 1200, hoogte: 1400, borstwering: 900, vakken: 'v1', vak1: 'draaikip_l' },
   terrasdeur: { breedte: 900, hoogte: 2300, borstwering: 0, vakken: 'v1', vak1: 'draai_l', glas: 'dubbel_gelaagd' },
   voordeur: { breedte: 1000, hoogte: 2300, borstwering: 0, glas: 'dubbel_gelaagd', ruimte: 'hal' },
   schuif: { breedte: 3000, hoogte: 2300, borstwering: 0, glas: 'dubbel_gelaagd', profiel: 'alu' },
+  hefschuif: { breedte: 5000, hoogte: 2400, borstwering: 0, glas: 'dubbel_gelaagd', profiel: 'alu_hi', delen: 'd3', schuif_richting: 'beide' },
+  vouwwand: { breedte: 3600, hoogte: 2300, borstwering: 0, glas: 'dubbel_gelaagd', profiel: 'alu', delen: 'd4' },
+  glaswand: { breedte: 3600, hoogte: 2500, borstwering: 0, glas: 'dubbel_gelaagd', profiel: 'alu_hi', delen: 'd3', tussenstijl: 'versterkt' },
 };
 /** Veelgebruikte indelingen per soort: [waarde, label]; voor ramen en terrasdeuren "vakken:vak1+vak2…". */
 const INDELINGEN: Record<string, [string, string][]> = {
@@ -26,6 +31,9 @@ const INDELINGEN: Record<string, [string, string][]> = {
   terrasdeur: [['v1:draai_l', 'Deur links'], ['v1:draai_r', 'Deur rechts'], ['v2:draai_l+vast', 'Deur + vast'], ['v2:vast+draai_r', 'Vast + deur'], ['v2:draai_l+draai_r', 'Dubbele deur']],
   voordeur: [['links', 'Scharnieren links'], ['rechts', 'Scharnieren rechts']],
   schuif: [['links', 'Links schuift'], ['rechts', 'Rechts schuift'], ['beide', 'Beide schuiven']],
+  hefschuif: [['d2', '2 delen'], ['d3', '3 delen'], ['d4', '4 delen']],
+  vouwwand: [['d3', '3 delen'], ['d4', '4 delen'], ['d5', '5 delen'], ['d6', '6 delen']],
+  glaswand: [['d1', '1 deel'], ['d2', '2 delen'], ['d3', '3 delen'], ['d4', '4 delen'], ['d5', '5 delen'], ['d6', '6 delen']],
 };
 const VOORBEELD = [
   'Keuken 1600 x 1200 vast + draai-kip rechts',
@@ -44,14 +52,19 @@ function indelingVan(k: Keuzes): string {
   const soort = String(k.type ?? 'raam');
   if (soort === 'voordeur') return String(k.deur_draai ?? 'links');
   if (soort === 'schuif') return String(k.schuif_richting ?? 'links');
+  if (DELEN.has(soort)) return String(k.delen ?? 'd3');
   const n = Number(String(k.vakken ?? 'v1').slice(1)) || 1;
-  return `v${n}:${[k.vak1, k.vak2, k.vak3].slice(0, n).join('+')}`;
+  // Een stolp, een bovenlicht of een vak onderaan staat niet in de lijst: dan toont de lijst "Andere indeling".
+  const extra = k.stolp === true || k.bovenlicht === true || (typeof k.onder === 'string' && k.onder !== 'geen') ? '+…' : '';
+  return `v${n}:${[k.vak1, k.vak2, k.vak3, k.vak4].slice(0, n).join('+')}${extra}`;
 }
 function zetIndeling(k: Keuzes, w: string) {
   const soort = String(k.type ?? 'raam');
   if (soort === 'voordeur') { k.deur_draai = w; return; }
   if (soort === 'schuif') { k.schuif_richting = w; return; }
+  if (DELEN.has(soort)) { k.delen = w; return; }
   const [vakken, rest] = w.split(':') as [string, string];
+  Object.assign(k, { stolp: false, bovenlicht: false, onder: 'geen' });
   k.vakken = vakken;
   rest.split('+').forEach((v, i) => { k[`vak${i + 1}`] = v; });
 }
@@ -89,7 +102,11 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
     const k = p.keuzes;
     const td = (inhoud: Node | string, cls = '') => { const c = el('td', cls ? { class: cls } : {}); c.append(inhoud); return c; };
     if (p.model !== 'RAAM') {
-      tr.append(td(p.code, 'code'), td(p.naam), el('td', { colspan: '7', class: 'klein' }, 'Aanbouw: aanpassen in de configurator'), td(String(p.aantal), 'num'), td(eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'));
+      // Een ander model (garagepoort, aanbouw): dezelfde kolommen als een raam, zodat de koppen ook op een smal scherm
+      // kloppen, maar alleen om te lezen; aanpassen kan in de configurator.
+      const maat = (code: string) => (typeof k[code] === 'number' ? String(k[code]) : '—');
+      tr.append(td(p.code, 'code'), td(p.naam), td(MODELLEN[p.model].label), td('aanpassen in de configurator', 'klein'), td(maat('breedte'), 'num'), td(maat('hoogte'), 'num'),
+        td('—'), td('—', 'num'), td(String(p.aantal), 'num'), td(zonderPrijs(p) ? '—' : eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'));
     } else {
       const soort = String(k.type ?? 'raam');
       const mini = el('span', { class: 'mini-lijst' });
@@ -117,7 +134,7 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
         }))),
         td(invoer('number', String(k.verdieping ?? 0), `Verdieping ${p.code}`, (w) => zet(p.id, (kk) => { kk.verdieping = Math.min(5, Math.max(0, Math.round(Number(w) || 0))); }), { min: '0', max: '5', step: '1', class: 'kort' }), 'num'),
         td(invoer('number', String(p.aantal), `Aantal ${p.code}`, (w) => wijzig('offerte', (tt) => { const x = tt.posities.find((y) => y.id === p.id); if (x) x.aantal = Math.max(0, Math.round(Number(w) || 0)); }), { min: '0', step: '1', class: 'kort' }), 'num'),
-        td(eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'),
+        td(zonderPrijs(p) ? '—' : eur(toonPrijs(r.prijs.brutoprijsExcl * p.aantal, t.meta.btw)), 'num'),
       );
     }
     const nF = r.meldingen.filter((m) => m.ernst === 'fout').length, nW = r.meldingen.filter((m) => m.ernst === 'waarschuwing').length;
@@ -153,7 +170,8 @@ export function startRamenlijst() {
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-ramen-nieuw]')) {
     b.addEventListener('click', () => {
       const soort = b.dataset.ramenNieuw!;
-      const p = nieuwePositie('RAAM', { type: soort, ...STANDAARD[soort], situatie: 'renovatie' }, SOORTEN.find(([w]) => w === soort)?.[1]);
+      const p = soort === 'poort' ? nieuwePositie('POORT', {}, 'Garagepoort')
+        : nieuwePositie('RAAM', { type: soort, ...STANDAARD[soort], situatie: 'renovatie' }, SOORTEN.find(([w]) => w === soort)?.[1]);
       wijzig('offerte', (t) => { t.posities.push(p); });
       // Meteen de omschrijving van de nieuwe regel invullen.
       requestAnimationFrame(() => (document.querySelector('#o-ramenlijst tbody tr:last-child input[type="text"]') as HTMLInputElement | null)?.select());
