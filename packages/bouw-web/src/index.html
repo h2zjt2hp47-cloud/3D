@@ -152,6 +152,35 @@ button:disabled { opacity: .45; cursor: default; }
 select, input[type="text"], input[type="date"], .eig input, .maatveld input { font: inherit; color: inherit; padding: 6px 8px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); }
 .status.let-op { color: var(--let-op); background: color-mix(in srgb, var(--let-op) 14%, transparent); }
 
+/* ---------- snelstart: drie vragen, grote tegels en knoppen (tablet en vinger eerst) ---------- */
+.nav .nieuwknop { background: var(--accent); border-color: var(--accent); color: var(--vlak); font-weight: 600; }
+.nav .nieuwknop[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--vlak), 0 0 0 4px var(--accent); }
+.snelstart { max-width: 1100px; margin: 0 auto; display: grid; gap: 10px; }
+.snelstart h2 { font-size: 1.8rem; }
+.snelstart > .klein { font-size: .95rem; margin: 0 0 6px; }
+.snel-stappen { list-style: none; display: flex; gap: 8px; padding: 0; margin: 0; counter-reset: stap; }
+.snel-stappen li { counter-increment: stap; font-size: .85rem; color: var(--zacht); border: 1px solid var(--lijn); border-radius: 999px; padding: 4px 12px; }
+.snel-stappen li::before { content: counter(stap) " · "; }
+.snel-stappen li[aria-current="step"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+.snel-tegels { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.snel-tegel { display: grid; justify-items: center; align-content: start; gap: 6px; min-height: 180px; padding: 16px 14px; border: 1px solid var(--lijn); border-radius: 12px; background: var(--vlak); color: inherit; font: inherit; cursor: pointer; text-align: center; }
+.snel-tegel:hover { border-color: var(--accent); }
+.snel-tegel strong { font-size: 1.15rem; }
+.snel-beeld { color: var(--accent); }
+.snel-beeld svg { width: 110px; height: 100px; display: block; }
+.snel-stijlbeeld svg { width: 100%; max-width: 240px; height: auto; display: block; border-radius: 8px; }
+.snel-maten { display: grid; gap: 12px; max-width: 640px; }
+.snel-maat { display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(120px, 160px) 64px; gap: 10px; align-items: center; background: var(--vlak); border: 1px solid var(--lijn); border-radius: 12px; padding: 10px 12px; }
+.snel-maat-naam { font-weight: 600; }
+.snel-knop { width: 64px; height: 64px; border-radius: 12px; border: 1px solid var(--accent); background: var(--accent-zacht); color: var(--accent); font-size: 2rem; line-height: 1; cursor: pointer; touch-action: manipulation; }
+.snel-knop:disabled { opacity: .35; }
+.snel-waarde { display: flex; align-items: center; gap: 6px; }
+.snel-waarde input { width: 100%; min-height: 56px; font-size: 1.5rem; text-align: center; font-variant-numeric: tabular-nums; border: 1px solid var(--lijn); border-radius: 10px; background: var(--achtergrond); }
+.snel-onder { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.snel-onder button { min-height: 52px; padding: 0 22px; font-size: 1.05rem; border-radius: 10px; border: 1px solid var(--accent); cursor: pointer; }
+#ss-verder { background: var(--accent); color: var(--vlak); }
+@media (max-width: 560px) { .snel-maat { grid-template-columns: 56px minmax(0, 1fr) 56px; } .snel-maat-naam { grid-column: 1 / -1; } .snel-knop { width: 56px; height: 56px; } }
+
 /* ---------- plattegrond ---------- */
 .planraster { display: grid; grid-template-columns: 230px minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
 @media (max-width: 1200px) { .planraster { grid-template-columns: 210px minmax(0, 1fr); } .planraster > .rechts { grid-column: 1 / -1; } }
@@ -246,6 +275,7 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 /* ---------- positie ---------- */
 .positiebalk { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 16px; }
 .positiebalk select { max-width: 340px; }
+#p-vrij { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; min-height: 44px; }
 .positiebalk input[type="text"] { min-width: 220px; }
 .positiebalk input[type="number"] { width: 70px; }
 .positieraster { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.2fr); gap: 24px; }
@@ -429,6 +459,27 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 .zon-gevels caption { text-align: left; font-weight: 600; padding-bottom: 4px; }
 .zon-gevels th, .zon-gevels td { text-align: left; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--lijn); vertical-align: top; }
 .zon-gevels .num { text-align: right; padding-right: 0; }
+/* ---------- aantikken in de 3D, stijlen en varianten ---------- */
+@media (max-width: 1200px) {
+  #view-plan.driedmodus:not(.groot-scherm) .planraster { grid-template-columns: minmax(0, 1fr); }
+  #view-plan.driedmodus:not(.groot-scherm) .planraster > .links { order: 3; }
+}
+.keuzepaneel { margin-top: 10px; padding: 12px 14px; border: 2px solid var(--accent); border-radius: 10px; background: var(--vlak); display: grid; gap: 8px; }
+.keuzepaneel .kaartkop { margin-bottom: 0; }
+.keuzepaneel h3 { margin: 0; font-size: 1.05rem; }
+.keuzepaneel p.klein { margin: 2px 0 0; }
+.keuze-tegels { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.tikhint { margin: 8px 0 4px; font-size: .9rem; color: var(--zacht); }
+.stijlbalk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0 4px; }
+.stijlrij { display: flex; flex-wrap: wrap; gap: 6px; }
+.stijlknop { display: grid; justify-items: center; gap: 2px; width: 92px; padding: 4px; border: 1px solid var(--lijn); border-radius: 8px; background: var(--vlak); color: inherit; font: inherit; font-size: .78rem; cursor: pointer; }
+.stijlknop:hover { border-color: var(--accent); }
+.stijlknop .snel-stijlbeeld svg { width: 80px; border-radius: 5px; }
+.teller { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0; }
+.teller strong { min-width: 2ch; text-align: center; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.teller .snel-knop { width: 48px; height: 48px; font-size: 1.6rem; }
+@media (pointer: coarse) { .keuzepaneel .gv-kleur { width: 44px; height: 44px; } .keuzepaneel .tabs button, .keuzepaneel .knoppenrij button, .keuzepaneel .kaartkop button { min-height: 44px; } }
+
 /* ---------- dak ---------- */
 #pl-dak .tabs { margin: 4px 0 10px; flex-wrap: wrap; }
 #pl-dak .gv-tegels { margin-bottom: 8px; }
@@ -561,6 +612,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
     <p><strong id="hd-project"></strong> · <span id="hd-bewaard" class="bewaard"></span></p>
   </div>
   <nav class="nav" aria-label="Onderdelen">
+    <button type="button" data-weergave="start" class="nieuwknop" aria-pressed="false">+ Nieuw ontwerp</button>
     <button type="button" data-weergave="projecten" aria-pressed="false">Projecten</button>
     <button type="button" data-weergave="plan" aria-pressed="true"><span class="nr">1 · </span>Plattegrond</button>
     <button type="button" data-weergave="offerte" aria-pressed="false" class="alleen-ramen"><span class="nr">1 · </span>Ramenlijst</button>
@@ -571,6 +623,21 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 </header>
 <noscript><p class="foutmelding">Deze pagina heeft JavaScript nodig. Open het bestand in een browser (Safari, Chrome, Edge), niet in een voorbeeldweergave.</p></noscript>
 <div id="foutmelding" class="foutmelding" role="alert" hidden><strong>Er liep iets mis in deze pagina.</strong> Stuur deze melding door (en zeg in welke browser je ze opende):</div>
+
+<main id="view-start" class="view" hidden>
+  <section class="snelstart" aria-labelledby="ss-titel">
+    <ol id="ss-stappen" class="snel-stappen" aria-label="Stappen">
+      <li data-stap="1">Wat</li><li data-stap="2">Hoe groot</li><li data-stap="3">Stijl</li>
+    </ol>
+    <h2 id="ss-titel"></h2>
+    <p id="ss-uitleg" class="klein"></p>
+    <div id="ss-inhoud"></div>
+    <div class="snel-onder">
+      <button type="button" id="ss-terug" class="tweede">← Terug</button>
+      <button type="button" id="ss-verder">Verder: kies een stijl</button>
+    </div>
+  </section>
+</main>
 
 <main id="view-projecten" class="view" hidden>
   <div class="projectraster">
@@ -670,7 +737,15 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       <p id="pl-hint" class="hint"></p>
       <p id="pl-zoomhint" class="hint klein"></p>
       <div class="drie-d" id="pl-3d" hidden></div>
+      <section id="pl-3d-keuze" class="keuzepaneel" aria-live="polite" hidden></section>
       <div id="pl-3d-knoppen" hidden>
+        <p class="tikhint">Tik op het dak, een raam, een gevel of een vloer om alleen dat te wijzigen.</p>
+        <div class="stijlbalk">
+          <span class="klein">Stijl</span>
+          <div id="pl-stijlen"></div>
+          <button type="button" id="pl-variant" class="tweede" title="Een kopie van dit ontwerp om iets anders te proberen; het origineel blijft">Variant maken</button>
+          <span id="pl-variant-melding" class="klein" role="status"></span>
+        </div>
         <div class="knoppenrij">
           <button type="button" data-pl-standpunt="schuin">Schuin</button>
           <button type="button" data-pl-standpunt="voor">Voorgevel</button>
@@ -684,7 +759,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <label><input type="checkbox" id="pl-alle-niveaus" checked> Alle verdiepingen</label>
           <label id="pl-toon-dak-label" hidden><input type="checkbox" id="pl-toon-dak" checked> Dak tonen</label>
           <label title="Snel: vlot draaien, ook op een tablet. Mooi: scherper beeld, zachtere schaduw en schaduw in de hoeken.">Kwaliteit <select id="pl-3d-kwaliteit"><option value="snel">Snel</option><option value="mooi">Mooi</option></select></label>
-          <span class="klein">slepen = draaien · zoomen met Ctrl (⌘) + scrollen of knijpen</span>
+          <span class="klein">tikken = kiezen · slepen = draaien · zoomen met Ctrl (⌘) + scrollen of knijpen</span>
         </div>
         <div id="pl-zon" class="zonblok"></div>
       </div>
@@ -718,6 +793,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
       <label class="klein">Aantal <input type="number" id="p-aantal" min="1" step="1"></label>
       <span id="p-model" class="klein"></span>
       <button type="button" id="p-naarplan" class="tweede alleen-woning">Toon in plattegrond</button>
+      <button type="button" id="p-vrij" hidden>Vrij verder tekenen in de plattegrond</button>
     </div>
     <div class="positieraster">
       <form id="p-formulier" aria-label="Configuratie" onsubmit="return false" style="display:grid;gap:16px;align-content:start"></form>

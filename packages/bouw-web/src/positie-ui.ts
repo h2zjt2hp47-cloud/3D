@@ -9,10 +9,11 @@ import { passendKader, tekenSvg, type ConfiguratieResultaat, type Kenmerk } from
 import { berekenRaam, ruitenVan } from '../../core/voorbeelden/raam.js';
 import { INDELINGEN, indelingVan, pasIndelingToe, type Indeling } from '../../core/voorbeelden/raamindelingen.js';
 import { raamKeuzes } from '../../core/voorbeelden/woning.js';
+import { aanbouwNaarPlan } from '../../core/voorbeelden/snelstart.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, alleenPrijs, el, eur, getal, kopieer, num, PRIJZEN } from './hulp.js';
 import { positieScene } from './positie-3d.js';
-import { bewaarInBibliotheek, klantKorting, MODELLEN, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
+import { bewaarInBibliotheek, klantKorting, MODELLEN, nieuweId, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -22,6 +23,7 @@ let weergave: 'voor' | '3d' = 'voor';
 let viewer: Viewer3D | null | undefined;
 let naarPlan: (openingId: string) => void = () => {};
 let naarOfferte: () => void = () => {};
+let naarWoning3D: () => void = () => {};
 
 const huidig = (): Positie | undefined => toestand().posities.find((p) => p.id === huidigId) ?? toestand().posities[0];
 
@@ -209,7 +211,11 @@ const velden = new Map<string, { veld: HTMLElement; fout: HTMLElement; update: (
 const SNEL = new Set(['roeden']);
 let meerOpen = false;
 
+/** Voor welke positie het formulier gebouwd is (een andere positie of een ander model vraagt een nieuw formulier). */
+let formulierVan = '';
+
 function bouwFormulier(p: Positie) {
+  formulierVan = `${p.id}:${p.model}`;
   const form = $('#p-formulier');
   form.replaceChildren();
   velden.clear();
@@ -467,6 +473,10 @@ export function toonPositie(id?: string) {
   $<HTMLInputElement>('#p-aantal').value = String(p.aantal);
   const o = openingVan(p);
   $('#p-naarplan').hidden = !o;
+  // Een aanbouw (model) kan als ruimte tegen een woning in de plattegrond, om er vrij aan verder te tekenen.
+  $('#p-vrij').hidden = p.model !== 'AANBOUW';
+  $<HTMLButtonElement>('#p-vrij').disabled = toestand().plan.ruimtes.length > 0;
+  $('#p-vrij').title = toestand().plan.ruimtes.length ? 'Kan alleen in een project zonder plattegrond: hier staat er al een.' : 'Zet de aanbouw als ruimte tegen een bestaande woning in de plattegrond (met raampartij, dak, koepel en gevel).';
   $('#p-model').textContent = MODELLEN[p.model].label;
   bouwFormulier(p);
   herbereken();
@@ -475,6 +485,8 @@ export function toonPositie(id?: string) {
 export function herbereken() {
   const p = huidig();
   if (!p || $('#p-inhoud').hidden) return;
+  // De positie van het formulier bestaat niet meer (verwijderd, of een aanbouw die in de plattegrond kwam): opnieuw opbouwen.
+  if (formulierVan !== `${p.id}:${p.model}`) { toonPositie(p.id); return; }
   const r = resultaat(p);
   for (const s of r.kenmerken) {
     const v = velden.get(s.code);
@@ -613,9 +625,35 @@ function toonWeergave(w: 'voor' | '3d') {
   }
 }
 
-export function startPositie(nav: { naarPlan: (openingId: string) => void; naarOfferte: () => void }) {
+/** De configurator met de 3D in beeld (na de snelstart). */
+export function toonPositie3D() {
+  toonWeergave('3d');
+}
+
+/**
+ * De aanbouw (model) als ruimte tegen een bestaande woning in de plattegrond (`aanbouwNaarPlan`): de positie van het
+ * model vervalt, de raampartij wordt een raam of deur in de achtergevel, dak, koepel en gevel staan in het plan.
+ */
+function aanbouwVrijTekenen() {
+  const p = huidig();
+  if (!p || p.model !== 'AANBOUW' || toestand().plan.ruimtes.length) return;
+  const { plan, posities } = aanbouwNaarPlan(p.keuzes);
+  // Eigen ids, zodat ze nooit samenvallen met posities die al in het project staan.
+  const ids = new Map(posities.map((x) => [x.id, nieuweId('p')]));
+  for (const o of plan.openingen) if (o.positie) o.positie = ids.get(o.positie);
+  wijzig('plan', (t) => {
+    t.plan = plan;
+    t.posities = [...t.posities.filter((x) => x.id !== p.id), ...posities.map((x) => ({ ...x, id: ids.get(x.id)! }))];
+    t.meta.regels = { ...t.meta.regels, gevel: true, dak: true };
+  });
+  naarWoning3D();
+}
+
+export function startPositie(nav: { naarPlan: (openingId: string) => void; naarOfferte: () => void; naarWoning3D: () => void }) {
   naarPlan = nav.naarPlan;
   naarOfferte = nav.naarOfferte;
+  naarWoning3D = nav.naarWoning3D;
+  $('#p-vrij').addEventListener('click', aanbouwVrijTekenen);
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.pWeergave as 'voor' | '3d'));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pStandpunt as 'schuin'));
   $<HTMLSelectElement>('#p-kies').addEventListener('change', (e) => toonPositie((e.target as HTMLSelectElement).value));

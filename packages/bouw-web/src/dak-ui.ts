@@ -5,6 +5,7 @@
  */
 import { dakOpbouw, standaardDak, type DakBedekking, type DakKeuze, type DakVorm, type GevelKant, type PlanSvgOpties } from '../../core/src/index.js';
 import { dakCatalogus, daklichtCatalogus } from '../../core/voorbeelden/inrichting.js';
+import { daklichtenOpDak, verdeelDaklichten } from '../../core/voorbeelden/snelstart.js';
 import { el, getal, getalVeld, keuzelijst } from './hulp.js';
 import { toestand, wijzig, type Toestand } from './staat.js';
 
@@ -29,7 +30,7 @@ export function metDak(t: Toestand): DakKeuze {
   return t.plan.dak;
 }
 
-function kiesVorm(vorm: DakVorm | 'geen') {
+export function kiesVorm(vorm: DakVorm | 'geen') {
   wijzig('plan', (t) => {
     if (vorm === 'geen') { delete t.plan.dak; return; }
     const d = metDak(t);
@@ -48,9 +49,48 @@ function kiesVorm(vorm: DakVorm | 'geen') {
 }
 
 const zet = (f: (d: DakKeuze) => void) => wijzig('plan', (t) => f(metDak(t)));
+export const zetDak = zet;
+
+/** De dakvormen als knoppen; `metGeen` = ook "Geen" (zoals vroeger: geen dak op de bovenste verdieping). */
+export function dakVormKnoppen(metGeen = true): HTMLElement {
+  const dak = toestand().plan.dak;
+  const vormen = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Dakvorm' });
+  for (const v of VORMEN.filter((x) => metGeen || x.code !== 'geen')) {
+    const b = el('button', { type: 'button', 'data-dak-vorm': v.code, 'aria-pressed': String((dak?.vorm ?? 'geen') === v.code), title: v.titel }, v.label);
+    b.addEventListener('click', () => kiesVorm(v.code));
+    vormen.append(b);
+  }
+  return vormen;
+}
+
+/**
+ * Teller voor de lichtkoepels: − en + zetten er een af of bij, gelijk verdeeld op het grootste platte dakstuk (zo staan
+ * er drie koepels in twee tikken). Null als er geen plat dakstuk is. Met de hand plaatsen en verslepen kan in de plattegrond.
+ */
+export function koepelTeller(): HTMLElement | null {
+  const plan = toestand().plan;
+  if (!plan.ruimtes.length) return null;
+  const nu = daklichtenOpDak(plan.dak ? plan : { ...plan, dak: standaardDak() });
+  if (!nu.plat) return null;
+  const type = nu.type ?? 'koepel_100';
+  const rij = el('div', { class: 'teller', role: 'group', 'aria-label': 'Aantal lichtkoepels' });
+  const zetAantal = (n: number) => wijzig('plan', (t) => {
+    metDak(t);
+    t.plan = verdeelDaklichten(t.plan, Math.max(0, n), type);
+  });
+  const min = el('button', { type: 'button', class: 'snel-knop klein-knop-teller', 'aria-label': 'Een lichtkoepel minder', 'data-koepels': 'min' }, '−') as HTMLButtonElement;
+  const plus = el('button', { type: 'button', class: 'snel-knop klein-knop-teller', 'aria-label': 'Een lichtkoepel meer', 'data-koepels': 'plus' }, '+') as HTMLButtonElement;
+  min.disabled = nu.aantal === 0;
+  min.addEventListener('click', () => zetAantal(nu.aantal - 1));
+  plus.addEventListener('click', () => zetAantal(nu.aantal + 1));
+  rij.append(el('span', {}, 'Lichtkoepels'), min, el('strong', { 'data-koepels': 'aantal' }, String(nu.aantal)), plus);
+  const naam = daklichtCatalogus[type]?.label.replace(/^Lichtkoepel /, '') ?? '';
+  rij.append(el('span', { class: 'klein' }, `${naam}, gelijk verdeeld op het grootste platte dak`));
+  return rij;
+}
 
 /** Tegels met de bedekkingen die bij de dakvorm passen, en eronder de kleuren van de gekozen bedekking. */
-function bedekkingKeuze(voor: 'plat' | 'hellend', nu: DakBedekking, kies: (b: DakBedekking) => void): HTMLElement {
+export function bedekkingKeuze(voor: 'plat' | 'hellend', nu: DakBedekking, kies: (b: DakBedekking) => void): HTMLElement {
   const vak = el('div');
   const tegels = el('div', { class: 'gv-tegels' });
   for (const [code, m] of Object.entries(dakCatalogus).filter(([, m]) => m.voor === voor)) {
@@ -87,13 +127,7 @@ export function toonDak() {
   const kop = el('div', { class: 'kaartkop' });
   const samenvatting = !dak ? 'niet gekozen' : opbouw?.hellend ? `${dak.vorm === 'zadel' ? 'zadeldak' : 'lessenaarsdak'} ${opbouw.hellend.helling}°` : 'plat dak';
   kop.append(el('h2', {}, 'Dak'), el('span', { class: 'klein' }, samenvatting));
-  const vormen = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Dakvorm' });
-  for (const v of VORMEN) {
-    const b = el('button', { type: 'button', 'data-dak-vorm': v.code, 'aria-pressed': String((dak?.vorm ?? 'geen') === v.code), title: v.titel }, v.label);
-    b.addEventListener('click', () => kiesVorm(v.code));
-    vormen.append(b);
-  }
-  vak.replaceChildren(kop, vormen);
+  vak.replaceChildren(kop, dakVormKnoppen());
   if (!dak) {
     vak.append(el('p', { class: 'klein' }, plan.daklichten?.length
       ? 'Er liggen lichtkoepels in het plan: het dak is plat, met EPDM. Kies een vorm om de bedekking te bepalen.'
@@ -124,6 +158,8 @@ export function toonDak() {
       .flatMap(([code, m]) => Object.entries(m.kleuren).map(([k, kleur]): [string, string] => [`${code}:${k}`, `${m.label}, ${kleur.label.toLowerCase()}`]));
     vak.append(rij('Platte delen', keuzelijst('dak-plat', combinaties, `${nu.materiaal}:${nu.kleur}`, (w) => zet((d) => { const [materiaal, kleur] = w.split(':'); d.plat = { materiaal: materiaal!, kleur: kleur! }; }))));
   }
+  const teller = koepelTeller();
+  if (teller) vak.append(teller);
   if (opbouw?.terugval) vak.append(el('p', { class: 'melding' }, opbouw.terugval));
   if (opbouw) {
     const dl = el('dl', { class: 'detail' });
