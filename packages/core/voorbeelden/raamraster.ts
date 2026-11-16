@@ -238,13 +238,6 @@ export function zonweringVan(r: ConfiguratieResultaat): ZonDeel[] {
   return Array.from({ length: n }, (_, i) => ({ nr: i + 1, x0: grenzen[i]!, x1: grenzen[i + 1]! }));
 }
 
-/**
- * Hoogte (mm) van de kast van een raamventilator: zo hoog als het bovenste kaderprofiel (de vleugel eronder kan dan nog
- * open), minstens 5 cm. Een echte opzetkast staat vaak bóven het kader; dat vraagt een hogere opening in de muur en is
- * hier niet getekend.
- */
-export const ventilatorHoogte = (f: number) => Math.max(f, 50);
-
 /** De opening per kolom van de hoofdrij (links → rechts gezien van binnen), voor plattegrond en gevelaanzicht. */
 export function openingenVan(r: ConfiguratieResultaat): string[] {
   return rasterVan(r).vakken.filter((v) => v.rol === 'vak' || v.rol === 'deur' || v.rol === 'deel').map((v) => v.opening);
@@ -271,6 +264,15 @@ export function raamTekening(r: ConfiguratieResultaat, raster: Raster = rasterVa
   const zon = zonweringVan(r);
   if (zon.length > 1) for (const z of zon) vorm(`zonwering.${z.nr}`, z.x0, -kast, z.x1 - z.x0, kast, kbKleur);
   else if (kast > 0) vorm('zonwering', 0, -kast, B, kast, kbKleur);
+  // Raamventilator (ronde 11b): de opzetkast bovenop het kader, binnen (dus vóór een zonweringskast in dit zicht van
+  // binnen), met de sleuven van de ventilator in het midden en de knop ernaast (zie raam3d.ts).
+  const vh = num(a.vent_h);
+  if (a.vent_toestel === true && vh > 0) {
+    const vb = num(a.vent_b), x0 = (B - vb) / 2;
+    vorm('ventilator', 0, -vh, B, vh, '#e8e7e2');
+    for (let i = 0; i < 3; i++) vorm(`ventilator.sleuf.${i + 1}`, x0, -vh * (0.75 - i * 0.2), vb, vh * 0.07, '#55585a');
+    vorm('ventilator.knop', x0 + vb + 30, -vh * 0.62, 24, vh * 0.24, '#55585a');
+  }
   vorm('kader', 0, 0, B, H, ki);
 
   const hoofd = raster.vakken.filter((v) => v.rol === 'vak' || v.rol === 'deur' || v.rol === 'deel');
@@ -309,13 +311,6 @@ export function raamTekening(r: ConfiguratieResultaat, raster: Raster = rasterVa
   for (const v of metRoeden) for (let j = 1; j < v.ruiten[1]; j++) vorm(roedeCode('roede_h', v, j, v.ruiten[1] - 1), v.vlak.x, v.vlak.y + (v.vlak.h * j) / v.ruiten[1] - dikte / 2, v.vlak.b, dikte, ki);
 
   if (a.vent_rooster === true) vorm('rooster', f, f * 0.3, B - 2 * f, f * 0.4, '#77797a');
-  // Raamventilator: de kast binnen tegen de bovenkant van het kader, met de sleuven van de luchtinlaat (zie raam3d.ts).
-  if (a.vent_toestel === true) {
-    const vb = num(a.vent_b), vh = ventilatorHoogte(f), x0 = (B - vb) / 2;
-    vorm('ventilator', x0, 0, vb, vh, '#e8e7e2');
-    for (let i = 0; i < 3; i++) vorm(`ventilator.sleuf.${i + 1}`, x0 + 25, vh * (0.3 + i * 0.2), vb - 90, vh * 0.08, '#55585a');
-    vorm('ventilator.knop', x0 + vb - 45, vh * 0.35, 20, vh * 0.3, '#55585a');
-  }
   if (a.type_deur !== true && typeof k.vensterbank === 'string' && k.vensterbank !== 'geen') vorm('vensterbank', -50, H, B + 100, 30, tekst(a.vb_kleur));
 
   const maatlijnen: MaatlijnResultaat[] = [];
@@ -328,9 +323,11 @@ export function raamTekening(r: ConfiguratieResultaat, raster: Raster = rasterVa
   if (raster.bl > 0) maat('bovenlicht', 0, raster.bl, 0, 0, 160);
   if (raster.oh > 0) maat('onder', 0, H, 0, H - raster.oh, 160);
   // Twee of drie screens: de breedte van elk screen vlak boven de kasten; de maat van de vakken komt er dan boven.
+  // (Boven een opzetkast van een raamventilator die hoger is dan de zonweringskast, komen de maten boven die kast.)
+  const boven = Math.max(kast, vh);
   const metScreens = zon.length > 1;
-  if (metScreens) for (const z of zon) maat(`screen.${z.nr}`, z.x0, 0, z.x1, 0, kast + 120, String(Math.round(z.x1 - z.x0)));
-  const vakAfstand = kast + 120 + (metScreens ? Math.max(260, Math.max(B, H) / 14) : 0);
+  if (metScreens) for (const z of zon) maat(`screen.${z.nr}`, z.x0, 0, z.x1, 0, boven + 120, String(Math.round(z.x1 - z.x0)));
+  const vakAfstand = boven + 120 + (metScreens ? Math.max(260, Math.max(B, H) / 14) : 0);
   if (n >= 2 && raster.soort !== 'schuif') {
     // Gelijke vakken: alleen het eerste; ongelijke vakken: elk vak.
     const ongelijk = hoofd.some((v) => Math.abs(v.b - hoofd[0]!.b) > 0.5);

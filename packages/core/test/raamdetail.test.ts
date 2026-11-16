@@ -99,7 +99,7 @@ describe('twee of drie screens op één raam', () => {
 });
 
 describe('ventilatie op het raam: rooster of raamventilator', () => {
-  it('een rooster zoals vroeger; een raamventilator is een toestel met een kast, geen rooster', () => {
+  it('een rooster zoals vroeger; een raamventilator is een toestel in een opzetkast, geen rooster', () => {
     const rooster = raam({ rooster: true });
     expect([rooster.afgeleid.vent_rooster, rooster.afgeleid.vent_toestel]).toEqual([true, false]);
     expect(stuk(rooster, 'rooster')).toBeDefined();
@@ -113,22 +113,30 @@ describe('ventilatie op het raam: rooster of raamventilator', () => {
     // De controle "droge ruimte zonder ventilatie" blijft stil: er is luchttoevoer.
     expect(v.meldingen.some((m) => m.code === 'ventilatie')).toBe(false);
     expect(raam({}).meldingen.some((m) => m.code === 'ventilatie')).toBe(true);
-    // Tekening: de kast en haar sleuven, geen rooster.
+    // Tekening: de opzetkast bovenop het kader (10 cm) over de hele breedte, de sleuven van de ventilator; geen rooster.
     expect(v.tekening!.vormen.some((x) => x.code === 'rooster')).toBe(false);
-    expect(v.tekening!.vormen.find((x) => x.code === 'ventilator')).toMatchObject({ breedte: 500, y: 0 });
-    // 3D: de kast binnen tegen de bovenkant van het kader, binnen de maat van het raam (de opening in de muur blijft gelijk).
+    expect(v.tekening!.vormen.find((x) => x.code === 'ventilator')).toMatchObject({ x: 0, y: -100, breedte: 1200, hoogte: 100 });
+    expect(v.tekening!.vormen.filter((x) => x.code.startsWith('ventilator.sleuf')).every((x) => x.breedte === 500 && x.x === 350)).toBe(true);
+    // 3D: de opzetkast binnen, bovenop het kader, over de hele breedte; buiten een rooster. De opening in de muur wordt 10 cm
+    // hoger (zoals bij een zonweringskast).
     const rb = raamBlokken(v);
     const kast = rb.blokken.find((b) => b.code === 'ventilator_kast')!;
     expect(rb.blokken.some((b) => b.code === 'rooster')).toBe(false);
-    expect([kast.x, kast.x + kast.b, kast.y + kast.h]).toEqual([35, 85, 140]);
+    expect([kast.x, kast.b, kast.y, kast.h]).toEqual([0, 120, 140, 10]);
+    expect(rb.blokken.some((b) => b.code === 'ventilator_buiten')).toBe(true);
     for (const b of rb.blokken.filter((x) => x.code.startsWith('ventilator'))) {
       expect(b.x).toBeGreaterThanOrEqual(0);
       expect(b.x + b.b).toBeLessThanOrEqual(rb.b);
-      expect(b.y + b.h).toBeLessThanOrEqual(rb.h + 0.001);
-      expect(b.z).toBeGreaterThanOrEqual(-0.5);
+      expect(b.y).toBeGreaterThanOrEqual(rb.h);
+      expect(b.y + b.h).toBeLessThanOrEqual(rb.h + rb.kast + 0.001);
+      expect(b.z).toBeGreaterThanOrEqual(-1.5);
       expect(b.z + b.d).toBeLessThanOrEqual(13.5);
     }
-    expect([rb.h, rb.kast]).toEqual([140, 0]);
+    expect([rb.h, rb.kast]).toEqual([140, 10]);
+    // Met een screen: de opzetkast is zo hoog als de zonweringskast, de opening blijft die van het screen, geen rooster buiten.
+    const s = raamBlokken(raam({ rooster: true, ventilatie_soort: 'ventilator', zonwering: 'screen' }));
+    expect([s.kast, s.blokken.find((b) => b.code === 'ventilator_kast')!.h, s.blokken.some((b) => b.code === 'ventilator_buiten')]).toEqual([15, 15, false]);
+    expect(raamBlokken(raam({ zonwering: 'screen' })).kast).toBe(15);
   });
 
   it('te smal voor een raamventilator: een fout met de raad een rooster te kiezen', () => {

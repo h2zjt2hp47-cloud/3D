@@ -361,13 +361,13 @@ export const raamdeur: ProductModel = {
     // `rooster: true` blijven exact hetzelfde); `ventilatie_soort` zegt welke: het zelfregelende rooster van vroeger of een raamventilator.
     {
       code: 'rooster', label: 'Ventilatie op het raam', stap: 'opties', type: 'janee', standaard: false, zichtbaarAls: 'type <> "voordeur"',
-      helptekst: 'Luchttoevoer bovenaan het raam: een zelfregelend rooster, of een raamventilator (een toestel met een kast).',
+      helptekst: 'Luchttoevoer bovenaan het raam: een zelfregelend rooster, of een raamventilator (een toestel in een opzetkast bovenop het kader).',
     },
     {
       code: 'ventilatie_soort', label: 'Soort ventilatie op het raam', stap: 'opties', type: 'keuze', standaard: 'rooster', zichtbaarAls: 'rooster en type <> "voordeur"',
       keuzes: [
         { code: 'rooster', label: 'Zelfregelend rooster' },
-        { code: 'ventilator', label: 'Raamventilator (toestel met een kast bovenaan het raam)' },
+        { code: 'ventilator', label: 'Raamventilator (toestel in een opzetkast bovenop het kader)' },
       ],
     },
     { code: 'rc2', label: 'Inbraakwerend beslag (RC2)', stap: 'opties', type: 'janee', standaard: false },
@@ -566,10 +566,13 @@ export const raamdeur: ProductModel = {
     { code: 'zb3', label: 'Breedte screen 3 (mm)', formule: 'als(zon_n < 3; 0; breedte - zg2)' },
     { code: 'zon_bmax', label: 'Breedste screen (mm)', formule: 'max(zb1; zb2; zb3)' },
     { code: 'zon_bmin', label: 'Smalste screen (mm)', formule: 'als(zon_n < 2; zb1; min(zb1; zb2; als(zon_n >= 3; zb3; zb2)))' },
-    // ---- Ventilatie op het raam (ronde 11b): het rooster van vroeger, of een raamventilator met een kast binnen, bovenaan. ----
+    // ---- Ventilatie op het raam (ronde 11b): het rooster van vroeger, of een raamventilator in een opzetkast bovenop het
+    // kader (binnen, over de hele breedte, 10 cm hoog of zo hoog als de zonweringskast), met het rooster van de ventilator
+    // (`vent_b` breed) in het midden. Zonder zonwering wordt de opening in de muur zo 10 cm hoger.
     { code: 'vent_rooster', formule: 'rooster = waar en ventilatie_soort <> "ventilator"' },
     { code: 'vent_toestel', formule: 'rooster = waar en ventilatie_soort = "ventilator"' },
-    { code: 'vent_b', label: 'Breedte kast raamventilator (mm)', formule: 'als(vent_toestel; min(500; breedte - 2 * f - 40); 0)' },
+    { code: 'vent_b', label: 'Breedte ventilator (mm)', formule: 'als(vent_toestel; min(500; breedte - 2 * f - 40); 0)' },
+    { code: 'vent_h', label: 'Hoogte opzetkast raamventilator (mm)', formule: 'als(vent_toestel; max(100; zon_kast); 0)' },
     { code: 'veilig_nodig', formule: 'type_deur of borst < 850' },
     { code: 'toeslag_pct', formule: 'kleur_buiten_toeslag + kleur_binnen_toeslag' },
     { code: 'levertermijn', label: 'Levertermijn (weken)', formule: 'profiel_weken + als(toeslag_pct > 0; 1; 0) + als(zonwering <> "geen"; 1; 0) + als(type = "voordeur"; 2; 0)' },
@@ -611,7 +614,7 @@ export const raamdeur: ProductModel = {
     },
     { code: 'valgevaar', ernst: 'waarschuwing', als: 'verdieping > 0 en (type_deur of borst < 850) en (beweeg > 0 of type_deur)', melding: 'Op de verdieping met een lage borstwering of een deur: valbeveiliging nodig (balustrade of vast glas, te bevestigen).' },
     { code: 'ventilatie', ernst: 'waarschuwing', als: 'ruimte_droog en type <> "voordeur" en niet rooster', melding: 'Droge ruimte zonder ventilatierooster of raamventilator: bij ventilatiesysteem C is luchttoevoer nodig (EPB, te bevestigen).' },
-    { code: 'ventilator_smal', ernst: 'fout', als: 'vent_toestel en breedte - 2 * f < 400', melding: 'Te smal voor een raamventilator (de kast is minstens 36 cm breed): kies een zelfregelend rooster.' },
+    { code: 'ventilator_smal', ernst: 'fout', als: 'vent_toestel en breedte - 2 * f < 400', melding: 'Te smal voor een raamventilator (de ventilator is minstens 36 cm breed): kies een zelfregelend rooster.' },
     { code: 'privacy', ernst: 'waarschuwing', als: 'in(ruimte; "badkamer"; "wc") en glas_m2 > 0 en niet glas_mat', melding: 'Badkamer of wc met helder glas: mat glas voor privacy?' },
     {
       code: 'statiek', ernst: 'fout', als: 'heeft_stijl en niet statiek_ok',
@@ -655,7 +658,7 @@ export const raamdeur: ProductModel = {
     { code: 'hor', omschrijving: 'Inzethor', artikel: '"HOR-INZET"', eenheid: 'm2', aantal: 'n', lengte: 'gb', breedte: 'gh', als: 'vliegenraam = "inzet"' },
     { code: 'plisse', omschrijving: 'Plissé-vliegendeur', artikel: '"HOR-PLISSE"', eenheid: 'stuk', aantal: '1', als: 'vliegenraam = "plisse"' },
     { code: 'rooster', omschrijving: 'Ventilatierooster', artikel: '"ROOSTER"', eenheid: 'lm', aantal: '1', lengte: 'breedte - 2 * f', als: 'vent_rooster' },
-    { code: 'ventilator', omschrijving: 'Raamventilator met kast (binnen, bovenaan het raam)', artikel: '"RAAM-VENTILATOR"', eenheid: 'stuk', aantal: '1', als: 'vent_toestel' },
+    { code: 'ventilator', omschrijving: 'Raamventilator in een opzetkast (binnen, bovenop het kader)', artikel: '"RAAM-VENTILATOR"', eenheid: 'stuk', aantal: '1', als: 'vent_toestel' },
     { code: 'rc2', omschrijving: 'Meerprijs inbraakwerend beslag', artikel: '"RC2-TOESLAG"', eenheid: 'stuk', aantal: 'max(1; beweeg)', als: 'rc2' },
     { code: 'vensterbank', omschrijving: 'Vensterbank binnen', artikel: 'vensterbank_artikel', eenheid: 'lm', aantal: '1', lengte: 'breedte + 100', als: 'niet type_deur en vensterbank <> "geen"' },
     { code: 'dorpel', omschrijving: 'Dorpel buiten', artikel: 'dorpel_artikel', eenheid: 'lm', aantal: '1', lengte: 'breedte + 60', als: 'niet type_deur en dorpel <> "geen"' },
@@ -735,7 +738,7 @@ export const raamPrijslijst: Prijslijst = Object.fromEntries(
       ['HOR-INZET', 'Inzethor', 'm2', 55, 0],
       ['HOR-PLISSE', 'Plissé-vliegendeur', 'stuk', 230, 0],
       ['ROOSTER', 'Ventilatierooster', 'lm', 62, 0],
-      ['RAAM-VENTILATOR', 'Raamventilator met kast', 'stuk', 340, 0],
+      ['RAAM-VENTILATOR', 'Raamventilator met opzetkast', 'stuk', 340, 0],
       ['ZON-MIDDENGELEIDER', 'Middengeleider screens', 'lm', 38, 0],
       ['RC2-TOESLAG', 'Meerprijs RC2-beslag', 'stuk', 85, 0],
       ['VB-STEEN', 'Vensterbank blauwe hardsteen', 'lm', 85, 5],

@@ -7,13 +7,13 @@
  */
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type ConfiguratieResultaat, type Scene3D } from '../src/index.js';
 import { GLASKLEUR } from './raam.js';
-import { nieuweIndeling, rasterVan, ventilatorHoogte, zonweringVan, type RasterVak } from './raamraster.js';
+import { nieuweIndeling, rasterVan, zonweringVan, type RasterVak } from './raamraster.js';
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
 export interface RaamBlokken {
   blokken: Blok[];
-  /** Breedte en hoogte van het kader (cm), hoogte van de zonweringskast en borstwering (cm). */
+  /** Breedte en hoogte van het kader (cm), hoogte van de zonweringskast (of van de opzetkast van een raamventilator) en borstwering (cm). */
   b: number;
   h: number;
   kast: number;
@@ -249,15 +249,20 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
 
   if (a.vent_rooster === true) blok('rooster', 'donker', f, H - f * 0.65, 7, B - 2 * f, 1.4, 0.4, '#3a3a3a');
 
-  // Raamventilator (ronde 11b): een kast binnen tegen de bovenkant van het kader, met sleuven voor de lucht en een knop; buiten
-  // een smal rooster in het kader. Alles binnen de maat van het kader: de opening in de muur blijft dezelfde.
-  if (a.vent_toestel === true) {
-    const vb = cm(a.vent_b), vh = ventilatorHoogte(num(a.f)) / 10, x0 = (B - vb) / 2;
-    blok('ventilator_kast', 'kunststof', x0, H - vh, 7, vb, vh, 5.6, '#e8e7e2', { afronding: 0.8 });
-    for (let i = 0; i < 3; i++) blok(`ventilator_sleuf${i + 1}`, 'donker', x0 + 2.5, H - vh * (0.3 + i * 0.2) - 0.4, 12.6, vb - 9, 0.4, 0.2, '#3b3e40');
-    blok('ventilator_sleuf_onder', 'donker', x0 + 2.5, H - vh - 0.05, 8, vb - 5, 0.1, 4, '#3b3e40');
-    blok('ventilator_knop', 'donker', x0 + vb - 4.5, H - vh * 0.6, 12.6, 2, vh * 0.3, 0.25, '#55585a');
-    blok('ventilator_buiten', 'donker', x0, H - f * 0.8, -0.5, vb, f * 0.6, 0.5, '#2f3133');
+  // Raamventilator (ronde 11b): een opzetkast bovenop het kader, binnen in de dagopening, over de hele breedte, met de
+  // sleuven van de ventilator in het midden en een knop ernaast. Buiten een rooster over de breedte, tenzij er een
+  // zonweringskast voor zit. De opzetkast is zo hoog als de zonweringskast (minstens 10 cm): zonder zonwering wordt de
+  // opening in de muur 10 cm hoger (`kast` hieronder).
+  const ventH = a.vent_toestel === true ? cm(a.vent_h) : 0;
+  if (ventH > 0) {
+    const vb = cm(a.vent_b), x0 = (B - vb) / 2;
+    blok('ventilator_kast', 'kunststof', 0, H, 1, B, ventH, 12, '#e8e7e2', { afronding: 0.6 });
+    for (let i = 0; i < 3; i++) blok(`ventilator_sleuf${i + 1}`, 'donker', x0, H + ventH * (0.25 + i * 0.2), 13, vb, 0.7, 0.25, '#3b3e40');
+    blok('ventilator_knop', 'donker', x0 + vb + 3, H + ventH * 0.38, 13, 2.4, 2.4, 0.3, '#55585a');
+    if (kast <= 0) {
+      blok('ventilator_buiten', 'donker', 0, H, -1, B, ventH, 2, '#2f3133');
+      for (let i = 0; i < 3; i++) blok(`ventilator_lamel${i + 1}`, 'metaal', 0.5, H + ventH * (0.2 + i * 0.3), -1.5, B - 1, 0.6, 0.5, '#5b5f62');
+    }
   }
 
   // Zonwering: kast boven het raam (buiten), geleiders en het doek of de lamellen half of helemaal neer. Twee of drie screens
@@ -300,7 +305,8 @@ export function raamBlokken(r: ConfiguratieResultaat, opties: { binnenDiepte?: n
   if (k.dorpel === 'alu') blok('dorpel', 'metaal', -3, -4, -(buitenD + 3), B + 6, 4, buitenD + 3, kb);
   if (k.dorpel === 'arduin') blok('dorpel', 'gevel', -3, -5, -(buitenD + 4), B + 6, 5, buitenD + 4, '#50565b');
 
-  return { blokken, b: B, h: H, kast, borst: cm(a.borst) };
+  // De hoogte boven het kader die de opening in de muur nodig heeft: de zonweringskast, of de opzetkast van een raamventilator.
+  return { blokken, b: B, h: H, kast: Math.max(kast, ventH), borst: cm(a.borst) };
 }
 
 /** Een raam of deur in een stukje gevel, met vloer binnen en terras buiten (voorbeeld per positie). */

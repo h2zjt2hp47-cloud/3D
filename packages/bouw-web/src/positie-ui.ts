@@ -215,7 +215,7 @@ export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string]
   if (a.heeft_stijl === true) t.push(['Statiek tussenstijl', `${getal(num(a.i_nodig), 1)} / ${getal(num(a.i_aanwezig), 1)} cm⁴ (nodig / aanwezig)`]);
   if (num(a.zon_kast) > 0) t.push(['Zonweringskast', `${getal(num(a.zon_kast))} mm boven het raam`]);
   if (num(a.zon_n) >= 2) t.push(['Screens naast elkaar', `${[a.zb1, a.zb2, a.zb3].slice(0, num(a.zon_n)).map((b) => getal(num(b))).join(' + ')} mm, met ${num(a.zon_n) - 1} middengeleider${num(a.zon_n) > 2 ? 's' : ''}`]);
-  if (a.vent_toestel === true) t.push(['Raamventilator', `kast ${getal(num(a.vent_b))} mm breed, binnen tegen de bovenkant van het kader`]);
+  if (a.vent_toestel === true) t.push(['Raamventilator', `${getal(num(a.vent_b))} mm breed, in een opzetkast van ${getal(num(a.vent_h))} mm hoog bovenop het kader (binnen, over de hele breedte)`]);
   return t;
 }
 
@@ -256,12 +256,14 @@ const BEELDKENMERKEN = new Set(['zon_stand']);
 
 /**
  * De samenvatting van een positie (kenmerk: keuze), zonder wat alleen over de prijs of het beeld gaat. Bij een raam staat
- * de ventilatie op één regel, zoals in het formulier: "Ventilatie op het raam: Zelfregelend rooster" (of Raamventilator, of nee).
+ * de ventilatie op één regel, zoals in het formulier: "Ventilatie op het raam: Zelfregelend rooster" (of Raamventilator, of
+ * nee), en het aantal screens alleen als het er meer dan één zijn.
  */
 export function samenvatting(r: ConfiguratieResultaat): string[] {
   const soort = r.kenmerken.find((k) => k.code === 'ventilatie_soort');
   return r.kenmerken.filter((k) => k.zichtbaar && (PRIJZEN || !PRIJSKENMERKEN.has(k.code)) && !BEELDKENMERKEN.has(k.code)).flatMap((k) => {
-    if (r.product === 'RAAM' && k.code === 'ventilatie_soort') return [];
+    // Eén screen is het gewone geval (zoals vroeger): geen aparte regel; twee of drie wel.
+    if (r.product === 'RAAM' && (k.code === 'ventilatie_soort' || (k.code === 'screens' && k.waarde === 's1'))) return [];
     if (r.product === 'RAAM' && k.code === 'rooster') return [`${k.label}: ${k.waarde === true ? (soort?.zichtbaar ? soort.weergave : 'ja') : 'nee'}`];
     return [`${k.label}: ${k.weergave}`];
   });
@@ -549,7 +551,7 @@ function ventilatieVeld(): HTMLElement {
     groep.append(tegel);
     knoppen.set(w, knop);
   }
-  veld.append(groep, el('p', { class: 'hulp' }, 'Luchttoevoer bovenaan het raam. Een raamventilator is een toestel met een kast binnen, tegen de bovenkant van het kader; het vraagt een elektrische aansluiting.'), fout, herstel);
+  veld.append(groep, el('p', { class: 'hulp' }, 'Luchttoevoer bovenaan het raam. Een raamventilator is een toestel in een opzetkast bovenop het kader (binnen; buiten een rooster); het vraagt een elektrische aansluiting en, zonder zonweringskast, een opening die 10 cm hoger is.'), fout, herstel);
   const update = () => {
     const k = huidig()?.keuzes;
     const nu = k?.rooster !== true ? 'geen' : k.ventilatie_soort === 'ventilator' ? 'ventilator' : 'rooster';
