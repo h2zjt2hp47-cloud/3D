@@ -82,3 +82,4 @@ export * from './richtwaarde.js';
 export * from './warmte.js';
 export * from './stabiliteit.js';
 export * from './maten3d.js';
+export * from './techniekplaatsen.js';

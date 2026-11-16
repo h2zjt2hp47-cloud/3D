@@ -11,6 +11,14 @@ import {
   type DakBedekking, type DakKeuze, type DakLicht, type DakLichtType, type DakMateriaal, type HellendDak,
 } from './dak.js';
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
+import {
+  toestelMaten, leidingVerloop, techniekBlokken, toestelVoetafdruk, voorRichting,
+  type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
+} from './techniek.js';
+
+// Techniek voor de installateur (toestellen en leidingen): zie techniek.ts. Hier alleen de velden in het plan, de 3D en
+// de controles; zo komt alles mee met `export * from './plattegrond.js'` in index.ts.
+export * from './techniek.js';
 
 export type RuimteType = 'leefruimte' | 'keuken' | 'slaapkamer' | 'bureau' | 'badkamer' | 'wc' | 'hal' | 'berging' | 'garage';
 
@@ -124,6 +132,13 @@ export interface Plattegrond {
    * Ontbreekt = de bovenkant van het plan is het noorden. Voor de lichtinval (zie zon.ts) en de noordpijl.
    */
   noord?: number;
+  /**
+   * Techniek (ronde 10): toestellen van de installateur (tellerkast, stopcontact, airco, boiler, ventilatie-unit …) en
+   * leidingen (kabel, koelleiding, water, afvoer, kanaal …), elk met een `niveau`. Zie techniek.ts. Ontbreken ze, dan is
+   * alles zoals vroeger.
+   */
+  toestellen?: Toestel[];
+  leidingen?: Leiding[];
 }
 
 /** Kant van de woning (op de plattegrond): boven, onder, links of rechts. */
@@ -281,6 +296,8 @@ export interface PlanCatalogus {
   /** Dakbedekkingen (plat en hellend) en lichtkoepels; zonder deze lijsten is het dak effen donker. */
   daken?: Record<string, DakMateriaal>;
   daklichten?: Record<string, DakLichtType>;
+  /** Toestellen en leidingsoorten van de installateur (zie techniek.ts); zonder deze catalogus wordt geen techniek getoond. */
+  techniek?: TechniekCatalogus;
 }
 
 export type MeubelVorm =
@@ -624,6 +641,8 @@ export function niveauPlan(plan: Plattegrond, niveau: number): Plattegrond {
     openingen: plan.openingen.filter((o) => niveauVan(o) === niveau),
     meubels: plan.meubels.filter((m) => niveauVan(m) === niveau),
     ...(plan.daklichten ? { daklichten: plan.daklichten.filter((l) => niveauVan(l) === niveau) } : {}),
+    ...(plan.toestellen ? { toestellen: plan.toestellen.filter((t) => niveauVan(t) === niveau) } : {}),
+    ...(plan.leidingen ? { leidingen: plan.leidingen.filter((l) => niveauVan(l) === niveau) } : {}),
   };
 }
 
@@ -1226,6 +1245,9 @@ export interface PlanMelding {
   ruimte?: string;
   opening?: string;
   daklicht?: string;
+  /** Techniek: het toestel of de leiding waar de melding over gaat. */
+  toestel?: string;
+  leiding?: string;
 }
 
 const BUITEN: OpeningSoort[] = ['raam', 'buitendeur', 'schuifraam', 'garagepoort'];
@@ -1265,6 +1287,7 @@ export function controleerPlan(plan: Plattegrond, cat?: PlanCatalogus): PlanMeld
     for (const r of plan.ruimtes) if (!bereikt.has(r.id)) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${r.naam} is niet bereikbaar: voeg een deur of doorgang toe.` });
   }
   controleerDak(plan, cat, uit);
+  if (plan.toestellen?.length || plan.leidingen?.length) controleerTechniek(plan, cat, uit);
   return uit;
 }
 
@@ -1298,6 +1321,175 @@ function controleerDak(plan: Plattegrond, cat: PlanCatalogus | undefined, uit: P
       if (ox > -20 && oy > -20) uit.push({ ernst: 'fout', daklicht: b.id, melding: `${naam(b)}: twee daklichten overlappen elkaar of liggen minder dan 20 cm van elkaar.` });
     }
   }
+}
+
+/** Meubels waar een sanitaire leiding (water, afvoer) of gas mag beginnen of eindigen. */
+const SANITAIRE_MEUBELS: MeubelVorm[] = ['wc', 'lavabo', 'douche', 'bad', 'keuken', 'eiland', 'koelkast'];
+
+/** De vorm van een muur op het plan, als veelhoek met de klok mee. */
+function muurVorm(m: Muur, muren: Muur[]): Punt[] {
+  const v = muurVlak(m, muren);
+  return v.punten ? metDeKlok(v.punten) : rechthoekVorm(v);
+}
+
+/** Afstand van een punt tot een veelhoek (0 als het erin ligt). */
+function afstandTotVeelhoek(v: Punt[], p: Punt): number {
+  if (binnenVeelhoek(v, p[0], p[1], -0.01)) return 0;
+  return Math.min(...v.map((q, i) => afstandTotStuk(p, q, v[(i + 1) % v.length]!)));
+}
+
+/**
+ * De wand waar een toestel met zijn achterkant tegen staat (binnen `speling` cm van een muurvlak), met de plaats langs
+ * die muur van zijn voetafdruk (van tot tot).
+ */
+function wandAchter(t: Toestel, type: ToestelType, muren: Muur[], speling = 3): { muur: Muur; van: number; tot: number } | undefined {
+  const m3 = toestelMaten(type, t.aan);
+  const [vx, vy] = voorRichting(t.draai);
+  const achter: Punt = [t.x - (vx * m3.d) / 2, t.y - (vy * m3.d) / 2];
+  for (const m of muren) {
+    const [s, w] = opAs(m, achter);
+    if (s < m.van - 1 || s > m.tot + 1) continue;
+    const afstand = Math.abs(w - m.lijn) - m.dikte / 2;
+    if (afstand < -1 || afstand > speling) continue;
+    const langs = toestelVoetafdruk(t, type).map((q) => opAs(m, q)[0]);
+    return { muur: m, van: Math.min(...langs), tot: Math.max(...langs) };
+  }
+  return undefined;
+}
+
+/**
+ * Controles op de techniek, als signaal in gewone taal en nooit als berekening (zie `TECHNIEK_VOORBEHOUD`): een toestel
+ * zonder de vrije ruimte die het vraagt (buitenunit, warmtepomp, tellerkast …), een toestel dat in een raam of deur hangt,
+ * een toestel dat niet hangt waar het hoort (niet tegen een wand, buiten de woning, een buitenunit binnen), een leiding die
+ * nergens begint of eindigt, een leiding langer dan de richtwaarde van haar soort, en (zodra er sanitair in het plan
+ * zit) een natte ruimte zonder afvoer. Zonder catalogus techniek wordt niets nagekeken.
+ */
+function controleerTechniek(plan: Plattegrond, cat: PlanCatalogus | undefined, uit: PlanMelding[]) {
+  const tc = cat?.techniek;
+  if (!tc) return;
+  const niveaus = verdiepingenVan(plan);
+  const alle = plan.toestellen ?? [];
+  const metSanitair = alle.some((t) => tc.toestellen[t.type]?.vak === 'sanitair') || (plan.leidingen ?? []).some((l) => tc.leidingen[l.soort]?.vak === 'sanitair');
+  const vh = (n: number) => vloerHoogte(plan, n);
+  niveaus.forEach((nv, n) => {
+    const pre = niveaus.length > 1 && n > 0 ? `${nv.naam}: ` : '';
+    const p = niveauPlan(plan, n);
+    const muren = murenVan(p);
+    const wandVormen = muren.map((m) => muurVorm(m, muren));
+    const toestellen = p.toestellen ?? [], leidingen = p.leidingen ?? [];
+    const naamVan = (t: Toestel, type?: ToestelType) => `${type?.label ?? 'Toestel'}${t.naam ? ` (${t.naam})` : ''}`;
+    // Wat in de weg kan staan, met van welke tot welke hoogte: muren, grote toestellen (niet een stopcontact of een
+    // lichtpunt) en meubels.
+    interface Hinder { vorm: Punt[]; van: number; tot: number; toestel?: Toestel }
+    const hinderlijk: Hinder[] = [
+      ...wandVormen.map((vorm) => ({ vorm, van: -Infinity, tot: Infinity })),
+      ...toestellen.flatMap((x) => {
+        const ty = tc.toestellen[x.type];
+        if (!ty || x.aan === 'dak' || toestelMaten(ty, x.aan).d < 15) return [];
+        return [{ vorm: toestelVoetafdruk(x, ty), van: x.hoogte, tot: x.hoogte + toestelMaten(ty, x.aan).h, toestel: x }];
+      }),
+      ...p.meubels.filter((mb) => mb.type !== 'tapijt').map((mb) => ({ vorm: rechthoekVorm(meubelVoetafdruk(mb)), van: 0, tot: cat?.meubels[mb.type]?.h ?? 100 })),
+    ];
+
+    for (const t of toestellen) {
+      const type = tc.toestellen[t.type];
+      if (!type) { uit.push({ ernst: 'fout', toestel: t.id, melding: `${pre}Techniek: een toestel van een onbekend type (${t.type}).` }); continue; }
+      const naam = naamVan(t, type);
+      const binnen = ruimteOp(p, t.x, t.y);
+      // Hangt het waar het hoort? Een toestel op de vloer of buiten staat tegen een muur als het er hoogstens zijn vrije
+      // ruimte achter plus 25 cm van staat.
+      const tegen = t.aan === 'wand' || t.aan === 'buiten' || t.aan === 'vloer' ? wandAchter(t, type, muren, t.aan === 'wand' ? 3 : 25 + (type.vrij?.achter ?? 0)) : undefined;
+      if (t.aan === 'wand' && !tegen) uit.push({ ernst: 'waarschuwing', toestel: t.id, melding: `${pre}${naam} hangt niet tegen een wand. Zet het tegen de dichtste wand.` });
+      if ((t.aan === 'plafond' || t.aan === 'vloer' || t.aan === 'dak') && !binnen) uit.push({ ernst: 'waarschuwing', toestel: t.id, melding: `${pre}${naam} staat buiten de woning.` });
+      if (t.aan === 'buiten' && binnen) uit.push({ ernst: 'waarschuwing', toestel: t.id, ruimte: binnen.id, melding: `${pre}${naam} staat binnen, in ${binnen.naam}; het hoort buiten.` });
+      // Vrije ruimte: per kant een strook rond de voetafdruk waar niets in mag staan (muren, grote toestellen, meubels), in
+      // de hoogte van de vloer tot boven het toestel (je staat ervoor), of bij een toestel aan het plafond van het toestel
+      // tot het plafond.
+      if (type.vrij) {
+        const eigen = toestelVoetafdruk(t, type);
+        const v = type.vrij, hoog = toestelMaten(type, t.aan).h;
+        const [z0, z1] = t.aan === 'plafond' ? [t.hoogte, plan.muurhoogte] : [0, Math.max(t.hoogte + hoog, 200)];
+        // Een centimeter speling: een toestel dat precies op zijn vrije ruimte staat (afgerond, of tegen een schuine muur) is goed.
+        const kanten: [string, number, Punt[]][] = [];
+        if (v.voor) kanten.push(['voor', v.voor, toestelVoetafdruk(t, type, { voor: v.voor - 1 })]);
+        if (v.achter) kanten.push(['achter', v.achter, toestelVoetafdruk(t, type, { achter: v.achter - 1 })]);
+        if (v.opzij) kanten.push(['opzij', v.opzij, toestelVoetafdruk(t, type, { opzij: v.opzij - 1 })]);
+        const hinder = hinderlijk.filter((h) => h.toestel !== t && Math.min(z1, h.tot) - Math.max(z0, h.van) > 1).map((h) => h.vorm);
+        // Alleen wat in de strook ligt telt, niet wat onder het toestel zelf ligt (de strook min de voetafdruk).
+        const te = kanten.filter(([, , zone]) => hinder.some((h) => {
+          const inZone = veelhoekOppervlakte(snijVeelhoek(h, zone));
+          return inZone > 1 && inZone - veelhoekOppervlakte(snijVeelhoek(snijVeelhoek(h, zone), eigen)) > 1;
+        }));
+        if (te.length) {
+          uit.push({
+            ernst: 'waarschuwing', toestel: t.id,
+            melding: `${pre}${naam}: te weinig vrije ruimte ${te.map(([k, cm]) => `${k} (vraagt ${cm} cm)`).join(', ')}. Richtwaarde; de handleiding van het toestel beslist.`,
+          });
+        }
+      }
+      // Hangt het in een raam of deur? Alleen voor een toestel tegen een muur: overlap langs de muur en in de hoogte.
+      if (tegen) {
+        const m3 = toestelMaten(type, t.aan);
+        for (const o of p.openingen) {
+          if (muurVanOpening(o, [tegen.muur]) !== tegen.muur) continue;
+          const langs = Math.min(tegen.tot, o.midden + o.breedte / 2) - Math.max(tegen.van, o.midden - o.breedte / 2);
+          const hoog = Math.min(t.hoogte + m3.h, o.borstwering + o.hoogte) - Math.max(t.hoogte, o.borstwering);
+          if (langs > 1 && hoog > 1) {
+            const wat = o.soort === 'raam' || o.soort === 'schuifraam' ? 'een raam' : o.soort === 'garagepoort' ? 'een garagepoort' : o.soort === 'doorgang' ? 'een doorgang' : 'een deur';
+            const melding = t.aan === 'wand' ? `hangt in ${wat}. Verschuif het langs de muur of zet het hoger of lager.` : `staat voor ${wat}. Verschuif het langs de muur.`;
+            uit.push({ ernst: 'waarschuwing', toestel: t.id, opening: o.id, melding: `${pre}${naam} ${melding}` });
+          }
+        }
+      }
+    }
+
+    // Leidingen: begint en eindigt elke leiding ergens?
+    const toestelOp = (q: Punt) => toestellen.some((x) => { const ty = tc.toestellen[x.type]; return !!ty && afstandTotVeelhoek(toestelVoetafdruk(x, ty), q) <= 30; });
+    for (const l of leidingen) {
+      const soort = tc.leidingen[l.soort];
+      if (!soort) { uit.push({ ernst: 'fout', leiding: l.id, melding: `${pre}Techniek: een leiding van een onbekende soort (${l.soort}).` }); continue; }
+      const naam = `${soort.label}${l.kring ? ` (${l.kring})` : ''}`;
+      if (l.punten.length < 2) { uit.push({ ernst: 'fout', leiding: l.id, melding: `${pre}${naam} heeft geen lengte: geef minstens twee punten.` }); continue; }
+      for (const [kant, id, q] of [['begin', l.van, l.punten[0]!], ['einde', l.naar, l.punten[l.punten.length - 1]!]] as const) {
+        if (id) {
+          if (!alle.some((x) => x.id === id)) uit.push({ ernst: 'fout', leiding: l.id, melding: `${pre}${naam}: het toestel aan het ${kant} bestaat niet meer.` });
+          continue;
+        }
+        const aftakking = leidingen.some((x) => x !== l && tc.leidingen[x.soort]?.vak === soort.vak && x.punten.some((a, i) => i > 0 && afstandTotStuk(q, x.punten[i - 1]!, a) <= 10));
+        const meubel = (soort.vak === 'sanitair' || l.soort === 'gas') && p.meubels.some((mb) => {
+          const vorm = cat?.meubels[mb.type]?.vorm;
+          return !!vorm && SANITAIRE_MEUBELS.includes(vorm) && afstandTotVeelhoek(rechthoekVorm(meubelVoetafdruk(mb)), q) <= 30;
+        });
+        const buiten = !!soort.naarBuiten && !ruimteOp(p, q[0], q[1]) && !wandVormen.some((w) => binnenVeelhoek(w, q[0], q[1], -0.5));
+        if (!toestelOp(q) && !aftakking && !meubel && !buiten) {
+          uit.push({ ernst: 'waarschuwing', leiding: l.id, melding: `${pre}${naam}: het ${kant} is nergens aangesloten (geen toestel, meubel of andere leiding binnen 30 cm${soort.naarBuiten ? ', en niet buiten de woning' : ''}).` });
+        }
+      }
+      if (soort.maxLengte) {
+        const lengte = leidingVerloop(l, plan, tc, { vloerHoogte: vh }).lengte;
+        if (lengte > soort.maxLengte.waarde) {
+          const waarom = soort.maxLengte.uitleg ? ` (${soort.maxLengte.uitleg})` : '';
+          uit.push({ ernst: 'waarschuwing', leiding: l.id, melding: `${pre}${naam} is ${String(lengte).replace('.', ',')} m lang, meer dan ${soort.maxLengte.waarde} m${waarom}. Richtwaarde; de installateur beslist.` });
+        }
+      }
+    }
+
+    // Natte ruimte zonder afvoer: alleen zodra er sanitair in het plan zit (anders meldt elk plan zonder techniek dit).
+    if (metSanitair) {
+      const afvoeren = leidingen.filter((l) => tc.leidingen[l.soort]?.afvoer);
+      const raakt = (r: Ruimte, l: Leiding) => l.punten.some((q, i) => {
+        if (ruimteOp(p, q[0], q[1])?.id === r.id) return true;
+        const a = l.punten[i - 1];
+        if (!a) return false;
+        const stappen = Math.ceil(Math.hypot(q[0] - a[0], q[1] - a[1]) / 10);
+        for (let k = 1; k < stappen; k++) if (ruimteOp(p, a[0] + ((q[0] - a[0]) * k) / stappen, a[1] + ((q[1] - a[1]) * k) / stappen)?.id === r.id) return true;
+        return false;
+      });
+      for (const r of p.ruimtes.filter((x) => RUIMTE_TYPES[x.type].nat)) {
+        if (!afvoeren.some((l) => raakt(r, l))) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${pre}${r.naam}: natte ruimte zonder afvoer (er loopt nog geen afvoerleiding).` });
+      }
+    }
+  });
 }
 
 function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], ingang: Set<string>, verbind: (a: string, b: string) => void) {
@@ -1763,6 +1955,13 @@ export interface Plan3DOpties {
    * binnendeuren en de aanleg horen bij geen ding. Uit = de codes van vroeger (vingerafdrukken en het 3D-pakket blijven gelijk).
    */
   dingen?: boolean;
+  /**
+   * Techniek (ronde 10): de toestellen en leidingen van het plan tonen, per vak aan of uit (`vakken`, standaard alle), in
+   * de gewone woning of in de uitgezette weergave (`weergave: 'uitgezet'`: vloeren, lage wanden en een lijn op
+   * plafondhoogte, zonder dak, ramen of meubels, zodat je vooral de installaties ziet). Vraagt `cat.techniek`.
+   * Ontbreekt = de blokken van vroeger. Zie techniek.ts.
+   */
+  techniek?: TechniekWeergave;
 }
 
 /** Code van een blok met het ding waar het bij hoort (zie `Plan3DOpties.dingen`). */
@@ -1770,6 +1969,8 @@ const metDing = (opties: Plan3DOpties, ding: string | undefined, code: string) =
 
 /** Hele woning: alle verdiepingen op elkaar, met vloerplaten, trapgaten en platte daken. */
 export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties = {}): Scene3D {
+  // Techniek in de uitgezette weergave: een eigen, eenvoudige woning (zie `uitgezet3D`).
+  if (opties.techniek?.weergave === 'uitgezet') return uitgezet3D(plan, cat, opties);
   const blokken: Blok[] = [];
   const niveaus = verdiepingenVan(plan).length;
   const laatste = Math.min(niveaus - 1, opties.totNiveau ?? niveaus - 1);
@@ -1895,11 +2096,85 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
       blokken.push({ ...b, code: `schaduw_${b.code}`, alleenSchaduw: true });
     }
     if (opties.aanleg) blokken.push(...aanlegBlokken(plan));
+    blokken.push(...techniek3D(plan, cat, opties));
     return { blokken, kader };
   }
   // Het kader is dat van de woning zelf: met terras en pad erbij zou de camera verder weg gaan staan.
   const kader = kaderVan(blokken);
   if (opties.aanleg) blokken.push(...aanlegBlokken(plan));
+  // Techniek (alleen met de optie): na het kader, zoals de aanleg (een buitenunit naast de woning verzet de camera niet).
+  blokken.push(...techniek3D(plan, cat, opties));
+  return { blokken, kader };
+}
+
+/** De toestellen en leidingen voor de 3D (zie `Plan3DOpties.techniek`); leeg zonder de optie of zonder catalogus. */
+function techniek3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties): Blok[] {
+  if (!opties.techniek || !cat.techniek) return [];
+  return techniekBlokken(plan, cat.techniek, {
+    vakken: opties.techniek.vakken, niveau: opties.techniek.niveau, totNiveau: opties.totNiveau, dingen: opties.dingen,
+    vloerHoogte: (n) => vloerHoogte(plan, n),
+    vloerBoven: opties.techniek.weergave === 'uitgezet', opvallend: opties.techniek.weergave === 'uitgezet',
+  });
+}
+
+/** Maten van de uitgezette weergave (cm): de lage wanden, de lijn op plafondhoogte en de kleuren. */
+const UITGEZET = { wand: 12, lijn: 2, vloer: 1, kleurVloer: '#e6e4de', kleurWand: '#bab7af', kleurLijn: '#8a8781' };
+
+/**
+ * De woning uitgezet, om de installaties te zien (`Plan3DOpties.techniek` met `weergave: 'uitgezet'`): per verdieping de
+ * muren als lage wand (12 cm, met de deuropeningen eruit), de buitenmuren ook als dunne lijn op plafondhoogte, de vloeren
+ * alleen op de onderste getoonde verdieping (een vloer erboven zou de installaties eronder verbergen), zonder dak,
+ * vloerplaten, ramen, meubels en aanleg. Alles in effen, lichte kleuren, zodat de kleuren van de leidingen opvallen; een
+ * leiding in de vloer ligt zichtbaar op de vloer en kleine toestellen zijn groter (zie `toestelBlokken`). De kijker kent
+ * geen doorschijnend materiaal (behalve glas): dit is de weergave die zonder dat kan.
+ */
+function uitgezet3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties): Scene3D {
+  const blokken: Blok[] = [];
+  const t = opties.techniek ?? {};
+  const niveaus = verdiepingenVan(plan).length;
+  const laatste = Math.min(niveaus - 1, opties.totNiveau ?? niveaus - 1);
+  const eerste = t.niveau ?? 0, tot = t.niveau ?? laatste;
+  const H = plan.muurhoogte, U = UITGEZET;
+  const effen = (code: string, kleur: string, b: Omit<Blok, 'code' | 'soort' | 'kleur' | 'vorm'>): Blok =>
+    ({ code, soort: 'gevel', vorm: 'blok', kleur, ...b, x: r2(b.x), y: r2(b.y), z: r2(b.z), b: r2(b.b), h: r2(b.h), d: r2(b.d) });
+  for (let n = eerste; n <= tot; n++) {
+    const y0 = vloerHoogte(plan, n), p = niveauPlan(plan, n), muren = murenVan(p);
+    if (n === eerste) {
+      for (const r of p.ruimtes) for (const deel of delenVan(r)) {
+        blokken.push(deel.omtrek
+          ? grondPrisma(`uitgezet_vloer_${r.id}`, 'gevel', U.kleurVloer, vormVanDeel(deel), y0, U.vloer)
+          : effen(`uitgezet_vloer_${r.id}`, U.kleurVloer, { x: deel.x, y: y0, z: deel.y, b: deel.b, h: U.vloer, d: deel.d }));
+      }
+    }
+    for (const m of muren) {
+      const vlak = muurVlak(m, muren);
+      const langs = vlak.punten?.map((q) => opAs(m, q)[0]);
+      const begin = langs ? Math.min(...langs) : m.as === 'h' ? vlak.x : vlak.y, einde = langs ? Math.max(...langs) : begin + (m.as === 'h' ? vlak.b : vlak.d);
+      // De lage wand, zonder de openingen tot op de vloer (deuren, doorgangen, schuiframen): zo zie je waar je binnenkomt.
+      const gaten = p.openingen.filter((o) => o.borstwering < U.wand && muurVanOpening(o, [m]) === m)
+        .map((o) => [o.midden - o.breedte / 2, o.midden + o.breedte / 2] as const).sort((a, b) => a[0] - b[0]);
+      const stukken: [number, number][] = [];
+      let c = begin;
+      for (const [a, b] of gaten) { if (a > c + 0.1) stukken.push([c, a]); c = Math.max(c, b); }
+      if (einde > c + 0.1) stukken.push([c, einde]);
+      const stuk = (code: string, a: number, b: number, y: number, h: number) => {
+        if (m.as === 's') {
+          const { d } = asVan(m);
+          let [pts] = knipMetRanden<MuurRand>(vlak.punten!, vlak.randen!, -d[0], -d[1], -a, 'snede');
+          [pts] = knipMetRanden(pts, pts.map(() => 'snede' as MuurRand), d[0], d[1], b, 'snede');
+          if (pts.length >= 3) blokken.push(grondPrisma(code, 'gevel', y === y0 ? U.kleurWand : U.kleurLijn, pts, y, h));
+          return;
+        }
+        const kleur = y === y0 ? U.kleurWand : U.kleurLijn;
+        blokken.push(m.as === 'h' ? effen(code, kleur, { x: a, y, z: vlak.y, b: b - a, h, d: vlak.d }) : effen(code, kleur, { x: vlak.x, y, z: a, b: vlak.b, h, d: b - a }));
+      };
+      for (const [a, b] of stukken) stuk(`uitgezet_wand_${n}_${m.id}_${r2(a)}`, a, b, y0, U.wand);
+      // De lijn op plafondhoogte alleen langs de buitenmuren: de omtrek van de verdieping, zonder een raster van binnenmuren.
+      if (m.soort === 'buiten') stuk(`uitgezet_lijn_${n}_${m.id}`, begin, einde, y0 + H - U.lijn, U.lijn);
+    }
+  }
+  const kader = kaderVan(blokken);
+  blokken.push(...techniek3D(plan, cat, opties));
   return { blokken, kader };
 }
 
