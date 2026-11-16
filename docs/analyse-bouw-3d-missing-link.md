@@ -354,6 +354,10 @@ weigert hij met een uitleg, in plaats van het verkeerd te tonen. De nieuwe kijke
 van de voorbeeldwoning met een zadeldak in pannen, en met een plat dak in grind met een koepel en een lichtstraat,
 openen zonder fouten in de losse kijker; de zending bevat nog steeds geen enkel bedrag.
 
+**Versie 3 (16/11, bij de raamtypes).** Gelakt schrijnwerk (mat, structuur, glans) heeft eigen soorten in de 3D; een oudere
+kijker zou die als stof tekenen. De kijker van 16/11 opent versie 1, 2 en 3. De woning staat in de kijker en op het beeld van de
+zending nu in een omgeving (lucht, gras, terras); een los raam of een deur blijft op een rustige achtergrond.
+
 **Wat nog niet bestaat:** het versturen zelf. Pakket en zending zijn nu een bestand; waar Missing Link het bewaart en hoe
 het een beeld ontvangt, hangt af van de antwoorden op hoofdstuk 8 (vragen 4 en 5). Er is niets naar Missing Link
 geschreven.

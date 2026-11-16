@@ -319,15 +319,15 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | Ronde | Fase | Wat | Werk [inschatting] |
 |---|---|---|---|
 | 1 | 1 | **Klaar (15/11):** dak (plat, lessenaar, zadel, met bedekking), lichtkoepels en lichtstraten, lichtinval (zon op een dag en uur, noordrichting, zon per gevel); 3D doorsturen als pakket en zending. Niet nagekeken op een toestel met WebGPU | – |
-| 2 | 1 | *(start zodra de ramen samengevoegd zijn: de stijlen zetten ook de kleur van het schrijnwerk)* **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
-| 3 | 1 | *(loopt sinds 15/11)* **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
+| 2 | 1 | *(loopt sinds 16/11)* **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
+| 3 | 1 | **Klaar (16/11, hoofdstuk 18):** **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
 | 4 | 1 | **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
 | 5 | 2 | **Klaar (16/11), alleen de motor:** bouwdelen en opbouw als gegevens (hoofdstuk 3 en 16); de woning en de schermen gebruiken ze nog niet | – |
 | 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
 | 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
-| 7 | 2 | *(loopt sinds 15/11, naar voren gehaald: de uitbouw uit hoofdstuk 10 heeft het hefschuifraam nodig)* **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
-| 8 | 2 | **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
+| 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
+| 8 | 2 | *(de bijgebouwen lopen sinds 16/11 in de motor)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
 | 10 | 2 | **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
@@ -661,4 +661,53 @@ puntlasten, sneeuwophoping, opwaaien; en voor de warmte: E-peil, S-peil, ventila
 
 **Voor de ronde van het scherm:** de belaste breedte van een balk staat in cm, de hart-op-hart in een opbouw in mm; het echte
 aandeel hout kan uit het bouwdeel gehaald en doorgegeven worden (nu rekent de U-waarde met het raster plus de toeslag).
+
+---
+
+## 18. Gebouwd op 16/11: ramen, deuren en garagepoort, en de 3D mooier (rondes 7 en 3)
+
+### Ramen, deuren en garagepoort
+
+| Wat | Inhoud |
+|---|---|
+| **Raster van vakken** | 1 tot 4 vakken naast elkaar met een vaste breedte per vak, bovenlicht (doorlopend, per vak of boven de deur), vak onderaan (glas of paneel), voordeur met zijlicht links, rechts of beide (`core/voorbeelden/raamraster.ts`). Oude projecten rekenen exact hetzelfde: 51 vastgelegde gevallen. |
+| **29 tegels met een tekening** | In vier groepen: ramen, deuren, grote glaspartijen, steellook (`raamindelingen.ts`). Eén tik geeft altijd een geldige positie; de instelling per vak zit achter *Meer opties*. |
+| **Grote glaspartijen** | Hef-schuif in 2, 3 of 4 delen, vouwwand in 3 tot 6 delen, vaste glaswand. |
+| **Stolp, kleinhouten, steellook** | Kleinhouten in 7 patronen. |
+| **Kleurwaaier** | 22 RAL-kleuren met naam en nummer, binnen en buiten apart; mat, structuur of glans zichtbaar in 3D. De schermkleur is een benadering en dat staat erbij. |
+| **Sectionale garagepoort** | Eigen model (`garagepoort.ts`, `garagepoort3d.ts`): breedte, hoogte, belijning, vensters, kleur; te plaatsen in een buitenmuur van de plattegrond, zichtbaar in gevel en 3D. |
+
+Gemeten: een raam in de plattegrond een andere indeling geven kost 3 tikken, binnen de configurator 1; een garagepoort toevoegen 2.
+Op een tablet is geen enkel aanraakdoel in de configurator kleiner dan 44 px.
+
+**Wat nog afwijkt of ontbreekt:** dakraam en hoekraam zijn niet gebouwd; de vouwwand staat in 3D gesloten; het gevelaanzicht toont
+de poort als één vlak en ramen zonder bovenlicht; de maatlijst (plakken uit Excel) kent de nieuwe soorten niet. De RAL-namen en
+schermkleuren komen uit het geheugen (nakijken tegen een echte waaier); de maten en grenzen van de nieuwe types (deelbreedte,
+400 kg per hef-schuifdeel, 100 kg per vouwdeel) zijn benaderingen, geen gegevens van een fabrikant. De nieuwe indelingen tonen
+"Nog geen prijs": dat verdwijnt met ronde 2, die alle bedragen uit beeld haalt.
+
+### De 3D mooier
+
+| Wat | Inhoud |
+|---|---|
+| **Omgeving** | Lucht met wolken, een bomenrij aan de horizon, gras met mist, de schaduw van de woning op het gras. Zelf berekend; geen bestanden van derden, geen verkeer naar buiten. De aanroeper kiest: `viewer.omgeving('buiten' \| 'geen')`. Een los raam of een deur blijft op een rustige achtergrond; de woning en de aanbouw staan in de omgeving. |
+| **Licht** | De zon blijft de baas: lucht, lichtkleur en belichting volgen de lichtinval; een lage zon geeft warm licht en lange schaduwen. |
+| **Materialen** | Gevelsteen, planken, leien, pannen, zink, parket en tegels kregen een kleurkaart en een hoogtekaart; glas spiegelt de lucht. |
+| **Schaduw** | Zachter, en schaduw in de hoeken in de kwaliteit *Mooi*; keuze *Snel* of *Mooi* onder de 3D (op een aanraakscherm eerst *Snel*). |
+| **Terras en pad** | Als gegevens uit `plattegrond3D` (optie `aanleg`): een terras bij elk schuifraam, een stoep bij elke buitendeur. Een benadering. |
+| **Hele deur in beeld** | Een raam, deur of poort komt in de configurator helemaal in beeld, ook een deur van 2,5 m met bovenlicht. |
+
+**Gemeten, in een browser zonder grafische kaart:** een beeld in *Snel* ±0,56 s (was ±0,41), in *Mooi* 0,7 à 1,0 s (was ±0,44); het
+eerste beeld na de klik op *3D* 7 à 8 s (was 3 à 4 s), en dat laatste is grotendeels onverklaard. Op een echt toestel is niets
+gemeten. De bundel groeide met minder dan 1 %.
+
+**Wat nog afwijkt of open staat:** in het standpunt *Schuin* is geen lucht te zien (de horizon ligt boven het beeld); er is geen
+weerkaatst licht binnen; zwart hout oogt donkerbruin in warm zonlicht; bij een lage zon vallen de naden op het grinddak meer op.
+**WebGPU is niet nagekeken**: het softwaretoestel viel weg vóór het eerste beeld, in de oude en in de nieuwe versie; de 3D start
+daarna correct op WebGL2. In de kijker en de zending krijgt een aanbouw nog geen omgeving (dat vraagt een veld op de positie).
+
+### Het 3D-pakket: versie 3
+
+Gelakt schrijnwerk heeft eigen soorten (`lak_mat`, `lak_structuur`, `lak_glans`); een oudere kijker zou die als stof tekenen.
+Het pakket staat daarom op versie 3 en de kijker van 16/11 is nodig. De omgeving voegde geen velden toe.
 
