@@ -58,6 +58,20 @@ function scene(): Scene3D | null {
   return positie ? passendKader(positie) : null;
 }
 
+/**
+ * De 3D tekent op 62 % van haar breedte. Vroeger rekte het canvas uit tot de hoogte van het venster: op een tablet in
+ * staande stand stond de woning dan uitgerekt. Nu kiest de kijker de breedte zo dat het hele beeld in het venster past.
+ */
+function pasMaatAan() {
+  const vak = $('#drie-d');
+  const main = vak.parentElement!;
+  const stijl = getComputedStyle(main);
+  const breed = main.clientWidth - parseFloat(stijl.paddingLeft) - parseFloat(stijl.paddingRight);
+  // Ruimte onder de 3D voor de uitleg (twee regels).
+  const hoog = window.innerHeight - vak.getBoundingClientRect().top - 64;
+  vak.style.width = `${Math.floor(Math.max(280, Math.min(breed, hoog / 0.62)))}px`;
+}
+
 /** De scène met de maatlijnen erbij als *Maten* aan staat: de hoofdmaten van de woning, of de maten van het raam. */
 function metMaten(s: Scene3D, woning: boolean): Scene3DMetMaten {
   if (!$<HTMLInputElement>('#maten').checked) return s;
@@ -82,6 +96,7 @@ function teken() {
     viewer?.kwaliteit?.(window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi');
   }
   if (!viewer) { fout('De 3D kan op dit toestel niet getoond worden.'); return; }
+  pasMaatAan();
   viewer.formaat();
   // De woning staat buiten (lucht, gras, horizon); een losse positie blijft een rustig beeld op een effen achtergrond.
   viewer.omgeving?.(woning ? 'buiten' : 'geen');
@@ -203,7 +218,7 @@ $('#bewaar').addEventListener('click', () => {
   a.download = `3D ${pakket?.project.nummer || 'bouw'}.png`;
   a.click();
 });
-window.addEventListener('resize', () => viewer?.formaat());
+window.addEventListener('resize', () => { if (!viewer) return; pasMaatAan(); viewer.formaat(); });
 huisstijl({ accent: adres.get('accent') ? `#${adres.get('accent')}` : undefined, achtergrond: adres.get('achtergrond') ? `#${adres.get('achtergrond')}` : undefined });
 if (klantbestand) {
   // Het bestand voor de klant: alleen het pakket in de pagina, geen ander bestand kiezen of slepen, niets ophalen.

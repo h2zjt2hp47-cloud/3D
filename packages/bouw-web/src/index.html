@@ -594,7 +594,8 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 .vr-kaarten { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; margin-top: 10px; }
 .variantkaart { border: 1px solid var(--lijn); border-radius: 8px; padding: 10px; background: var(--vlak); display: grid; gap: 8px; align-content: start; min-width: 0; }
 .variantkaart.actief { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-.variantkaart h3 { font-size: 1.05rem; margin: 0; }
+/* Twee regels plaats voor de naam: dan staan de 3D-beelden van de kaarten op dezelfde hoogte. */
+.variantkaart h3 { font-size: 1.05rem; margin: 0; min-height: 2.6em; }
 .variantkaart .verschil { margin: 0; padding-left: 18px; font-size: .92rem; }
 .variantkaart .verschil:empty { display: none; }
 .samen { position: relative; }
@@ -603,6 +604,8 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
 .samen-vlak:active { cursor: grabbing; }
 .variantkaart .knoppenrij { margin: 0; }
 @media (pointer: coarse) { .variantkaart .knoppenrij button, #vr-keuze button { min-height: 44px; } }
+/* Gaat voor op de algemene regel voor een label met een vinkje op een aanraakscherm (36 px): hier 44 px. */
+#o-varianten-mee label.mee-keuze, #vr-kaarten label.mee-keuze, #view-varianten label.vr-schakelaar { min-height: 44px; }
 
 /* ---------- afdruk ---------- */
 #afdruk { display: none; }

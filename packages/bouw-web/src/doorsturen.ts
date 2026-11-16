@@ -29,7 +29,8 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
  * `omschrijf` geeft de omschrijving van een positie zoals op de offerte.
  */
 export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = toestand()): Pakket3D {
-  const niveaus = t.meta.zonderWoning ? [] : verdiepingenVan(t.plan);
+  // Zonder ruimtes (een aanbouw of een raam uit de snelstart) is er geen woning om te tonen: anders zag je alleen gras.
+  const niveaus = t.meta.zonderWoning || !t.plan.ruimtes.length ? [] : verdiepingenVan(t.plan);
   return {
     soort: PAKKET3D_SOORT,
     versie: PAKKET3D_VERSIE,

@@ -20,8 +20,9 @@ button { cursor: pointer; }
 button.hoofd { background: var(--accent); border-color: var(--accent); color: var(--op-accent); }
 input[type=checkbox] { width: 22px; height: 22px; }
 main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px; gap: 8px; }
-.drie-d { flex: 1; min-height: 260px; border-radius: 6px; overflow: hidden; background: #f2f1ed; }
-.drie-d canvas { display: block; width: 100% !important; height: 100% !important; cursor: grab; }
+/* De 3D tekent op 62 % van haar breedte; kijker.ts kiest de breedte zo dat het beeld in het venster past (niet uitgerekt). */
+.drie-d { flex: none; align-self: center; width: 100%; max-width: 100%; border-radius: 6px; overflow: hidden; background: #f2f1ed; }
+.drie-d canvas { display: block; width: 100% !important; height: auto !important; cursor: grab; }
 .drie-d canvas:active { cursor: grabbing; }
 #uitleg { color: var(--zacht); font-size: 13px; margin: 0; }
 #leeg { margin: auto; max-width: 520px; text-align: center; padding: 24px; border: 2px dashed var(--lijn); border-radius: 10px; background: var(--vlak); }

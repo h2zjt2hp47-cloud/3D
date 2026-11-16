@@ -102,7 +102,7 @@ export function toonVarianten() {
     if (!v) continue;
     vak.kaart.classList.toggle('actief', v.id === id);
     const [kop, , lijstVerschil, mee, knoppen] = [...vak.kaart.children] as HTMLElement[];
-    kop!.replaceChildren(el('h3', {}, v.naam), ...(v.id === id ? [el('span', { class: 'label' }, 'je werkt hierin')] : []));
+    kop!.replaceChildren(el('h3', { title: v.id === id ? 'Hier werk je nu in' : '' }, v.naam));
     lijstVerschil!.replaceChildren(...(lijst.length > 1 ? verschil[i] ?? [] : []).map((x) => el('li', {}, x.charAt(0).toUpperCase() + x.slice(1))));
     const vink = el('input', { type: 'checkbox' }) as HTMLInputElement;
     vink.checked = gaatMee(v.id);
