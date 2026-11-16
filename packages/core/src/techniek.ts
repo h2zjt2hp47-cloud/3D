@@ -60,7 +60,7 @@ export type ToestelTeken =
 export type ToestelVorm =
   | 'kast' | 'stopcontact' | 'schakelaar' | 'plaatje' | 'lichtpunt' | 'spot' | 'pendel' | 'wandlamp' | 'wandunit'
   | 'cassette' | 'buitenunit' | 'kolom' | 'boiler' | 'radiator' | 'unit' | 'mond' | 'rooster' | 'doorvoer' | 'laadpaal'
-  | 'kraan' | 'pomp' | 'collector' | 'verzachter';
+  | 'kraan' | 'pomp' | 'collector';
 
 /** Een soort toestel in de catalogus. Maten in cm; alles is een richtwaarde (zie `herkomst`). */
 export interface ToestelType {
@@ -575,10 +575,6 @@ export function toestelVorm(vorm: ToestelVorm, B: number, D: number, H: number, 
       }
       break;
     }
-    case 'verzachter':
-      staand('vat', 'kunststof', B * 0.25, 0, D / 2, Math.min(B * 0.45, D), H, kleur);
-      blok('zoutbak', 'kunststof', B * 0.5, 0, 0, B * 0.5, H * 0.7, D, GRIJS);
-      break;
   }
   return uit;
 }

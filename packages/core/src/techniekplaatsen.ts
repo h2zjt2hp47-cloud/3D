@@ -9,7 +9,7 @@
  * nodig (punten verslepen).
  */
 import {
-  asVan, binnenVorm, delenVan, langsAs, murenVan, muurVanOpening, niveauPlan, niveauVan, opAs, openingenVanRuimte, ruimteOp,
+  asVan, binnenVorm, delenVan, langsAs, murenVan, muurVanOpening, muurVlak, niveauPlan, niveauVan, opAs, openingenVanRuimte, ruimteOp,
   verschuifZijden, vormVanDeel, type Muur, type Plattegrond, type Punt,
 } from './plattegrond.js';
 import { draaiNaar, nieuwToestel, standaardToestelHoogte, toestelMaten, toestelVoetafdruk, type TechniekCatalogus, type Toestel, type ToestelType } from './techniek.js';
@@ -52,8 +52,18 @@ export function tegenWand(plan: Plattegrond, t: Toestel, type: ToestelType, opti
   }
   if (!beste) return undefined;
   const { m, plus } = beste;
-  // Tussen de dwarsmuren blijven (bij een te korte muur: in het midden).
-  const a = m.van + dwars(m, m.van, muren) / 2 + m3.b / 2, b = m.tot - dwars(m, m.tot, muren) / 2 - m3.b / 2;
+  // Tussen de dwarsmuren blijven (bij een te korte muur: in het midden). Bij een schuine muur: binnen het muurvlak aan
+  // die kant, van hoek tot hoek (de zijde `plus` of `min` van haar grondvlak).
+  let [a, b] = [m.van + dwars(m, m.van, muren) / 2, m.tot - dwars(m, m.tot, muren) / 2];
+  if (m.as === 's') {
+    const v = muurVlak(m, muren), i = v.randen?.indexOf(plus ? 'plus' : 'min') ?? -1;
+    if (v.punten && i >= 0) {
+      const s1 = opAs(m, v.punten[i]!)[0], s2 = opAs(m, v.punten[(i + 1) % v.punten.length]!)[0];
+      [a, b] = [Math.min(s1, s2), Math.max(s1, s2)];
+    }
+  }
+  a += m3.b / 2;
+  b -= m3.b / 2;
   const s = a <= b ? Math.min(b, Math.max(a, beste.s)) : (m.van + m.tot) / 2;
   const w = m.lijn + (plus ? 1 : -1) * (m.dikte / 2 + tussen + m3.d / 2);
   const [x, y] = langsAs(m, s, w);

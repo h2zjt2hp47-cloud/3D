@@ -22,7 +22,7 @@ import { voorbeeldWoning, type DemoPositie } from './woning.js';
 /** De plancatalogus met de techniek erbij (het scherm zet `techniek` er later zelf bij). */
 export const techniekPlanCatalogus: PlanCatalogus = { ...planCatalogus, techniek: techniekCatalogus };
 
-/** De volgorde waarin de technische ruimte in de berging gevuld wordt (zo past alles; een andere volgorde laat iets over). */
+/** De volgorde waarin de technische ruimte in de berging gevuld wordt: van de geprobeerde volgordes de enige waarin alle zes passen. */
 export const BERGING_OPSTELLING = ['boiler', 'warmtepomp_binnen', 'verdeler_vloerverwarming', 'tellerkast', 'verdeelbord', 'collector'];
 
 interface TrekOpties {

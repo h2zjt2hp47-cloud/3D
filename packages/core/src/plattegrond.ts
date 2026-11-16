@@ -1409,10 +1409,11 @@ function controleerTechniek(plan: Plattegrond, cat: PlanCatalogus | undefined, u
         const eigen = toestelVoetafdruk(t, type);
         const v = type.vrij, hoog = toestelMaten(type, t.aan).h;
         const [z0, z1] = t.aan === 'plafond' ? [t.hoogte, plan.muurhoogte] : [0, Math.max(t.hoogte + hoog, 200)];
+        // Een centimeter speling: een toestel dat precies op zijn vrije ruimte staat (afgerond, of tegen een schuine muur) is goed.
         const kanten: [string, number, Punt[]][] = [];
-        if (v.voor) kanten.push(['voor', v.voor, toestelVoetafdruk(t, type, { voor: v.voor })]);
-        if (v.achter) kanten.push(['achter', v.achter, toestelVoetafdruk(t, type, { achter: v.achter })]);
-        if (v.opzij) kanten.push(['opzij', v.opzij, toestelVoetafdruk(t, type, { opzij: v.opzij })]);
+        if (v.voor) kanten.push(['voor', v.voor, toestelVoetafdruk(t, type, { voor: v.voor - 1 })]);
+        if (v.achter) kanten.push(['achter', v.achter, toestelVoetafdruk(t, type, { achter: v.achter - 1 })]);
+        if (v.opzij) kanten.push(['opzij', v.opzij, toestelVoetafdruk(t, type, { opzij: v.opzij - 1 })]);
         const hinder = hinderlijk.filter((h) => h.toestel !== t && Math.min(z1, h.tot) - Math.max(z0, h.van) > 1).map((h) => h.vorm);
         // Alleen wat in de strook ligt telt, niet wat onder het toestel zelf ligt (de strook min de voetafdruk).
         const te = kanten.filter(([, , zone]) => hinder.some((h) => {

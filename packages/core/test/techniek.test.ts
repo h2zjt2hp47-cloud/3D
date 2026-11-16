@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ALLE_VAKKEN, asVan, controleerPlan, leidingVerloop, maatTekst, maatVan, murenVan, niveauPlan, nieuwToestel, opAs, plattegrond3D, ruimteOp,
-  telTechniek, tekenPlattegrond, toestelBlokken, toestelMaten, toestelVoetafdruk, toestelVorm, vloerHoogte, voorRichting,
+  ALLE_VAKKEN, asVan, binnenVeelhoek, controleerPlan, leidingBlokken, leidingVerloop, maatTekst, maatVan, murenVan, niveauPlan, nieuwToestel, opAs, plattegrond3D, ruimteOp,
+  telTechniek, tekenPlattegrond, toestelBlokken, toestelMaten, toestelVoetafdruk, toestelVorm, vloerHoogte, voorRichting, vormVanDeel,
   zetOmtrek, TECHNIEK_VOORBEHOUD, type Blok, type Leiding, type Plattegrond, type Ruimte, type Toestel,
 } from '../src/index.js';
 import { leidingLangsWanden, technischeOpstelling, tegenWand, vloerverwarmingLus } from '../src/techniekplaatsen.js';
@@ -81,6 +81,9 @@ describe('verloop van een leiding en de telling', () => {
     expect(v.punten.map((p) => p[1])).toEqual([34, -5, -5, 34]);
     expect(v.lengte).toBeCloseTo(3 + 2 * 0.39, 5);
     expect(v.lengtePlan).toBe(3);
+    // De 3D tekent dezelfde stukken: de cilinders samen zijn even lang als de leiding (39 + 300 + 39 cm).
+    const buizen = leidingBlokken(plan.leidingen![0]!, tc.leidingen.kabel, v, 'k').filter((b) => b.vorm === 'cilinder');
+    expect(buizen.reduce((s, b) => s + (b.as === 'x' ? b.b : b.as === 'z' ? b.d : b.h), 0)).toBeCloseTo(v.lengte * 100, 5);
     const regels = telTechniek(plan, tc);
     expect(regels).toEqual([
       { groep: 'elektriciteit', soort: 'toestel', materiaal: 'stopcontact', label: 'Stopcontact', aantal: 2 },
@@ -94,7 +97,7 @@ describe('verloop van een leiding en de telling', () => {
     expect(v.punten[0]![1]).toBeLessThan(vloerHoogte(plan, 1));
     expect(v.punten[1]![1]).toBe(vloerHoogte(plan, 1) - 5);
   });
-  it('de telling van het voorbeeld is de som van wat de 3D tekent', () => {
+  it('de telling van het voorbeeld is de som van het verloop van elke leiding (dat ook de 3D tekent)', () => {
     const { plan } = uitgerusteWoning();
     const regels = telTechniek(plan, tc);
     const verwacht = new Map<string, number>();
@@ -137,6 +140,40 @@ describe('plaatsen: tegen de wand, langs de wanden, technische ruimte, vloerverw
     const achter: [number, number] = [p.toestel.x - (vx * tc.toestellen.radiator!.d) / 2, p.toestel.y - (vy * tc.toestellen.radiator!.d) / 2];
     expect(Math.abs(Math.abs(opAs(muur, achter)[1] - muur.lijn) - muur.dikte / 2)).toBeLessThan(0.2);
     expect(ruimteOp(plan, p.toestel.x, p.toestel.y)?.id).toBe('r1');
+  });
+  it('een kamer met een schuine muur: 3D (gewoon en uitgezet), tekening en controles zonder meldingen', () => {
+    const plan = kamer();
+    zetOmtrek(plan.ruimtes[0]!, [[0, 0], [600, 0], [600, 400], [200, 400], [0, 200]]);
+    const rad = tegenWand(plan, t('radiator', 'rad', 90, 270), tc.toestellen.radiator!)!.toestel;
+    const ac = tegenWand(plan, t('airco_wand', 'ac', 160, 330), tc.toestellen.airco_wand!)!.toestel;
+    const acb = tegenWand(plan, t('airco_buiten', 'acb', 120, 400), tc.toestellen.airco_buiten!)!.toestel;
+    const sc = tegenWand(plan, t('stopcontact_dubbel', 'sc', 40, 230), tc.toestellen.stopcontact_dubbel!)!.toestel;
+    // Allemaal tegen de schuine muur, schuin gedraaid.
+    for (const x of [rad, ac, acb, sc]) expect(x.draai % 90, x.type).not.toBe(0);
+    const schuin = metTechniek(plan, [rad, ac, acb, sc], [
+      { id: 'k', soort: 'kabel', punten: leidingLangsWanden(plan, [sc.x, sc.y], [rad.x, rad.y]), hoogte: 'wand', van: 'sc', naar: 'rad' },
+      { id: 'koel', soort: 'koelleiding', punten: [[ac.x, ac.y], [acb.x, acb.y]], hoogte: 225, van: 'ac', naar: 'acb' },
+      { id: 'vv', soort: 'vloerverwarming', punten: vloerverwarmingLus(plan, 'r1'), hoogte: 'vloer' },
+    ]);
+    const eindig = (b: Blok[]) => b.every((x) => [x.x, x.y, x.z, x.b, x.h, x.d, x.draai ?? 0].every(Number.isFinite));
+    const gewoon = plattegrond3D(schuin, cat, { techniek: {} });
+    expect(eindig(gewoon.blokken)).toBe(true);
+    // Een toestel op de schuine muur draait mee (`draai` op zijn blokken).
+    expect(gewoon.blokken.filter((b) => b.code.startsWith('toestel_rad_')).every((b) => b.draai === rad.draai)).toBe(true);
+    const uit = plattegrond3D(schuin, cat, { techniek: { weergave: 'uitgezet' } });
+    expect(eindig(uit.blokken)).toBe(true);
+    const muur = murenVan(plan).find((m) => m.as === 's')!;
+    expect(uit.blokken.some((b) => b.code.startsWith(`uitgezet_wand_0_${muur.id}_`) && b.vorm === 'prisma' && b.as === 'y')).toBe(true);
+    const svg = tekenPlattegrond(schuin, cat, { techniek: true });
+    expect(svg).toContain(`rotate(${Math.round(rad.draai * 10) / 10})`);
+    // Alleen de lus vloerverwarming (zonder verdeler) is los: de rest hangt waar het hoort.
+    expect(techniekMeldingen(schuin).map((m) => m.melding)).toEqual([
+      expect.stringMatching(/^Lus vloerverwarming: het begin is nergens aangesloten/),
+      expect.stringMatching(/^Lus vloerverwarming: het einde is nergens aangesloten/),
+    ]);
+    // De lus blijft binnen de vrije vorm.
+    const binnen = vormVanDeel(plan.ruimtes[0]!);
+    for (const [x, y] of schuin.leidingen![2]!.punten) expect(binnenVeelhoek(binnen, x, y, -0.5)).toBe(true);
   });
   it('een leiding langs de wanden: haaks, door de binnenmuur waar het moet', () => {
     const { plan } = voorbeeldWoning();
