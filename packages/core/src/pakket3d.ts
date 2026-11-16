@@ -15,9 +15,11 @@ export const PAKKET3D_SOORT = 'bouw-3d-pakket';
  *   2  dak en lichtkoepels: de vorm `prisma` met een `doorsnede`, de daksoorten (pannen, roofing, grind, groendak) en
  *      blokken die alleen schaduw werpen (`alleenSchaduw`);
  *   3  de raamtypes van 16/11: gelakt schrijnwerk als eigen soorten (`lak_mat`, `lak_structuur`, `lak_glans`); een
- *      oudere kijker zou die als stof tekenen.
+ *      oudere kijker zou die als stof tekenen;
+ *   4  schuine muren en vrije vormen (16/11): een `prisma` die verticaal doorgetrokken is (`as: 'y'`), materiaal per staand
+ *      zijvlak (`randen`), de richting van de textuur op een vloer (`vlakRichting`) en blokken van de woning met een `draai`.
  */
-export const PAKKET3D_VERSIE = 3;
+export const PAKKET3D_VERSIE = 4;
 
 /** De woning tot en met één verdieping; `laag` is dezelfde scène met de muren op 110 cm (om binnen te kijken). */
 export interface Pakket3DNiveau {

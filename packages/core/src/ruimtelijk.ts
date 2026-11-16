@@ -31,7 +31,8 @@ export interface Blok {
    * blok = (afgeronde) balk; cilinder/kegel = staand of liggend; bol = knoop; kuipwand = gebogen wand langs `pad`;
    * profiel = een doorsnede (`profiel`) die langs een rechte `pad` loopt, bv. een uitlopende arm.
    * prisma = een harde doorsnede (`doorsnede`) in een verticaal vlak, recht doorgetrokken langs x of z (`as`): een
-   * hellend dakvlak, een topgevel of een lichtstraat (woning; de zetels gebruiken het niet).
+   * hellend dakvlak, een topgevel of een lichtstraat (woning; de zetels gebruiken het niet). Met `as: 'y'` is de
+   * doorsnede het grondvlak, verticaal doorgetrokken: een schuine muur, of de vloer en het dak van een vrije vorm.
    */
   vorm: 'blok' | 'cilinder' | 'kegel' | 'bol' | 'kuipwand' | 'profiel' | 'prisma';
   /** Minimumhoek (x, y, z) en afmetingen (b langs x, h langs y, d langs z), in cm. */
@@ -46,7 +47,7 @@ export interface Blok {
   afronding?: number;
   /** Bolling van een kussen in cm (midden van het dunste vlak); leeg = standaard (max. 2,2 cm). */
   bol?: number;
-  /** Voor liggende cilinders (rolarm): de as. */
+  /** Voor liggende cilinders (rolarm): de as. Bij een prisma: de richting waarin de doorsnede doorgetrokken is. */
   as?: 'x' | 'y' | 'z';
   /** Kegel: verhouding onderste/bovenste straal. */
   taps?: number;
@@ -108,14 +109,27 @@ export interface Blok {
    * langs x doorgetrokken is (`as: 'x'`, van x tot x + b) en langs x bij `as: 'z'` (van z tot z + d); y is de hoogte.
    * x/y/z/b/h/d blijven het omsluitende kader. `zijden` geldt voor de twee kopse vlakken (bij as 'x': 'x-' en 'x+').
    * `plaatsBlokken` draait een prisma niet mee: het staat al in wereldmaat.
+   * Met `as: 'y'`: de doorsnede is het grondvlak, punten [x, z] in wereldmaat, rondom (in welke zin ook), van y tot y + h;
+   * `zijden['y+']` geldt dan voor het bovenvlak en `randen` voor de staande zijvlakken.
    */
   doorsnede?: [number, number][];
+  /**
+   * Prisma met `as: 'y'`: een ander materiaal per staand zijvlak, zijde i van punt i naar punt i + 1 van de doorsnede
+   * (null = het materiaal van het blok). Bv. de binnen- en buitenkant van een schuine muur. Textuur langs het vlak, in
+   * ware lengte, zodat stenen en planken van twee stukken van dezelfde muur op elkaar aansluiten.
+   */
+  randen?: ({ soort: BlokSoort; kleur: string; voeg?: string } | null)[];
+  /** Prisma met `as: 'y'`: richting van de textuur op het boven- en ondervlak (graden, van x naar z; 0 = zoals x). */
+  vlakRichting?: number;
   /**
    * Voor het oog verborgen, maar werpt wel schaduw (woning, lichtinval): het dak, een verdieping of het stuk muur dat
    * weggelaten is om binnen te kijken. Zo valt het zonlicht alleen door ramen en lichtkoepels binnen.
    */
   alleenSchaduw?: boolean;
-  /** Draaiing rond de verticale as in graden (van x naar z), rond het midden; bv. een kussen in een gebogen zetel. */
+  /**
+   * Draaiing rond de verticale as in graden (van x naar z), rond het midden; bv. een kussen in een gebogen zetel, of een
+   * raam, deur of meubel in een schuine muur (zie `draaiBlokken`). x, z, b en d zijn het blok vóór de draaiing.
+   */
   draai?: number;
   /**
    * Altijd als zachte vorm tekenen (zachtevorm.ts), ook bij Blokken: grote vrije vormen zoals de zitting en rug van een

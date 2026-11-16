@@ -3,7 +3,12 @@
  * Elementen dragen data-soort en data-id, zodat een editor erop kan klikken.
  */
 import {
+  asVan,
   delenVan,
+  langsAs,
+  verschuifZijden,
+  vormVanDeel,
+  type Punt,
   meubelAfstanden,
   meubelVoetafdruk,
   muurVanOpening,
@@ -96,7 +101,9 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     uit.push('<g pointer-events="none" opacity="0.35">');
     for (const m of mo) {
       const v = muurVlak(m, mo);
-      uit.push(`<rect x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="none" stroke="#6b7a85" stroke-width="1.5" stroke-dasharray="8 6"/>`);
+      uit.push(v.punten
+        ? `<polygon points="${punten(v.punten)}" fill="none" stroke="#6b7a85" stroke-width="1.5" stroke-dasharray="8 6"/>`
+        : `<rect x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="none" stroke="#6b7a85" stroke-width="1.5" stroke-dasharray="8 6"/>`);
     }
     uit.push('</g>');
   }
@@ -104,7 +111,11 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   // Vloeren (alle delen van een ruimte).
   for (const r of plan.ruimtes) {
     const v = cat.vloeren[r.vloer];
-    for (const p of delenVan(r)) uit.push(`<rect data-soort="ruimte" data-id="${esc(r.id)}" x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="${v?.kleur ?? '#e7e4dc'}" fill-opacity="0.32"/>`);
+    for (const p of delenVan(r)) {
+      uit.push(p.omtrek
+        ? `<polygon data-soort="ruimte" data-id="${esc(r.id)}" points="${punten(vormVanDeel(p))}" fill="${v?.kleur ?? '#e7e4dc'}" fill-opacity="0.32"/>`
+        : `<rect data-soort="ruimte" data-id="${esc(r.id)}" x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="${v?.kleur ?? '#e7e4dc'}" fill-opacity="0.32"/>`);
+    }
   }
   // Trapgat boven een trap van de verdieping eronder.
   for (const t of opties.onderlegger?.meubels.filter((m) => m.type === 'trap') ?? []) {
@@ -123,7 +134,9 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   // Muren.
   for (const m of muren) {
     const v = muurVlak(m, muren);
-    uit.push(`<rect data-soort="muur" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}"/>`);
+    uit.push(v.punten
+      ? `<polygon data-soort="muur" data-id="${esc(m.id)}" points="${punten(v.punten)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke-width="0.6" stroke-linejoin="round"/>`
+      : `<rect data-soort="muur" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}"/>`);
   }
 
   // Openingen.
@@ -148,10 +161,22 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
       + `<text x="${n(q.x1 + (q.y1 === q.y2 ? 18 * k : 8 * k))}" y="${n(q.y1 + (q.y1 === q.y2 ? -8 * k : 24 * k))}" font-size="${n(15 * k)}" fill="#8a5a3c" pointer-events="none">${esc(d.tekst)}</text>`);
   }
 
+  // Schuine muren: hun lengte (op de as) als maat langs de muur, aan de buitenkant (bij een binnenmuur aan de plus-kant).
+  for (const m of muren) {
+    if (m.as !== 's') continue;
+    const [p, q] = m.punten!;
+    // maatlijn legt de maat links van de richting, en dat is de plus-kant: aan de min-kant dus omgekeerd tekenen.
+    const buitenMin = m.soort === 'buiten' && !m.min;
+    // Voorbij het label van een raam of deur in die muur (dat staat op een halve muurdikte + 22).
+    const afst = m.dikte / 2 + 50 * Math.max(k, 0.5);
+    uit.push(buitenMin ? maatlijn(q[0], q[1], p[0], p[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k) : maatlijn(p[0], p[1], q[0], q[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k));
+  }
+
   // Namen en oppervlaktes.
   for (const r of plan.ruimtes) {
     const mt = ruimteMaten(plan, r, muren);
-    const cx = r.x + r.b / 2, cy = r.y + r.d / 2; // hoofddeel = grootste deel
+    // Hoofddeel = grootste deel; bij een vrije vorm het zwaartepunt van haar omtrek (dat ligt altijd binnen een bolle vorm).
+    const [cx, cy] = r.omtrek ? zwaartepunt(vormVanDeel(delenVan(r)[0]!)) : [r.x + r.b / 2, r.y + r.d / 2];
     const fs = Math.max(12, Math.min(22, r.b / 8, r.d / 4)) * k;
     uit.push(`<g pointer-events="none" text-anchor="middle"><text x="${n(cx)}" y="${n(cy - fs * 0.15)}" font-size="${n(fs)}" font-weight="600" fill="#2c2f2d">${esc(r.naam)}</text>`
       + `<text x="${n(cx)}" y="${n(cy + fs * 1.05)}" font-size="${n(fs * 0.8)}" fill="#5f6763">${m2(mt.netto)}</text></g>`);
@@ -161,9 +186,13 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   for (const r of plan.ruimtes) {
     const gekozen = sel?.soort === 'ruimte' && sel.id === r.id;
     if (fouten.has(r.id) || gekozen) {
-      for (const p of delenVan(r)) uit.push(`<rect x="${n(p.x + 4)}" y="${n(p.y + 4)}" width="${n(p.b - 8)}" height="${n(p.d - 8)}" fill="${gekozen ? '#2f6fd0' : 'none'}" fill-opacity="0.06" stroke="${gekozen ? '#2f6fd0' : '#c0392b'}" stroke-width="3" stroke-dasharray="${gekozen ? '0' : '10 6'}" pointer-events="none"/>`);
+      const stijl = `fill="${gekozen ? '#2f6fd0' : 'none'}" fill-opacity="0.06" stroke="${gekozen ? '#2f6fd0' : '#c0392b'}" stroke-width="3" stroke-dasharray="${gekozen ? '0' : '10 6'}" pointer-events="none"`;
+      for (const p of delenVan(r)) {
+        uit.push(p.omtrek ? `<polygon points="${punten(verschuifZijden(vormVanDeel(p), -4))}" ${stijl}/>` : `<rect x="${n(p.x + 4)}" y="${n(p.y + 4)}" width="${n(p.b - 8)}" height="${n(p.d - 8)}" ${stijl}/>`);
+      }
     }
-    if (gekozen && !opties.afdruk && !r.delen?.length) {
+    // Een vrije vorm heeft (nog) geen grepen: haar muren zijn gemeten, niet getrokken (zie zetOmtrek).
+    if (gekozen && !opties.afdruk && !r.delen?.length && !r.omtrek) {
       uit.push(maatlijn(r.x, r.y, r.x + r.b, r.y, -28 * k, `${Math.round(r.b)}`, '#2f6fd0', k));
       uit.push(maatlijn(r.x, r.y + r.d, r.x, r.y, -28 * k, `${Math.round(r.d)}`, '#2f6fd0', k));
       for (const [greep, gx, gy] of [['n', r.x + r.b / 2, r.y], ['s', r.x + r.b / 2, r.y + r.d], ['w', r.x, r.y + r.d / 2], ['o', r.x + r.b, r.y + r.d / 2]] as const) {
@@ -195,6 +224,11 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
         const a = af.ketting[i]!, b = af.ketting[i + 1]!;
         if (b - a < 0.5) continue;
         const tekst = `${Math.round(b - a)}`;
+        if (m.as === 's') {
+          const [p, q] = [langsAs(m, a, m.lijn), langsAs(m, b, m.lijn)];
+          uit.push(maatlijn(p[0], p[1], q[0], q[1], -afst, tekst, maatKleur, k));
+          continue;
+        }
         uit.push(m.as === 'h' ? maatlijn(a, m.lijn, b, m.lijn, afst, tekst, maatKleur, k) : maatlijn(m.lijn, a, m.lijn, b, -afst, tekst, maatKleur, k));
       }
     }
@@ -239,6 +273,19 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   return uit.join('');
 }
 
+/** Punten als SVG-lijst. */
+const punten = (v: Punt[]) => v.map(([x, y]) => `${n(x)},${n(y)}`).join(' ');
+
+/** Zwaartepunt van een veelhoek. */
+function zwaartepunt(v: Punt[]): Punt {
+  let a = 0, cx = 0, cy = 0;
+  v.forEach((p, i) => {
+    const q = v[(i + 1) % v.length]!, f = p[0] * q[1] - q[0] * p[1];
+    a += f; cx += (p[0] + q[0]) * f; cy += (p[1] + q[1]) * f;
+  });
+  return Math.abs(a) < 1e-9 ? v[0]! : [cx / (3 * a), cy / (3 * a)];
+}
+
 /** Maatlijn van punt 1 naar 2, verschoven over afstand (links van de richting). */
 function maatlijn(x1: number, y1: number, x2: number, y2: number, afstand: number, tekst: string, kleur: string, k = 1): string {
   const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1;
@@ -253,7 +300,7 @@ function maatlijn(x1: number, y1: number, x2: number, y2: number, afstand: numbe
 }
 
 /** Deurboog: blad open (loodrecht op de muur) en de draaicirkel. */
-function boog(as: 'h' | 'v', L: number, a: number, b: number, scharnierBegin: boolean, s: number, stijl: string): string {
+function boog(as: Opening['as'], L: number, a: number, b: number, scharnierBegin: boolean, s: number, stijl: string): string {
   const w = b - a, p = scharnierBegin ? a : b, q = scharnierBegin ? b : a;
   const sweepH = scharnierBegin === s > 0 ? 0 : 1;
   const sweep = as === 'h' ? sweepH : 1 - sweepH;
@@ -262,6 +309,13 @@ function boog(as: 'h' | 'v', L: number, a: number, b: number, scharnierBegin: bo
 }
 
 function openingSvg(o: Opening, m: Muur | undefined, opties: PlanSvgOpties, gekozen: boolean, fout: boolean): string {
+  if (o.as === 's') {
+    // Schuine muur: getekend zoals in een staande muur (die is een schuine muur met d = (0, 1) en n = (1, 0)), en dan
+    // gedraaid tot n en d van de schuine muur.
+    const { d, n: nn } = asVan(o.richting ? o : m ?? o);
+    const f = (x: number) => String(Math.round(x * 1e6) / 1e6);
+    return `<g transform="matrix(${f(nn[0])} ${f(nn[1])} ${f(d[0])} ${f(d[1])} 0 0)">${openingSvg({ ...o, as: 'v' }, m && { ...m, as: 'v' }, opties, gekozen, fout)}</g>`;
+  }
   const dikte = m?.dikte ?? 20;
   const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2, L = o.lijn, half = dikte / 2;
   const rect = (x0: number, x1: number, d0: number, d1: number, attrs: string) =>
