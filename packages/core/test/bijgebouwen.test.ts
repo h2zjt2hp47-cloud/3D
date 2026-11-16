@@ -276,6 +276,11 @@ describe('bijgebouwen: uitersten en elke keuze', () => {
     // Een schuifraam van 3 m past niet in een tuinhuis van 3 m breed.
     expect(codes(tuin({ breedte: 300, deur: 'schuifraam', ramen_voor: 0 }))).toContain('deur_past_niet');
     expect(codes(tuin({ breedte: 400, deur: 'dubbel', ramen_voor: 1 }))).toContain('ramen_voor.max');
+    // Een luifel van minder dan 1 m bestaat niet: de 3D tekent dan een tuinhuis zonder luifel.
+    const kort = tuin({ luifel: 50 });
+    expect(codes(kort)).toContain('luifel_klein');
+    expect(bijgebouwSamenstelling(kort).delen.filter((g) => g.code.startsWith('paal.'))).toEqual([]);
+    expect(codes(tuin({ luifel: 100 }))).not.toContain('luifel_klein');
     expect(bijgebouw3D(tuin({ breedte: 300, deur: 'schuifraam', ramen_voor: 5 })).blokken.length).toBeGreaterThan(10);
   });
 });

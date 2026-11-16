@@ -603,7 +603,9 @@ function deurBlokken(code: string, o: VlakRechthoek, dikte: number, kleur: strin
 function bouwTuinhuis(r: ConfiguratieResultaat): BijgebouwSamenstelling {
   const S = new Samensteller();
   const k = waarden(r), a = r.afgeleid, R = TUINHUIS_OPENINGEN;
-  const B = num(k.breedte, 400), D = num(k.diepte, 300), wh = num(k.wandhoogte, 220), L = Math.max(0, num(k.luifel)), ov = Math.max(0, num(k.oversteek, 25));
+  const B = num(k.breedte, 400), D = num(k.diepte, 300), wh = num(k.wandhoogte, 220), ov = Math.max(0, num(k.oversteek, 25));
+  // Een luifel van minder dan 1 m bestaat niet in het model (de motor meldt het): teken dan geen luifel.
+  const L = num(k.luifel) >= 100 ? num(k.luifel) : 0;
   const vorm: 'plat' | 'lessenaar' | 'zadel' = k.dakvorm === 'lessenaar' ? 'lessenaar' : k.dakvorm === 'zadel' ? 'zadel' : 'plat';
   const tan = vorm === 'plat' ? 0 : num(a.helling_tan), cos = vorm === 'plat' ? 1 : num(a.helling_cos, 1), graden = vorm === 'plat' ? 0 : num(a.helling);
   const geisoleerd = k.isolatie === true;

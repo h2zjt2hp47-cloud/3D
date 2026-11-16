@@ -568,6 +568,7 @@ export const tuinhuis: ProductModel = {
       melding: 'Na te kijken: een losstaand bijgebouw is in Vlaanderen vaak vrijgesteld van vergunning tot 40 m² en 3,5 m hoog, binnen 30 m van de woning. Dit ontwerp is groter of hoger: vraag het na bij de gemeente.',
     },
     { code: 'deur_past_niet', ernst: 'fout', als: 'deur_breedte + 60 > breedte', melding: 'Deze deur is te breed voor de voorwand: kies een smallere deur of maak het tuinhuis breder.' },
+    { code: 'luifel_klein', ernst: 'fout', als: 'luifel > 0 en luifel < 100', melding: 'Een luifel is minstens 1 m diep. Zet de luifel op 0 voor een tuinhuis zonder luifel; de oversteek van het dak regel je apart.' },
     {
       code: 'deur_laag', ernst: 'waarschuwing', als: 'wandhoogte < 220 en dakvorm <> "lessenaar"',
       melding: 'Bij deze wandhoogte wordt de deur lager dan 2,05 m: boven de deur is plaats nodig voor een latei en de bovenregel.',
