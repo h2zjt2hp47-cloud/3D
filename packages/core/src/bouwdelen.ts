@@ -51,7 +51,7 @@ export type StukRol =
   // Sinds 16/11: eigen rollen voor wat een loods, een bijgebouw of staalwerk rond de woning nodig heeft, zodat de
   // meetstaat ze apart kan tonen (`meetstaat(..., { perRol: true })`).
   | 'kolom' | 'spant' | 'gording' | 'wandregel' | 'windverband' | 'schoor' | 'windveer' | 'boeiboord'
-  | 'staander' | 'leuning' | 'regel' | 'spijl' | 'trapboom' | 'trededrager' | 'console' | 'trekstang' | 'kader';
+  | 'staander' | 'leuning' | 'regel' | 'spijl' | 'trapboom' | 'trede' | 'trededrager' | 'console' | 'trekstang' | 'kader';
 
 /** De rollen van een stuk in gewone taal (voor een meetstaat per rol), in de volgorde van de meetstaat. */
 export const STUK_ROLLEN: Record<StukRol, string> = {
@@ -59,7 +59,7 @@ export const STUK_ROLLEN: Record<StukRol, string> = {
   paal: 'paal', ligger: 'ligger', balk: 'balk', randbalk: 'randbalk', keper: 'keper', trekbalk: 'trekbalk', spantbeen: 'spantbeen',
   stijl: 'stijl', draagstijl: 'draagstijl', korte_stijl: 'korte stijl', onderregel: 'onderregel', bovenregel: 'bovenregel',
   latei: 'latei', raamregel: 'regel onder een raam', schoor: 'schoor', windveer: 'windveer', boeiboord: 'boeiboord',
-  staander: 'staander', leuning: 'leuning', regel: 'regel', spijl: 'spijl', trapboom: 'trapboom', trededrager: 'drager onder een trede',
+  staander: 'staander', leuning: 'leuning', regel: 'regel', spijl: 'spijl', trapboom: 'trapboom', trede: 'trede', trededrager: 'drager onder een trede',
   console: 'console', trekstang: 'trekstang', kader: 'kader',
 };
 
