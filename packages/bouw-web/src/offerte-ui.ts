@@ -18,7 +18,7 @@ import { tegelBeeld } from './snelstart-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, dupliceerPositie, kanInWoning, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zetInWoning, zonderPrijs, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
-import { maakPakket3D, maakZending } from './doorsturen.js';
+import { maakPakket3D, maakZending, tekenBeeld, woningScene } from './doorsturen.js';
 import { drukBlad } from './blad.js';
 import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
 import { toonConstructieOverzicht } from './constructie-ui.js';
@@ -172,21 +172,69 @@ function beeldVan(p: Positie): string | undefined {
 /** Waarom een positie niet in de woning gezet kon worden (bij die regel). */
 let plaatsMelding: { id: string; tekst: string } | undefined;
 
-/** Beeld van het ontwerp bovenaan het overzicht: de 3D zoals ze laatst op het scherm stond, en de plattegrond per verdieping. */
-let laatsteBeeld: string | null = null;
+/**
+ * Beeld van het ontwerp bovenaan het overzicht: de 3D zoals ze laatst op het scherm stond, en de plattegrond per verdieping.
+ * Doorloop B13 (16/11): na een wijziging (in de configurator, of hier) was er geen 3D-beeld meer tot je eerst naar de 3D
+ * ging. Nu wordt het beeld dan buiten beeld getekend (`tekenBeeld`, schuin, zoals de zending), met een korte zin zolang
+ * het tekent. Het beeld hoort bij een stand van plan en posities (`ontwerpSleutel`): een oud beeld wordt nooit getoond.
+ */
+let laatsteBeeld: { sleutel: string; beeld: string } | null = null;
+/** De stand van de woning die het beeld toont: plan en de keuzes van de posities (de klant of een aantal niet). */
+const ontwerpSleutel = (t: ReturnType<typeof toestand>) => JSON.stringify([t.plan, t.posities.map((p) => [p.id, p.model, p.keuzes])]);
+/** Waarom er (nog) geen 3D-beeld staat, als er geen is. */
+let ontwerpZin = '';
+/** Het beeld dat nu getekend wordt (voor welke stand). */
+let tekentVoor = '';
+
+/**
+ * Eén verborgen kijker tekent de beelden voor het overzicht, het blad en de zending (doorsturen.ts): na elkaar, nooit
+ * door elkaar (anders krijgt een beeld de scène van een ander).
+ */
+let rij: Promise<unknown> = Promise.resolve();
+export function naElkaar<T>(f: () => Promise<T>): Promise<T> {
+  const volgende = rij.then(f, f);
+  rij = volgende.catch(() => undefined);
+  return volgende;
+}
+
+function maakOntwerpBeeld(sleutel: string) {
+  if (tekentVoor === sleutel) return;
+  tekentVoor = sleutel;
+  ontwerpZin = '3D-beeld maken …';
+  void naElkaar(async () => {
+    const t = toestand();
+    if (ontwerpSleutel(t) !== sleutel) return;
+    const beeld = await tekenBeeld(woningScene(undefined, false, t), { standpunt: 'schuin', buiten: true });
+    if (tekentVoor === sleutel) tekentVoor = '';
+    if (!beeld) { ontwerpZin = 'Geen 3D-beeld: de 3D werkt niet op dit toestel.'; }
+    else if (ontwerpSleutel(toestand()) === sleutel) { laatsteBeeld = { sleutel, beeld }; ontwerpZin = ''; }
+    // Het overzicht staat nog open: het beeld (of de reden) meteen tonen.
+    if (!$('#view-offerte').hidden && !toestand().meta.zonderWoning) toonOntwerp(false);
+  });
+}
+
 function toonOntwerp(nieuwBeeld: boolean) {
   const t = toestand();
+  const sleutel = ontwerpSleutel(t);
   if (nieuwBeeld) {
-    laatsteBeeld = ontwerpBeeld();
+    // De 3D van de woning zoals ze laatst op het scherm stond, als ze sindsdien niet veranderde.
+    const live = ontwerpBeeld();
+    if (live) laatsteBeeld = { sleutel, beeld: live };
     // De 3D van de positie die laatst in de configurator stond (een carport, een loods …), als ze nog klopt.
     const pb = positieBeeld();
     const p = pb && t.posities.find((x) => x.id === pb.id);
     if (pb && p) positieBeelden.set(p.id, { sleutel: beeldSleutel(p), beeld: pb.beeld });
   }
   const beelden: HTMLElement[] = [];
-  if (laatsteBeeld) {
+  if (laatsteBeeld?.sleutel === sleutel) {
     const f = el('figure');
-    f.append(el('img', { src: laatsteBeeld, alt: 'De woning in 3D' }), el('figcaption', {}, '3D'));
+    f.append(el('img', { src: laatsteBeeld.beeld, alt: 'De woning in 3D' }), el('figcaption', {}, '3D'));
+    beelden.push(f);
+  } else if (t.plan.ruimtes.length) {
+    // Geen (actueel) beeld: het buiten beeld tekenen; tot dan zegt een vak waarom het er nog niet staat.
+    maakOntwerpBeeld(sleutel);
+    const f = el('figure', { class: 'ontwerp-wacht' });
+    f.append(el('div', { class: 'ontwerp-wachtvak', role: 'status' }, ontwerpZin || '3D-beeld maken …'), el('figcaption', {}, '3D'));
     beelden.push(f);
   }
   // Geen woning, wel een carport, tuinhuis, loods of staalwerk: hun 3D-beeld (als het er is) is het ontwerp.
@@ -636,7 +684,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
     const knop = $<HTMLButtonElement>('#o-blad'), melding = $('#o-klantbestand-melding');
     knop.disabled = true;
     try {
-      const ok = await drukBlad(kort, omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
+      const ok = await naElkaar(() => drukBlad(kort, omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; }));
       melding.textContent = ok ? 'Blad klaar: kies in het afdrukvenster een printer of "Bewaren als PDF".' : 'Het blad kan niet gemaakt worden: de 3D werkt niet op dit toestel.';
     } finally {
       knop.disabled = false;
@@ -693,7 +741,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
     const knop = $<HTMLButtonElement>('#o-zending'), melding = $('#o-melding');
     knop.disabled = true;
     try {
-      const z = await maakZending(exportGegevens({ prijzen: false }), omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
+      const z = await naElkaar(() => maakZending(exportGegevens({ prijzen: false }), omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; }));
       const n = Object.keys(z.beelden.posities).length + (z.beelden.woning ? 1 : 0);
       download(`Zending ${toestand().meta.nummer}.json`, JSON.stringify(z), 'application/json');
       melding.textContent = n ? `Zending klaar: ${z.pakket3d.posities.length} regels, ${n} beelden en de 3D.` : 'Zending klaar, zonder beelden: de 3D werkt niet op dit toestel.';

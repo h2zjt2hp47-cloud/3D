@@ -868,6 +868,8 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
 .getalrij input[type="text"] { width: 96px; padding: 6px 8px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); text-align: right; font-variant-numeric: tabular-nums; }
 .heeft-fout .getalrij input[type="text"], .veld:has(.veldmelding:not(:empty)) .getalrij input[type="text"] { border-color: var(--fout); }
 #o-ramenlijst input.maat { min-width: 0; }
+/* B13: het 3D-beeld van het ontwerp wordt getekend: een vak met de reden zolang het er niet is. */
+.ontwerp-wachtvak { display: grid; place-items: center; min-height: 160px; aspect-ratio: 960 / 595; border-radius: 4px; background: #e9e7e1; color: var(--zacht); font-size: .9rem; text-align: center; padding: 12px; }
 #p-inwoning { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; min-height: 44px; }
 </style>
 </head>
