@@ -158,6 +158,7 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
   };
 
   // ---------- hellend dak ----------
+  let hellendGeraakt = false;
   const dakSnede = (d: ConstructieDeel) => {
     const dv = d.dakvlak!, dak = dv.dak, v = d.deel.vlak!;
     const tan = Math.tan((dak.helling * Math.PI) / 180), cos = Math.cos((dak.helling * Math.PI) / 180);
@@ -182,6 +183,7 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
         vormen.push({ punten: [[pa, Y(t0) + a / cos], [pb, Y(t1) + a / cos], [pb, Y(t1) + b / cos], [pa, Y(t0) + b / cos]], kleur: k.kleur, soort: k.soort, naam: l.naam });
       }
       noemOp('Dak', pVan((t0 + t1) * 0.55), Y((t0 + t1) * 0.55) + d.deel.vlak!.dikte / cos, true);
+      hellendGeraakt = true;
       return;
     }
     // Evenwijdig met de nok: één plaats op de helling.
@@ -199,6 +201,7 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
       }
     }
     noemOp('Dak', (q0 + q1) * 0.62, Y(t) + v.dikte / cos, true);
+    hellendGeraakt = true;
   };
 
   for (const d of c.delen) {
@@ -218,7 +221,8 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
   // hoogtematen (± 250 beeldpunten) en rechts voor de namen (± 170).
   const px = Math.max(0.15, ((opties.breedtePx ?? 900) - 420) / Math.max(100, breed));
   const tekst = 13 / px, lijn = 1 / px;
-  const links = uMin - 250 / px, rechts = uMax + 170 / px, boven = hMax + 40 / px, onder = Math.min(hMin, 0) - 70 / px;
+  // Boven plaats voor het kleine plan linksboven (± 85 beeldpunten), zodat het geen maat bedekt.
+  const links = uMin - 250 / px, rechts = uMax + 170 / px, boven = hMax + 100 / px, onder = Math.min(hMin, 0) - 70 / px;
   const X = (u: number) => r1(u - links), Yv = (h: number) => r1(boven - h);
   const W = r1(rechts - links), H = r1(boven - onder);
   const uit: string[] = [];
@@ -237,9 +241,11 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
   // Maten: de hoogtes links (vloerpeil per verdieping, de bovenkant van de muren, de nok of de bovenkant van het dak).
   const hoogtes = new Map<number, string>();
   for (const [n, v] of verdiepingenVan(plan).entries()) if (niveauPlan(plan, n).ruimtes.length) hoogtes.set(r1(vloerHoogte(plan, n)), `vloer ${v.naam.toLowerCase()}`);
-  const muurTop = c.hellend?.y ?? Math.max(...c.delen.filter((d) => d.muur).map((d) => d.zet.y + d.muur!.hoogte));
-  hoogtes.set(r1(muurTop), c.hellend ? 'muurkop' : 'bovenkant muur');
-  hoogtes.set(r1(hMax), c.hellend ? 'nok' : 'bovenkant dak');
+  // De muurkop en de nok alleen als de snede het hellende dak raakt; anders de bovenkant van wat ze raakt.
+  const metHellend = hellendGeraakt;
+  const muurTop = metHellend ? c.hellend!.y : undefined;
+  if (muurTop !== undefined && muurTop < hMax - 1) hoogtes.set(r1(muurTop), 'muurkop');
+  hoogtes.set(r1(hMax), metHellend ? (c.hellend!.dak.nokAs === 'x') === (richting === 'dwars') ? 'nok' : 'bovenkant dak' : 'bovenkant dak');
   const mx = X(uMin) - 40 / px;
   const lijst = [...hoogtes].sort((a, b) => a[0] - b[0]);
   uit.push(`<line x1="${r1(mx)}" y1="${Yv(lijst[0]![0])}" x2="${r1(mx)}" y2="${Yv(lijst[lijst.length - 1]![0])}" stroke="#34505f" stroke-width="${r1(lijn)}"/>`);

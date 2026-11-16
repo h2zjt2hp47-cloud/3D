@@ -726,8 +726,10 @@ details.constructiedeel > summary { display: flex; flex-wrap: wrap; gap: 4px 12p
 .constructieinhoud { padding: 4px 0 8px; }
 .voorbehoud { background: color-mix(in srgb, var(--let-op) 12%, transparent); border-left: 3px solid var(--let-op); padding: 6px 10px; font-size: .9rem; border-radius: 4px; }
 table.meetstaat tr.groep th { text-align: left; padding-top: 10px; font: inherit; font-weight: 600; }
-table.stabiliteit td { vertical-align: top; }
-table.stabiliteit td:last-child { min-width: 14em; }
+table.stabiliteit td, table.epb td, table.meetstaat td { white-space: normal; vertical-align: top; }
+table.stabiliteit td:last-child { min-width: 12em; }
+table.epb .status, table.stabiliteit .status { white-space: nowrap; display: inline-block; }
+table.meetstaat td.num { white-space: nowrap; }
 details.aannames { margin: 6px 0; }
 details.aannames ul { margin: 4px 0; padding-left: 20px; }
 .constructieinhoud h4 { margin: 12px 0 4px; }
@@ -738,6 +740,9 @@ details.aannames ul { margin: 4px 0; padding-left: 20px; }
 @media (pointer: coarse) {
   .opbouwrij select, details.opbouwkeuze > summary, details.opbouwlagen > summary, details.constructiedeel > summary, details.aannames > summary, .doorsnedebalk button, .doorsnedebalk input { min-height: 44px; }
   .doorsnedebalk button { min-width: 44px; }
+  /* Op een aanraakscherm is een kop een flexvak (zie hoger) en verdwijnt het pijltje: een eigen pijltje, zodat je ziet dat hij openklapt. */
+  details.opbouwkeuze > summary::before, details.opbouwlagen > summary::before, details.constructiedeel > summary::before, details.aannames > summary::before { content: '▸'; margin-right: 8px; }
+  details.opbouwkeuze[open] > summary::before, details.opbouwlagen[open] > summary::before, details.constructiedeel[open] > summary::before, details.aannames[open] > summary::before { content: '▾'; }
 }
 </style>
 </head>
