@@ -314,7 +314,7 @@ describe('staal: de tabel met profielen (voorbeelden)', () => {
     expect(buis(42.4, 2).naam).toBe('buis 42,4 × 2');
   });
 
-  it('elke afwerking is een materiaal van staal met een kleur', () => {
-    for (const a of STAAL_AFWERKINGEN) expect(staalMaterialen[`staal_${a.code}`]).toMatchObject({ soort: 'metaal', kleur: a.kleur });
+  it('elke afwerking is een materiaal van staal met een kleur: blank metaal als metaal, poederlak als lak', () => {
+    for (const a of STAAL_AFWERKINGEN) expect(staalMaterialen[`staal_${a.code}`]).toMatchObject({ soort: a.code === 'verzinkt' || a.code === 'inox' ? 'metaal' : 'lak_mat', kleur: a.kleur });
   });
 });

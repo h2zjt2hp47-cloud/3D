@@ -109,20 +109,22 @@ export function staalprofiel(naam: string): Staalprofiel {
 }
 
 /**
- * Afwerkingen van staal: thermisch verzinkt, poederlak in een paar RAL-kleuren, inox. `soort: 'metaal'` met een eigen
- * kleur. De kleuren op het scherm zijn benaderingen (zoals bij de ramen); de keuze gebeurt met een echte kleurenwaaier.
+ * Afwerkingen van staal: thermisch verzinkt, poederlak in een paar RAL-kleuren, inox. Blank metaal (verzinkt, inox) is
+ * de bloksoort `metaal`; poederlak is een laklaag en wordt `lak_mat`: als `metaal` spiegelt de kijker de omgeving zo sterk
+ * dat een donkere RAL-kleur zwart oogt (proef op echte beelden, 16/11). De kleuren op het scherm zijn benaderingen
+ * (zoals bij de ramen); de keuze gebeurt met een echte kleurenwaaier.
  */
-export const STAAL_AFWERKINGEN: { code: string; label: string; kleur: string }[] = [
-  { code: 'verzinkt', label: 'Thermisch verzinkt', kleur: '#a9b0b3' },
-  { code: 'ral9005', label: 'Poederlak zwart (RAL 9005)', kleur: '#26262a' },
-  { code: 'ral7016', label: 'Poederlak antracietgrijs (RAL 7016)', kleur: '#3d4347' },
-  { code: 'ral7035', label: 'Poederlak lichtgrijs (RAL 7035)', kleur: '#c5c7c4' },
-  { code: 'ral9010', label: 'Poederlak zuiver wit (RAL 9010)', kleur: '#efeae0' },
-  { code: 'ral9006', label: 'Poederlak blank aluminiumkleurig (RAL 9006)', kleur: '#a5a6a5' },
-  { code: 'inox', label: 'Inox, geborsteld', kleur: '#c9cccd' },
+export const STAAL_AFWERKINGEN: { code: string; label: string; kleur: string; soort: 'metaal' | 'lak_mat' }[] = [
+  { code: 'verzinkt', label: 'Thermisch verzinkt', kleur: '#bfc5c8', soort: 'metaal' },
+  { code: 'ral9005', label: 'Poederlak zwart (RAL 9005)', kleur: '#26262a', soort: 'lak_mat' },
+  { code: 'ral7016', label: 'Poederlak antracietgrijs (RAL 7016)', kleur: '#3d4347', soort: 'lak_mat' },
+  { code: 'ral7035', label: 'Poederlak lichtgrijs (RAL 7035)', kleur: '#c5c7c4', soort: 'lak_mat' },
+  { code: 'ral9010', label: 'Poederlak zuiver wit (RAL 9010)', kleur: '#efeae0', soort: 'lak_mat' },
+  { code: 'ral9006', label: 'Poederlak blank aluminiumkleurig (RAL 9006)', kleur: '#a5a6a5', soort: 'lak_mat' },
+  { code: 'inox', label: 'Inox, geborsteld', kleur: '#c9cccd', soort: 'metaal' },
 ];
 
 /** Staal als materiaal: `staal_<code>` per afwerking. */
 export const staalMaterialen: Record<string, BouwMateriaal> = Object.fromEntries(
-  STAAL_AFWERKINGEN.map((a) => [`staal_${a.code}`, { label: a.code === 'inox' ? 'Inox, geborsteld' : `Staal, ${a.label.charAt(0).toLowerCase()}${a.label.slice(1)}`, soort: 'metaal', kleur: a.kleur }]),
+  STAAL_AFWERKINGEN.map((a) => [`staal_${a.code}`, { label: a.code === 'inox' ? 'Inox, geborsteld' : `Staal, ${a.label.charAt(0).toLowerCase()}${a.label.slice(1)}`, soort: a.soort, kleur: a.kleur }]),
 );
