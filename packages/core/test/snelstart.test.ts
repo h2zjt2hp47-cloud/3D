@@ -189,6 +189,21 @@ describe('snelstart: maten intypen in cm', () => {
     expect(leesMaat('', cm)).toBeUndefined();
     expect(leesMaat('vier meter', cm)).toBeUndefined();
   });
+  it('rekent een som uit, elk stuk met zijn eigen eenheid', () => {
+    const cm = { eenheid: 'cm' as const }, mm = { eenheid: 'mm' as const };
+    expect(leesMaat('300+150', cm)).toBe(450);
+    expect(leesMaat('300 + 150', cm)).toBe(450);
+    expect(leesMaat('4 m - 20', cm)).toBe(380);
+    expect(leesMaat('4,5+1,2', cm)).toBe(570);
+    expect(leesMaat('2m+35cm+5mm', cm)).toBe(236);
+    expect(leesMaat('300−20', cm)).toBe(280);
+    expect(leesMaat('100-150', cm)).toBe(-50);
+    expect(leesMaat('300+150', mm)).toBe(4500);
+    expect(leesMaat('+30', cm)).toBeUndefined();
+    expect(leesMaat('300+', cm)).toBeUndefined();
+    expect(leesMaat('300++1', cm)).toBeUndefined();
+    expect(leesMaat('3x150', cm)).toBeUndefined();
+  });
   it('alle lengtes in de snelstart staan in cm', () => {
     for (const t of SNELSTART_TEGELS) for (const m of t.maten) expect(m.toon, `${t.code}.${m.code}`).toBe(m.eenheid === 'stuks' ? 'aantal' : 'cm');
   });
