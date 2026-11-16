@@ -83,6 +83,11 @@ export interface OfferteMeta {
   akkoord?: Akkoord;
   /** Project zonder woning: enkel ramen en deuren (geen plattegrond, meteen een ramenlijst). */
   zonderWoning?: boolean;
+  /**
+   * Varianten van hetzelfde ontwerp dragen dezelfde groep (16/11, gezet door *Variant maken*): om ze naast elkaar te
+   * tonen en samen mee te geven. Een kopie, een sjabloon of een nieuw project krijgt ze niet mee.
+   */
+  variantGroep?: string;
   meerwerk: MeerwerkRegel[];
   meerwerkbon?: { nummer: number; naam: string; datum: string; handtekening?: string; getekend: boolean };
 }
@@ -250,6 +255,7 @@ function volgendNummer(): string {
 function schoon(x: Toestand, zonderKlant: boolean): Toestand {
   const k = structuredClone(x);
   k.meta = { ...k.meta, akkoord: undefined, meerwerk: [], meerwerkbon: undefined, datum: new Date().toISOString().slice(0, 10) };
+  delete k.meta.variantGroep;
   if (zonderKlant) k.meta = { ...k.meta, klant: '', adres: '' };
   for (const p of k.posities) delete p.inmeting;
   return k;

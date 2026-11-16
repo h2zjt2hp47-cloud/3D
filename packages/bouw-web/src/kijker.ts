@@ -14,8 +14,13 @@
  *   pagina → kijker   { soort: 'bouw-kijker', vraag: 'beeld' }                    geef het beeld zoals het nu staat (PNG)
  *                     { soort: 'bouw-kijker', huisstijl: { accent, achtergrond } } kleuren van de insluitende pagina
  * Met ?oorsprong=<adres> in het adres van de kijker luistert en antwoordt hij alleen naar dat adres.
+ *
+ * Bestand voor de klant (16/11, `meegeven.ts`): het pakket zit in de pagina zelf. Dan is dit alleen een kijker: geen
+ * ander pakket openen, niets ophalen of ontvangen, met de naam van de aannemer, het project en de datum bovenaan, en met
+ * de varianten om tussen te wisselen als er meer ontwerpen meegaan. Maten (de keuze *Maten*) rekent de kijker zelf uit
+ * de scène (core/src/maten3d.ts), zodat ook een ouder pakket ze heeft.
  */
-import { leesPakket3D, passendKader, PAKKET3D_VERSIE, type Pakket3D, type Scene3D } from '../../core/src/index.js';
+import { gebouwMaatlijnen, leesPakket3D, passendKader, PAKKET3D_VERSIE, raamMaatlijnen, type Pakket3D, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -23,6 +28,11 @@ const adres = new URLSearchParams(location.search);
 const oorsprong = adres.get('oorsprong');
 let viewer: Viewer3D | null | undefined;
 let pakket: Pakket3D | null = null;
+/** Het ontwerp en zijn varianten (het eerste is het pakket zelf); `pakket` is het ontwerp dat nu getoond wordt. */
+let alle: Pakket3D[] = [];
+/** Een pakket dat in de pagina zelf zit: het bestand voor de klant. Dan alleen kijken. */
+const ingesloten = document.getElementById('pakket');
+const klantbestand = !!ingesloten?.textContent?.trim();
 /** Wat er nu in beeld staat ('woning' of de code van een positie), om het standpunt alleen bij een andere keuze te zetten. */
 let getoond = '';
 
@@ -48,6 +58,13 @@ function scene(): Scene3D | null {
   return positie ? passendKader(positie) : null;
 }
 
+/** De scène met de maatlijnen erbij als *Maten* aan staat: de hoofdmaten van de woning, of de maten van het raam. */
+function metMaten(s: Scene3D, woning: boolean): Scene3DMetMaten {
+  if (!$<HTMLInputElement>('#maten').checked) return s;
+  const laag = woning && $<HTMLInputElement>('#laag').checked;
+  return { ...s, maatlijnen: woning ? gebouwMaatlijnen(s, { hoogtes: !laag }) : raamMaatlijnen(s.blokken) };
+}
+
 function teken() {
   if (!pakket) return;
   const keuze = $<HTMLSelectElement>('#keuze').value;
@@ -68,38 +85,85 @@ function teken() {
   viewer.formaat();
   // De woning staat buiten (lucht, gras, horizon); een losse positie blijft een rustig beeld op een effen achtergrond.
   viewer.omgeving?.(woning ? 'buiten' : 'geen');
-  viewer.toon(s);
+  viewer.toon(metMaten(s, woning));
   // Een positie van voren (het hele raam in beeld), de woning schuin van boven; alleen bij een andere keuze, niet bij elke klik.
   if (keuze !== getoond) viewer.standpunt(woning ? 'schuin' : 'voor');
   getoond = keuze;
 }
 
+/** Datum van het ontwerp in gewone taal ("16 november 2026"), of leeg. */
+function datumTekst(d?: string): string {
+  if (!d || !/^\d{4}-\d{2}-\d{2}/.test(d)) return '';
+  const x = new Date(`${d.slice(0, 10)}T12:00:00`);
+  return Number.isNaN(x.getTime()) ? '' : x.toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+/** Kop van de pagina: project, datum, nummer en klant, en de naam van de aannemer. */
+function zetKop(p: Pakket3D) {
+  $('#titel').textContent = p.project.naam || '3D-kijker';
+  const datum = datumTekst(p.project.datum);
+  $('#ondertitel').textContent = [datum ? `Ontwerp van ${datum}` : '', p.project.nummer, p.project.klant].filter(Boolean).join(' · ');
+  $('#aannemer').textContent = p.project.aannemer ?? '';
+  $('#aannemer').hidden = !p.project.aannemer;
+  document.title = `3D · ${p.project.naam || p.project.nummer || 'bouw'}`;
+}
+
+/** Toont een ander ontwerp (variant): wat je bekeek (de woning of een raam, de verdieping) blijft, als het er ook is. */
+function kiesVariant(i: number) {
+  const p = alle[i];
+  if (!p) return;
+  const vorigeKeuze = pakket ? $<HTMLSelectElement>('#keuze').value : '';
+  const vorigNiveau = pakket ? $<HTMLSelectElement>('#niveau').value : '';
+  const helemaal = !pakket || Number(vorigNiveau) === pakket.woning.length - 1;
+  pakket = p;
+  zetKop(p);
+  for (const [j, b] of [...document.querySelectorAll<HTMLButtonElement>('#variantknoppen button')].entries()) b.setAttribute('aria-pressed', String(j === i));
+  const keuze = $<HTMLSelectElement>('#keuze');
+  keuze.replaceChildren(
+    ...(p.woning.length ? [new Option('De woning', 'woning')] : []),
+    ...p.posities.map((x) => new Option(`${x.code} · ${x.naam}`, x.code)),
+  );
+  if ([...keuze.options].some((o) => o.value === vorigeKeuze)) keuze.value = vorigeKeuze;
+  const niveau = $<HTMLSelectElement>('#niveau');
+  niveau.replaceChildren(...p.woning.map((n, k) => new Option(k === p.woning.length - 1 && k > 0 ? `${n.naam} (hele woning)` : n.naam, String(k))));
+  niveau.value = !helemaal && Number(vorigNiveau) < p.woning.length - 1 ? vorigNiveau : String(Math.max(0, p.woning.length - 1));
+  teken();
+}
+
 function toon(bron: unknown) {
+  let gelezen: Pakket3D;
   try {
-    pakket = leesPakket3D(bron);
+    gelezen = leesPakket3D(bron);
   } catch (e) {
     fout(e instanceof Error ? e.message : String(e));
     return;
   }
   $('#fout').hidden = true;
-  $('#titel').textContent = pakket.project.naam || '3D-kijker';
-  $('#ondertitel').textContent = [pakket.project.nummer, pakket.project.klant].filter(Boolean).join(' · ');
-  document.title = `3D · ${pakket.project.naam || pakket.project.nummer || 'bouw'}`;
-  const keuze = $<HTMLSelectElement>('#keuze');
-  keuze.replaceChildren(
-    ...(pakket.woning.length ? [new Option('De woning', 'woning')] : []),
-    ...pakket.posities.map((p) => new Option(`${p.code} · ${p.naam}`, p.code)),
-  );
-  const niveau = $<HTMLSelectElement>('#niveau');
-  niveau.replaceChildren(...pakket.woning.map((n, i) => new Option(i === pakket!.woning.length - 1 && i > 0 ? `${n.naam} (hele woning)` : n.naam, String(i))));
-  niveau.value = String(Math.max(0, pakket.woning.length - 1));
+  alle = [gelezen, ...(gelezen.varianten ?? [])];
+  pakket = null;
+  // Varianten: één knop per ontwerp, met wat het anders maakt; de klant wisselt ertussen.
+  $('#variantknoppen').replaceChildren(...alle.map((p, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'variantknop';
+    b.title = p.variant?.naam || p.project.naam;
+    const naam = document.createElement('strong');
+    naam.textContent = `Variant ${i + 1}`;
+    const verschil = document.createElement('span');
+    verschil.textContent = (p.variant?.verschil ?? []).join(' · ') || p.project.naam;
+    b.append(naam, verschil);
+    b.addEventListener('click', () => kiesVariant(i));
+    return b;
+  }));
+  $('#varianten').hidden = alle.length < 2;
   $<HTMLInputElement>('#laag').checked = false;
   getoond = '';
   $('#leeg').hidden = true;
   $('#balk').hidden = false;
   $('#drie-d').hidden = false;
-  teken();
-  naarPagina({ bericht: 'getoond', project: pakket.project.nummer });
+  $('#voorbehoud').hidden = !klantbestand;
+  kiesVariant(0);
+  naarPagina({ bericht: 'getoond', project: gelezen.project.nummer });
 }
 
 function leesBestand(f: File | undefined) {
@@ -119,7 +183,8 @@ window.addEventListener('message', (e) => {
   if (oorsprong && e.origin !== oorsprong) return;
   const d = e.data as { soort?: string; vraag?: string; huisstijl?: object } | null;
   if (!d || typeof d !== 'object') return;
-  if (d.soort === 'bouw-3d-pakket') toon(d);
+  // Het bestand voor de klant toont alleen zijn eigen pakket.
+  if (d.soort === 'bouw-3d-pakket' && !klantbestand) toon(d);
   if (d.soort !== 'bouw-kijker') return;
   if (d.huisstijl) huisstijl(d.huisstijl);
   if (d.vraag === 'beeld') naarPagina({ bericht: 'beeld', png: viewer?.beeld?.() ?? null });
@@ -128,6 +193,7 @@ window.addEventListener('message', (e) => {
 $('#keuze').addEventListener('change', teken);
 $('#niveau').addEventListener('change', teken);
 $('#laag').addEventListener('change', teken);
+$('#maten').addEventListener('change', teken);
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as 'schuin'));
 $('#bewaar').addEventListener('click', () => {
   const png = viewer?.beeld?.();
@@ -137,20 +203,22 @@ $('#bewaar').addEventListener('click', () => {
   a.download = `3D ${pakket?.project.nummer || 'bouw'}.png`;
   a.click();
 });
-$('#ander').addEventListener('click', () => $<HTMLInputElement>('#bestand').click());
-$('#kies').addEventListener('click', () => $<HTMLInputElement>('#bestand').click());
-$<HTMLInputElement>('#bestand').addEventListener('change', (e) => leesBestand((e.target as HTMLInputElement).files?.[0]));
-const leeg = $('#leeg');
-for (const soort of ['dragenter', 'dragover'] as const) document.addEventListener(soort, (e) => { e.preventDefault(); leeg.classList.add('sleep'); });
-document.addEventListener('dragleave', () => leeg.classList.remove('sleep'));
-document.addEventListener('drop', (e) => { e.preventDefault(); leeg.classList.remove('sleep'); leesBestand(e.dataTransfer?.files?.[0]); });
 window.addEventListener('resize', () => viewer?.formaat());
-
-// Kleuren en pakket uit het adres van de pagina.
 huisstijl({ accent: adres.get('accent') ? `#${adres.get('accent')}` : undefined, achtergrond: adres.get('achtergrond') ? `#${adres.get('achtergrond')}` : undefined });
-const bron = adres.get('pakket');
-if (bron) fetch(bron).then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status))))).then(toon, () => fout('Het 3D-pakket kon niet opgehaald worden.'));
-// Een pakket dat in de pagina zelf zit (één bestand om door te sturen).
-const ingesloten = document.getElementById('pakket');
-if (ingesloten?.textContent?.trim()) toon(ingesloten.textContent);
+if (klantbestand) {
+  // Het bestand voor de klant: alleen het pakket in de pagina, geen ander bestand kiezen of slepen, niets ophalen.
+  document.body.classList.add('klantbestand');
+  toon(ingesloten!.textContent);
+} else {
+  $('#ander').addEventListener('click', () => $<HTMLInputElement>('#bestand').click());
+  $('#kies').addEventListener('click', () => $<HTMLInputElement>('#bestand').click());
+  $<HTMLInputElement>('#bestand').addEventListener('change', (e) => leesBestand((e.target as HTMLInputElement).files?.[0]));
+  const leeg = $('#leeg');
+  for (const soort of ['dragenter', 'dragover'] as const) document.addEventListener(soort, (e) => { e.preventDefault(); leeg.classList.add('sleep'); });
+  document.addEventListener('dragleave', () => leeg.classList.remove('sleep'));
+  document.addEventListener('drop', (e) => { e.preventDefault(); leeg.classList.remove('sleep'); leesBestand(e.dataTransfer?.files?.[0]); });
+  // Pakket uit het adres van de pagina.
+  const bron = adres.get('pakket');
+  if (bron) fetch(bron).then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status))))).then(toon, () => fout('Het 3D-pakket kon niet opgehaald worden.'));
+}
 naarPagina({ bericht: 'klaar', versie: PAKKET3D_VERSIE });

@@ -17,6 +17,8 @@ import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zonderPrijs, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 import { maakPakket3D, maakZending } from './doorsturen.js';
+import { drukBlad } from './blad.js';
+import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee } from './meegeven.js';
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
 const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'dak', 'inrichting'] as const;
@@ -24,6 +26,52 @@ const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', '
 let naarPositie: (id: string) => void = () => {};
 let naarPlan: (openingId?: string) => void = () => {};
 let naarWerf: () => void = () => {};
+let naarVarianten: () => void = () => {};
+
+/**
+ * Meegeven aan de klant: één HTML-bestand met de draaibare 3D (de kijker met het ontwerp en de gekozen varianten erin),
+ * zonder prijzen. Meteen klaar (er worden geen beelden getekend); de melding zegt hoe groot het is.
+ */
+export async function geefMee(knop: HTMLButtonElement, melding: HTMLElement) {
+  knop.disabled = true;
+  melding.textContent = 'Bestand maken …';
+  try {
+    const b = await maakKlantBestand(meeTeGeven(), omschrijving);
+    const uitkomst = await bewaarBestand(b.naam, new Blob([b.inhoud], { type: 'text/html' }));
+    melding.textContent = uitkomst === 'bewaard'
+      ? `Klaar: "${b.naam}" (${grootteTekst(b.grootte)}${b.varianten > 1 ? `, ${b.varianten} varianten` : ''}). Stuur het door of zet het op een stick: de klant opent het in een browser.`
+      : uitkomst === 'geweigerd' ? 'Het bestand is niet bewaard.' : 'Bewaren lukt hier niet.';
+  } catch (fout) {
+    melding.textContent = fout instanceof Error ? fout.message : String(fout);
+  } finally {
+    knop.disabled = false;
+  }
+}
+
+/** Welke varianten mee gaan in het bestand (alleen als er varianten zijn), met wat ze anders maakt. */
+function toonVariantenMee() {
+  const vak = $('#o-varianten-mee');
+  const leden = familie();
+  vak.hidden = leden.length < 2;
+  if (leden.length < 2) { vak.replaceChildren(); return; }
+  const mee = new Set(meeTeGeven(leden).map((v) => v.id));
+  const verschil = verschilVan(leden);
+  const naast = el('button', { type: 'button', class: 'tweede' }, 'Naast elkaar bekijken');
+  naast.addEventListener('click', () => naarVarianten());
+  vak.replaceChildren(el('p', { class: 'klein' }, `Mee in het bestand (hoogstens 3; de klant wisselt ertussen):`), ...leden.map((v, i) => {
+    const vink = el('input', { type: 'checkbox' }) as HTMLInputElement;
+    vink.checked = mee.has(v.id);
+    vink.addEventListener('change', () => { zetMee(v.id, vink.checked); toonVariantenMee(); });
+    const label = el('label', { class: 'mee-keuze' });
+    const tekst = el('span', {}, v.naam);
+    tekst.append(el('small', {}, (verschil[i] ?? []).join(' · ')));
+    label.append(vink, tekst);
+    if (!gaatMee(v.id) || mee.has(v.id)) return label;
+    // Aangevinkt maar niet mee: er gaan er al drie.
+    tekst.append(el('small', {}, 'gaat niet mee: er gaan er al drie'));
+    return label;
+  }), naast);
+}
 
 export function berekenHuidigeOfferte(): OfferteResultaat {
   const t = toestand();
@@ -161,6 +209,9 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     const i = $<HTMLInputElement>(`#${id}`);
     if (document.activeElement !== i) i.value = w;
   }
+  const firma = $<HTMLInputElement>('#o-aannemer');
+  if (document.activeElement !== firma) firma.value = aannemerNaam() === STANDAARD_AANNEMER ? '' : aannemerNaam();
+  toonVariantenMee();
   $<HTMLInputElement>(`#o-btw-${m.btw}`).checked = true;
   $<HTMLInputElement>(`#o-klanttype-${m.klanttype}`).checked = true;
   const kv = $<HTMLInputElement>('#o-korting');
@@ -451,7 +502,8 @@ export function drukAf() {
   }).join('');
   const gevelLijst = gevelSvgs(560);
   const gevels = gevelLijst.length ? `<h2>Gevels</h2><div class="a-gevels">${gevelLijst.map((g) => `<figure><figcaption>${esc(g.naam)}</figcaption>${g.svg}</figure>`).join('')}</div>` : '';
-  const kop = `<header class="a-kop"><div><div class="a-firma">Uw bedrijf · Ramen, deuren en renovatie</div><h1>${PRIJZEN ? 'Offerte' : 'Overzicht'} ${esc(t.meta.nummer)}</h1><p>${esc(t.meta.datum)}</p></div>
+  const firma = aannemerNaam() === STANDAARD_AANNEMER ? 'Uw bedrijf · Ramen, deuren en renovatie' : aannemerNaam();
+  const kop = `<header class="a-kop"><div><div class="a-firma">${esc(firma)}</div><h1>${PRIJZEN ? 'Offerte' : 'Overzicht'} ${esc(t.meta.nummer)}</h1><p>${esc(t.meta.datum)}</p></div>
     <div class="a-klant"><strong>${esc(t.meta.klant)}</strong><br>${esc(t.meta.adres)}<br>Project: ${esc(t.meta.project)}</div></header>`;
   if (!PRIJZEN) {
     // Zonder prijzen: wat er in het ontwerp zit en hoeveel, met de tekeningen; geen totalen, voorwaarden of handtekening.
@@ -475,10 +527,24 @@ export function drukAf() {
   window.print();
 }
 
-export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan: (openingId?: string) => void; naarWerf: () => void }) {
+export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan: (openingId?: string) => void; naarWerf: () => void; naarVarianten: () => void }) {
   naarPositie = nav.naarPositie;
   naarPlan = nav.naarPlan;
   naarWerf = nav.naarWerf;
+  naarVarianten = nav.naarVarianten;
+  $<HTMLInputElement>('#o-aannemer').addEventListener('change', (e) => zetAannemerNaam((e.target as HTMLInputElement).value));
+  $('#o-klantbestand').addEventListener('click', () => void geefMee($<HTMLButtonElement>('#o-klantbestand'), $('#o-klantbestand-melding')));
+  // Blad met beelden: de beelden worden buiten beeld getekend, daarna opent het afdrukvenster (bewaren als PDF kan daar).
+  $('#o-blad').addEventListener('click', async () => {
+    const knop = $<HTMLButtonElement>('#o-blad'), melding = $('#o-klantbestand-melding');
+    knop.disabled = true;
+    try {
+      const ok = await drukBlad(kort, omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
+      melding.textContent = ok ? 'Blad klaar: kies in het afdrukvenster een printer of "Bewaren als PDF".' : 'Het blad kan niet gemaakt worden: de 3D werkt niet op dit toestel.';
+    } finally {
+      knop.disabled = false;
+    }
+  });
   startRamenlijst();
   for (const [id, veld] of [['o-klant', 'klant'], ['o-adres', 'adres'], ['o-project', 'project'], ['o-nummer', 'nummer'], ['o-datum', 'datum']] as const) {
     $<HTMLInputElement>(`#${id}`).addEventListener('change', (e) => wijzig('meta', (t) => { t.meta[veld] = (e.target as HTMLInputElement).value; }));
