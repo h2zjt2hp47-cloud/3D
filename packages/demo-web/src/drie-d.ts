@@ -865,6 +865,9 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   // Elke structuur is hier zelf getekend (geen foto's, geen bestanden van fabrikanten): een kleurkaart en een
   // hoogtekaart (bumpMap), zodat voegen, groeven en de golf van een dakpan licht vangen. Grotere tegels dan hierboven,
   // met een vaste tint per steen of plank die over de rand doorloopt: geen naad en minder zichtbare herhaling.
+  // De schaal (beeldpunten per cm) is zo gekozen dat één laag, plank of pan een geheel aantal beeldpunten telt dat
+  // een paar keer door twee deelbaar is. De grafische kaart tekent van ver met verkleinde versies van de tekening
+  // (telkens de helft); valt een voeg daar niet op een geheel beeldpunt, dan krijgt de gevel lichte en donkere banden.
   const BOUW_ANISOTROPIE = 8;
   /** Hoeveel sterker glas de lucht spiegelt in de omgeving 'buiten' (anders zie je alleen de kamer erachter). */
   const GLAS_SPIEGELT = 2.6;
@@ -897,7 +900,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     }
   };
   /** Gevelsteen: 8 stenen × 20 lagen, elke steen een eigen tint (hier en daar een donker gebakken), de voeg verdiept. */
-  const baksteenRijk = (hex: string, voeg = '#cfc8bb') => metRelief(STEEN_RIJK.b, STEEN_RIJK.h, 3, (g, r, px) => {
+  const baksteenRijk = (hex: string, voeg = '#cfc8bb') => metRelief(STEEN_RIJK.b, STEEN_RIJK.h, 4, (g, r, px) => {
     const toeval = vasteReeks('baksteenrijk' + hex + voeg);
     const W = STEEN_RIJK.b * px, H = STEEN_RIJK.h * px;
     g.fillStyle = voeg;
@@ -909,6 +912,9 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const off = rij % 2 ? 11 : 0;
       // Eén tint en hoogte per steen van de rij; de steen op de rand krijgt links en rechts dezelfde.
       const stenen = Array.from({ length: 8 }, () => ({ f: toeval() < 0.06 ? 0.7 + toeval() * 0.1 : 0.86 + toeval() * 0.25, hoog: 170 + toeval() * 60, vlek: toeval() }));
+      // Elke laag gemiddeld even licht: van ver zie je anders lichte en donkere lagen als banden.
+      const gemiddeld = stenen.reduce((som, st) => som + st.f, 0) / stenen.length;
+      for (const st of stenen) st.f += 0.97 - gemiddeld;
       for (let s = -1; s < 9; s++) {
         const st = stenen[(s + 8) % 8]!, x = (s * 22 + off) * px, y = rij * 6 * px, w = 21 * px, h = 5 * px;
         g.fillStyle = tint(hex, st.f);
@@ -951,7 +957,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     }
   };
   /** Staande planken van 12 cm met een schaduwgroef; 8 planken per tegel. */
-  const plankenRijk = (hex: string) => metRelief(PLANK_RIJK.b, PLANK_RIJK.h, 3, (g, r, px) => {
+  const plankenRijk = (hex: string) => metRelief(PLANK_RIJK.b, PLANK_RIJK.h, 8 / 3, (g, r, px) => {
     const toeval = vasteReeks('plankenrijk' + hex);
     for (let p = 0; p < 8; p++) {
       plankMetNerf(g, r, toeval, hex, p * 12 * px, 0, 12 * px, PLANK_RIJK.h * px, true, 0.84 + toeval() * 0.26);
@@ -961,7 +967,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     }
   });
   /** Liggende planken van 15 cm (rabat): elke plank helt naar voren en werpt een schaduwlijn op de plank eronder. */
-  const plankenLiggendRijk = (hex: string) => metRelief(LIGGEND_RIJK.b, LIGGEND_RIJK.h, 2.5, (g, r, px) => {
+  const plankenLiggendRijk = (hex: string) => metRelief(LIGGEND_RIJK.b, LIGGEND_RIJK.h, 32 / 15, (g, r, px) => {
     const toeval = vasteReeks('plankenliggendrijk' + hex);
     const W = LIGGEND_RIJK.b * px;
     for (let rij = 0; rij < 8; rij++) {
@@ -1017,7 +1023,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
    * Keramische dakpannen, 30 × 34 cm zichtbaar, 6 × 4 per tegel: de golf van elke pan en de trap waar ze op de pan
    * eronder ligt, ook in de hoogtekaart. De bovenkant van de tekening ligt hoger op het dak (zie prismaGeometrie).
    */
-  const pannenRijk = (hex: string) => metRelief(PANNEN_RIJK.b, PANNEN_RIJK.h, 3, (g, r, px) => {
+  const pannenRijk = (hex: string) => metRelief(PANNEN_RIJK.b, PANNEN_RIJK.h, 4, (g, r, px) => {
     const toeval = vasteReeks('pannenrijk' + hex);
     for (let rij = 0; rij < 4; rij++) for (let s = 0; s < 6; s++) {
       const x = s * 30 * px, y = rij * 34 * px, w = 30 * px, h = 34 * px, f = 0.9 + toeval() * 0.2;
@@ -1065,7 +1071,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     r.fillRect(0, 0, 1.4 * px, H);
   });
   /** Parket: planken van 20 × 120 cm in halfsteens verband, met nerf en een fijne groef tussen de planken. */
-  const parketRijk = (hex: string) => metRelief(PARKET.b, PARKET.h, 3, (g, r, px) => {
+  const parketRijk = (hex: string) => metRelief(PARKET.b, PARKET.h, 3.2, (g, r, px) => {
     const toeval = vasteReeks('parketrijk' + hex);
     for (let rij = 0; rij < 4; rij++) {
       const off = (rij % 2) * 60, tinten = [0.86 + toeval() * 0.24, 0.86 + toeval() * 0.24];
@@ -2214,8 +2220,9 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   /** Gras: straal van het vlak (tot voorbij de mist) en de maat van één tegel van de tekening, in cm. */
   const GRAS = { straal: 90000, tegel: 1400 };
   // Maat van de twee omgevingsbeelden (equirect). Klein gehouden: de lucht is een zacht verloop, en three maakt van elk
-  // beeld een reeks vervaagde kubussen (gemeten zonder grafische kaart: 512 × 256 voor beide kostte ±1,5 s meer bij het
-  // eerste beeld). Voor glas volstaat het kleinste: daar spiegelt alleen het verloop van de hemel.
+  // beeld een reeks vervaagde kubussen. Voor glas volstaat het kleinste: daar spiegelt alleen het verloop van de hemel.
+  // (Gemeten zonder grafische kaart: de maat maakte voor het eerste beeld geen meetbaar verschil; een proef zonder het
+  // tweede beeld was ±1 s sneller, in één meting.)
   const LUCHT_W = 256, LUCHT_H = 128, GLAS_W = 64, GLAS_H = 32;
   type BuitenDelen = { gras: any; koepel: any; mist: any; luchtbeeld: any; glasbeeld: any; u: Record<'zon' | 'zenit' | 'horizon' | 'gloed' | 'schijf' | 'wolk' | 'bomen' | 'mist', any> };
   let buitenDelen: BuitenDelen | null = null;
@@ -2308,8 +2315,9 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
 
     // De lucht staat op een bol rond de camera, op de verste diepte, en wordt na de woning en het gras getekend: zo
     // wordt ze alleen berekend waar ze echt te zien is. Als achtergrond van de scène (`backgroundNode`) werd eerst elk
-    // beeldpunt met lucht gevuld, ook achter de woning: zonder grafische kaart ±0,25 s per beeld, ook als er geen lucht
-    // in beeld is (standpunt Schuin). De bol verschuift niet met de camera mee (w = 0), zoals de achtergrond van three.
+    // beeldpunt met lucht gevuld, ook achter de woning: in een meting zonder grafische kaart ±0,25 s per beeld, ook als
+    // er geen lucht in beeld is (standpunt Schuin). De bol verschuift niet met de camera mee (w = 0), zoals de
+    // achtergrond van three.
     const luchtMateriaal = new NodeMaterial();
     luchtMateriaal.side = THREE.BackSide;
     luchtMateriaal.depthWrite = false;
@@ -2758,7 +2766,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   // maten van een woning (schaduw in de hoek van twee muren, onder een dakrand, in een raamnis), tot op 70 à 120 m.
   const AO_ZETEL = { straal: 14, dikte: 8, schaal: 1.1, ver: [1000, 1600], sterkte: 0.9 };
   const AO_BOUW = { straal: 48, dikte: 18, schaal: 1.05, ver: [7000, 12000], sterkte: 0.78 };
-  let composer: { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void } | null = null;
+  let composer: { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void; sluit?(): void } | null = null;
   function maakComposer(maten = AO_ZETEL) {
     try {
       const pijplijn = new RenderPipeline(renderer);
@@ -2780,7 +2788,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const afstand = scenePass.getViewZNode().negate();
       const dichtbij = float(1).sub(smoothstep(maten.ver[0], maten.ver[1], afstand));
       pijplijn.outputNode = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(maten.sterkte))), kleur.a);
-      composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {} };
+      composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {}, sluit: () => pijplijn.dispose?.() };
     } catch (fout) {
       console.warn('Nabewerking (GTAO) niet beschikbaar:', fout);
       composer = null;
@@ -3196,6 +3204,14 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       renderer.setPixelRatio(k === 'mooi' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
       // VSM vervaagt de schaduw zelf: 2048 is scherp genoeg en veel lichter dan 4096.
       const maat = k === 'mooi' ? 2048 : 1024;
+      // Bouw: krijgt de schaduwkaart een andere maat terwijl de nabewerking al bestaat, dan tekende die daarna met een
+      // gewiste schaduwkaart (muren, dak en gras verdwenen na Snel → Mooi; three vernieuwt de koppeling met de kaart
+      // niet voor een pijplijn die intussen niet getekend werd). Daarom de pijplijn weggooien: `formaat` maakt een nieuwe.
+      if (!opties.zetel && composer && zon.shadow.mapSize.x !== maat) {
+        clearTimeout(mooiGepland);
+        try { composer.sluit?.(); } catch { /* al weg */ }
+        composer = null;
+      }
       // De schaduwkaart past zich zelf aan de nieuwe maat aan (WebGPURenderer).
       zon.shadow.mapSize.set(maat, maat);
       zetSchaduwZachtheid();
