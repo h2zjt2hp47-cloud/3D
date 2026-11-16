@@ -837,6 +837,20 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
   details.opbouwkeuze > summary::before, details.opbouwlagen > summary::before, details.constructiedeel > summary::before, details.aannames > summary::before { content: '▸'; margin-right: 8px; }
   details.opbouwkeuze[open] > summary::before, details.opbouwlagen[open] > summary::before, details.constructiedeel[open] > summary::before, details.aannames[open] > summary::before { content: '▾'; }
 }
+
+/* ---------- Doorloop B (16/11): configurator, overzicht, ramenlijst en projecten voor de verkoper ---------- */
+/* B5: de 3D (of het vooraanzicht) blijft in beeld bij elke keuze. Op een breed scherm (laptop, tablet liggend) stond de
+   hele rechterkolom vast, maar die is langer dan het scherm en schoof dus toch weg: nu staat alleen de kaart met de 3D
+   vast en lopen de andere kaarten eronder door. Op een tablet in staande stand blijft de kaart bovenaan staan, ook in 3D
+   (vroeger alleen het vooraanzicht en de 3D van een vast model). */
+@media (min-width: 901px) {
+  .positieraster > .resultaat { position: static; align-self: stretch; align-content: start; }
+  .positieraster > .resultaat > #p-voorkaart { position: sticky; top: 8px; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
+}
+@media (max-width: 900px) and (min-height: 1000px) {
+  .positieraster > .resultaat > #p-voorkaart:has(#p-3d:not([hidden])) { position: sticky; top: 0; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
+  #p-voorkaart:has(#p-3d:not([hidden])) .knoppenrij { margin-top: 6px; gap: 6px; }
+}
 </style>
 </head>
 <body>
