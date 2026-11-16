@@ -20,6 +20,7 @@ import {
   type RuimteType,
   type HandmatigePost,
 } from '../../core/src/index.js';
+import { beslisStart, herstelIndex, voegLijstenSamen } from '../../core/src/projecten.js';
 import { UITBOUW_VOORBEELD_NAAM, UITBOUW_VOORBEELD_UITLEG, uitbouwVoorbeeld } from '../../core/voorbeelden/uitbouwvoorbeeld.js';
 import { aanbouw, aanbouwPrijslijst } from '../../core/voorbeelden/aanbouw.js';
 import { garagepoort, poortPrijslijst } from '../../core/voorbeelden/garagepoort.js';
@@ -116,7 +117,15 @@ export interface Toestand {
 // Opslag in de browser: een index met projecten, elk project apart, plus sjablonen en de bibliotheek.
 const OUD = 'bouw-demo.v1';
 const INDEX = 'bouw-demo.projecten.v1';
-const PROJECT = (id: string) => `bouw-demo.project.${id}`;
+const PROJECT_VOOR = 'bouw-demo.project.';
+const PROJECT = (id: string) => `${PROJECT_VOOR}${id}`;
+/**
+ * Doorloop B4 (16/11): een tweede sleutel met dezelfde lijst (de reserve), en in de opslag van dit tabblad (sessionStorage)
+ * of het al projecten zag en hoeveel keer het na elkaar opnieuw laadde omdat de opslag leeg leek. Zie core/src/projecten.ts.
+ */
+const RESERVE = 'bouw-demo.projecten.v1.reserve';
+const GEZIEN = 'bouw-demo.opslag-gezien';
+const HERLADEN = 'bouw-demo.herladen';
 const SJABLONEN = 'bouw-demo.sjablonen.v1';
 const BIBLIOTHEEK = 'bouw-demo.bibliotheek.v1';
 
@@ -214,25 +223,96 @@ const aanvullen = (x: Toestand): Toestand => ({ ...x, plan: { ...x.plan, meubels
 let index: { actief: string; projecten: ProjectInfo[] } = { actief: '', projecten: [] };
 export let laatstBewaard = '';
 export let opslagProbleem = '';
+/** Projecten die in dit tabblad verwijderd werden: ze komen niet terug bij het samenvoegen van de lijst. */
+const verwijderd = new Set<string>();
 
 function infoVan(id: string, x: Toestand): ProjectInfo {
   return { id, naam: x.meta.project || 'Naamloos project', klant: x.meta.klant, nummer: x.meta.nummer, gewijzigd: new Date().toISOString(), posities: x.posities.length };
 }
 
+/** De ids van alle projecten die in de opslag staan (alleen de sleutels, zonder ze te lezen). */
+function projectIds(): string[] {
+  const uit: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(PROJECT_VOOR)) uit.push(k.slice(PROJECT_VOOR.length));
+    }
+  } catch { /* geen opslag */ }
+  return uit;
+}
+
+/** De opslag van dit tabblad (blijft bij herladen); lezen, of schrijven als er een waarde is. Kan ontbreken. */
+function sessie(sleutel: string, waarde?: string): string | null {
+  try {
+    if (waarde === undefined) return sessionStorage.getItem(sleutel);
+    sessionStorage.setItem(sleutel, waarde);
+  } catch { /* geen opslag */ }
+  return null;
+}
+
+/**
+ * Schrijft de lijst van projecten: nooit over wat er al staat, altijd samengevoegd (doorloop B4). Wat in de opslag staat en
+ * hier niet, blijft (behalve wat dit tabblad verwijderde, of een project zonder gegevens); ook in de reserve.
+ */
+function schrijfIndex(): boolean {
+  const ids = new Set(projectIds());
+  index.projecten = voegLijstenSamen([index.projecten, lees<typeof index>(INDEX)?.projecten, lees<typeof index>(RESERVE)?.projecten], { weg: verwijderd, bestaat: (id) => ids.has(id) });
+  const ok = schrijf(INDEX, index);
+  schrijf(RESERVE, index);
+  if (ok) sessie(GEZIEN, '1');
+  return ok;
+}
+
+/** Lijkt de opslag leeg terwijl dit tabblad ze gevuld zag, dan laadt de pagina opnieuw; tot dan wordt er niets bewaard. */
+let herladenBezig = false;
+
 function laad(): Toestand {
-  index = lees<typeof index>(INDEX) ?? { actief: '', projecten: [] };
-  const actief = index.projecten.find((p) => p.id === index.actief) ?? index.projecten[0];
-  if (actief) {
-    const x = lees<Toestand>(PROJECT(actief.id));
-    if (isToestand(x)) { index.actief = actief.id; return aanvullen(x); }
+  // De lijst: de index, aangevuld met de reserve en met elk project in de opslag dat in geen van beide staat.
+  index = herstelIndex({
+    index: lees<typeof index>(INDEX), reserve: lees<typeof index>(RESERVE), ids: projectIds(),
+    regelVan: (id) => { const x = lees<Toestand>(PROJECT(id)); return isToestand(x) ? { ...infoVan(id, x), gewijzigd: '' } : undefined; },
+  });
+  const gelezen = new Map<string, Toestand>();
+  const besluit = beslisStart({
+    index,
+    leesbaar: (id) => { const x = lees<Toestand>(PROJECT(id)); if (isToestand(x)) gelezen.set(id, x); return isToestand(x); },
+    opslagGezien: sessie(GEZIEN) === '1',
+    herladen: Number(sessie(HERLADEN) ?? 0) || 0,
+  });
+  if (besluit.soort === 'project') {
+    index.actief = besluit.id;
+    sessie(GEZIEN, '1');
+    sessie(HERLADEN, '0');
+    return aanvullen(gelezen.get(besluit.id)!);
   }
-  // Eerste keer: het oude enkele project (vorige versie van de demo) of de voorbeeldwoning.
+  if (besluit.soort === 'herladen') {
+    // De opslag is leeg terwijl dit tabblad ze gevuld zag: niets schrijven, opnieuw laden. Gemeten als bestand in
+    // Chromium: bij een volgende keer laden is alles terug.
+    sessie(HERLADEN, String((Number(sessie(HERLADEN) ?? 0) || 0) + 1));
+    herladenBezig = true;
+    index = { actief: '', projecten: [] };
+    try { location.reload(); } catch { /* niets */ }
+    return voorbeeldToestand();
+  }
+  if (besluit.soort === 'niet-te-lezen') {
+    // Na drie keer herladen nog altijd leeg: het voorbeeld tonen zonder iets te schrijven, en het zeggen. Laadt de
+    // verkoper zelf opnieuw en is de opslag dan nog leeg, dan is het een gewone eerste start.
+    sessie(HERLADEN, '0');
+    sessie(GEZIEN, '0');
+    index = { actief: '', projecten: [] };
+    opslagProbleem = 'De bewaarde projecten zijn nu niet te lezen: herlaad de pagina. Tot dan wordt er niets bewaard.';
+    return voorbeeldToestand();
+  }
+  // Eerste keer: het oude enkele project (vorige versie van de demo) of de voorbeeldwoning. Het komt bij de lijst
+  // (samengevoegd met wat er al stond), het overschrijft ze niet.
   const oud = lees<Toestand>(OUD);
   const start = isToestand(oud) ? aanvullen(oud) : voorbeeldToestand();
   const id = `pr${Date.now().toString(36)}`;
-  index = { actief: id, projecten: [infoVan(id, start)] };
+  index = { actief: id, projecten: [infoVan(id, start), ...index.projecten] };
   schrijf(PROJECT(id), start);
-  schrijf(INDEX, index);
+  schrijfIndex();
+  sessie(HERLADEN, '0');
   return start;
 }
 
@@ -244,13 +324,13 @@ export const toestand = () => t;
 export const actiefProject = () => index.actief;
 
 function bewaar() {
-  if (!index.actief) return;
+  if (!index.actief || herladenBezig) return;
   const ok = schrijf(PROJECT(index.actief), t);
   const info = infoVan(index.actief, t);
   index.projecten = index.projecten.some((p) => p.id === index.actief)
     ? index.projecten.map((p) => (p.id === index.actief ? info : p))
     : [...index.projecten, info];
-  const ok2 = schrijf(INDEX, index);
+  const ok2 = schrijfIndex();
   opslagProbleem = ok && ok2 ? '' : 'Bewaren in de browser lukt niet (opslag vol of uitgeschakeld). Bewaar het project als bestand.';
   if (!opslagProbleem) laatstBewaard = new Date().toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
 }
@@ -313,6 +393,7 @@ export function dupliceerProject(id: string) {
 }
 
 export function verwijderProject(id: string) {
+  verwijderd.add(id);
   index.projecten = index.projecten.filter((p) => p.id !== id);
   try { localStorage.removeItem(PROJECT(id)); } catch { /* niets */ }
   if (id === index.actief) {
@@ -324,7 +405,7 @@ export function verwijderProject(id: string) {
       nieuwProject(legeToestand(), 'Nieuw project');
     }
   } else {
-    schrijf(INDEX, index);
+    schrijfIndex();
     for (const l of luisteraars) l('projecten');
   }
 }
