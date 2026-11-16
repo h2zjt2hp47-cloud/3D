@@ -125,7 +125,7 @@ const BOUWBEELDEN = [
   // met een hoek in verstek en een schuin stuk (`LOSSE_WANDEN`). De tekening, en de 3D van het gelijkvloers zonder dak.
   { naam: 'bouw-losse-plan', losse: 'plan' },
   { naam: 'bouw-losse-3d', losse: '3d', toetsen: 'R5U4' },
-  // Techniek voor de installateur (ronde 10, 16/11): de configurator toont ze nog niet, dus uit de motor (tsx) in de losse
+  // Techniek voor de installateur (ronde 10, 16/11): uit de motor (tsx) in de losse
   // kijker: de uitgeruste voorbeeldwoning in de uitgezette weergave, en de tekening van het gelijkvloers met de tekens.
   { naam: 'bouw-techniek', techniek: '3d', toetsen: 'O1' },
   { naam: 'bouw-techniek-plan', techniek: 'plan' },

@@ -1,5 +1,5 @@
 /**
- * Hulpfuncties om techniek in het plan te zetten (ronde 10), voor het scherm van een volgende ronde: een toestel tegen de
+ * Hulpfuncties om techniek in het plan te zetten (ronde 10), voor het scherm (ronde 10b, bouw-web/src/techniek-ui.ts): een toestel tegen de
  * dichtste wand zetten (ook een schuine), een leiding van A naar B die de wanden volgt, de technische ruimte als één
  * opstelling langs de wanden van een berging of garage, en de lus van een vloerverwarming in een ruimte. Zuivere
  * functies: ze geven een nieuw toestel of nieuwe punten terug en wijzigen het plan niet.
