@@ -29,6 +29,7 @@ import {
   vormVanDeel,
   zetOmtrek,
   planKader,
+  planKaderMetTechniek,
   plattegrond3D,
   RUIMTE_TYPES,
   ruimteMaten,
@@ -74,6 +75,11 @@ import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { constructieAan, constructieScene, opbouwKeuze, startConstructie, toonOpbouwVanDing } from './constructie-ui.js';
 import { startDoorsnede, toonDoorsnede } from './doorsnede-ui.js';
+import {
+  draaiToestel, maakZichtbaar, startTechniek, techniek3DOpties, techniekAan, techniekHint, techniekMetRuimte, techniekNaTekenen, techniekPlan, techniekPointerDown,
+  techniekPointerMove, techniekPointerUp, techniekSelecteren, techniekTekenOpties, techniekUitgezet, techniekVoorbeeld, toonBalk3D, toonTechniekEigenschappen,
+  toonTechniekZonderKeuze, verschuifToestel, verwijderTechniek, zetTechniek, type TechniekSelectie,
+} from './techniek-ui.js';
 
 export { gevelSvgs } from './gevel-ui.js';
 import {
@@ -90,7 +96,7 @@ import {
 } from './staat.js';
 
 type Gereedschap = 'kies' | 'ruimte' | 'maten' | 'wand' | 'losse_wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'garagepoort' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
-type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'wand'; id: string } | undefined;
+type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'wand' | 'toestel' | 'leiding'; id: string } | undefined;
 
 const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
   { code: 'kies', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
@@ -204,7 +210,8 @@ const snap = (v: number, s = rasterStap()) => Math.round(v / s) * s;
 
 /** Passend beeld: de verdieping, samen met de verdieping eronder (om erop te tekenen). */
 function passendKader(): Kader {
-  const a = metVoorbeeld(planKader(plan(), 140));
+  // Met de techniek aan ook wat buiten de woning staat (een buitenunit, een leiding naar de straat).
+  const a = metVoorbeeld((techniekAan() ? planKaderMetTechniek : planKader)(plan(), 140));
   const onder = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   if (!onder?.ruimtes.length) return a;
   const b = planKader(onder, 140);
@@ -241,6 +248,16 @@ function selectieKader(): Kader | undefined {
     const l = pl.daklichten?.find((x) => x.id === s.id);
     return l ? { x: l.x, y: l.y, b: l.b, d: l.d } : undefined;
   }
+  if (s.soort === 'toestel') {
+    const t = pl.toestellen?.find((x) => x.id === s.id);
+    return t ? { x: t.x - 60, y: t.y - 60, b: 120, d: 120 } : undefined;
+  }
+  if (s.soort === 'leiding') {
+    const l = pl.leidingen?.find((x) => x.id === s.id);
+    if (!l) return undefined;
+    const xs = l.punten.map((q) => q[0]), ys = l.punten.map((q) => q[1]);
+    return { x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, b: Math.max(...xs) - Math.min(...xs) + 80, d: Math.max(...ys) - Math.min(...ys) + 80 };
+  }
   if (s.soort === 'wand') {
     const w = pl.losseWanden?.find((x) => x.id === s.id);
     if (!w) return undefined;
@@ -265,7 +282,7 @@ function raamInfo(o: Opening) {
 
 function fouten(): Set<string> {
   const s = new Set<string>();
-  for (const m of controleerPlan(toestand().plan, cat)) if (m.ernst === 'fout') { if (m.ruimte) s.add(m.ruimte); if (m.opening) s.add(m.opening); if (m.daklicht) s.add(m.daklicht); }
+  for (const m of controleerPlan(toestand().plan, cat)) if (m.ernst === 'fout') { if (m.ruimte) s.add(m.ruimte); if (m.opening) s.add(m.opening); if (m.daklicht) s.add(m.daklicht); if (m.toestel) s.add(m.toestel); if (m.leiding) s.add(m.leiding); }
   for (const o of plan().openingen) {
     const p = positieVan(o);
     if (p && !resultaat(p).geldig) s.add(o.id);
@@ -279,17 +296,20 @@ export function render() {
   niveau = Math.min(niveau, Math.max(0, verdiepingenVan(toestand().plan).length - 1));
   const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   viewBox = zoom ? zoom.kijkvak() : passendKader();
-  houder.innerHTML = tekenPlattegrond(plan(), cat, {
+  houder.innerHTML = tekenPlattegrond(techniekPlan(plan()), cat, {
     selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, voorbeeldLosseWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(),
     dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN, noordpijl: true,
-    // Maten aantikken om ze te wijzigen, en het voorbeeld van een ruimte met maten.
-    maatDoelen: true, voorbeeldVorm: matenVoorbeeld(),
+    // Maten aantikken om ze te wijzigen, en het voorbeeld van een ruimte met maten. Met de techniek aan tik je op toestellen
+    // en leidingen, niet op maten; de tekens en leidingen alleen dan (techniek-ui.ts).
+    maatDoelen: !techniekAan(), voorbeeldVorm: matenVoorbeeld(), ...techniekTekenOpties(),
   });
+  techniekNaTekenen();
   plaatsMaatVraag();
   zoom?.bijwerken();
   const zi = document.getElementById('pl-zoomhint');
   if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
   houder.dataset.gereedschap = gereedschap;
+  toonGereedschapKaart();
   // Lege plattegrond: zeg wat je eerst doet (op het tekenvlak zelf, niet alleen in de hulpregel).
   const leeg = !toestand().plan.ruimtes.length;
   let kaart = document.getElementById('pl-leeg-kaart');
@@ -336,6 +356,8 @@ function toonNiveaus() {
         t.plan.meubels = t.plan.meubels.filter((m) => niveauVan(m) !== n);
         if (t.plan.daklichten) t.plan.daklichten = t.plan.daklichten.filter((l) => niveauVan(l) !== n);
         if (t.plan.losseWanden) t.plan.losseWanden = t.plan.losseWanden.filter((w) => niveauVan(w) !== n);
+        if (t.plan.toestellen) t.plan.toestellen = t.plan.toestellen.filter((x) => niveauVan(x) !== n);
+        if (t.plan.leidingen) t.plan.leidingen = t.plan.leidingen.filter((x) => niveauVan(x) !== n);
         t.plan.verdiepingen = verdiepingenVan(t.plan).slice(0, n);
       });
       niveau = n - 1;
@@ -371,6 +393,8 @@ let wachtend3D = false;
 function plan3D() {
   // De schakelaar "Dak tonen" heeft alleen zin met een dakkeuze (de constructie heeft altijd een dak).
   $('#pl-toon-dak-label').hidden = !heeftDak() && !constructieAan();
+  // De knop Techniek (alleen met techniek in het plan of aan) en de balk eronder.
+  toonBalk3D();
   if (!viewer || wachtend3D) return;
   wachtend3D = true;
   requestAnimationFrame(() => {
@@ -389,20 +413,22 @@ function plan3D() {
       dingen: true,
       totNiveau: alleNiveaus && !laag ? undefined : niveau,
       inhoud: openingInhoud,
+      // Techniek (ronde 10b): de installaties, in de woning of uitgezet (alleen als de techniek aan staat).
+      ...techniek3DOpties(alleNiveaus && !laag ? undefined : niveau),
     });
     // Constructie (ronde 6): wanden, vloeren en dak als skelet, met het kader van de afgewerkte woning (de camera springt niet).
     const constructie = constructieAan();
     const getoond = constructie ? constructieScene({ laag: laag ? 110 : undefined, dak: toonDakIn3D, totNiveau: alleNiveaus && !laag ? undefined : niveau, kader: scene.kader, dingen: true }) : scene;
     // Maten tonen: breedte, diepte, hoogte en nok van het gebouw, en breedte en hoogte van het aangetikte raam of de deur.
     // De maten komen altijd van de afgewerkte woning.
-    const metMaten: Scene3DMetMaten = toonMaten ? {
+    const metMaten: Scene3DMetMaten = toonMaten && !(techniekAan() && techniekUitgezet()) ? {
       ...getoond,
       maatlijnen: [...gebouwMaatlijnen(scene, { hoogtes: !laag }), ...(!constructie && gekozenDing?.startsWith('opening:') ? raamMaatlijnen(scene.blokken, { ding: gekozenDing }) : [])],
     } : getoond;
     // Na de snelstart een ruimer kader: de camera staat verder, zodat de hele woning met lucht erboven in beeld komt.
     viewer?.toon(ruimKader ? ruimKaderVan(metMaten) : metMaten);
     // Het beeld in het overzicht (Het ontwerp) is dat van de afgewerkte woning, niet van het skelet.
-    beeldActueel = !!viewer && !constructie;
+    beeldActueel = !!viewer && !constructie && !techniekAan();
     if (volgendStandpunt) { viewer?.standpunt(volgendStandpunt); volgendStandpunt = undefined; }
   });
   toonDingKeuzes();
@@ -996,6 +1022,17 @@ function naPointerDown(ev: PointerEvent) {
   const p = punt(ev);
   const doel = ev.target as Element;
   const houder = $('#pl-canvas');
+  // Techniek (ronde 10b): alleen toestellen en leidingen kiezen, plaatsen en slepen; op een leeg stuk verschuift het beeld.
+  if (techniekAan()) {
+    if (maatVraagOpen()) sluitMaatVraag(true);
+    zoom?.vastzetten();
+    if (techniekPointerDown(ev, [p.x, p.y], doel) === 'pan') {
+      pannen = { bewogen: false, x: ev.clientX, y: ev.clientY };
+      zoom?.startPan(ev);
+    }
+    houder.setPointerCapture(ev.pointerId);
+    return;
+  }
   // Een maat aangetikt (met Selecteren): een veld om ze in cm te typen. Met een ander gereedschap telt de tik voor dat
   // gereedschap (een raam op de muur, ook waar een maat staat).
   const maat = doel.closest('[data-maat]') as SVGElement | null;
@@ -1084,10 +1121,13 @@ function naPointerMove(ev: PointerEvent) {
     zoom?.beweegPan(ev);
     return;
   }
+  if (techniekPointerMove(ev)) return;
   // Een losse wand: vanaf het begin van het slepen met de schaal van de tekening (zie `Sleep.scherm`).
   const sch = sleep?.scherm, eenheid = 1 / (($('#pl-canvas').querySelector('svg') as SVGSVGElement | null)?.getScreenCTM()?.a || 1);
   const p = sch ? { x: sch.px + (ev.clientX - sch.x) * eenheid, y: sch.py + (ev.clientY - sch.y) * eenheid } : punt(ev);
   if (!sleep) {
+    // Techniek: het toestel dat zou komen, onder de muis.
+    if (techniekAan()) { if (ev.pointerType === 'mouse' && techniekVoorbeeld([p.x, p.y])) render(); return; }
     // Voorbeeld van een nieuwe opening onder de muisaanwijzer.
     if (['raam', 'buitendeur', 'schuifraam', 'garagepoort', 'binnendeur', 'doorgang'].includes(gereedschap)) {
       const r = openingOp(gereedschap as OpeningSoort, p.x, p.y);
@@ -1180,6 +1220,8 @@ function naPointerMove(ev: PointerEvent) {
         const w = pl.losseWanden?.find((x) => x.id === w0.id);
         if (w) { w.van = [w0.van[0] + ddx, w0.van[1] + ddy]; w.tot = [w0.tot[0] + ddx, w0.tot[1] + ddy]; }
       }
+      // Toestellen en leidingen (ronde 10b) ook: wat erin staat, en wat buiten tegen haar gevel staat (techniek-ui.ts).
+      techniekMetRuimte(oud, pl, id, ddx, ddy);
       // Een vrije vorm: de ramen en deuren in haar muren (ook schuine) gaan mee.
       if (heeftVrijeVorm(r0)) verzetOpeningen(oud, pl, id);
       else for (const o0 of oud.openingen) {
@@ -1307,6 +1349,7 @@ function naPointerUp(ev: PointerEvent) {
   sleep = undefined;
   $('#pl-canvas').releasePointerCapture?.(ev.pointerId);
   zoom?.losmaken();
+  if (techniekPointerUp()) return;
   if (pannen) {
     const klik = !pannen.bewogen || Math.hypot(ev.clientX - pannen.x, ev.clientY - pannen.y) < 8;
     pannen = undefined;
@@ -1369,6 +1412,14 @@ function naPointerUp(ev: PointerEvent) {
 function verwijderSelectie() {
   if (!selectie) return;
   const s = selectie;
+  if (s.soort === 'toestel' || s.soort === 'leiding') {
+    let tekst = '';
+    wijzig('plan', (t) => { tekst = verwijderTechniek(t, s as TechniekSelectie); });
+    selectie = undefined;
+    melding = tekst;
+    toonEigenschappen();
+    return;
+  }
   wijzig('plan', (t) => {
     if (s.soort === 'ruimte') t.plan.ruimtes = t.plan.ruimtes.filter((r) => r.id !== s.id);
     if (s.soort === 'meubel') t.plan.meubels = t.plan.meubels.filter((m) => m.id !== s.id);
@@ -1577,6 +1628,8 @@ function toonEigenschappen() {
     vak.append(r);
   } else if (s?.soort === 'wand') {
     if (!toonLosseWand(vak, pl, s.id)) { selectie = undefined; return toonEigenschappen(); }
+  } else if (s?.soort === 'toestel' || s?.soort === 'leiding') {
+    if (!toonTechniekEigenschappen(vak, s as TechniekSelectie, verwijderSelectie)) { selectie = undefined; return toonEigenschappen(); }
   } else if (s?.soort === 'daklicht') {
     const l = pl.daklichten?.find((x) => x.id === s.id);
     if (!l) { selectie = undefined; return toonEigenschappen(); }
@@ -1603,6 +1656,8 @@ function toonEigenschappen() {
     })));
     r.append(knop('Verwijderen', verwijderSelectie, 'gevaar'));
     vak.append(r);
+  } else if (techniekAan()) {
+    toonTechniekZonderKeuze(vak);
   } else {
     vak.append(el('h3', {}, 'Woning'));
     const zet = (f: (p: Plattegrond) => void) => wijzig('plan', (t) => f(t.plan));
@@ -1725,10 +1780,21 @@ function toonOverzicht() {
   meldingen.sort((a, b) => (a.ernst === b.ernst ? 0 : a.ernst === 'fout' ? -1 : 1));
   $('#pl-meldingen').replaceChildren(...meldingen.map((m) => {
     const li = el('li', { class: m.ernst }, m.melding);
-    const id = m.wand ?? m.opening ?? m.daklicht ?? m.ruimte;
+    const id = m.toestel ?? m.leiding ?? m.wand ?? m.opening ?? m.daklicht ?? m.ruimte;
     if (id) {
       li.style.cursor = 'pointer';
       li.addEventListener('click', () => {
+        // Een melding over de techniek: de techniek aan, zijn vak getoond, het toestel of de leiding gekozen.
+        const tech = m.toestel ? alles.toestellen?.find((x) => x.id === id) : m.leiding ? alles.leidingen?.find((x) => x.id === id) : undefined;
+        if (tech) {
+          niveau = niveauVan(tech);
+          const s: TechniekSelectie = { soort: m.toestel ? 'toestel' : 'leiding', id };
+          selectie = s;
+          maakZichtbaar(s);
+          if (weergave !== 'plan') toonWeergave('plan');
+          kiesGereedschap('kies');
+          return;
+        }
         const item = m.wand ? alles.losseWanden?.find((w) => w.id === id) : m.opening ? alles.openingen.find((o) => o.id === id) : m.daklicht ? alles.daklichten?.find((l) => l.id === id) : alles.ruimtes.find((r) => r.id === id);
         if (item) niveau = niveauVan(item);
         selectie = { soort: m.wand ? 'wand' : m.opening ? 'opening' : m.daklicht ? 'daklicht' : 'ruimte', id };
@@ -1750,6 +1816,8 @@ function toonOverzicht() {
 function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPaneel>[1]) {
   // Ruimte met maten: het paneel boven de tekening; een ander gereedschap sluit het.
   if (g !== 'maten' && matenPaneelOpen()) sluitMatenPaneel();
+  // Een gewoon gereedschap (een sneltoets) zet de techniek uit.
+  if (g !== 'kies' && techniekAan()) zetTechniek(false, { stil: true });
   gereedschap = g;
   voorbeeldOpening = undefined;
   voorbeeldLosseWand = undefined;
@@ -1758,12 +1826,21 @@ function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPane
     openMatenPaneel(matenOmgeving, begin);
   }
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === g));
-  $('#pl-hint').textContent = GEREEDSCHAP.find((x) => x.code === g)?.hint ?? '';
-  $('#pl-meubels').hidden = g !== 'meubel';
-  $('#pl-daklichten').hidden = g !== 'daklicht';
+  toonGereedschapKaart();
   voorbeeld = undefined;
   render();
   toonEigenschappen();
+}
+
+/** Met de techniek aan staat het palet van de techniek in de plaats van het gereedschap (zie techniek-ui.ts). */
+function toonGereedschapKaart() {
+  const tech = techniekAan();
+  $('#pl-hint').textContent = tech ? techniekHint() : GEREEDSCHAP.find((x) => x.code === gereedschap)?.hint ?? '';
+  $('#pl-gereedschap').hidden = tech;
+  const kop = $('#pl-gereedschap').previousElementSibling;
+  if (kop) kop.textContent = tech ? 'Techniek' : 'Gereedschap';
+  $('#pl-meubels').hidden = tech || gereedschap !== 'meubel';
+  $('#pl-daklichten').hidden = tech || gereedschap !== 'daklicht';
 }
 
 function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
@@ -1918,6 +1995,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   houder.addEventListener('pointerup', naPointerUp);
   houder.addEventListener('pointerleave', () => {
     if (voorbeeldOpening || (gereedschap === 'daklicht' && voorbeeld)) { voorbeeldOpening = undefined; voorbeeld = undefined; render(); }
+    if (techniekVoorbeeld(undefined)) render();
   });
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | 'gevels' | '3d' | 'doorsnede'));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-standpunt]')) b.addEventListener('click', () => {
@@ -1937,7 +2015,29 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     viewer?.kwaliteit?.(k);
   });
   // Afgewerkt of Constructie (ronde 6): de knop boven de knoppen van de 3D.
-  startConstructie({ opnieuw: () => plan3D() });
+  startConstructie({ opnieuw: () => plan3D(), bijWeergave: () => { if (techniekAan()) zetTechniek(false); } });
+  // Techniek voor de installateur (ronde 10b): het palet, de knop in het gereedschap en *Techniek* bij de 3D.
+  startTechniek({
+    niveau: () => niveau,
+    schaal: schaalNu,
+    snap: (v) => snap(v, fijn()),
+    selectie: () => selectie,
+    kies: (s) => { selectie = s; melding = ''; render(); toonEigenschappen(); },
+    opnieuw: () => render(),
+    eigenschappen: () => toonEigenschappen(),
+    melding: (tekst) => { melding = tekst; toonEigenschappen(); },
+    gewisseld: () => { selectie = undefined; melding = ''; kiesGereedschap('kies'); if (weergave === '3d') plan3D(); },
+    drieD: () => plan3D(),
+    svg: () => $('#pl-canvas').querySelector('svg'),
+    naarPlan: (s) => {
+      const x = s.soort === 'toestel' ? toestand().plan.toestellen?.find((y) => y.id === s.id) : toestand().plan.leidingen?.find((y) => y.id === s.id);
+      if (x) niveau = niveauVan(x);
+      toonWeergave('plan');
+      selectie = s;
+      maakZichtbaar(s);
+      kiesGereedschap('kies');
+    },
+  });
   startDoorsnede();
   // Lichtinval: aan of uit bouwt de 3D opnieuw op (verborgen delen als schaduwwerper); dag en uur verzetten alleen de zon.
   startZon({ opnieuw: () => plan3D(), zon: () => viewer?.zon?.(zonVoorKijker()) });
@@ -1957,6 +2057,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     if (bron !== 'vervang') return;
     // Een ander project: het paneel Ruimte met maten en een open maatvraag horen bij het vorige.
     sluitMaatVraag(true);
+    // De techniek ook: een nieuw ontwerp (de snelstart) begint met het gewone beeld (het voorbeeld met techniek zet ze daarna weer aan).
+    if (techniekAan()) zetTechniek(false, { stil: true });
     if (matenPaneelOpen()) { sluitMatenPaneel(); gereedschap = 'kies'; for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === 'kies')); }
     if (weergave === '3d') toonNaastKnop();
     niveau = 0;
@@ -1982,6 +2084,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       // De lichtkoepels en de losse wanden gaan mee weg; de dakkeuze (vorm en bedekking) blijft, zoals de gevel.
       delete t.plan.daklichten;
       delete t.plan.losseWanden;
+      delete t.plan.toestellen;
+      delete t.plan.leidingen;
     });
     kiesGereedschap('ruimte');
   });
@@ -2001,8 +2105,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     if (weergave === 'gevels') { if (gevelToets(ev)) ev.preventDefault(); return; }
     if (weergave === '3d') return;
     if (ev.key === 'Delete' || ev.key === 'Backspace') { if (selectie) { ev.preventDefault(); verwijderSelectie(); } return; }
-    if (ev.key === 'Escape') { selectie = undefined; kiesGereedschap('kies'); return; }
-    if (ev.key.toLowerCase() === 'q') { draaiMeubel(); return; }
+    if (ev.key === 'Escape') { selectie = undefined; if (techniekAan()) techniekSelecteren(); kiesGereedschap('kies'); return; }
+    if (ev.key.toLowerCase() === 'q') { if (selectie?.soort === 'toestel') draaiToestel(selectie.id); else draaiMeubel(); return; }
     if (zoom?.toets(ev)) { ev.preventDefault(); return; }
     const sneltoets = GEREEDSCHAP.find((g) => g.toets && g.toets.toLowerCase() === ev.key.toLowerCase());
     if (sneltoets && !ev.ctrlKey && !ev.metaKey) { kiesGereedschap(sneltoets.code); return; }
@@ -2010,6 +2114,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     const stap = ev.shiftKey ? 1 : 5;
     const d: Record<string, [number, number]> = { ArrowLeft: [-stap, 0], ArrowRight: [stap, 0], ArrowUp: [0, -stap], ArrowDown: [0, stap] };
     const v = d[ev.key];
+    if (v && selectie?.soort === 'toestel') { ev.preventDefault(); verschuifToestel(selectie.id, v[0], v[1]); return; }
     if (v && selectie) {
       ev.preventDefault();
       const s = selectie;

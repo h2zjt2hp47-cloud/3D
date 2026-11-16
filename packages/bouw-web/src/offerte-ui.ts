@@ -22,6 +22,7 @@ import { maakPakket3D, maakZending } from './doorsturen.js';
 import { drukBlad } from './blad.js';
 import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
 import { toonConstructieOverzicht } from './constructie-ui.js';
+import { toonTechniekOverzicht } from './techniek-ui.js';
 
 /** Het pictogram (van de snelstart) van een vast model zonder 3D-beeld in het overzicht. */
 const MINI_BEELD: Record<string, string> = { OVERKAPPING: 'overkapping', TUINHUIS: 'tuinhuis', LOODS: 'loods', BALUSTRADE: 'balustrade', LUIFEL: 'luifel', STAALTRAP: 'trap' };
@@ -358,6 +359,8 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
   $('#o-regels-kaart').hidden = o.regels.length === 0;
   // Constructie (ronde 6): meetstaat, aanwijzing voor EPB en schatting van de stabiliteit, elk achter een kop die openklapt.
   toonConstructieOverzicht();
+  // Techniek (ronde 10b): de telling per vak, alleen als het plan techniek heeft, dicht tot je ze openklapt.
+  toonTechniekOverzicht();
   for (const x of document.querySelectorAll('.o-btwlabel')) x.textContent = PRIJZEN ? `prijzen ${btwLabel()}` : '';
 
   // Totalen (alleen met prijzen).

@@ -129,6 +129,11 @@ export interface MaatVraag {
    * na elke tik het toetsenbord over de tekening, en wie niets typt, wil snel verder tekenen.
    */
   meteenTypen?: boolean;
+  /**
+   * In de hoek van de tekening aan de andere kant van het anker, niet ernaast (techniek, ronde 10b): wie na het plaatsen
+   * van een toestel meteen het volgende plaatst, tikt vlak naast het vorige; daar mag de vraag niet in de weg staan.
+   */
+  ver?: boolean;
 }
 let vraag: { v: MaatVraag; doos: HTMLElement; toegepast: boolean; kant?: string } | undefined;
 /** Waar tijdens het toepassen van de maatvraag zelf (dan sluit een wijziging van het plan ze niet). */
@@ -166,6 +171,11 @@ export function plaatsMaatVraag() {
   }
   const b = doos.offsetWidth || 260, d = doos.offsetHeight || 140;
   const W = vlak.clientWidth, H = vlak.clientHeight;
+  if (v.ver) {
+    doos.style.left = `${x < W / 2 ? Math.max(4, W - b - 4) : 4}px`;
+    doos.style.top = `${y < H / 2 ? Math.max(4, H - d - 4) : 4}px`;
+    return;
+  }
   // Naast het anker als er plaats is (dan blijft wat je wijzigt in beeld), anders eronder of erboven.
   const marge = 28 + (Array.isArray(v.anker) ? 0 : v.anker.width / 2);
   const rechts = x + marge, links = x - marge - b;
