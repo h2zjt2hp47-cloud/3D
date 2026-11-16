@@ -710,6 +710,19 @@ function plaatsDaklicht(x: number, y: number) {
 
 /** Deelt alle ruimtes die een wand kruist; minstens 60 cm aan elke kant. */
 function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number): boolean {
+  // Eerst op een kopie: komt de nieuwe wand uit op een raam, deur of poort, dan staat die niet meer op één muur
+  // (16/11, doorloop A21: de garagepoort werd ongeldig zonder uitleg). Dan niet indelen, met de reden.
+  const proef = structuredClone(toestand().plan);
+  const voor = murenVan(niveauPlan(proef, niveau));
+  splitsRuimtes(proef, niveau, as, lijn, Math.min(van, tot), Math.max(van, tot), (oud) => ({ ...oud, id: nieuweId('r'), delen: undefined }), 60);
+  const na = murenVan(niveauPlan(proef, niveau));
+  const geraakt = proef.openingen.find((o) => niveauVan(o) === niveau && muurVanOpening(o, voor) && !muurVanOpening(o, na));
+  if (geraakt) {
+    const naam = ({ raam: 'een raam', buitendeur: 'een buitendeur', schuifraam: 'een schuifraam', binnendeur: 'een binnendeur', doorgang: 'een doorgang', garagepoort: 'een garagepoort' } as Record<OpeningSoort, string>)[geraakt.soort];
+    melding = `Hier komt de nieuwe wand uit op ${naam}: schuif de wand een stukje op, of verschuif eerst de opening.`;
+    toonEigenschappen();
+    return false;
+  }
   let nieuw: Ruimte[] = [];
   wijzig('plan', (t) => {
     nieuw = splitsRuimtes(t.plan, niveau, as, lijn, Math.min(van, tot), Math.max(van, tot), (oud) => ({ ...oud, id: nieuweId('r'), naam: nieuweRuimteNaam(), delen: undefined }), 60);
