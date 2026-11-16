@@ -326,12 +326,12 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 4 | 1 | **Klaar (16/11, hoofdstuk 22):** **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
 | 5 | 2 | **Klaar (16/11), alleen de motor:** bouwdelen en opbouw als gegevens (hoofdstuk 3 en 16); de woning en de schermen gebruiken ze nog niet | – |
-| 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
+| 6 | 2 | *(loopt sinds 16/11)* **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
 | 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
 | 8 | 2 | *(bijgebouwen klaar in de motor op 16/11, hoofdstuk 19; op de schermen loopt sinds 16/11 samen met loods en staalwerk; de aanbouw nog niet op bouwdelen)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | *(klaar in de motor op 16/11, hoofdstuk 20; nog geen scherm)* **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
-| 10 | 2 | *(motor en 3D lopen sinds 16/11)* **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
+| 10 | 2 | *(klaar in de motor, tekening en 3D op 16/11, hoofdstuk 24; nog geen scherm om te plaatsen)* **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
 | 12 | 2 | **Vloerafwerking** en de rest van de afwerkingen | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
@@ -890,4 +890,29 @@ een hellend dak valt terug op plat zodra er een aanbouw of los gebouw op dezelfd
 maten op de tekening staan op de as van de muren, terwijl het paneel standaard buiten meet: wie 450 typt, ziet daarna 420 (de
 maatvraag toont daarom ook binnen- en buitenmaat). Niet getest op een echte tablet: of het cijfertoetsenbord daar "+", "," en "m"
 heeft, is niet zeker.
+
+---
+
+## 24. Gebouwd op 16/11: techniek voor de installateur in motor, tekening en 3D (ronde 10)
+
+Jonas: *"voeg ook alles wat een installateur kan nodig hebben toe, airco, leidingen, meterkasten etc."* De indeling uit hoofdstuk 11
+(toestellen en leidingen) staat nu in de motor. **Het scherm om ze te plaatsen komt in een volgende ronde.**
+
+| Wat | Inhoud |
+|---|---|
+| **Catalogus** (`core/voorbeelden/techniek.ts`) | 36 toestellen in vier vakken. *Elektriciteit*: tellerkast, verdeelbord, stopcontacten, schakelaar, datapunt, lichtpunten en armaturen, laadpaal, omvormer, batterij. *Koeling en verwarming*: airco binnen en buiten, warmtepomp, boiler, radiator, verdeler vloerverwarming, thermostaat, gasketel. *Ventilatie*: unit C en D, toevoer- en afvoermonden, gevelrooster, dakdoorvoer. *Sanitair*: boiler, collector, waterverzachter, regenwaterpomp, buitenkraan. 13 soorten leiding met een vaste kleur (warm water rood, koud water blauw, regenwater groen en gas geel volgens het onderzoek; de rest eigen keuze). Elke maat, hoogte en vrije ruimte is een **richtwaarde** met `nagelezen: false`. |
+| **In het plan** | Toestellen (plaats, hoogte, draaiing) en leidingen (soort, maat, punten, hoogte in de vloer, de wand of tegen het plafond; van toestel naar toestel, ook naar een andere verdieping) als optionele velden. |
+| **Tekening** | Een teken per toestel (voor elektriciteit zo dicht mogelijk bij de gewoonte van het vak, **te bevestigen**), een gekleurde lijn per leiding (gestreept in de vloer, streep-punt tegen het plafond), per vak aan of uit. |
+| **3D** | *Gewoon*: de installaties op hun plaats (buitenunits, leidingen langs de gevel, dakdoorvoer). *Uitgezet*: de woning als lage wanden en lijnen, zodat je vooral de installaties ziet; per vak en per verdieping. |
+| **Telling** | Per vak de aantallen en de lopende meters per soort en diameter, zonder prijzen, in dezelfde vorm als de meetstaat. Voorbeeldwoning: 78 toestellen, 60 leidingen (bv. 7 kringen en 267 m kabel, 10 lussen en 796 m vloerverwarming, 83 m ventilatiekanaal). |
+| **Controles** (als signaal) | Te weinig vrije ruimte rond een toestel, een toestel in een raam of deur, een buitenunit binnen, een leiding die nergens begint of eindigt, een koelleiding of lus te lang, een natte ruimte zonder afvoer. Vaste zin: *de installateur dimensioneert; dit is geen berekening en geen controle op de regels.* |
+| **Hulp voor het scherm** | Een toestel tegen de dichtste muur (ook een schuine), een leiding langs de wanden, de technische ruimte in één keer, een lus vloerverwarming. |
+
+Een plan zonder techniek blijft exact gelijk (alle tests en beelden); twee nieuwe beelden bewaken de techniek.
+
+**Minder goed:** het plan met alle vakken samen is te druk (per vak is het leesbaar); in een kleine berging overlappen tekens; de
+eenvoudige weg legt aanvoer en retour van de warmtepomp buiten langs de gevel; een stopcontact zie je in de gewone 3D van een hele
+woning niet. **Na te lezen door een installateur:** elke maat en hoogte (vooral stopcontact, schakelaar, tellerkast, verdeelbord,
+airco, thermostaat), de vrije ruimtes, de grootste lengtes, de afstand tussen de buizen van de vloerverwarming, de kleuren die geen
+afspraak zijn, en alle tekens.
 
