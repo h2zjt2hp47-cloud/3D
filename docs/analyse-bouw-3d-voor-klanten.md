@@ -319,18 +319,18 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | Ronde | Fase | Wat | Werk [inschatting] |
 |---|---|---|---|
 | 1 | 1 | **Klaar (15/11):** dak (plat, lessenaar, zadel, met bedekking), lichtkoepels en lichtstraten, lichtinval (zon op een dag en uur, noordrichting, zon per gevel); 3D doorsturen als pakket en zending. Niet nagekeken op een toestel met WebGPU | – |
-| 2 | 1 | *(loopt sinds 16/11)* **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
+| 2 | 1 | **Klaar (16/11, hoofdstuk 20):** **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
 | 2b | 1 | *(vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
 | 2c | 1 | *(loopt sinds 16/11, vóór 2b)* **Schuine muren in de motor en de 3D:** een ruimte met een vrije vorm, schuine muren met ramen en deuren, gevelaanzicht, plat dak, zon per gevel, tekening en controles; een rechthoekig plan blijft exact hetzelfde. Het scherm om ze in te geven komt met 2b | L |
 | 3 | 1 | **Klaar (16/11, hoofdstuk 18):** **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
-| 4 | 1 | **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
+| 4 | 1 | *(loopt sinds 16/11)* **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
 | 5 | 2 | **Klaar (16/11), alleen de motor:** bouwdelen en opbouw als gegevens (hoofdstuk 3 en 16); de woning en de schermen gebruiken ze nog niet | – |
 | 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
 | 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
 | 8 | 2 | *(bijgebouwen klaar in de motor op 16/11, hoofdstuk 19; nog geen scherm, de aanbouw nog niet op bouwdelen)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
-| 9 | 2 | **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
+| 9 | 2 | *(klaar in de motor op 16/11, hoofdstuk 20; nog geen scherm)* **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
 | 10 | 2 | **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
 | 12 | 2 | **Vloerafwerking** en de rest van de afwerkingen | M |
@@ -749,4 +749,51 @@ de vloer zonder fundering; de drempels van de waarschuwingen. De meetstaat is ne
 afgewerkte weergave, een instelbare kleur van de kern, een kleinste lengte voor korte stijlen, eigen rollen voor schoor, gording,
 windveer en boeiboord in de meetstaat, en een hulp om een bouwdeel op zijn plaats na de draaiing te zetten. **Voor de kijker**:
 een knop *Laag* (ooghoogte); glas en hout met nerf ogen nog vlak.
+
+---
+
+## 20. Gebouwd op 16/11: snel resultaat (ronde 2) en staal (ronde 9, motor)
+
+### Snel resultaat
+
+| Wat | Inhoud |
+|---|---|
+| **Prijzen uit beeld** | Geen enkel bedrag meer op een scherm, in de afdruk, de gekopieerde tekst of de export. Eén schakelaar (`PRIJZEN` in `bouw-web/src/hulp.ts`) staat uit; de rekenmotor en de formules blijven. Geteld in de browser over alle schermen met alles opengeklapt: 362 bedragen vóór, **0 na**, op groot scherm en tablet. |
+| **Overzicht in plaats van Offerte** | Bovenaan *Het ontwerp* (3D-beeld en plattegrond per verdieping), dan *Meegeven en doorsturen*, dan elke regel met beeld, soort, maat en aantal, die openklapt naar keuzes, materialen en opbouw. *Werf* staat niet meer in het menu (de code blijft). |
+| **Snelstart in drie vragen** | *+ Nieuw ontwerp* staat eerst in het menu. *Wat*: woning, aanbouw, raam of deur, garagepoort (een lijst als gegevens). *Hoe groot*: twee of drie maten met grote − en +, en **intypbaar in cm** ("450", "4,5 m", "4500 mm"). *Welke stijl*: vier tegels. Daarna staat er meteen een volledig ontwerp in 3D, met een beginbeeld op ooghoogte (lucht, voorgevel en pad in beeld). Een aanbouw kan daarna vrij verder getekend worden in de plattegrond, tegen een eenvoudige bestaande woning. |
+| **Stijlen** | Klassiek, Modern wit, Hout en zwart, Landelijk (`core/voorbeelden/stijlen.ts`): gevel, plint, verdieping, schrijnwerk, dak, koepels, vloer en binnenkleur in één tik; ook onder de 3D, met *Variant maken*. Een voorstel; geen aannemer heeft ze nagelezen. |
+| **Tik op het ding** | In de 3D van de woning: dak (vorm, bedekking, kleur, aantal koepels), gevel (dit muurvlak, deze gevel of de hele woning), raam of deur (kleur, zonwering, alle keuzes), vloer en wand, meubel. |
+
+**Gemeten** (echte browser, groot scherm 1440 × 900 en tablet 820 × 1180 met aanraking, telregels uit `docs/analyse-gebruiksgemak.md`;
+op beide toestellen evenveel tikken):
+
+| Taak | Vóór | Na | Doel |
+|---|---|---|---|
+| Eerste 3D om te tonen | 9 | **4** | ≤ 5 |
+| Uitbouw 5 × 5 m, plat dak met drie koepels, hef-schuifraam van 4 m met screen, houten achtergevel | 35 | **16** | ≤ 25 |
+| Dezelfde, ook de zijmuren in hout | 35 | **21** | ≤ 25 |
+| Variant met een ander dak / andere stijl | 5 | **2** | 2 |
+| Naar het overzicht en doorsturen | 2 | **2** | 1 à 2 |
+
+Daarmee is de toets van de mijlpaal van fase 1 (de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken) gehaald; "mooi genoeg om te
+tonen" beslist Jonas op de beelden.
+
+**Wat nog niet kan:** de raampartij van een aanbouw is de breedte min 2 × 30 cm (exact 4 m kost 4 tikken extra); de bestaande woning
+bij een aanbouw is een eenvoudige doos met één muurhoogte voor beide; de woning uit de snelstart heeft een vaste indeling; met een
+lege opslag opent nog altijd de voorbeeldwoning; de klantweergave verbergt het keuzepaneel en de stijlen niet; een aangetikte gevel
+is nauwelijks gemarkeerd. Alleen getest met de aanraking van Chromium, niet op een echte tablet of in Safari.
+
+### Staal (alleen de motor)
+
+| Wat | Inhoud |
+|---|---|
+| **Profielen** | I- en H-profiel, koker, hoek, plat, Z, C en rond in de bouwdelen, met een gewicht per meter als richtwaarde (`core/voorbeelden/staalprofielen.ts`, `nagelezen: false`); staven tussen twee punten (windverband); meetstaat per rol en profiel met gewicht. |
+| **Loods of hal** | Vast model (`loods.ts`, `loods3d.ts`): breedte 6–30 m, portaalafstand 5–8 m, 2–20 traveeën, zijhoogte 3–8 m, zadel of lessenaar; sandwichpaneel of plaat in zeven kleuren; betonpanelen; sectionale poort of roldeur, loopdeur, lichtplaten of lichtstraat. Afgewerkt en constructie (portalen, Z-gordingen, wandregels, windverbanden). Meldingen in gewone taal, altijd met "een staalbouwer of ingenieur rekent". |
+| **Staal rond de woning** | Balustrade (spijlen, staven, glas, plaat), luifel (trekstangen of consoles; helder glas is in de 3D bijna onzichtbaar, mat glas leest wel), rechte stalen trap met trapformule (twee trapbomen of een middenboom; treden in eik of staal). De kwartslag, het bordes en de spiltrap zijn niet gebouwd. |
+
+**Na te lezen door een staalbouwer** (alles is een voorstel): de maten en gewichten van de profielen (uit het geheugen), het profiel
+per overspanning, de afstanden van gordingen en wandregels (het onderzoek spreekt het model tegen: gordingen hoogstens ± 5 m,
+portalen tot 8 m), het windverband, wat de portalen niet hebben (vouten, voetplaten), de maten van balustrade, luifel en trap.
+**Voor de kijker:** een hal van 30 m valt als *positie* half buiten beeld (zichtgrens en grondvlak van 40 m); als *woning* (buiten)
+lukt het wel. Op te lossen wanneer de loods een scherm krijgt.
 
