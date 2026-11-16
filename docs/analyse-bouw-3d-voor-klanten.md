@@ -320,7 +320,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 |---|---|---|---|
 | 1 | 1 | **Klaar (15/11):** dak (plat, lessenaar, zadel, met bedekking), lichtkoepels en lichtstraten, lichtinval (zon op een dag en uur, noordrichting, zon per gevel); 3D doorsturen als pakket en zending. Niet nagekeken op een toestel met WebGPU | – |
 | 2 | 1 | **Klaar (16/11, hoofdstuk 20):** **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
-| 2b | 1 | *(loopt sinds 16/11; vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
+| 2b | 1 | **Klaar (16/11, hoofdstuk 23)** *(vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
 | 2c | 1 | **Klaar (16/11, hoofdstuk 21):** **Schuine muren in de motor en de 3D:** een ruimte met een vrije vorm, schuine muren met ramen en deuren, gevelaanzicht, plat dak, zon per gevel, tekening en controles; een rechthoekig plan blijft exact hetzelfde. Het scherm om ze in te geven komt met 2b | L |
 | 3 | 1 | **Klaar (16/11, hoofdstuk 18):** **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
 | 4 | 1 | **Klaar (16/11, hoofdstuk 22):** **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
@@ -329,9 +329,9 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
 | 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
-| 8 | 2 | *(bijgebouwen klaar in de motor op 16/11, hoofdstuk 19; nog geen scherm, de aanbouw nog niet op bouwdelen)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
+| 8 | 2 | *(bijgebouwen klaar in de motor op 16/11, hoofdstuk 19; op de schermen loopt sinds 16/11 samen met loods en staalwerk; de aanbouw nog niet op bouwdelen)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | *(klaar in de motor op 16/11, hoofdstuk 20; nog geen scherm)* **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
-| 10 | 2 | **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
+| 10 | 2 | *(motor en 3D lopen sinds 16/11)* **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
 | 12 | 2 | **Vloerafwerking** en de rest van de afwerkingen | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
@@ -862,4 +862,32 @@ Het doel: *snel een mooie 3D opmaken die een verkoper kan tonen na het eerste ge
 
 Wat er nog aan fase 1 hangt: de maten in cm muur per muur en de schuine muren op het scherm (ronde 2b, loopt), en een proef op een
 echte tablet.
+
+---
+
+## 23. Gebouwd op 16/11: maten in cm en schuine muren op het scherm (ronde 2b)
+
+Jonas: *"Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin.
+Graag gebruiksvriendelijk."* en *"schuine muren ook"*.
+
+| Wat | Inhoud |
+|---|---|
+| **Ruimte met maten** (sneltoets N) | Een schets met bij elke muur een vakje in cm. *Rechthoek*: de overkant volgt zichtbaar. *Vrije vorm*: vier zijden en een diagonaal, zoals een inmeter meet; de schets toont de vorm en de hoeken, met de tweede diagonaal om na te meten; staat een muur een fractie scheef (0,05° à 3°), dan zegt het paneel dat ("de overkant staat 0,7° scheef, 6,4 cm over 520 cm; is dat zo gemeten?"). Gemeten aan de buiten- of binnenkant. **Waar**: tegen de woning (kies de gevel of tik op een muur, met de afstand tot de hoek, links, midden of rechts), los als bijgebouw (met de afstand tot de gevel), of als nieuw project. Ook bereikbaar vanuit de snelstart (aanbouw) en vanuit een aangetikte gevel in de 3D. |
+| **Maatvraag na een tik** | Raam, buitendeur, schuifraam, garagepoort, binnendeur en doorgang vragen de breedte en de afstand tot de dichtste hoek; indelen vraagt de afstand tot de muur. Wie niets typt, houdt wat hij tikte. |
+| **Maten op de tekening aantikken** | Breedte en diepte van een ruimte, een zijde van een vrije vorm, de lengte van een schuine muur, de kettingmaat van een raam, de totale buitenmaat. "+30" telt op; de buren schuiven mee. |
+| **Invoer** | Cijfertoetsenbord; "450", "4,5 m", "300+150"; grenzen in gewone taal; ongedaan maken per stap; alle knoppen en velden minstens 44 × 44 op een aanraakscherm. |
+| **Schuine muren in het scherm** | Ramen en deuren plaatsen en slepen langs een schuine muur, een vrije vorm en haar hoekpunten slepen, een tab per schuine gevel in de gevel-editor, een rij per schuine gevel in de lichtinval, een schuine gevel aantikken in de 3D. |
+| **Los bijgebouw** | In hetzelfde plan: eigen muren, eigen plat dak, in de gevels getekend zoals je ze van buiten ziet. |
+
+**Gemeten** (groot scherm en tablet): wie perfect tikt en niets typt, is even snel als vroeger. Met een vinger die 8 beeldpunten
+naast het doel tikt (± 26 cm op de tekening van een tablet), gaf het oude scherm bij elke taak een foute maat (een aanbouw die de
+woning niet raakt, een wand 30 cm verkeerd); het nieuwe geeft de juiste, voor 1 à 4 tikken meer. Een aanbouw met een schuine zijmuur
+(450, 380, 520, 380, diagonaal 640) en een raam erin: 15 tikken (kon vroeger niet).
+
+**Wat nog niet kan:** alleen vierhoeken (geen L-vorm of vijfhoek in het paneel), geen schuine binnenwand, plaatsen op een
+verdieping kijkt niet na wat eronder ligt, de grepen van een rechthoek blijven op een tablet klein. Een woning van één bouwlaag met
+een hellend dak valt terug op plat zodra er een aanbouw of los gebouw op dezelfde verdieping bijkomt (het paneel waarschuwt). De
+maten op de tekening staan op de as van de muren, terwijl het paneel standaard buiten meet: wie 450 typt, ziet daarna 420 (de
+maatvraag toont daarom ook binnen- en buitenmaat). Niet getest op een echte tablet: of het cijfertoetsenbord daar "+", "," en "m"
+heeft, is niet zeker.
 
