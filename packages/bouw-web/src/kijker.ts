@@ -100,7 +100,8 @@ function teken() {
   const s = scene();
   if (!s) return;
   if (viewer === undefined) {
-    viewer = maak3D($('#drie-d'));
+    // Ronde 11: een tik op een ding van de woning (dak, gevel, raam) opent de posten van het werk waar het bij hoort.
+    viewer = maak3D($('#drie-d'), { opKlik: tikOpDing });
     // Zoals in de configurator: op een aanraakscherm (tablet) de snelle weergave, op een computer de mooie.
     viewer?.kwaliteit?.(window.matchMedia?.('(pointer: coarse)').matches ? 'snel' : 'mooi');
   }
@@ -116,6 +117,68 @@ function teken() {
   // niet bij elke klik.
   if (keuze !== getoond) viewer.standpunt(buiten || p?.maatlijnen ? 'schuin' : 'voor');
   getoond = keuze;
+}
+
+// ---------- de posten van het werk (ronde 11) ----------
+
+/**
+ * De delen van een post aanduiden in de 3D (één kader rond alle blokken), alleen bij de woning: de blokken die de post
+ * zelf noemt (`markeer`, bv. het platte dak van de uitbouw en niet het dak van de bestaande woning), anders zijn dingen.
+ */
+function markeerPost(x: { dingen?: string[]; markeer?: string[] } | undefined) {
+  if (!viewer || $<HTMLSelectElement>('#keuze').value !== 'woning') return;
+  const voor = x?.markeer?.length ? x.markeer : (x?.dingen ?? []).map((d) => `${d}.`);
+  viewer.markeer?.(voor.length ? `~${voor.join(',')}` : null);
+}
+
+/** De lijst van de posten van het ontwerp (dicht tot je er een openklapt), of niets als het pakket er geen heeft. */
+function toonPosten(p: Pakket3D) {
+  const lijst = $('#werklijst');
+  const posten = p.posten ?? [];
+  $('#werk').hidden = !posten.length;
+  lijst.replaceChildren();
+  let groep = '';
+  for (const [i, x] of posten.entries()) {
+    if (x.groep !== groep) {
+      groep = x.groep;
+      const h = document.createElement('h3');
+      h.textContent = groep;
+      lijst.append(h);
+    }
+    const d = document.createElement('details');
+    d.dataset.post = String(i);
+    const s = document.createElement('summary');
+    const t = document.createElement('strong');
+    t.textContent = x.titel;
+    s.append(t);
+    if (x.aantal !== undefined) {
+      const a = document.createElement('span');
+      a.textContent = `${x.aantal} ${x.aantal === 1 ? 'stuk' : 'stuks'}`;
+      s.append(a);
+    }
+    const ul = document.createElement('ul');
+    for (const r of x.detail) {
+      const li = document.createElement('li');
+      li.textContent = r;
+      ul.append(li);
+    }
+    d.append(s, ul);
+    d.addEventListener('toggle', () => {
+      if (d.open) markeerPost(x);
+      else if (!lijst.querySelector('details[open]')) markeerPost(undefined);
+    });
+    lijst.append(d);
+  }
+}
+
+/** Tik in de 3D: de posten van dat ding openen (de rest dicht) en het ding aanduiden. */
+function tikOpDing(ding: string | null) {
+  if (!pakket?.posten?.length || $<HTMLSelectElement>('#keuze').value !== 'woning') return;
+  const deze = new Set(pakket.posten.flatMap((x, i) => (ding && x.dingen?.includes(ding) ? [String(i)] : [])));
+  const lijst = [...document.querySelectorAll<HTMLDetailsElement>('#werklijst details')];
+  for (const d of lijst) d.open = deze.has(d.dataset.post ?? '');
+  viewer?.markeer?.(deze.size && ding ? ding : null);
+  lijst.find((d) => d.open)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 /** Datum van het ontwerp in gewone taal ("16 november 2026"), of leeg. */
@@ -144,6 +207,7 @@ function kiesVariant(i: number) {
   const helemaal = !pakket || Number(vorigNiveau) === pakket.woning.length - 1;
   pakket = p;
   zetKop(p);
+  toonPosten(p);
   for (const [j, b] of [...document.querySelectorAll<HTMLButtonElement>('#variantknoppen button')].entries()) b.setAttribute('aria-pressed', String(j === i));
   const keuze = $<HTMLSelectElement>('#keuze');
   keuze.replaceChildren(

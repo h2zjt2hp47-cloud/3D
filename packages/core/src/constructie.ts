@@ -437,34 +437,34 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
         }
         uit.stukken.push({ niveau: top, soort: 'dak', blokken });
       } else {
-      const code = opbouwVoor(plan, oc, 'hellendDak');
-      const ov = d.oversteek, lengte = r2(d.q1 - d.q0 + 2 * ov), y = r2(yb - ov * d.tan);
-      // Zadeldak: twee dakvlakken van de dakvoet tot de nok; lessenaar: één van de lage naar de hoge kant.
-      const vlakken: { voet: number; naar: 1 | -1; diepte: number }[] = d.vorm === 'zadel'
-        ? [{ voet: d.p0, naar: 1, diepte: d.nokP - d.p0 + ov }, { voet: d.p1, naar: -1, diepte: d.p1 - d.nokP + ov }]
-        : [{ voet: d.voetP, naar: d.voetP === d.p0 ? 1 : -1, diepte: d.p1 - d.p0 + 2 * ov }];
-      vlakken.forEach((v, i) => {
-        const deel = dakvlak({ lengte, diepte: r2(v.diepte), helling: d.helling, opbouw: opbouw(code) }, oc.materialen);
-        // De minimumhoek ná de draaiing: de dakvoet (met oversteek) of de nok, en het begin langs de nok.
-        const p = r2(v.naar === 1 ? v.voet - ov : v.voet + ov - v.diepte), q = r2(d.q0 - ov);
-        const zet = d.nokAs === 'x'
-          ? { x: q, y, z: p, draai: v.naar === 1 ? 0 : 180 } as const
-          : { x: p, y, z: q, draai: v.naar === 1 ? 270 : 90 } as const;
-        uit.delen.push({
-          code: `hellend_${i}`, plaats: 'hellendDak', opbouw: code, niveau: top, wat: d.vorm === 'zadel' ? `Hellend dak, ${i ? 'tweede' : 'eerste'} dakvlak` : 'Hellend dak (lessenaar)',
-          deel, zet: { ...zet }, ding: 'dak', dakvlak: { dak: d, voet: v.voet, naar: v.naar },
+        const code = opbouwVoor(plan, oc, 'hellendDak');
+        const ov = d.oversteek, lengte = r2(d.q1 - d.q0 + 2 * ov), y = r2(yb - ov * d.tan);
+        // Zadeldak: twee dakvlakken van de dakvoet tot de nok; lessenaar: één van de lage naar de hoge kant.
+        const vlakken: { voet: number; naar: 1 | -1; diepte: number }[] = d.vorm === 'zadel'
+          ? [{ voet: d.p0, naar: 1, diepte: d.nokP - d.p0 + ov }, { voet: d.p1, naar: -1, diepte: d.p1 - d.nokP + ov }]
+          : [{ voet: d.voetP, naar: d.voetP === d.p0 ? 1 : -1, diepte: d.p1 - d.p0 + 2 * ov }];
+        vlakken.forEach((v, i) => {
+          const deel = dakvlak({ lengte, diepte: r2(v.diepte), helling: d.helling, opbouw: opbouw(code) }, oc.materialen);
+          // De minimumhoek ná de draaiing: de dakvoet (met oversteek) of de nok, en het begin langs de nok.
+          const p = r2(v.naar === 1 ? v.voet - ov : v.voet + ov - v.diepte), q = r2(d.q0 - ov);
+          const zet = d.nokAs === 'x'
+            ? { x: q, y, z: p, draai: v.naar === 1 ? 0 : 180 } as const
+            : { x: p, y, z: q, draai: v.naar === 1 ? 270 : 90 } as const;
+          uit.delen.push({
+            code: `hellend_${i}`, plaats: 'hellendDak', opbouw: code, niveau: top, wat: d.vorm === 'zadel' ? `Hellend dak, ${i ? 'tweede' : 'eerste'} dakvlak` : 'Hellend dak (lessenaar)',
+            deel, zet: { ...zet }, ding: 'dak', dakvlak: { dak: d, voet: v.voet, naar: v.naar },
+          });
         });
-      });
-      // De kepers liggen op de muren langs de nok (de dakvoet en, bij een lessenaar, de hoge kant).
-      const as = d.nokAs === 'x' ? 'h' : 'v';
-      const breedte = (d.vorm === 'zadel' ? (d.nokP - d.p0) / 2 : (d.p1 - d.p0) / 2) + ov;
-      for (const lijn of [d.p0 + t, d.p1 - t]) steunen.push({ niveau: top, as, lijn, van: d.q0, tot: d.q1, draagt: 'hellend_dak', breedte, helling: d.helling });
-      // De topgevel (en de hoge muur van een lessenaar): het stuk muur tussen de muurkop en het dak.
-      for (const w of [...uit.delen]) {
-        if (w.plaats !== 'buitenwand' || w.niveau !== top || !w.muur || w.muur.muur.as === 's') continue;
-        const g = topgevel(w, d, oc.materialen[w.deel.lagen[w.deel.dragend]?.materiaal ?? '']);
-        if (g) uit.delen.push(g);
-      }
+        // De kepers liggen op de muren langs de nok (de dakvoet en, bij een lessenaar, de hoge kant).
+        const as = d.nokAs === 'x' ? 'h' : 'v';
+        const breedte = (d.vorm === 'zadel' ? (d.nokP - d.p0) / 2 : (d.p1 - d.p0) / 2) + ov;
+        for (const lijn of [d.p0 + t, d.p1 - t]) steunen.push({ niveau: top, as, lijn, van: d.q0, tot: d.q1, draagt: 'hellend_dak', breedte, helling: d.helling });
+        // De topgevel (en de hoge muur van een lessenaar): het stuk muur tussen de muurkop en het dak.
+        for (const w of [...uit.delen]) {
+          if (w.plaats !== 'buitenwand' || w.niveau !== top || !w.muur || w.muur.muur.as === 's') continue;
+          const g = topgevel(w, d, oc.materialen[w.deel.lagen[w.deel.dragend]?.materiaal ?? '']);
+          if (g) uit.delen.push(g);
+        }
       }
     }
   }

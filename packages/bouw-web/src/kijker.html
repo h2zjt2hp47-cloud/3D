@@ -37,6 +37,19 @@ header .aannemer { font-weight: 600; font-size: 14px; color: var(--accent); }
 .variantknop span { font-size: 12.5px; color: var(--zacht); line-height: 1.3; }
 .variantknop[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 #voorbehoud { color: var(--zacht); font-size: 12px; margin: 0; }
+/* De posten van het werk (ronde 11): een lijst die je openklapt, per groep. */
+#werk { background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; padding: 10px 14px; }
+#werk h2 { font-size: 15px; margin: 0 0 2px; }
+#werk .klein { color: var(--zacht); font-size: 13px; margin: 0 0 6px; }
+#werk h3 { font-size: 13px; color: var(--zacht); margin: 12px 0 2px; font-weight: 600; }
+#werk details { border-top: 1px solid var(--lijn); }
+#werk summary { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; min-height: 44px; padding: 10px 0; cursor: pointer; list-style: none; }
+#werk summary::-webkit-details-marker { display: none; }
+#werk summary::before { content: '▸'; color: var(--zacht); }
+#werk details[open] > summary::before { content: '▾'; }
+#werk summary strong { flex: 1 1 14em; font-weight: 600; }
+#werk summary span { color: var(--zacht); font-size: 13px; white-space: nowrap; }
+#werk ul { margin: 0 0 10px; padding-left: 34px; font-size: 13.5px; }
 /* Bestand voor de klant: alleen kijken, geen ander pakket openen. */
 body.klantbestand #ander, body.klantbestand #leeg { display: none !important; }
 </style>
@@ -74,6 +87,11 @@ body.klantbestand #ander, body.klantbestand #leeg { display: none !important; }
   <div class="drie-d" id="drie-d" hidden></div>
   <p id="uitleg" hidden></p>
   <p id="voorbehoud" hidden>Een ontwerp ter illustratie: kleuren en materialen zijn een benadering, maten onder voorbehoud van inmeting.</p>
+  <section id="werk" hidden aria-labelledby="werk-titel">
+    <h2 id="werk-titel">Wat er gebeurt, stap voor stap</h2>
+    <p class="klein">Tik op een onderdeel voor de uitleg, of tik in de 3D op het dak, een gevel of een raam.</p>
+    <div id="werklijst"></div>
+  </section>
 </main>
 <!--PAKKET-->
 <script>/*BUNDEL*/</script>

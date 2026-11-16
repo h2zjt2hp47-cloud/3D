@@ -11,7 +11,7 @@
  * Raakt de verkoper geen maat aan, dan houdt elk vertrekpunt zijn eigen gangbare maten (de tegel zegt welke); anders
  * krijgt elk vertrekpunt de maten van de tweede vraag.
  */
-import { standaardKeuzes } from '../../core/src/index.js';
+import { standaardKeuzes, type Keuzes } from '../../core/src/index.js';
 import { garagepoort } from '../../core/voorbeelden/garagepoort.js';
 import { dakCatalogus, gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
@@ -41,6 +41,15 @@ let maten: Record<string, number> = {};
 let soort: SnelSoort | undefined;
 /** Raakte de verkoper een maat aan? Zo niet, dan houdt elk vertrekpunt van een vast model zijn eigen maten. */
 let aangeraakt = false;
+
+/**
+ * Ronde 11, aanbouw: de ligging van de bestaande woning. Tussen twee buren of met één buur (links) staan de zijmuren tegen
+ * de buren (`Plattegrond.tegenBuren`); vrijstaand is de standaard en geeft het ontwerp van vroeger. De keuze reist mee als
+ * sleutel `buren` in de keuzes van het model AANBOUW (dat model kent ze zelf niet) tot `aanbouwNaarPlan`.
+ */
+const LIGGINGEN: ['twee' | 'een' | 'vrij', string][] = [['twee', 'Tussen twee buren'], ['een', 'Eén buur'], ['vrij', 'Vrijstaand']];
+let ligging: 'twee' | 'een' | 'vrij' = 'vrij';
+const metLigging = (k: Keuzes): Keuzes => (ligging === 'vrij' ? k : { ...k, buren: ligging });
 
 /** De maten van de tweede vraag: die van de gekozen soort (staalwerk) of van de tegel. */
 const huidigeMaten = (): SnelMaat[] => soort?.maten ?? tegel?.maten ?? [];
@@ -166,6 +175,7 @@ function toonStap1() {
         tegel = t;
         soort = t.soorten?.[0];
         aangeraakt = false;
+        ligging = 'vrij';
         maten = standaardMaten();
         toonStap2();
       });
@@ -224,12 +234,24 @@ function toonStap2() {
   if (tegel.soorten) $('#ss-inhoud').append(vak);
   else $('#ss-inhoud').replaceChildren(vak);
   if (tegel.soort === 'aanbouw') {
+    // Ronde 11: ligging van de woning. Vrijstaand is de standaard (zoals vroeger): wie niets aanraakt, tikt niet meer.
+    const rij = el('div', { class: 'snel-ligging', role: 'group', 'aria-label': 'Ligging van de woning' });
+    rij.append(el('span', { class: 'snel-maat-naam' }, 'Ligging'));
+    for (const [code, label] of LIGGINGEN) {
+      const b = el('button', { type: 'button', class: 'snel-liggingknop', 'data-snel-buren': code, 'aria-pressed': String(code === ligging) }, label);
+      b.addEventListener('click', () => {
+        ligging = code;
+        for (const x of rij.querySelectorAll<HTMLButtonElement>('[data-snel-buren]')) x.setAttribute('aria-pressed', String(x.dataset.snelBuren === code));
+      });
+      rij.append(b);
+    }
+    $('#ss-inhoud').append(rij);
     // Een andere vorm (een schuine zijmuur) of een andere plaats: de bestaande woning in de plattegrond, en daar de aanbouw
     // met de maten van de muren in cm (paneel Ruimte met maten).
     const b = el('button', { type: 'button', class: 'tweede snel-metmaten', id: 'ss-maten' }, 'Andere vorm of plaats (schuine muur): teken met maten in de plattegrond');
     b.addEventListener('click', () => {
       const s = Object.values(stijlCatalogus)[0]!;
-      const { plan, posities } = bestaandeWoning(aanbouwKeuzes(maten, s));
+      const { plan, posities } = bestaandeWoning(metLigging(aanbouwKeuzes(maten, s)));
       const basis = legeToestand();
       const t: Toestand = { plan, posities: posities as Positie[], meta: { ...basis.meta, regels: { ...basis.meta.regels, gevel: true, dak: true } } };
       nieuwProject(t, `Aanbouw met maten, ${meter(maten.breedte! / 10)} × ${meter(maten.diepte! / 10)} m`);
@@ -304,7 +326,7 @@ function maak(s: Stijl) {
     return;
   }
   if (tegel.soort === 'aanbouw') {
-    const p = nieuwePositie('AANBOUW', aanbouwKeuzes(maten, s), 'Aanbouw');
+    const p = nieuwePositie('AANBOUW', metLigging(aanbouwKeuzes(maten, s)), 'Aanbouw');
     nieuwProject({ ...basis, meta, posities: [p] }, `Aanbouw ${meter(maten.breedte! / 10)} × ${meter(maten.diepte! / 10)} m, ${s.label.toLowerCase()}`);
     nav.naarPositie3D(p.id);
     return;

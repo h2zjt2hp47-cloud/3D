@@ -30,6 +30,8 @@ import {
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 
 let naarPlan: () => void = () => {};
+/** De woning in 3D (het voorbeeldproject van ronde 11 opent meteen in 3D). */
+let naarWoning3D: () => void = () => {};
 
 const datum = (iso: string) => (iso ? new Date(iso).toLocaleString('nl-BE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
 
@@ -100,7 +102,9 @@ export function toonProjecten() {
     const li = el('li');
     li.append(el('strong', {}, s.naam), el('span', { class: 'klein' }, [s.omschrijving, s.gewijzigd ? `bewaard ${datum(s.gewijzigd)}` : ''].filter(Boolean).join(' · ')));
     const r = el('div', { class: 'positieacties' });
-    r.append(knop('Nieuw project hiermee', () => { nieuwProject(s.toestand, `${s.naam} – nieuw`); naarPlan(); }, ''));
+    // Het voorbeeldproject (ronde 11) opent meteen in 3D, met zijn eigen naam.
+    r.append(knop(s.in3D ? 'Openen in 3D' : 'Nieuw project hiermee', () => { nieuwProject(s.toestand, s.in3D ? s.naam : `${s.naam} – nieuw`); if (s.in3D) naarWoning3D(); else naarPlan(); }, ''));
+    if (s.in3D) r.lastElementChild!.setAttribute('data-sjabloon', s.id);
     if (!s.ingebouwd) r.append(gevaarKnop('Verwijderen', 'Zeker?', () => verwijderSjabloon(s.id)));
     li.append(r);
     return li;
@@ -121,8 +125,9 @@ export function toonProjecten() {
   }));
 }
 
-export function startProjecten(nav: { naarPlan: () => void }) {
+export function startProjecten(nav: { naarPlan: () => void; naarWoning3D?: () => void }) {
   naarPlan = nav.naarPlan;
+  naarWoning3D = nav.naarWoning3D ?? nav.naarPlan;
   $('#pr-nieuw').addEventListener('click', () => {
     const bron = sjablonen().find((s) => s.id === $<HTMLSelectElement>('#pr-bron').value) ?? sjablonen()[0]!;
     const naam = $<HTMLInputElement>('#pr-naam').value.trim() || 'Nieuw project';

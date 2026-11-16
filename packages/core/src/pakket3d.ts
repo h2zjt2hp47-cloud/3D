@@ -72,6 +72,24 @@ export interface Pakket3D {
    * tussen te wisselen. Een oudere kijker toont alleen het eerste ontwerp: hij tekent niets verkeerd, de versie blijft 3.
    */
   varianten?: Pakket3D[];
+  /**
+   * De posten van het werk (ronde 11, optioneel; in het bestand voor de klant): per post de groep in woorden, de titel,
+   * het detail in gewone zinnen, een aantal in stuks, en de dingen van de 3D die erbij horen (als de scène ze kent: de
+   * codes `<ding>.<blok>`). Zonder hoeveelheden die alleen voor de aannemer zijn en zonder prijzen. Een oudere kijker slaat
+   * ze over en toont het ontwerp zoals vroeger: de versie blijft 4.
+   */
+  posten?: Pakket3DPost[];
+}
+
+/** Eén post van het werk in het pakket (zie `Pakket3D.posten` en `klantPosten` in posten.ts). */
+export interface Pakket3DPost {
+  groep: string;
+  titel: string;
+  detail: string[];
+  aantal?: number;
+  dingen?: string[];
+  /** Het begin van de namen van de blokken om de post aan te duiden, als dat preciezer moet dan de dingen. */
+  markeer?: string[];
 }
 
 /**
@@ -197,6 +215,16 @@ export function leesPakket3D(bron: unknown): Pakket3D {
   const aannemer = tekst(p.project?.aannemer), datum = tekst(p.project?.datum);
   if (aannemer) uit.project.aannemer = aannemer;
   if (datum) uit.project.datum = datum;
+  // De posten van het werk (ronde 11): alleen als ze er zijn en kloppen; tekst blijft tekst.
+  if (Array.isArray(p.posten)) {
+    const posten = p.posten.filter((x) => x && typeof x.titel === 'string' && typeof x.groep === 'string').map((x): Pakket3DPost => ({
+      groep: x.groep, titel: x.titel, detail: Array.isArray(x.detail) ? x.detail.filter((d) => typeof d === 'string') : [],
+      ...(typeof x.aantal === 'number' && Number.isFinite(x.aantal) ? { aantal: x.aantal } : {}),
+      ...(Array.isArray(x.dingen) && x.dingen.length ? { dingen: x.dingen.filter((d) => typeof d === 'string') } : {}),
+      ...(Array.isArray(x.markeer) && x.markeer.length ? { markeer: x.markeer.filter((d) => typeof d === 'string') } : {}),
+    }));
+    if (posten.length) uit.posten = posten;
+  }
   const v = p.variant as Partial<NonNullable<Pakket3D['variant']>> | undefined;
   if (v && typeof v === 'object') uit.variant = { naam: String(v.naam ?? ''), verschil: Array.isArray(v.verschil) ? v.verschil.map(String) : [] };
   if (Array.isArray(p.varianten) && p.varianten.length) {

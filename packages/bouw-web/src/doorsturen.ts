@@ -12,7 +12,7 @@ import { resultaat, toestand, type Positie, type Toestand } from './staat.js';
  * De woning in 3D, zoals het plattegrondscherm ze toont: met de echte ramen en deuren van de posities. Van het actieve
  * project, of van een ander (een variant) als `t` gegeven is.
  */
-export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toestand = toestand()): Scene3D {
+export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toestand = toestand(), opties: { dingen?: boolean } = {}): Scene3D {
   // Zonder dakkeuze laat de plattegrond de bovenste verdieping open om erin te kijken. Wie het pakket krijgt (een klant,
   // Missing Link) ziet de hele woning beter dicht: dan het platte dak dat een plan zonder keuze altijd bedoelde.
   const heel = totNiveau === undefined && !laag;
@@ -25,6 +25,8 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
     gevelkoppen: true,
     totNiveau,
     inhoud: openingInhoudUit(t.posities),
+    // Ronde 11 (bestand voor de klant): elk blok zegt bij welk ding het hoort, zodat een tik in de kijker de posten toont.
+    ...(opties.dingen ? { dingen: true } : {}),
   });
 }
 
@@ -32,7 +34,7 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
  * Het 3D-pakket van het huidige project, of van een ander project (`t`, bv. een variant), zonder van project te wisselen.
  * `omschrijf` geeft de omschrijving van een positie zoals op de offerte.
  */
-export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = toestand()): Pakket3D {
+export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = toestand(), opties: { dingen?: boolean } = {}): Pakket3D {
   // Zonder ruimtes (een aanbouw of een raam uit de snelstart) is er geen woning om te tonen: anders zag je alleen gras.
   const niveaus = t.meta.zonderWoning || !t.plan.ruimtes.length ? [] : verdiepingenVan(t.plan);
   return {
@@ -43,8 +45,8 @@ export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = to
     woning: niveaus.map((v, n) => ({
       naam: v.naam,
       // Het laatste niveau is de hele woning met dak; met lage muren kijk je altijd tot en met die verdieping.
-      scene: woningScene(n === niveaus.length - 1 ? undefined : n, false, t),
-      laag: woningScene(n, true, t),
+      scene: woningScene(n === niveaus.length - 1 ? undefined : n, false, t, opties),
+      laag: woningScene(n, true, t, opties),
     })),
     posities: t.posities.map((p) => {
       const r = resultaat(p), maatlijnen = positieMaatlijnen(p, r);

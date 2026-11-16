@@ -2836,7 +2836,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   }
   function zetMarkering() {
     if (markeerKader) { scene.remove(markeerKader); markeerKader.geometry?.dispose(); markeerKader = null; }
+    for (const k of markeerKaders) { scene.remove(k); k.geometry?.dispose(); }
+    markeerKaders = [];
     if (!markeerId) return;
+    if (markeerId.startsWith('~')) { zetMarkeringen(markeerId.slice(1)); return; }
     const box = new THREE.Box3();
     for (const c of groep.children) {
       if (c.name.startsWith(`${markeerId}.`)) box.expandByObject(c);
@@ -2855,6 +2858,29 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     markeerKader.material.opacity = 0.85;
     markeerKader.renderOrder = 9;
     scene.add(markeerKader);
+  }
+  /**
+   * Meer dingen tegelijk aanduiden (ronde 11, de delen van een post van de offerte): `markeer('~a,b|c')` tekent één kader
+   * per groep (gescheiden door `|`) rond alle blokken waarvan de naam begint met een van de voorvoegsels van die groep
+   * (gescheiden door `,`; een ding als `gevel:uitbouw:onder.`, of een blok als `dak.dakplaat_uitbouw`). Zonder `~` aan
+   * het begin is alles zoals vroeger (één ding).
+   */
+  function zetMarkeringen(groepen: string) {
+    for (const g of groepen.split('|')) {
+      const voor = g.split(',').filter(Boolean);
+      if (!voor.length) continue;
+      const box = new THREE.Box3();
+      for (const c of groep.children) if (voor.some((v) => c.name.startsWith(v))) box.expandByObject(c);
+      if (box.isEmpty()) continue;
+      box.expandByScalar(1.5);
+      const k = new THREE.Box3Helper(box, new THREE.Color('#3f5a52'));
+      k.material.depthTest = false;
+      k.material.transparent = true;
+      k.material.opacity = 0.85;
+      k.renderOrder = 9;
+      scene.add(k);
+      markeerKaders.push(k);
+    }
   }
   renderer.domElement.addEventListener('pointercancel', los);
   renderer.domElement.addEventListener('wheel', (ev: WheelEvent) => {
@@ -2932,6 +2958,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   let markeerId: string | null = null;
   let decorGepland = 0;
   let markeerKader: any = null;
+  /** De kaders van `markeer('~…')` (meer dingen tegelijk, ronde 11). */
+  let markeerKaders: any[] = [];
   const matenGroep = new THREE.Group();
   scene.add(matenGroep);
   // ---------- echte 3D-modellen (bestand van de fabrikant, zie core/src/echt3d.ts) ----------

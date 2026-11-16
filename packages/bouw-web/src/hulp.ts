@@ -10,6 +10,16 @@ export function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<
 
 export const eur = (x: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(x);
 
+/** Een schakelaar (aan of uit) met zijn label, minstens 44 beeldpunten hoog (ronde 11: *Bestaand*, *Tegen de buren*). */
+export function schakelaar(label: string, aan: boolean, wissel: (aan: boolean) => void, data: Record<string, string> = {}): HTMLLabelElement {
+  const l = el('label', { class: 'schakelaar schakelaar-groot', ...data });
+  const v = el('input', { type: 'checkbox', role: 'switch' }) as HTMLInputElement;
+  v.checked = aan;
+  v.addEventListener('change', () => wissel(v.checked));
+  l.append(v, el('span', { class: 'schuifje', 'aria-hidden': 'true' }), el('span', {}, label));
+  return l;
+}
+
 /**
  * Prijzen tonen? In eerste instantie niet (beslissing van 15/11: eerst alleen de 3D tonen aan klanten, zonder prijzen).
  * De rekenmotor, de formules, de prijslijsten en hun tests blijven bestaan; de schermen tonen alleen geen enkel bedrag:

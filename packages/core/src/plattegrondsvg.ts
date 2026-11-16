@@ -202,7 +202,7 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
         : { x: buitenMin ? v.x - w : v.x + v.b, y: v.y, b: w, d: v.d };
       const cx = r.x + r.b / 2, cy = r.y + r.d / 2, draai = m.as === 'v' ? -90 : 0;
       uit.push(`<g pointer-events="none"><rect x="${n(r.x)}" y="${n(r.y)}" width="${n(r.b)}" height="${n(r.d)}" fill="${NEUTRAAL.buren}" fill-opacity="0.6"/>`
-        + `<text x="${n(cx)}" y="${n(cy)}" font-size="${n(13 * k)}" text-anchor="middle" dominant-baseline="central" fill="#5f5c56" transform="rotate(${draai} ${n(cx)} ${n(cy)})">buren</text></g>`);
+        + `<text x="${n(cx)}" y="${n(cy)}" font-size="${n(Math.min(r.b, r.d) * 0.45)}" text-anchor="middle" dominant-baseline="central" fill="#55524c" transform="rotate(${draai} ${n(cx)} ${n(cy)})">buren</text></g>`);
     }
   }
 

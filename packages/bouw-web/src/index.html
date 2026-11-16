@@ -454,6 +454,11 @@ body.zonder-woning .nav [data-weergave="offerte"]:not(.alleen-ramen) { display: 
 .maatvraag-melding:empty { display: none; }
 .maatvraag-ok { justify-self: end; min-height: 44px; min-width: 88px; font-weight: 600; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); cursor: pointer; }
 @media (pointer: coarse) { .maatvraag button, .maatpaneel button { min-height: 44px; min-width: 44px; } }
+/* Ronde 11: ligging van de bestaande woning bij een aanbouw (vrijstaand is de standaard). */
+.snel-ligging { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 14px; max-width: 640px; }
+.snel-ligging .snel-maat-naam { flex: 1 0 100%; font-weight: 600; }
+.snel-liggingknop { min-height: 52px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--lijn); background: var(--vlak); color: inherit; font: inherit; cursor: pointer; }
+.snel-liggingknop[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-zacht); box-shadow: inset 0 0 0 1px var(--accent); }
 .snel-metmaten { display: inline-flex; align-items: center; text-align: left; margin-top: 12px; min-height: 52px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--accent); background: var(--vlak); color: var(--accent); cursor: pointer; font-size: 1rem; }
 
 /* ---------- aanraakschermen: ook invoervelden en keuzelijsten minstens 44 px ---------- */
@@ -757,6 +762,34 @@ table.meetstaat td.num { white-space: nowrap; }
 details.aannames { margin: 6px 0; }
 details.aannames ul { margin: 4px 0; padding-left: 20px; }
 .constructieinhoud h4 { margin: 12px 0 4px; }
+/* Werken (ronde 11): de posten van het werk, elk dicht tot je hem openklapt; ook in het keuzepaneel van de 3D. */
+.postlijst h3.postgroep { margin: 16px 0 2px; font-size: .95rem; color: var(--zacht); font-weight: 600; letter-spacing: .02em; }
+details.post { border-top: 1px solid var(--lijn); }
+details.post > summary { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; padding: 9px 0; min-height: 44px; box-sizing: border-box; cursor: pointer; list-style: none; }
+details.post > summary::-webkit-details-marker { display: none; }
+details.post > summary::before { content: '▸'; margin-right: 2px; color: var(--zacht); }
+details.post[open] > summary::before { content: '▾'; }
+.posttitel { flex: 1 1 14em; font-weight: 600; }
+.posthoeveel { white-space: nowrap; }
+.postinhoud { padding: 0 0 10px 16px; }
+.postinhoud > ul { margin: 2px 0 6px; padding-left: 18px; }
+.postinhoud .knoppenrij button { min-height: 44px; }
+.werkvelden { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 6px 0; }
+.werkveld { display: flex; flex-direction: column; gap: 2px; }
+.werkveld input, .werkveld select { min-height: 44px; box-sizing: border-box; }
+.werkveld input[data-werk-titel] { min-width: 16em; }
+#o-werken .acties { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+#o-werken .acties button { min-height: 44px; }
+.werktoevoegen { margin-top: 10px; padding: 10px; border: 1px dashed var(--lijn); border-radius: 8px; }
+.werktegels { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.werktegel { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 56px; padding: 8px 10px; border: 1px solid var(--lijn); border-radius: 8px; background: var(--vlak); color: var(--inkt); text-align: left; cursor: pointer; font: inherit; }
+.werktegel:hover { border-color: var(--accent); }
+.werkvrij { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.werkvrij input { flex: 1 1 220px; min-height: 44px; box-sizing: border-box; }
+.werkvrij button { min-height: 44px; }
+label.schakelaar.schakelaar-groot { min-height: 44px; }
+.dingposten { margin-top: 10px; border-top: 1px solid var(--lijn); padding-top: 4px; }
+.dingposten > p { margin: 6px 0 2px; }
 #pl-doorsnede { margin-top: 8px; }
 /* Techniek voor de installateur (ronde 10b): het palet in plaats van het gereedschap, de balk bij de 3D. */
 .gereedschap .techniekknop { margin-top: 6px; border-style: dashed; }

@@ -23,6 +23,7 @@ import { drukBlad } from './blad.js';
 import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
 import { toonConstructieOverzicht } from './constructie-ui.js';
 import { toonTechniekOverzicht } from './techniek-ui.js';
+import { toonWerkenOverzicht } from './werken-ui.js';
 
 /** Het pictogram (van de snelstart) van een vast model zonder 3D-beeld in het overzicht. */
 const MINI_BEELD: Record<string, string> = { OVERKAPPING: 'overkapping', TUINHUIS: 'tuinhuis', LOODS: 'loods', BALUSTRADE: 'balustrade', LUIFEL: 'luifel', STAALTRAP: 'trap' };
@@ -357,6 +358,8 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     return d;
   }));
   $('#o-regels-kaart').hidden = o.regels.length === 0;
+  // Werken (ronde 11): de posten van het werk in de volgorde van het bouwen, elk dicht tot je hem openklapt.
+  toonWerkenOverzicht();
   // Constructie (ronde 6): meetstaat, aanwijzing voor EPB en schatting van de stabiliteit, elk achter een kop die openklapt.
   toonConstructieOverzicht();
   // Techniek (ronde 10b): de telling per vak, alleen als het plan techniek heeft, dicht tot je ze openklapt.
@@ -522,6 +525,8 @@ function exportGegevens(opties: { prijzen: boolean } = { prijzen: true }): Recor
         };
       }),
       ...o.regels.map((r) => ({ positie: r.groep, omschrijving: r.omschrijving, aantal: r.hoeveelheid, eenheid: r.eenheid, ...(met ? { eenheidsprijs: r.eenheidsprijs, kostprijs: r.kostprijs } : {}) })),
+      // Werk zonder ding (ronde 11): zonder bedrag, met de groep en wat de verkoper invulde.
+      ...(t.meta.werken ?? []).map((w) => ({ positie: 'Werk', omschrijving: w.titel, groep: w.groep ?? 'supplementen', ...(w.hoeveelheid !== undefined ? { aantal: w.hoeveelheid } : {}), ...(w.eenheid ? { eenheid: w.eenheid } : {}), ...(w.uitleg ? { details: [w.uitleg] } : {}) })),
     ],
     ...(met ? { totaal: { excl: o.excl, btw: o.btw, incl: o.incl } } : {}),
   };

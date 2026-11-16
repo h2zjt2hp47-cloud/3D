@@ -29,7 +29,9 @@ export async function bewaarBestand(naam: string, data: Blob): Promise<'bewaard'
     }
   }
   const a = document.createElement('a');
-  a.download = naam;
+  // Met een "×" in de naam (bv. "Woning 9 × 10 m") geeft Chrome het bestand de naam "download", zonder extensie (gezien
+  // op 16/11 bij het bestand voor de klant): een gewone x doet hetzelfde werk.
+  a.download = naam.replace(/×/g, 'x');
   a.href = URL.createObjectURL(data);
   document.body.append(a);
   a.click();

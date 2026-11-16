@@ -5,9 +5,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  constructie3D, controleerPlan, gevelAanzichten, gevelOppervlaktes, heeftBestaand, klantPosten, muurStatus, murenVan, niveauPlan, nieuweTechniek,
+  constructie3D, controleerPlan, NEUTRAAL, gevelAanzichten, gevelOppervlaktes, heeftBestaand, klantPosten, muurStatus, murenVan, niveauPlan, nieuweTechniek,
   plattegrond3D, POST_GROEPEN, postenTekst, postenVan, postenVanDing, tekenDoorsnede, tekenPlattegrond, telTechniek, woningConstructie, woningMeetstaat,
-  woningStabiliteit, woningWarmte, type Plattegrond,
+  woningStabiliteit, woningWarmte, leesPakket3D, PAKKET3D_SOORT, PAKKET3D_VERSIE, type Plattegrond,
 } from '../src/index.js';
 import { planCatalogus, planNaarRegels } from '../voorbeelden/inrichting.js';
 import { woningOpbouwCatalogus } from '../voorbeelden/woningopbouw.js';
@@ -55,7 +55,7 @@ describe('de bestaande woning (aanbouwNaarPlan zet de vlag)', () => {
     // Het platte dak van een bestaande ruimte heet anders (een eigen laag); hier is er geen (de bestaande woning heeft een zadeldak).
     expect(plaats(a)).toEqual(plaats(b));
     const muur = a.blokken.find((x) => x.code.startsWith('gevel:bestaand:boven.'))!;
-    expect(muur.zijden?.['z-']).toEqual({ soort: 'gevel', kleur: '#dad7d0' });
+    expect(muur.zijden?.['z-']).toEqual({ soort: 'gevel', kleur: NEUTRAAL.gevel });
   });
   it('meetstaat, constructie, EPB en stabiliteit tellen alleen de uitbouw', () => {
     const c = woningConstructie(plan, cat), k = woningConstructie(kaal, cat);
@@ -108,7 +108,7 @@ describe('tegen de buren', () => {
     expect(woningConstructie(plan, cat).delen.filter((d) => d.plaats === 'buitenwand').map((d) => d.ding)).toEqual(['gevel:uitbouw:onder']);
     // In het gevelaanzicht neutraal, zonder sokkel.
     const links = gevelAanzichten(plan, undefined, cat).find((g) => g.kant === 'links')!;
-    expect(links.tekening.vormen.filter((v) => v.code.startsWith('muur.')).every((v) => v.vulling === '#c9c6bf')).toBe(true);
+    expect(links.tekening.vormen.filter((v) => v.code.startsWith('muur.')).every((v) => v.vulling === NEUTRAAL.buren)).toBe(true);
   });
 });
 
@@ -131,12 +131,12 @@ describe('posten van het werk: het voorbeeldproject', () => {
   it('hoofdstuk 10, rij per rij', () => {
     // Afbraak, grondwerken, container: als regel, zonder ding.
     for (const t of ['Afbraak van het terras', 'Grondwerken', 'Container']) expect(posten.find((p) => p.titel.startsWith(t))?.dingen).toEqual([]);
-    for (const t of ['Fundering', 'Vloerplaat', 'Opening in de bestaande gevel', 'Buitenwanden: buitenwand in houtskelet', 'Plat dak', 'Dakrand', 'Regenafvoer en noodafvoer', 'Lichtkoepel 120 × 120', 'Gevelbekleding: houten bekleding, staand', 'Wanden binnen: schilderklaar', 'Plafond', 'Vloer: keramische tegel', 'Elektriciteit', 'Sanitair']) {
+    for (const t of ['Fundering', 'Vloerplaat', 'Opening in de bestaande gevel', 'Buitenwand in houtskelet', 'Plat dak', 'Dakrand', 'Regenafvoer en noodafvoer', 'Lichtkoepel 120 × 120', 'Gevelbekleding: houten bekleding, staand', 'Wanden binnen: schilderklaar', 'Plafond', 'Vloer: keramische tegel', 'Elektriciteit', 'Sanitair']) {
       expect(titels, t).toContain(t);
     }
     const koepels = posten.find((p) => p.titel.startsWith('Lichtkoepel'))!;
     expect([koepels.hoeveelheid, koepels.eenheid]).toEqual([3, 'stuks']);
-    const wand = posten.find((p) => p.titel.startsWith('Buitenwanden'))!;
+    const wand = posten.find((p) => p.titel.startsWith('Buitenwand in'))!;
     expect(wand.detail.join(' ')).toMatch(/dampscherm.*houtskelet met isolatie 140 mm/);
     expect(wand.dingen).toEqual(['gevel:uitbouw:onder']);
     const dak = posten.find((p) => p.titel.startsWith('Plat dak'))!;
@@ -167,5 +167,25 @@ describe('posten van het werk: het voorbeeldproject', () => {
     const tekst = postenTekst(posten, { intern: true });
     expect(tekst).not.toMatch(/€|prijs|btw|totaal|korting|marge|offerte/i);
     expect(tekst.split('\n')[2]).toBe('Groep\tPost\tHoeveelheid\tEenheid\tDetail');
+  });
+});
+
+describe('de posten in het 3D-pakket (bestand voor de klant)', () => {
+  const { plan, posities, werken } = uitbouwVoorbeeld();
+  const posten = klantPosten(postenVan(plan, cat, { posities: posities.map((p) => ({ id: p.id, naam: p.naam, aantal: p.aantal })), handmatig: werken }));
+  const basis = {
+    soort: PAKKET3D_SOORT, versie: PAKKET3D_VERSIE, gemaakt: '2026-11-16T12:00:00.000Z', project: { nummer: 'OF-2026-0001', naam: 'Uitbouw' },
+    woning: [{ naam: 'Gelijkvloers', scene: plattegrond3D(plan, cat, { dingen: true }), laag: plattegrond3D(plan, cat, { dingen: true, laag: 110 }) }], posities: [],
+  };
+  it('optioneel: de versie blijft 4; zonder posten is het pakket zoals vroeger', () => {
+    expect(PAKKET3D_VERSIE).toBe(4);
+    expect('posten' in leesPakket3D(basis)).toBe(false);
+  });
+  it('met posten: ze komen door het lezen, wat niet klopt valt weg', () => {
+    const p = leesPakket3D(JSON.stringify({ ...basis, posten: [...posten, { titel: 3 }, null] }));
+    expect(p.posten?.length).toBe(posten.length);
+    expect(p.posten?.find((x) => x.titel.startsWith('Lichtkoepel'))).toMatchObject({ aantal: 3, dingen: ['dak'] });
+    expect(p.posten?.find((x) => x.titel === 'Dakrand')?.markeer?.[0]).toMatch(/^dak\.dakrand_/);
+    expect(JSON.stringify(p.posten)).not.toMatch(/€|prijs|btw|totaal|korting|marge|offerte/i);
   });
 });

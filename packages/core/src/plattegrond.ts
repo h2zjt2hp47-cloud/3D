@@ -259,7 +259,7 @@ export function gevelAfwerking(plan: Plattegrond, cat: PlanCatalogus | undefined
  * Neutrale tinten (effen en licht) voor wat al bestaat of van de buren is: zichtbaar, maar ondergeschikt aan het nieuwe
  * werk, dat in zijn eigen materialen en kleuren staat.
  */
-export const NEUTRAAL = { gevel: '#dad7d0', binnen: '#e9e7e2', vloer: '#dedbd4', dak: '#aeaba4', buren: '#c9c6bf' } as const;
+export const NEUTRAAL = { gevel: '#cdcfcd', binnen: '#e2e3e0', vloer: '#d5d6d2', dak: '#8e908f', buren: '#aeb1b0' } as const;
 
 /** Heeft het plan een bestaande ruimte of een muurvlak tegen de buren? Zo niet, dan rekent alles zoals vroeger. */
 export const heeftBestaand = (plan: Plattegrond) => plan.ruimtes.some((r) => r.bestaand === true) || !!plan.tegenBuren?.length;

@@ -64,7 +64,7 @@ import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { maak3D, type Kwaliteit, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { isDing, maakVariant, stijlRij, toonDing } from './ding-ui.js';
 import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
-import { $, el, eur, getal, getalVeld, keuzelijst, PRIJZEN } from './hulp.js';
+import { $, el, eur, getal, getalVeld, keuzelijst, PRIJZEN, schakelaar } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
@@ -73,7 +73,7 @@ import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { familie } from './meegeven.js';
 import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
-import { constructieAan, constructieScene, opbouwKeuze, startConstructie, toonOpbouwVanDing } from './constructie-ui.js';
+import { constructieAan, constructieScene, opbouwKeuze, startConstructie, toonOpbouwVanDing, zetWeergave as zetConstructieWeergave } from './constructie-ui.js';
 import { startDoorsnede, toonDoorsnede } from './doorsnede-ui.js';
 import {
   draaiToestel, maakZichtbaar, startTechniek, techniek3DOpties, techniekAan, techniekHint, techniekMetRuimte, techniekNaTekenen, techniekPlan, techniekPointerDown,
@@ -471,6 +471,22 @@ export function toonWoning3D(standpunt: Standpunt = 'ooghoogte') {
   volgendStandpunt = standpunt;
   ruimKader = true;
   toonWeergave('3d');
+}
+
+/**
+ * Ronde 11: de delen van een post van het werk (kaart *Werken* in het overzicht) aanduiden in de 3D van de woning, één
+ * kader per groep (zie `markeer('~…')` in de kijker), vanuit een standpunt waarin ze te zien zijn. De volgende tik in de
+ * 3D haalt de aanduiding weg.
+ */
+export function toonDingenIn3D(groepen: string[][], standpunt?: Standpunt, opties: { techniek?: boolean } = {}) {
+  selectie = undefined;
+  gekozenDing = null;
+  if (standpunt) volgendStandpunt = standpunt;
+  // De namen van de blokken zijn die van de afgewerkte woning; de toestellen en leidingen staan alleen in de techniek.
+  if (constructieAan()) zetConstructieWeergave('afgewerkt');
+  if (!!opties.techniek !== techniekAan()) zetTechniek(!!opties.techniek, { stil: true });
+  toonWeergave('3d');
+  viewer?.markeer?.(groepen.length ? `~${groepen.map((g) => g.join(',')).join('|')}` : null);
 }
 
 function punt(ev: PointerEvent | MouseEvent): { x: number; y: number } {
@@ -1515,7 +1531,10 @@ function toonEigenschappen() {
       }))),
       rij('Vloer', keuzelijst('pl-vloer', Object.entries(cat.vloeren).map(([k, v]) => [k, v.label]), r.vloer, (w) => zet((x) => { x.vloer = w; }))),
       rij('Wanden', keuzelijst('pl-wand', Object.entries(cat.wanden).map(([k, v]) => [k, v.label]), r.wand, (w) => zet((x) => { x.wand = w; }))),
+      // Ronde 11: een bestaande ruimte blijft; ze staat neutraal en telt niet mee in het werk.
+      schakelaar('Bestaand (blijft)', r.bestaand === true, (aan) => zet((x) => { if (aan) x.bestaand = true; else delete x.bestaand; }), { 'data-ruimte-bestaand': '' }),
     );
+    if (r.bestaand === true) vak.append(el('p', { class: 'klein' }, 'Bestaat al: neutraal in plan en 3D, niet in de meetstaat, de constructie of het overzicht. De muur naar het nieuwe deel is de bestaande gevel.'));
     if (r.delen?.length) {
       vak.append(el('p', { class: 'klein' }, `Samengestelde ruimte (${r.delen.length + 1} delen, L- of U-vorm). Verplaatsen kan; maten wijzig je door een wand te tekenen of een ruimte erin te tekenen.`));
     } else if (r.omtrek) {

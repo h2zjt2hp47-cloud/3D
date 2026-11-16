@@ -106,6 +106,11 @@ const mm = (x: number) => `${komma(x, 1)} mm`;
 const kleinEerst = (s: string) => (/^[A-Z]{2}/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1));
 const hoofd = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const meter = (cm: number) => `${komma(cm / 100, 2)} m`;
+/**
+ * De titel van een post: de naam van de opbouw zelf als die al zegt wat het is ("Plat dak op houten roostering", niet
+ * "Plat dak: plat dak op …"), anders "Wat: naam" ("Vloerplaat: betonplaat 150 mm").
+ */
+const titelVan = (wat: string, naam: string) => (naam.toLowerCase().startsWith(wat.toLowerCase().slice(0, 6)) ? hoofd(naam) : `${wat}: ${kleinEerst(naam)}`);
 
 /** Een laag in een paar woorden: "houtskelet met isolatie 140 mm (hout 38 mm om de 600 mm, minerale wol)". */
 function laagTekst(l: Pick<BouwdeelLaag, 'naam' | 'dikte' | 'rol' | 'hout' | 'vulling'>, materialen: Record<string, { label: string }>): string {
@@ -224,7 +229,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     const plaat = new Set([...v.structuur].filter((i) => i <= eerste.deel.dragend));
     const lagen = lagenVan(eerste, plaat);
     uit.push({
-      id: `vloerplaat:${code}`, groep: 'ruwbouw', titel: `Vloerplaat: ${kleinEerst(lagen[lagen.length - 1]?.naam ?? opbouwNaam(code))}`, hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
+      id: `vloerplaat:${code}`, groep: 'ruwbouw', titel: titelVan('Vloerplaat', lagen[lagen.length - 1] ? `${lagen[lagen.length - 1]!.naam} ${mm(lagen[lagen.length - 1]!.dikte)}` : opbouwNaam(code)), hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
       detail: [lagenZin('Opbouw', lagen, mat) ?? '', `Onder ${uniek(lijst.map((d) => ruimteNaam.get(d.ding?.slice('ruimte:'.length) ?? '') ?? '')).filter(Boolean).join(', ').toLowerCase() || 'de nieuwe ruimtes'}, tot de buitenkant van de muren.`].filter(Boolean),
       intern: hoeveelheden(lijst, plaat, mat), dingen: uniek(lijst.map((d) => d.ding).filter((x): x is string => !!x)),
     });
@@ -250,7 +255,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
   for (const [code, lijst] of opPlaats('verdiepingsvloer')) {
     const v = verdeel(lijst[0]!);
     uit.push({
-      id: `vloer:${code}`, groep: 'ruwbouw', titel: `Vloer tussen de verdiepingen: ${kleinEerst(opbouwNaam(code))}`, hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
+      id: `vloer:${code}`, groep: 'ruwbouw', titel: titelVan('Verdiepingsvloer', opbouwNaam(code)), hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
       detail: [lagenZin('Van onder naar boven', lagenVan(lijst[0]!, v.structuur), mat) ?? '', 'Met het trapgat uitgespaard.'].filter(Boolean),
       intern: hoeveelheden(lijst, v.structuur, mat), dingen: uniek(lijst.map((d) => d.ding).filter((x): x is string => !!x)),
     });
@@ -263,7 +268,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     const lateien = lijst.some((d) => d.deel.stukken.some((s) => s.rol === 'latei'));
     const buren = oud && murenPer.some((ms) => ms.some((m) => m.soort === 'buiten' && muurStatus(plan, m) === 'buren'));
     uit.push({
-      id: `wand:buitenwand:${code}`, groep: 'winddicht', titel: `Buitenwanden: ${kleinEerst(opbouwNaam(code).split(',')[0]!)}`, hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
+      id: `wand:buitenwand:${code}`, groep: 'winddicht', titel: titelVan('Buitenwand', opbouwNaam(code).split(',')[0]!), hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
       detail: [
         lagenZin('Van binnen naar buiten', lagenVan(lijst[0]!, v.structuur), mat) ?? '',
         ...(lateien ? ['Rond de ramen en deuren een latei en dubbele stijlen.'] : []),
@@ -283,7 +288,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     const v = verdeel(lijst[0]!);
     const struct = lagenVan(lijst[0]!, v.structuur), latten = lagenVan(lijst[0]!, v.buiten).filter((l) => l.rol !== 'afwerking_buiten');
     uit.push({
-      id: `dak:hellend:${code}`, groep: 'winddicht', titel: `Hellend dak: ${kleinEerst(opbouwNaam(code))}`, hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
+      id: `dak:hellend:${code}`, groep: 'winddicht', titel: titelVan('Hellend dak', opbouwNaam(code)), hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
       detail: [
         lagenZin('Van binnen naar buiten', [...struct, ...latten], mat) ?? '',
         ...(dak ? [`Dakbedekking: ${bedekkingTekst(dak.keuze.bedekking)}.`] : []),
@@ -299,7 +304,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     const v = verdeel(lijst[0]!);
     const ruimtes = uniek(nieuwPlat.map((s) => ruimteNaam.get(s.ruimte) ?? '')).filter(Boolean);
     uit.push({
-      id: `dak:plat:${code}`, groep: 'winddicht', titel: `Plat dak: ${kleinEerst(opbouwNaam(code))}`, hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
+      id: `dak:plat:${code}`, groep: 'winddicht', titel: titelVan('Plat dak', opbouwNaam(code)), hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
       detail: [
         lagenZin('Van onder naar boven', lagenVan(lijst[0]!, v.structuur), mat) ?? '',
         ...(dak ? [`Dakbedekking: ${bedekkingTekst(dak.platBedekking)}, met afschot naar de afvoer.`] : []),
@@ -409,7 +414,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     const alle = new Set(lijst[0]!.deel.lagen.map((l) => l.index));
     const naast = uniek(lijst.flatMap((d) => (d.ding?.startsWith('wand:') ? [] : [d.muur?.muur.plus, d.muur?.muur.min])).filter((x): x is string => nieuweRuimte(x)));
     uit.push({
-      id: `wand:binnenwand:${code}`, groep: 'binnen', titel: `Binnenwanden: ${kleinEerst(opbouwNaam(code))}`, hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
+      id: `wand:binnenwand:${code}`, groep: 'binnen', titel: titelVan('Binnenwand', opbouwNaam(code)), hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
       detail: [lagenZin('Opbouw', lagenVan(lijst[0]!, alle), mat) ?? '', 'Netto, zonder de deuren.'].filter(Boolean),
       intern: hoeveelheden(lijst, alle, mat), dingen: uniek([...naast.map((id) => `ruimte:${id}`), ...lijst.map((d) => d.ding).filter((x): x is string => !!x?.startsWith('wand:'))]),
     });
@@ -443,7 +448,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     if (plafondLagen.length) {
       const onder = uniek(nieuwPlat.map((s) => s.ruimte));
       uit.push({
-        id: 'plafond', groep: 'binnen', titel: `Plafond: ${kleinEerst(plafondLagen.find((l) => l.rol === 'afwerking_binnen')?.naam ?? plafondLagen[0]!.naam)}`, hoeveelheid: r1(m2Van(plafond)), eenheid: 'm²',
+        id: 'plafond', groep: 'binnen', titel: titelVan('Plafond', plafondLagen.find((l) => l.rol === 'afwerking_binnen')?.naam ?? plafondLagen[0]!.naam), hoeveelheid: r1(m2Van(plafond)), eenheid: 'm²',
         detail: [lagenZin('Van boven naar onder', [...plafondLagen].reverse(), mat)!, 'Onder het platte dak; netto, zonder de openingen van de dakramen.'],
         intern: hoeveelheden(plafond, new Set(plafondLagen.map((l) => l.index)), mat), dingen: onder.map((id) => `ruimte:${id}`),
       });
@@ -549,6 +554,8 @@ export interface KlantPost {
   /** Alleen een aantal stuks (3 dakramen, 1 hef-schuifdeur); m² en lopende meter zijn voor de aannemer. */
   aantal?: number;
   dingen?: string[];
+  /** Om de post in de 3D aan te duiden (zie `Post.markeer`). */
+  markeer?: string[];
 }
 
 /** De posten voor de klant: groep in woorden, titel en detail, een aantal alleen in stuks, zonder het materiaal (`intern`). */
@@ -557,6 +564,7 @@ export function klantPosten(posten: Post[]): KlantPost[] {
     groep: POST_GROEP_NAAM[p.groep], titel: p.titel, detail: p.detail,
     ...(p.eenheid === 'stuks' && p.hoeveelheid !== undefined ? { aantal: p.hoeveelheid } : {}),
     ...(p.dingen.length ? { dingen: p.dingen } : {}),
+    ...(p.markeer?.length ? { markeer: p.markeer } : {}),
   }));
 }
 
