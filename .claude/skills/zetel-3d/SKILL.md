@@ -65,7 +65,7 @@ Lees opties via `gekozenOpties(ontwerp, catalogus, e)` en `te(groep, veld, stand
 - Vooraanzicht is tekenbaar: element klikken/zijwaarts slepen; grepen voor breedte (rij schuift mee, rugleuning over volle breedte groeit mee), rug-/arm-/zithoogte (bovenkant) en poothoogte (onderkant); nieuw element tekenen (breedte = kader, hoogte = rug-/armhoogte); opzet komt op het element met de meeste overlap, vóór een eigen rug of losse rugleuning (`voorkantRug`).
 
 ## Zoomen in boven- en vooraanzicht
-- `zoom.ts` (klasse `Zoom`): muiswiel, knijpen, verschuiven (leeg stuk of middelste muisknop), knoppen −, +, Passend en Selectie, sneltoetsen + − 0.
+- `zoom.ts` (klasse `Zoom`): muiswiel, knijpen, verschuiven (leeg stuk of middelste muisknop), knoppen −, +, Passend en Selectie, sneltoetsen + − 0. Het wiel zoomt evenredig met de beweging (`wielFactor`, ook gebruikt door de 3D in `drie-d.ts`: één klik ±14 %, een trackpad en knijpen in kleine stappen, nooit meer dan ±25 % per gebeurtenis; vroeger zoomde de 3D 10 % per gebeurtenis en schoot een trackpad weg). Knijpen op de trackpad in Safari (Mac) komt als `gesturechange` en wordt in beide opgevangen, niet dubbel met knijpen via de aanwijzers op een iPad.
 - `passendBoven()` en `passendVoor()` geven het automatische beeld; `tekenCanvas` en `tekenVoorvlak` tekenen met `zoom.kijkvak()`.
 
 ## Weergave (drie-d.ts)

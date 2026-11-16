@@ -32,6 +32,22 @@ export interface ZoomOpties {
   wielZoomt?: () => boolean;
 }
 
+/**
+ * Hoeveel één wielgebeurtenis zoomt (> 1 = inzoomen), evenredig met de beweging. Een muiswiel geeft per klik een grote
+ * stap (±100 px), een trackpad tientallen kleine per seconde, en knijpen op een trackpad komt binnen als wiel met Ctrl en
+ * kleine stappen: met een vaste stap per gebeurtenis (vroeger 10 % in de 3D) schiet het beeld dan weg. Eén klik van het
+ * wiel zoomt ±14 %, knijpen volgt de vingers, en geen enkele gebeurtenis zoomt meer dan ±25 %. Gedeeld door de tekening
+ * (Zoom) en de 3D (drie-d.ts).
+ */
+export function wielFactor(e: Pick<WheelEvent, 'deltaY' | 'deltaMode' | 'ctrlKey'>): number {
+  // Regels of pagina's (Firefox, sommige muizen) naar pixels.
+  const px = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);
+  // Knijpen: Ctrl met kleine stappen. Ctrl met een gewoon muiswiel (stappen van ±100) zoomt zoals het wiel zonder Ctrl.
+  const knijpen = e.ctrlKey && Math.abs(px) < 50;
+  const stap = knijpen ? 0.01 : 0.0015;
+  return Math.exp(-Math.max(-0.22, Math.min(0.22, px * stap)));
+}
+
 export class Zoom {
   private vak: Kader | undefined;
   private tijdelijk: Kader | undefined;
@@ -49,10 +65,22 @@ export class Zoom {
       e.preventDefault();
       // Horizontaal vegen op een trackpad verschuift; verticaal (of knijpen = ctrl) zoomt.
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.ctrlKey && !e.metaKey) { this.verschuifPx(-e.deltaX, 0); return; }
-      const stap = e.ctrlKey ? 0.01 : e.deltaMode === 1 ? 0.05 : e.deltaMode === 2 ? 0.5 : 0.0015;
-      const f = Math.min(2, Math.max(0.5, Math.exp(-e.deltaY * stap)));
-      this.zoomOp(f, e.clientX, e.clientY);
+      this.zoomOp(wielFactor(e), e.clientX, e.clientY);
     }, { passive: false });
+    // Safari op een Mac: knijpen op de trackpad komt als gebaar (gesturechange met `scale`), niet als wiel met Ctrl; zonder
+    // dit zoomt de hele pagina. Op een iPad loopt knijpen via de aanwijzers (this.knijp): dan niet dubbel zoomen.
+    let gebaarSchaal = 1;
+    const gebaar = (naam: string, f: (e: { scale?: number; clientX: number; clientY: number }) => void) => doel.addEventListener(naam, (ev) => {
+      ev.preventDefault();
+      if (!this.knijp) f(ev as unknown as { scale?: number; clientX: number; clientY: number });
+    });
+    gebaar('gesturestart', () => { gebaarSchaal = 1; });
+    gebaar('gesturechange', (e) => {
+      const s = e.scale ?? 1;
+      if (!(s > 0)) return;
+      this.zoomOp(s / gebaarSchaal, e.clientX, e.clientY);
+      gebaarSchaal = s;
+    });
     // Vangfase: knijpen en middelste muisknop gaan voor op de acties van de editor.
     doel.addEventListener('pointerdown', (ev) => {
       const e = ev as PointerEvent;

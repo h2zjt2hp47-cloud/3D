@@ -76,7 +76,7 @@ import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { constructieAan, constructieScene, opbouwKeuze, startConstructie, toonOpbouwVanDing } from './constructie-ui.js';
 import { startDoorsnede, toonDoorsnede } from './doorsnede-ui.js';
 import {
-  draaiToestel, maakZichtbaar, startTechniek, techniek3DOpties, techniekAan, techniekHint, techniekMetRuimte, techniekNaTekenen, techniekPlan, techniekPointerDown,
+  draaiToestel, maakZichtbaar, startTechniek, techniek3DOpties, techniekAan, techniekHint, techniekInWoning, techniekMetRuimte, techniekNaTekenen, techniekPlan, techniekPointerDown,
   techniekPointerMove, techniekPointerUp, techniekSelecteren, techniekTekenOpties, techniekUitgezet, techniekVoorbeeld, toonBalk3D, toonTechniekEigenschappen,
   toonTechniekZonderKeuze, verschuifToestel, verwijderTechniek, zetTechniek, type TechniekSelectie,
 } from './techniek-ui.js';
@@ -403,20 +403,23 @@ function plan3D() {
     wachtend3D = false;
     // Lichtinval: de zon uit de gekozen richting, en wat verborgen is werpt nog schaduw.
     viewer?.zon?.(zonVoorKijker());
+    // Techniek in de woning: de verdieping waarop je werkt met lage muren en zonder dak, anders zie je niets (16/11).
+    const tw = techniekInWoning(), muurLaag = laag || tw;
     const scene = plattegrond3D(toestand().plan, cat, {
-      laag: laag ? 110 : undefined,
+      laag: muurLaag ? 110 : undefined,
       meubels: toonMeubels,
-      dak: toonDakIn3D,
+      dak: toonDakIn3D && !tw,
       lichtinval: lichtinvalAan(),
       // Terras en pad horen bij de woning (gegevens); lucht, gras en horizon tekent de kijker (omgeving 'buiten').
       aanleg: true,
       gevelkoppen: true,
       // Elk blok zegt bij welk ding het hoort: tik op het dak, een raam of een gevel (zie ding-ui.ts).
       dingen: true,
-      totNiveau: alleNiveaus && !laag ? undefined : niveau,
+      totNiveau: alleNiveaus && !muurLaag ? undefined : niveau,
       inhoud: openingInhoud,
-      // Techniek (ronde 10b): de installaties, in de woning of uitgezet (alleen als de techniek aan staat).
-      ...techniek3DOpties(alleNiveaus && !laag ? undefined : niveau),
+      // Techniek (ronde 10b): de installaties, in de woning of uitgezet (alleen als de techniek aan staat); uitgezet
+      // alleen de verdieping waarop je werkt.
+      ...techniek3DOpties(niveau),
     });
     // Constructie (ronde 6): wanden, vloeren en dak als skelet, met het kader van de afgewerkte woning (de camera springt niet).
     const constructie = constructieAan();
@@ -428,7 +431,8 @@ function plan3D() {
       maatlijnen: [...gebouwMaatlijnen(scene, { hoogtes: !laag }), ...(!constructie && gekozenDing?.startsWith('opening:') ? raamMaatlijnen(scene.blokken, { ding: gekozenDing }) : [])],
     } : getoond;
     // Na de snelstart een ruimer kader: de camera staat verder, zodat de hele woning met lucht erboven in beeld komt.
-    viewer?.toon(ruimKader ? ruimKaderVan(metMaten) : metMaten);
+    // Met de techniek aan het krappe kader: de toestellen zo groot mogelijk in beeld.
+    viewer?.toon(ruimKader && !techniekAan() ? ruimKaderVan(metMaten) : metMaten);
     // Het beeld in het overzicht (Het ontwerp) is dat van de afgewerkte woning, niet van het skelet.
     beeldActueel = !!viewer && !constructie && !techniekAan();
     if (volgendStandpunt) { viewer?.standpunt(volgendStandpunt); volgendStandpunt = undefined; }

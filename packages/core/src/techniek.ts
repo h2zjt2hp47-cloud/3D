@@ -197,6 +197,11 @@ export interface TechniekWeergave {
   weergave?: 'gewoon' | 'uitgezet';
   /** Alleen deze verdieping (uitgezet): de andere verdiepingen vallen weg. */
   niveau?: number;
+  /**
+   * Kleine toestellen groter, in de kleur van hun vak en met een merkteken op de vloer (zie `toestelBlokken`). Standaard
+   * alleen in de uitgezette weergave; het scherm zet het ook aan in de woning (16/11: anders zie je geen stopcontact).
+   */
+  opvallend?: boolean;
 }
 
 // ---------- maten en hoogtes ----------
@@ -602,8 +607,18 @@ function zetOp(blokken: Blok[], graden: number, x: number, y: number, z: number)
   });
 }
 
-/** In de uitgezette weergave is een klein toestel (stopcontact, schakelaar, lichtpunt) minstens zo groot (cm), in de kleur van zijn vak. */
-export const KLEIN_TOESTEL = 20;
+/**
+ * In de uitgezette weergave is een klein toestel (stopcontact, schakelaar, lichtpunt) minstens zo groot (cm), in de kleur
+ * van zijn vak. 16/11: van 20 naar 30 cm; met 20 cm was een stopcontact op een hele verdieping een stipje.
+ */
+export const KLEIN_TOESTEL = 30;
+
+/**
+ * Het merkteken onder een klein toestel in de uitgezette weergave (cm): een schijf op de vloer in de kleur van zijn vak,
+ * met een dun staafje naar het toestel als dat hoger hangt. Zo vind je een stopcontact of een lichtpunt op een hele
+ * verdieping, ook van ver en van boven; een tik op het merkteken kiest het toestel.
+ */
+export const MERKTEKEN = { schijf: 50, dik: 1.2, staaf: 1.4, vanaf: 20 };
 
 /**
  * Een toestel als blokken in de wereld; `vloer` = hoogte van de vloer van zijn verdieping boven het maaiveld (cm). Met
@@ -621,7 +636,18 @@ export function toestelBlokken(t: Toestel, type: ToestelType, vloer: number, muu
   const [vx, vy] = voorRichting(t.draai), naarVoor = (m.d - echt.d) / 2;
   const groei = t.aan === 'plafond' ? echt.h - m.h : t.aan === 'vloer' || t.aan === 'buiten' ? 0 : (echt.h - m.h) / 2;
   const onder = (t.aan === 'dak' ? muurhoogte + t.hoogte : t.hoogte) + groei;
-  return zetOp(lokaal, t.draai, t.x + vx * naarVoor, vloer + onder, t.y + vy * naarVoor);
+  const blokken = zetOp(lokaal, t.draai, t.x + vx * naarVoor, vloer + onder, t.y + vy * naarVoor);
+  // Het merkteken (zie MERKTEKEN): alleen bij een vergroot toestel, niet op het dak. Een toestel aan de wand: de schijf
+  // ligt voor de wand, het staafje staat onder het midden van het toestel.
+  if (f > 1 && t.aan !== 'dak') {
+    const M = MERKTEKEN, kleurMerk = TECHNIEK_VAKKEN[type.vak].kleur;
+    const wand = t.aan === 'wand' ? M.schijf / 2 : 0;
+    const sx = t.x + vx * wand, sz = t.y + vy * wand, mx = t.x + vx * naarVoor, mz = t.y + vy * naarVoor;
+    blokken.push({ code: `${code}_merk_schijf`, soort: 'kunststof', vorm: 'cilinder', kleur: kleurMerk, x: fijn(sx - M.schijf / 2), y: r2(vloer + 1), z: fijn(sz - M.schijf / 2), b: M.schijf, h: M.dik, d: M.schijf });
+    const hoog = onder - 1 - M.dik;
+    if (hoog > M.vanaf) blokken.push({ code: `${code}_merk_staaf`, soort: 'kunststof', vorm: 'cilinder', kleur: kleurMerk, x: fijn(mx - M.staaf / 2), y: r2(vloer + 1 + M.dik), z: fijn(mz - M.staaf / 2), b: M.staaf, h: r2(hoog), d: M.staaf });
+  }
+  return blokken;
 }
 
 export interface TechniekBlokOpties extends VerloopOpties {

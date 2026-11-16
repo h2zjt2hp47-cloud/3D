@@ -103,11 +103,20 @@ export function techniekTekenOpties(): { techniek?: TechniekVak[] } {
   return aan ? { techniek: ALLE_VAKKEN.filter((v) => zichtbaar.has(v)) } : {};
 }
 
-/** Opties voor `plattegrond3D`: de installaties, gewoon of uitgezet (alleen als de techniek aan staat). */
-export function techniek3DOpties(niveau: number | undefined): { techniek?: { vakken: TechniekVak[]; weergave: 'gewoon' | 'uitgezet'; niveau?: number } } {
+/**
+ * Opties voor `plattegrond3D`: de installaties, gewoon of uitgezet (alleen als de techniek aan staat). 16/11: uitgezet
+ * altijd alleen de verdieping waarop je werkt (alle verdiepingen samen zweefden als losse kaders boven elkaar), en in
+ * beide weergaven de kleine toestellen groter en met een merkteken op de vloer (`opvallend`): anders was een
+ * stopcontact op een hele verdieping een stipje. In de woning toont de 3D dan ook lage muren zonder dak (zie
+ * `techniekInWoning`).
+ */
+export function techniek3DOpties(niveau: number): { techniek?: { vakken: TechniekVak[]; weergave: 'gewoon' | 'uitgezet'; niveau?: number; opvallend: boolean } } {
   if (!aan) return {};
-  return { techniek: { vakken: ALLE_VAKKEN.filter((v) => zichtbaar.has(v)), weergave: uitgezet ? 'uitgezet' : 'gewoon', ...(uitgezet && niveau !== undefined ? { niveau } : {}) } };
+  return { techniek: { vakken: ALLE_VAKKEN.filter((v) => zichtbaar.has(v)), weergave: uitgezet ? 'uitgezet' : 'gewoon', opvallend: true, ...(uitgezet ? { niveau } : {}) } };
 }
+
+/** De techniek in de woning (niet uitgezet): de 3D toont dan de verdieping waarop je werkt met lage muren en zonder dak. */
+export const techniekInWoning = () => aan && !uitgezet;
 
 // ---------- hulpjes ----------
 
@@ -798,6 +807,9 @@ export function toonBalk3D() {
   if (tab3D) {
     tab3D.hidden = !aan && !heeftTechniek();
     tab3D.setAttribute('aria-pressed', String(aan));
+    // Met de techniek uit: hoeveel er is, zodat je ziet dat er iets te zien is (in Afgewerkt staat de techniek niet).
+    const plan = toestand().plan, n = (plan.toestellen?.length ?? 0) + (plan.leidingen?.length ?? 0);
+    tab3D.textContent = !aan && n ? `Techniek (${n})` : 'Techniek';
     // Afgewerkt en Constructie: niet ingedrukt terwijl de techniek aan staat; daarna weer zoals de constructie staat.
     const nu = aan ? 'techniek' : constructieAan() ? 'constructie' : 'afgewerkt';
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-3d-weergave]')) b.setAttribute('aria-pressed', String(b.dataset['3dWeergave'] === nu));
@@ -808,7 +820,7 @@ export function toonBalk3D() {
   balk3D.hidden = !aan;
   if (!aan) return;
   const weergave = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Techniek in de 3D' });
-  for (const [w, label, uitleg] of [['woning', 'In de woning', 'De woning zoals ze is, met de installaties op hun plaats (in de muren en vloeren verstopt; zet Muren laag aan om binnen te kijken)'], ['uitgezet', 'Uitgezet', 'De woning als lage wanden en lijnen, zodat je de installaties ziet']] as const) {
+  for (const [w, label, uitleg] of [['woning', 'In de woning', 'De verdieping waarop je werkt, met lage muren en zonder dak, en de installaties op hun plaats (een leiding in de muur of de vloer zit erin verstopt)'], ['uitgezet', 'Uitgezet', 'De woning als lage wanden en lijnen, zodat je de installaties ziet']] as const) {
     const b = el('button', { type: 'button', 'data-techniek-3d': w, 'aria-pressed': String((w === 'uitgezet') === uitgezet), title: uitleg }, label);
     b.addEventListener('click', () => { uitgezet = w === 'uitgezet'; toonBalk3D(); omg?.drieD(); });
     weergave.append(b);

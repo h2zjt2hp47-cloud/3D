@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ALLE_VAKKEN, asVan, binnenVeelhoek, controleerPlan, leidingBlokken, leidingVerloop, maatTekst, maatVan, murenVan, niveauPlan, nieuwToestel, opAs, plattegrond3D, ruimteOp,
   telTechniek, tekenPlattegrond, toestelBlokken, toestelMaten, toestelVoetafdruk, toestelVorm, vloerHoogte, voorRichting, vormVanDeel,
-  zetOmtrek, TECHNIEK_VOORBEHOUD, type Blok, type Leiding, type Plattegrond, type Ruimte, type Toestel,
+  zetOmtrek, KLEIN_TOESTEL, MERKTEKEN, TECHNIEK_VOORBEHOUD, type Blok, type Leiding, type Plattegrond, type Ruimte, type Toestel,
 } from '../src/index.js';
 import { leidingLangsWanden, technischeOpstelling, tegenWand, vloerverwarmingLus } from '../src/techniekplaatsen.js';
 import { planCatalogus } from '../voorbeelden/inrichting.js';
@@ -324,15 +324,29 @@ describe('3D: toestellen en leidingen, per vak, gewoon en uitgezet', () => {
   });
   it('kleine toestellen zijn in de uitgezette weergave groter en in de kleur van hun vak; de achterkant blijft tegen de wand', () => {
     const s = plan.toestellen!.find((x) => x.type === 'stopcontact_dubbel')!, ty = tc.toestellen[s.type]!;
-    const gewoon = toestelBlokken(s, ty, 0, 270, 'x'), groot = toestelBlokken(s, ty, 0, 270, 'x', true);
+    const gewoon = toestelBlokken(s, ty, 0, 270, 'x'), alles = toestelBlokken(s, ty, 0, 270, 'x', true);
+    // Het toestel zelf (zonder het merkteken op de vloer).
+    const groot = alles.filter((b) => !b.code.includes('_merk_'));
     const breedte = (b: Blok[]) => Math.max(...b.map((x) => Math.max(x.b, x.d)));
     expect(breedte(gewoon)).toBe(15);
-    expect(breedte(groot)).toBeCloseTo(20, 1);
+    expect(breedte(groot)).toBeCloseTo(KLEIN_TOESTEL, 1);
+    expect(KLEIN_TOESTEL).toBe(30);
     expect(groot[0]!.kleur).toBe('#6a2fa0');
     // De achterkant (de plaat) raakt nog altijd het muurvlak.
     const [vx, vy] = voorRichting(s.draai);
     const achter = (b: Blok[]) => Math.min(...b.map((x) => (x.x + x.b / 2 - s.x) * vx + (x.z + x.d / 2 - s.y) * vy - (Math.abs(vx) > 0.5 ? x.b : x.d) / 2));
     expect(achter(groot)).toBeCloseTo(achter(gewoon), 1);
+    // Het merkteken (16/11): een schijf op de vloer voor de wand, en een staafje tot onder het toestel, in de kleur van het vak.
+    const schijf = alles.find((b) => b.code === 'x_merk_schijf')!, staaf = alles.find((b) => b.code === 'x_merk_staaf')!;
+    expect(schijf.vorm).toBe('cilinder');
+    expect(schijf.b).toBe(MERKTEKEN.schijf);
+    expect(schijf.y).toBe(1);
+    expect(schijf.kleur).toBe('#6a2fa0');
+    const midden = (b: Blok) => (b.x + b.b / 2 - s.x) * vx + (b.z + b.d / 2 - s.y) * vy;
+    expect(midden(schijf)).toBeCloseTo(MERKTEKEN.schijf / 2, 1);
+    expect(staaf.y + staaf.h).toBeCloseTo(Math.min(...groot.map((b) => b.y)), 1);
+    // Zonder vergroting geen merkteken.
+    expect(gewoon.some((b) => b.code.includes('_merk_'))).toBe(false);
   });
   it('aantikken: elk blok van de techniek zegt bij welk toestel of welke leiding het hoort', () => {
     const s = plattegrond3D(plan, cat, { techniek: {}, dingen: true });

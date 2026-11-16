@@ -2133,7 +2133,7 @@ function techniek3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties)
   return techniekBlokken(plan, cat.techniek, {
     vakken: opties.techniek.vakken, niveau: opties.techniek.niveau, totNiveau: opties.totNiveau, dingen: opties.dingen,
     vloerHoogte: (n) => vloerHoogte(plan, n),
-    vloerBoven: opties.techniek.weergave === 'uitgezet', opvallend: opties.techniek.weergave === 'uitgezet',
+    vloerBoven: opties.techniek.weergave === 'uitgezet', opvallend: opties.techniek.opvallend ?? opties.techniek.weergave === 'uitgezet',
   });
 }
 

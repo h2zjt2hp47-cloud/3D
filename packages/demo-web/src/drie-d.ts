@@ -7,7 +7,7 @@
 import type { Blok, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
 import { smeltMee, zachteVorm, type ZachteVorm } from '../../core/src/zachtevorm.js';
 import { wandDoorsnede } from '../../core/src/kuip.js';
-import { wielHint } from './zoom.js';
+import { wielFactor, wielHint } from './zoom.js';
 import { HOOGTE_KLEUR, KAART_PX, WEEFSEL_CM, WEEFSELKAART, weefselCanvas, weefselKaarten } from './weefsel.js';
 import { bouwDecor, type DecorSpec } from './decor3d.js';
 
@@ -2865,9 +2865,26 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       return;
     }
     ev.preventDefault();
-    afstand = Math.min(verst(), Math.max(120, afstand * (1 + Math.sign(ev.deltaY) * 0.1)));
+    // Evenredig met de beweging (zie wielFactor): een trackpad of knijpen geeft veel kleine stappen, een muiswiel één grote.
+    afstand = Math.min(verst(), Math.max(120, afstand / wielFactor(ev)));
     plaatsCamera();
   }, { passive: false });
+  // Safari op een Mac: knijpen op de trackpad komt als gebaar (gesturechange met `scale`), niet als wiel met Ctrl; zonder
+  // dit zoomt de hele pagina. Op een iPad komt knijpen ook als twee aanwijzers binnen (hierboven): dan niet dubbel zoomen.
+  let gebaarStart = 0;
+  const gebaar = (naam: string, f: (schaal: number) => void) => renderer.domElement.addEventListener(naam, (ev: Event) => {
+    ev.preventDefault();
+    if (bezigMetFoto || aanwijzers.size > 1) return;
+    f((ev as unknown as { scale?: number }).scale ?? 1);
+  });
+  gebaar('gesturestart', () => { gebaarStart = afstand; });
+  gebaar('gesturechange', (schaal) => {
+    if (!gebaarStart || !(schaal > 0)) return;
+    afstand = Math.min(verst(), Math.max(120, gebaarStart / schaal));
+    pauzeerDraaien();
+    plaatsCamera();
+  });
+  gebaar('gestureend', () => { gebaarStart = 0; });
 
   // Nabewerking (kwaliteit Mooi): ambient occlusion (GTAO) voor schaduw in hoeken, naden en onder kussens.
   // WebGPU (04-11): een RenderPipeline met TSL-knopen (pass met normalen, GTAO op halve resolutie, ontruisd), zelfde
