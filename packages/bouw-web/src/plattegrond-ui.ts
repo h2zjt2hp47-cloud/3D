@@ -309,6 +309,8 @@ export function render() {
   const zi = document.getElementById('pl-zoomhint');
   if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
   houder.dataset.gereedschap = gereedschap;
+  // Met de techniek aan staan de meubels lichter (de tekens en leidingen op de voorgrond).
+  houder.toggleAttribute('data-techniek', techniekAan());
   toonGereedschapKaart();
   // Lege plattegrond: zeg wat je eerst doet (op het tekenvlak zelf, niet alleen in de hulpregel).
   const leeg = !toestand().plan.ruimtes.length;

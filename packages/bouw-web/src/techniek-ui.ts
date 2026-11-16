@@ -108,7 +108,10 @@ const r1 = (x: number) => Math.round(x * 10) / 10;
 const cm = (x: number) => `${getal(r1(x), 1)} cm`;
 const typeVan = (t: Toestel): ToestelType | undefined => tc.toestellen[t.type];
 const naamVan = (t: Toestel | undefined) => (t ? typeVan(t)?.label ?? t.type : '');
-const kortLabel = (label: string) => label.replace(/\s*\(.*\)\s*$/, '');
+/** Het label zonder de uitleg tussen haakjes, behalve als twee toestellen dan hetzelfde zouden heten (airco wand en cassette). */
+const zonderHaakjes = (label: string) => label.replace(/\s*\(.*\)\s*$/, '');
+const dubbelKort = new Set(Object.values(tc.toestellen).map((t) => zonderHaakjes(t.label)).filter((k, i, a) => a.indexOf(k) !== i));
+const kortLabel = (label: string) => (dubbelKort.has(zonderHaakjes(label)) ? label : zonderHaakjes(label));
 const BEVESTIGING: Record<string, string> = { wand: 'aan de wand', plafond: 'tegen het plafond', vloer: 'op de vloer', buiten: 'buiten', dak: 'op het dak' };
 const LIGGING: [LeidingHoogte, string][] = [['vloer', 'In de vloer'], ['wand', 'In de wand'], ['plafond', 'Tegen het plafond']];
 
@@ -139,8 +142,8 @@ function leidingenNu(): Leiding[] {
 /** Tot hoever naast een toestel of leiding een tik nog telt: 22 beeldpunten (een vinger), dus een doel van 44. */
 const raakAfstand = () => 22 * (omg?.schaal() ?? 1);
 
-/** Het toestel onder een tik (het dichtste binnen 22 beeldpunten). */
-function toestelOp(p: Punt): Toestel | undefined {
+/** Het toestel onder een tik (het dichtste binnen 22 beeldpunten), met de afstand. */
+function toestelBij(p: Punt): { t: Toestel; d: number } | undefined {
   let beste: Toestel | undefined, af = raakAfstand();
   for (const t of toestellenNu()) {
     const type = typeVan(t);
@@ -149,11 +152,12 @@ function toestelOp(p: Punt): Toestel | undefined {
     const d = binnenVeelhoekje(v, p) ? 0 : Math.min(Math.hypot(p[0] - t.x, p[1] - t.y), ...v.map((a, i) => afstandTotStuk(p, a, v[(i + 1) % v.length]!)));
     if (d <= af) { af = d; beste = t; }
   }
-  return beste;
+  return beste ? { t: beste, d: af } : undefined;
 }
+const toestelOp = (p: Punt) => toestelBij(p)?.t;
 
-/** De leiding onder een tik (het dichtste stuk binnen 22 beeldpunten). */
-function leidingOp(p: Punt): Leiding | undefined {
+/** De leiding onder een tik (het dichtste stuk binnen 22 beeldpunten), met de afstand. */
+function leidingBij(p: Punt): { l: Leiding; d: number } | undefined {
   let beste: Leiding | undefined, af = raakAfstand();
   for (const l of leidingenNu()) {
     for (let i = 1; i < l.punten.length; i++) {
@@ -161,7 +165,7 @@ function leidingOp(p: Punt): Leiding | undefined {
       if (d <= af) { af = d; beste = l; }
     }
   }
-  return beste;
+  return beste ? { l: beste, d: af } : undefined;
 }
 
 /** Wijzigt een toestel in de toestand (op id). */
@@ -380,14 +384,16 @@ export function techniekPointerDown(ev: PointerEvent, p: Punt, doel: Element): '
     const i = Number(greep.dataset.leidinggreep);
     if (l) { sleep = { soort: 'punt', id: l.id, groep: puntGroep(l, i), plan: structuredClone(toestand().plan), scherm, start: l.punten[i]!, bewogen: false }; return 'klaar'; }
   }
-  const t = toestelOp(p);
+  // Het dichtste van de twee: een toestel, of een leiding als die duidelijk dichter ligt (6 beeldpunten), zodat je ook in
+  // een volle tekening een leiding naast een toestel kunt kiezen.
+  const bt = toestelBij(p), bl = leidingBij(p);
+  const t = bt && (!bl || bt.d <= bl.d + 6 * (omg?.schaal() ?? 1)) ? bt.t : undefined;
   if (t) {
     omg?.kies({ soort: 'toestel', id: t.id });
     sleep = { soort: 'toestel', id: t.id, plan: structuredClone(toestand().plan), scherm, start: [t.x, t.y], bewogen: false };
     return 'klaar';
   }
-  const l = leidingOp(p);
-  if (l) { omg?.kies({ soort: 'leiding', id: l.id }); return 'klaar'; }
+  if (bl) { omg?.kies({ soort: 'leiding', id: bl.l.id }); return 'klaar'; }
   return 'pan';
 }
 
@@ -532,12 +538,24 @@ export function techniekNaTekenen() {
     return c;
   };
   const s = omg.selectie();
-  const l = s?.soort === 'leiding' ? toestand().plan.leidingen?.find((x) => x.id === s.id) : undefined;
+  // Het vak van het palet op de voorgrond, de andere lichter (en wat gekozen is, altijd vol): zo blijft het plan per vak leesbaar.
+  const plan = toestand().plan;
+  const vakVan = new Map<string, TechniekVak | undefined>([
+    ...(plan.toestellen ?? []).map((t): [string, TechniekVak | undefined] => [`toestel:${t.id}`, typeVan(t)?.vak]),
+    ...(plan.leidingen ?? []).map((x): [string, TechniekVak | undefined] => [`leiding:${x.id}`, tc.leidingen[x.soort]?.vak]),
+  ]);
+  for (const d of svg.querySelectorAll<SVGElement>('[data-soort="toestel"][data-id], [data-soort="leiding"][data-id]')) {
+    const sleutel = `${d.dataset.soort}:${d.dataset.id}`, v = vakVan.get(sleutel);
+    if (v && v !== vak && !(s && `${s.soort}:${s.id}` === sleutel)) d.setAttribute('opacity', '0.3');
+  }
+  const l = s?.soort === 'leiding' ? plan.leidingen?.find((x) => x.id === s.id) : undefined;
   // Een lus vloerverwarming heeft geen grepen (een zigzag om de 15 cm): die leg je opnieuw met een tik op de ruimte.
   if (l && gereedschap.soort === 'kies' && l.soort !== 'vloerverwarming') {
     const getoond: Punt[] = [];
+    // Een uiteinde aan een toestel heeft geen greep: het volgt het toestel (sleep het toestel).
+    const vast = new Set([...(l.van ? puntGroep(l, 0) : []), ...(l.naar ? puntGroep(l, l.punten.length - 1) : [])]);
     for (let i = 0; i < l.punten.length; i++) {
-      if (i > 0 && puntGroep(l, i)[0] !== i) continue;
+      if (vast.has(i) || (i > 0 && puntGroep(l, i)[0] !== i)) continue;
       const [x, y] = l.punten[i]!;
       // Niet twee grepen op elkaar: minstens 26 beeldpunten ertussen.
       if (getoond.some((q) => Math.hypot(q[0] - x, q[1] - y) < 26 * e)) continue;
@@ -696,7 +714,7 @@ export function toonPalet() {
   for (const v of ALLE_VAKKEN) {
     const b = el('button', { type: 'button', 'data-techniek-tab': v, 'aria-pressed': String(v === vak) }, TECHNIEK_VAKKEN[v].label);
     b.style.setProperty('--vak', TECHNIEK_VAKKEN[v].kleur);
-    b.addEventListener('click', () => { vak = v; toonPalet(); });
+    b.addEventListener('click', () => { vak = v; toonPalet(); omg?.opnieuw(); });
     tabs.append(b);
   }
   const toestellen = el('div', { class: 'ttegels', role: 'group', 'aria-label': 'Toestellen' });
@@ -733,7 +751,7 @@ export function toonPalet() {
     el('p', { class: 'tsub' }, 'Toestellen: tik er een, tik in het plan'), toestellen,
     el('p', { class: 'tsub' }, 'Leidingen: tik er een, dan op twee toestellen'), leidingen,
     el('p', { class: 'tsub' }, 'In één tik: kies, tik dan op de ruimte'), een,
-    el('p', { class: 'tsub' }, 'Tonen'), vakSchakelaars(),
+    el('p', { class: 'tsub' }, 'Tonen (het vak hierboven staat op de voorgrond, de andere lichter)'), vakSchakelaars(),
     el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD),
     voorbeeld,
   );
@@ -937,7 +955,7 @@ export function techniekDingKeuzes(vakEl: HTMLElement, ding: string, nav: { slui
     knop('In de plattegrond', () => omg?.naarPlan({ soort, id }), 'tweede', { 'data-techniek-naarplan': '' }),
     knop('Verwijderen', () => { wijzig('plan', (x) => { verwijderTechniek(x, { soort, id }); }); nav.sluit(); }, 'gevaar'),
   );
-  vakEl.append(rij, el('p', { class: 'klein voorbehoud' }, TECHNIEK_VOORBEHOUD));
+  vakEl.append(rij);
 }
 
 // ---------- het overzicht: de telling ----------
