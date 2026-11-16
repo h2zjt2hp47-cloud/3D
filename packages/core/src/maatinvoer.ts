@@ -8,8 +8,13 @@
  * Een nieuwe vorm ligt met haar eerste zijde AB langs de gevel (A links), de rest ligt aan de buitenkant (langs o).
  */
 import {
+  binnenVeelhoek,
+  binnenVorm,
   buitenKant,
   delenVan,
+  dichtsteMuur,
+  langsAs,
+  opMuur,
   hoekenVan,
   murenVan,
   niveauPlan,
@@ -23,6 +28,7 @@ import {
   zetOmtrek,
   type GevelKant,
   type Muur,
+  type Opening,
   type Plattegrond,
   type Punt,
   type Rechthoek,
@@ -304,4 +310,62 @@ export function zetMaatVorm(r: Ruimte, m: MaatRuimte): void {
     Object.assign(r, m.rechthoek);
     delete r.omtrek;
   } else zetOmtrek(r, m.punten);
+}
+
+/**
+ * Hoe ver het binnenvlak van een ruimte loopt op de plaats van een nieuwe wand: voor een staande wand (`as` 'v') de
+ * kleinste en grootste x van het binnenvlak op de hoogte y van `punt`, voor een liggende wand ('h') de kleinste en grootste
+ * y op x. Zo is "250 cm van de linkermuur" de vrije maat van het binnenvlak tot de wand, ook bij een schuine muur.
+ */
+export function binnenRand(plan: Plattegrond, r: Ruimte, as: 'h' | 'v', [x, y]: Punt): [number, number] | undefined {
+  const muren = murenVan(niveauPlan(plan, niveauVan(r)));
+  const deel = delenVan(r).map(vormVanDeel).find((v) => binnenVeelhoek(v, x, y, -1));
+  if (!deel) return undefined;
+  const v = binnenVorm(deel, muren);
+  const w = as === 'v' ? y : x;
+  const snij: number[] = [];
+  v.forEach((a, i) => {
+    const b = v[(i + 1) % v.length]!;
+    const [a1, a2, b1, b2] = as === 'v' ? [a[1], a[0], b[1], b[0]] : [a[0], a[1], b[0], b[1]];
+    if ((a1 - w) * (b1 - w) > 0 || Math.abs(b1 - a1) < 1e-9) return;
+    snij.push(a2 + ((w - a1) * (b2 - a2)) / (b1 - a1));
+  });
+  return snij.length >= 2 ? [Math.min(...snij), Math.max(...snij)] : undefined;
+}
+
+/**
+ * Na een andere vorm (een zijde langer, een hoekpunt verschoven, de ruimte versleept): de ramen en deuren in de muren van
+ * die ruimte blijven op dezelfde zijde, op dezelfde afstand van het begin van die zijde (de hoek waar de inmeter van
+ * vertrok). `oud` en `nieuw` zijn hetzelfde plan vóór en na; alleen de openingen in `nieuw` veranderen.
+ */
+export function verzetOpeningen(oud: Plattegrond, nieuw: Plattegrond, ruimteId: string): void {
+  const r0 = oud.ruimtes.find((r) => r.id === ruimteId), r1 = nieuw.ruimtes.find((r) => r.id === ruimteId);
+  if (!r0 || !r1) return;
+  const n = niveauVan(r0);
+  const oudeVormen = delenVan(r0).map(vormVanDeel), nieuweVormen = delenVan(r1).map(vormVanDeel);
+  const nieuweMuren = murenVan(niveauPlan(nieuw, niveauVan(r1)));
+  for (const o0 of oud.openingen) {
+    if (niveauVan(o0) !== n) continue;
+    const c = langsAs(o0, o0.midden, o0.lijn);
+    let plek: { deel: number; zijde: number; s: number } | undefined;
+    oudeVormen.forEach((v, deel) => v.forEach((a, zijde) => {
+      if (plek) return;
+      const b = v[(zijde + 1) % v.length]!, l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (l < 1e-6) return;
+      const s = ((c[0] - a[0]) * (b[0] - a[0]) + (c[1] - a[1]) * (b[1] - a[1])) / l;
+      const dwars = Math.abs((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / l;
+      if (dwars < 1 && s > -0.5 && s < l + 0.5) plek = { deel, zijde, s };
+    }));
+    if (!plek) continue;
+    const v = nieuweVormen[plek.deel];
+    if (!v || v.length !== oudeVormen[plek.deel]!.length) continue;
+    const a = v[plek.zijde]!, b = v[(plek.zijde + 1) % v.length]!, l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (l < 1e-6) continue;
+    const p: Punt = [a[0] + ((b[0] - a[0]) * plek.s) / l, a[1] + ((b[1] - a[1]) * plek.s) / l];
+    const d = dichtsteMuur(nieuweMuren, p[0], p[1], 2);
+    const o = nieuw.openingen.find((x) => x.id === o0.id);
+    if (!d || !o) continue;
+    Object.assign(o, opMuur(d.muur, Math.round(d.midden * 100) / 100) as Partial<Opening>);
+    if (d.muur.as !== 's') delete o.richting;
+  }
 }

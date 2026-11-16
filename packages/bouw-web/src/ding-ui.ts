@@ -11,7 +11,7 @@
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
 import { pasStijlToe, raamInStijl, stijlCatalogus, type Stijl } from '../../core/voorbeelden/stijlen.js';
-import { verfGevel, type GevelKant, type VerfBereik } from '../../core/src/index.js';
+import { murenVan, niveauPlan, verfGevel, vlakSleutel, type GevelKant, type VerfBereik } from '../../core/src/index.js';
 import { bedekkingKeuze, dakVormKnoppen, koepelTeller, metDak, zetDak } from './dak-ui.js';
 import { gevelStaal } from './gevel-ui.js';
 import { el } from './hulp.js';
@@ -65,7 +65,13 @@ function gevelKeuzes(vak: HTMLElement, sleutel: string) {
     if (t.meta.regels.gevel === undefined) t.meta.regels.gevel = true;
     const m = gevelCatalogus[materiaal];
     const voeg = m?.voegen ? (nu.materiaal === materiaal && nu.voeg ? nu.voeg : Object.keys(m.voegen)[0]) : undefined;
-    verfGevel(t.plan, { materiaal, kleur, ...(voeg ? { voeg } : {}) }, gevelBereik, { sleutel, kant, niveau });
+    const keuze = { materiaal, kleur, ...(voeg ? { voeg } : {}) };
+    // Een schuine gevel: "deze gevel" = alle muurvlakken die in die richting kijken (op elke verdieping).
+    if (gevelBereik === 'gevel' && kant.startsWith('s')) {
+      for (const n of new Set(t.plan.ruimtes.map((r) => r.niveau ?? 0))) {
+        for (const m of murenVan(niveauPlan(t.plan, n))) if (m.soort === 'buiten' && vlakSleutel(m).endsWith(`:${kant}`)) verfGevel(t.plan, keuze, 'vlak', { sleutel: vlakSleutel(m) });
+      }
+    } else verfGevel(t.plan, keuze, gevelBereik, { sleutel, kant, niveau });
   });
   vak.append(tabs('Wat verf je?', [['vlak', 'Dit muurvlak'], ['gevel', 'Deze gevel'], ['woning', 'Hele woning']], gevelBereik, (w) => {
     gevelBereik = w as VerfBereik;
@@ -149,7 +155,7 @@ function titel(ding: string): string {
   if (ding === 'dak') return 'Dak';
   const [soort, id = '', kant] = ding.split(':');
   const kanten: Record<string, string> = { boven: 'bovenkant', onder: 'onderkant', links: 'linkerkant', rechts: 'rechterkant' };
-  if (soort === 'gevel') return `Gevel · ${t.plan.ruimtes.find((r) => r.id === id)?.naam ?? ''} (${kanten[kant ?? ''] ?? kant} van het plan)`;
+  if (soort === 'gevel') return `Gevel · ${t.plan.ruimtes.find((r) => r.id === id)?.naam ?? ''} (${kant?.startsWith('s') ? 'schuine gevel' : `${kanten[kant ?? ''] ?? kant} van het plan`})`;
   if (soort === 'opening') { const o = t.plan.openingen.find((x) => x.id === id); const p = o && positieVan(o); return p ? `${p.code} · ${p.naam}` : 'Opening'; }
   if (soort === 'ruimte') return t.plan.ruimtes.find((r) => r.id === id)?.naam ?? 'Ruimte';
   if (soort === 'meubel') { const m = t.plan.meubels.find((x) => x.id === id); return cat.meubels[m?.type ?? '']?.label ?? 'Meubel'; }
@@ -160,7 +166,7 @@ function titel(ding: string): string {
  * Vult het paneel met de keuzes van een ding (of verbergt het). `sluit` haalt de keuze weg (ook de aanduiding in de 3D),
  * `naarPositie` opent de configurator voor alle keuzes van een raam.
  */
-export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: () => void; naarPositie: (id: string) => void }) {
+export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: () => void; naarPositie: (id: string) => void; metMaten?: (muurId: string) => void }) {
   const naam = ding ? titel(ding) : '';
   if (!ding || !naam) { vak.hidden = true; vak.replaceChildren(); return; }
   vak.hidden = false;
@@ -171,7 +177,18 @@ export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: ()
   vak.replaceChildren(kop);
   const [soort, id = ''] = ding.split(':');
   if (ding === 'dak') dakKeuzes(vak);
-  else if (soort === 'gevel') gevelKeuzes(vak, ding.slice('gevel:'.length));
+  else if (soort === 'gevel') {
+    gevelKeuzes(vak, ding.slice('gevel:'.length));
+    // Een aanbouw of bijgebouw tegen deze gevel, met de maten in cm (paneel Ruimte met maten in de plattegrond).
+    const sleutel = ding.slice('gevel:'.length), plan = toestand().plan;
+    const niveau = plan.ruimtes.find((r) => r.id === id)?.niveau ?? 0;
+    const muur = murenVan(niveauPlan(plan, niveau)).find((m) => m.soort === 'buiten' && vlakSleutel(m) === sleutel);
+    if (muur && nav.metMaten) {
+      const b = el('button', { type: 'button', class: 'tweede', 'data-ding-maten': '' }, 'Aanbouw tegen deze gevel, met maten …');
+      b.addEventListener('click', () => nav.metMaten!(muur.id));
+      vak.append(b);
+    }
+  }
   else if (soort === 'opening') openingKeuzes(vak, id, nav.naarPositie);
   else if (soort === 'ruimte') ruimteKeuzes(vak, id);
   else if (soort === 'meubel') meubelKeuzes(vak, id, nav.sluit);

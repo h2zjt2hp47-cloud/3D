@@ -340,5 +340,22 @@ export function aanbouwNaarPlan(k: Keuzes): { plan: Plattegrond; posities: DemoP
   return { plan, posities: w.posities };
 }
 
+/**
+ * Alleen de bestaande woning van `aanbouwNaarPlan` (zonder de uitbouw, haar raampartij, de doorgang en de koepel): om er
+ * daarna in de plattegrond zelf een aanbouw tegen te zetten met gemeten maten (bv. met een schuine zijmuur). De voordeur
+ * ligt boven op het plan, de achtergevel onderaan.
+ */
+export function bestaandeWoning(k: Keuzes): { plan: Plattegrond; posities: DemoPositie[] } {
+  const { plan, posities } = aanbouwNaarPlan(k);
+  const W = 900;
+  plan.ruimtes = plan.ruimtes.filter((r) => r.id !== 'uitbouw');
+  plan.openingen = plan.openingen.filter((o) => !(o.as === 'h' && o.lijn > W - 0.5 && (o.niveau ?? 0) === 0));
+  delete plan.daklichten;
+  const vlakken = plan.gevelOntwerp?.vlakken;
+  if (vlakken) for (const s of Object.keys(vlakken)) if (s.startsWith('uitbouw:')) delete vlakken[s];
+  const nodig = new Set(plan.openingen.map((o) => o.positie));
+  return { plan, posities: posities.filter((p) => nodig.has(p.id)) };
+}
+
 /** Daklichten verdelen en tellen: in `daklichten.ts` (ook gebruikt door de stijlen). */
 export { daklichtenOpDak, verdeelDaklichten } from './daklichten.js';

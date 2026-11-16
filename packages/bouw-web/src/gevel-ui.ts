@@ -48,6 +48,10 @@ let gereedschap: Gereedschap = 'verf';
 let bereik: VerfBereik = 'vlak';
 let kwast: GevelKeuze = { materiaal: 'gevelsteen', kleur: 'rood', voeg: 'grijs' };
 let kant: GevelKant | undefined;
+/** De gekozen gevel: de kant, of bij een schuine gevel de richting waarin ze kijkt (`s` + tienden van een graad). */
+let gevelId: string | undefined;
+const idVan = (g: Gevel) => (g.schuin ? `s${Math.round(g.schuin.kijkt * 10)}` : g.kant);
+const huidigeGevel = () => gevels.find((x) => idVan(x) === gevelId);
 /** Vorm onder de muis (voor het voorbeeld) en of Shift ingedrukt is. */
 let onderMuis: { code: string; shift: boolean } | undefined;
 let gekozen: string | undefined;
@@ -101,7 +105,7 @@ function volgStandaard(plan: Plattegrond) {
 
 interface Doel { soort: 'vlak' | 'sokkel'; bereik: VerfBereik; sleutel: string; niveau: number }
 function doelVan(code: string, shift: boolean): Doel | undefined {
-  const g = gevels.find((x) => x.kant === kant);
+  const g = huidigeGevel();
   const v = g?.vlakken.find((x) => x.code === code);
   if (!v) return undefined;
   return { soort: v.sokkel ? 'sokkel' : 'vlak', bereik: shift ? 'gevel' : bereik, sleutel: v.sleutel, niveau: v.niveau };
@@ -111,7 +115,10 @@ function verf(plan: Plattegrond, d: Doel) {
     plan.gevelOntwerp!.sokkel = { ...kwast, hoogte: plan.gevelOntwerp!.sokkel?.hoogte || 30 };
     return;
   }
-  verfGevel(plan, kwast, d.bereik, { sleutel: d.sleutel, kant, niveau: d.niveau });
+  const g = huidigeGevel();
+  // Een schuine gevel: "hele gevel" = elk muurvlak van dit aanzicht (een kant zou ook de rechte muren verven).
+  if (d.bereik === 'gevel' && g?.schuin) for (const v of g.vlakken.filter((x) => !x.sokkel)) verfGevel(plan, kwast, 'vlak', { sleutel: v.sleutel });
+  else verfGevel(plan, kwast, d.bereik, { sleutel: d.sleutel, kant, niveau: d.niveau });
   volgStandaard(plan);
 }
 /** Codes van de vormen die een klik zou verven (voor de markering). */
@@ -139,7 +146,8 @@ export function toonGevelEditor() {
     plan.gevelOntwerp ??= gevelOntwerpVan(plan);
     verf(plan, doel);
   }
-  gevels = gevelAanzichten(plan, gevelInfo, planCatalogus);
+  // Met een eigen aanzicht per schuine gevel (recht ervoor bekeken), na de vier kanten.
+  gevels = gevelAanzichten(plan, gevelInfo, planCatalogus, { schuin: true });
   const vak = $('#gv-canvas');
   if (!gevels.length) {
     vak.replaceChildren(el('p', { class: 'klein' }, 'Teken eerst ruimtes; de gevels volgen vanzelf.'));
@@ -148,13 +156,14 @@ export function toonGevelEditor() {
     toonEigenschappen();
     return;
   }
-  if (!kant || !gevels.some((g) => g.kant === kant)) kant = (gevels.find((g) => g.naam.startsWith('Voorgevel')) ?? gevels[0]!).kant;
-  const g = gevels.find((x) => x.kant === kant)!;
+  if (!gevelId || !huidigeGevel()) gevelId = idVan(gevels.find((g) => g.naam.startsWith('Voorgevel') && !g.schuin) ?? gevels[0]!);
+  const g = huidigeGevel()!;
+  kant = g.kant;
 
   // Tabs per gevel.
   $('#gv-kanten').replaceChildren(...gevels.map((x) => {
-    const b = el('button', { type: 'button', 'aria-pressed': String(x.kant === kant), title: x.naam }, x.naam.replace(/ \(.*\)$/, '') + ` · ${KANT_NAAM[x.kant]}`);
-    b.addEventListener('click', () => { kant = x.kant; gekozen = undefined; zoom?.passendMaken(); toonGevelEditor(); });
+    const b = el('button', { type: 'button', 'aria-pressed': String(idVan(x) === gevelId), title: x.naam, 'data-gevel': idVan(x) }, x.schuin ? x.naam : x.naam.replace(/ \(.*\)$/, '') + ` · ${KANT_NAAM[x.kant]}`);
+    b.addEventListener('click', () => { gevelId = idVan(x); gekozen = undefined; zoom?.passendMaken(); toonGevelEditor(); });
     return b;
   }));
 
@@ -196,7 +205,8 @@ function toonLegende(plan: Plattegrond, g: Gevel) {
     x.m2 += m2;
     som.set(sleutel, x);
   };
-  for (const v of opp.filter((x) => x.kant === g.kant)) {
+  // Een schuine gevel: alleen de vlakken die in haar richting kijken.
+  for (const v of opp.filter((x) => (g.schuin ? x.kijkt !== undefined && Math.round(x.kijkt * 10) === Math.round(g.schuin.kijkt * 10) : x.kant === g.kant))) {
     tel(JSON.stringify(v.keuze ?? {}), v.keuze, v.netto);
     const s = plan.gevelOntwerp?.sokkel;
     if (s) tel(`sokkel:${JSON.stringify(s)}`, s, v.sokkel, `Sokkel ${s.hoogte} cm: `);
@@ -386,7 +396,7 @@ function naDown(ev: PointerEvent) {
   if (ev.button !== 0 || zoom?.bezig) return;
   const code = codeOnder(ev);
   const houder = $('#gv-canvas');
-  const g = gevels.find((x) => x.kant === kant);
+  const g = huidigeGevel();
   if (!g) return;
   const oid = openingVanCode(code);
   if (oid && gereedschap !== 'ramen') {
@@ -401,6 +411,12 @@ function naDown(ev: PointerEvent) {
     const o = plan.openingen.find((x) => x.id === oid);
     if (!o) return;
     const m = muurVanOpening(o, murenVan(niveauPlan(plan, niveauVan(o))));
+    if (m?.as === 's' && !g.schuin) {
+      // In verkort is een plaats in het aanzicht geen plaats langs de schuine muur: verschuiven in haar eigen aanzicht.
+      $('#gv-hint').textContent = 'Dit raam staat in een schuine muur: hier zie je ze in verkort. Verschuif het in het aanzicht van die schuine gevel (tab hierboven).';
+      toonGevelEditor();
+      return;
+    }
     zoom?.vastzetten();
     sleep = {
       id: oid, start: punt(ev), midden: o.midden, borstwering: o.borstwering, bewogen: false,
@@ -447,7 +463,7 @@ function naMove(ev: PointerEvent) {
     return;
   }
   const code = codeOnder(ev);
-  const nieuw = code && gevels.find((x) => x.kant === kant)?.vlakken.some((v) => v.code === code) ? { code, shift: ev.shiftKey } : undefined;
+  const nieuw = code && huidigeGevel()?.vlakken.some((v) => v.code === code) ? { code, shift: ev.shiftKey } : undefined;
   if (nieuw?.code !== onderMuis?.code || nieuw?.shift !== onderMuis?.shift) {
     onderMuis = nieuw;
     if (gereedschap !== 'ramen') toonGevelEditor();
@@ -456,7 +472,7 @@ function naMove(ev: PointerEvent) {
 
 /** De klik uitvoeren die bij het indrukken klaargezet werd. */
 function voerUit(w: NonNullable<typeof wacht>) {
-  const g = gevels.find((x) => x.kant === kant);
+  const g = huidigeGevel();
   const doel = doelVan(w.code, w.shift);
   if (!g || !doel) return;
   if (gereedschap === 'pipet' || (gereedschap === 'verf' && w.alt)) {
@@ -471,6 +487,10 @@ function voerUit(w: NonNullable<typeof wacht>) {
   }
   if (gereedschap === 'raam' && doel.soort === 'vlak') {
     const v = g.vlakken.find((x) => x.code === w.code)!;
+    if (!g.schuin && murenVan(niveauPlan(toestand().plan, v.niveau)).find((m) => m.id === v.muur)?.as === 's') {
+      $('#gv-hint').textContent = 'Een schuine muur zie je hier in verkort: voeg het raam toe in het aanzicht van die schuine gevel (tab hierboven).';
+      return;
+    }
     const id = terug?.voegRaamToe(v.niveau, v.muur, Math.round(g.vanU(w.u)));
     if (id) { gekozen = id; kiesGereedschap('ramen'); }
   }

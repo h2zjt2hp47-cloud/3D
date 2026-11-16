@@ -5,7 +5,7 @@
  */
 import { $, PRIJZEN, toonFout } from './hulp.js';
 import { startOfferte, toonOfferte } from './offerte-ui.js';
-import { naWijziging, startPlattegrond, toonPlan, toonWoning3D } from './plattegrond-ui.js';
+import { naWijziging, openRuimteMetMaten, startPlattegrond, toonPlan, toonWoning3D } from './plattegrond-ui.js';
 import { herbereken, startPositie, toonPositie, toonPositie3D } from './positie-ui.js';
 import { startSnelstart, toonSnelstart } from './snelstart-ui.js';
 import { startWerf, toonWerf } from './werf-ui.js';
@@ -67,6 +67,8 @@ const nav = {
   naarWoning3D: () => { toon('plan'); toonWoning3D(); },
   /** De configurator met de 3D in beeld (na de snelstart). */
   naarPositie3D: (id: string) => { toon('positie', { positie: id }); toonPositie3D(); },
+  /** De plattegrond met het paneel Ruimte met maten (na de snelstart: een aanbouw met gemeten maten). */
+  naarMaten: (maten: { breedte: number; diepte: number }) => { toon('plan'); openRuimteMetMaten({ maten, plaats: 'tegen' }); },
 };
 
 /** Projectnaam en bewaarstatus in de kop. */

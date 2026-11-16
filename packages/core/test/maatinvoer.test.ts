@@ -11,6 +11,13 @@ import {
   ruimteUitMaten,
   verschuifZijden,
   zetMaatVorm,
+  binnenRand,
+  verzetOpeningen,
+  zetOmtrek,
+  muurVanOpening,
+  opMuur,
+  dichtsteMuur,
+  vormVanDeel,
   zijdenVan,
   type Plattegrond,
   type Punt,
@@ -18,6 +25,8 @@ import {
 } from '../src/index.js';
 import { voorbeeldWoning } from '../voorbeelden/woning.js';
 import { planCatalogus } from '../voorbeelden/inrichting.js';
+import { aanbouwKeuzes, bestaandeWoning } from '../voorbeelden/snelstart.js';
+import { stijlCatalogus } from '../voorbeelden/stijlen.js';
 
 const nieuw = (id = 'nieuw'): Ruimte => ({ id, naam: 'Aanbouw', type: 'leefruimte', x: 0, y: 0, b: 0, d: 0, vloer: 'parket_eik', wand: 'wit' });
 const woning = () => voorbeeldWoning().plan;
@@ -188,5 +197,67 @@ describe('ruimte met maten los van de woning of als nieuw project', () => {
     expect(Math.min(...v.punten.map((q) => q[1]))).toBe(0);
     // Binnenmaten: de omtrek een halve muur naar binnen is de gemeten vorm.
     zijdenVan(verschuifZijden(v.punten, -15)).forEach((l, i) => expect(l).toBeCloseTo([450, 380, 520, 380][i]!, 1));
+  });
+});
+
+describe('wanden en openingen bij een vrije vorm', () => {
+  const metAanbouw = () => {
+    const plan = woning();
+    const m = ruimteUitMaten(plan, { soort: 'vierhoek', ab: 450, bc: 380, cd: 520, da: 380, ac: 640 }, 'buiten', { soort: 'tegen', gevel: gevel(plan, 'onder'), afstand: 120 });
+    const r = nieuw();
+    zetMaatVorm(r, m);
+    plan.ruimtes.push(r);
+    return plan;
+  };
+
+  it('binnenRand: het binnenvlak op de plaats van een nieuwe wand', () => {
+    const plan = woning();
+    // Leefruimte 0..820 × 380..900: links buitenmuur (30), rechts binnenmuur (10) naar de nachthal.
+    expect(binnenRand(plan, plan.ruimtes.find((r) => r.id === 'leef')!, 'v', [400, 600])).toEqual([15, 815]);
+    expect(binnenRand(plan, plan.ruimtes.find((r) => r.id === 'leef')!, 'h', [400, 600])).toEqual([385, 885]);
+  });
+
+  it('een raam in de schuine muur blijft op dezelfde afstand van de hoek als de vorm verandert of versleept wordt', () => {
+    const plan = metAanbouw();
+    const muren = murenVan(niveauPlan(plan, 0));
+    const r = plan.ruimtes.find((x) => x.id === 'nieuw')!;
+    const v = vormVanDeel(delenVan0(r));
+    // Een raam op 100 cm van B langs de schuine zijde BC.
+    const [B, C] = [v[1]!, v[2]!];
+    const l = Math.hypot(C[0] - B[0], C[1] - B[1]);
+    const p: Punt = [B[0] + ((C[0] - B[0]) * 100) / l, B[1] + ((C[1] - B[1]) * 100) / l];
+    const d = dichtsteMuur(muren, p[0], p[1], 2)!;
+    expect(d.muur.as).toBe('s');
+    plan.openingen.push({ id: 'rs', soort: 'raam', ...opMuur(d.muur, d.midden), breedte: 80, hoogte: 120, borstwering: 90, scharnier: 'begin', naarPlus: true });
+    // C verder weg: BC wordt 420 lang, het raam blijft op 100 cm van B.
+    const oud = structuredClone(plan);
+    const w = v.map((q) => [...q] as Punt);
+    w[2] = [B[0] + ((C[0] - B[0]) * 420) / l, B[1] + ((C[1] - B[1]) * 420) / l];
+    zetOmtrek(r, w);
+    verzetOpeningen(oud, plan, 'nieuw');
+    const o = plan.openingen.find((x) => x.id === 'rs')!;
+    const m2 = muurVanOpening(o, murenVan(niveauPlan(plan, 0)));
+    expect(m2).toBeDefined();
+    const c = [o.midden * o.richting![0] + o.lijn * o.richting![1], o.midden * o.richting![1] - o.lijn * o.richting![0]];
+    expect(Math.hypot(c[0]! - B[0], c[1]! - B[1])).toBeCloseTo(100, 1);
+    // Verslepen: alles 50 cm naar rechts, het raam mee.
+    const oud2 = structuredClone(plan);
+    zetOmtrek(r, vormVanDeel(delenVan0(r)).map(([x, y]) => [x + 50, y] as Punt));
+    verzetOpeningen(oud2, plan, 'nieuw');
+    expect(muurVanOpening(plan.openingen.find((x) => x.id === 'rs')!, murenVan(niveauPlan(plan, 0)))).toBeDefined();
+  });
+});
+
+const delenVan0 = (r: Ruimte) => ({ x: r.x, y: r.y, b: r.b, d: r.d, ...(r.omtrek ? { omtrek: r.omtrek } : {}) });
+
+describe('snelstart: de bestaande woning om er met maten een aanbouw tegen te zetten', () => {
+  it('zonder uitbouw, raampartij of koepel; de aanbouw komt tegen de achtergevel', () => {
+    const { plan, posities } = bestaandeWoning(aanbouwKeuzes({ breedte: 5000, diepte: 4000, hoogte: 3000 }, Object.values(stijlCatalogus)[0]!));
+    expect(plan.ruimtes.map((r) => r.id).sort()).toEqual(['bestaand', 'bestaand1']);
+    expect(plan.daklichten).toBeUndefined();
+    expect(posities.every((p) => plan.openingen.some((o) => o.positie === p.id))).toBe(true);
+    expect(controleerPlan(plan, planCatalogus).filter((m) => m.ernst === 'fout')).toEqual([]);
+    const m = ruimteUitMaten(plan, { soort: 'vierhoek', ab: 450, bc: 380, cd: 520, da: 380, ac: 640 }, 'buiten', { soort: 'tegen', gevel: gevel(plan, 'onder'), afstand: 20 });
+    expect(m.fouten).toEqual([]);
   });
 });

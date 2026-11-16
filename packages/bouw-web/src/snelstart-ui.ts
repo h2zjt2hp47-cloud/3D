@@ -9,7 +9,7 @@ import { standaardKeuzes } from '../../core/src/index.js';
 import { garagepoort } from '../../core/voorbeelden/garagepoort.js';
 import { dakCatalogus, gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
-import { aanbouwKeuzes, leesMaat, SNELSTART_TEGELS, snelRaam, snelWoning, type SnelMaat, type SnelTegel } from '../../core/voorbeelden/snelstart.js';
+import { aanbouwKeuzes, bestaandeWoning, leesMaat, SNELSTART_TEGELS, snelRaam, snelWoning, type SnelMaat, type SnelTegel } from '../../core/voorbeelden/snelstart.js';
 import { stijlCatalogus, type Stijl } from '../../core/voorbeelden/stijlen.js';
 import { $, el, getal } from './hulp.js';
 import { legeToestand, nieuwePositie, nieuwProject, ramenToestand, type Positie, type Toestand } from './staat.js';
@@ -19,6 +19,8 @@ export interface SnelstartNav {
   naarWoning3D: () => void;
   /** Na een positie (aanbouw, raam, poort): de configurator in 3D. */
   naarPositie3D: (id: string) => void;
+  /** Een aanbouw met gemeten maten (vrije vorm): de plattegrond met het paneel Ruimte met maten (maten in cm). */
+  naarMaten: (maten: { breedte: number; diepte: number }) => void;
 }
 
 let nav: SnelstartNav;
@@ -137,6 +139,20 @@ function toonStap2() {
     zet(maten[m.code] ?? m.standaard);
   }
   $('#ss-inhoud').replaceChildren(vak);
+  if (tegel.soort === 'aanbouw') {
+    // Een andere vorm (een schuine zijmuur) of een andere plaats: de bestaande woning in de plattegrond, en daar de aanbouw
+    // met de maten van de muren in cm (paneel Ruimte met maten).
+    const b = el('button', { type: 'button', class: 'tweede snel-metmaten', id: 'ss-maten' }, 'Andere vorm of plaats (schuine muur): teken met maten in de plattegrond');
+    b.addEventListener('click', () => {
+      const s = Object.values(stijlCatalogus)[0]!;
+      const { plan, posities } = bestaandeWoning(aanbouwKeuzes(maten, s));
+      const basis = legeToestand();
+      const t: Toestand = { plan, posities: posities as Positie[], meta: { ...basis.meta, regels: { ...basis.meta.regels, gevel: true, dak: true } } };
+      nieuwProject(t, `Aanbouw met maten, ${meter(maten.breedte! / 10)} × ${meter(maten.diepte! / 10)} m`);
+      nav.naarMaten({ breedte: Math.round(maten.breedte! / 10), diepte: Math.round(maten.diepte! / 10) });
+    });
+    $('#ss-inhoud').append(b);
+  }
 }
 
 function toonStap3() {
