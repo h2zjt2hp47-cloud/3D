@@ -3709,8 +3709,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     },
     markeer(id) {
       markeerId = id;
-      kijkGevraagd = typeof id === 'string' && id.startsWith('~') && id.split(/[|,]/).includes('@kijk');
-      kijkTot = performance.now() + 4000;
+      kijkGevraagd = typeof id === 'string' && id.startsWith('~') && id.slice(1).split(/[|,]/).includes('@kijk');
+      kijkTot = performance.now() + 10000;
       zetMarkering();
       if (kijkGevraagd) kijkNaarDeel();
       render(true);
