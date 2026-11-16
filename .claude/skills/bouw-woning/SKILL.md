@@ -189,7 +189,7 @@ Demo: `packages/bouw-web` (één HTML-bestand, `npm run build -w @configurator/b
 - **Plaats een bouwdeel met `plaatsBouwdeel`, niet met `plaatsBlokken`**: kepers, spantbenen en de lagen van een hellend dak zijn prisma's, en `plaatsBlokken` laat hun `doorsnede` staan (ook bij een gewone verschuiving).
 - **Constructie**: het skelet overal zichtbaar (`skelet.<rol>.<n>`), de lagen als staal aan het einde (x = lengte), elke laag een trede later (`laag.<i>`, `lat.<i>`, `vulling.<i>`); `lagen: false` geeft alleen het skelet. **Afgewerkt**: de binnenste en de buitenste laag met een effen kern ertussen. De buitenmaten zijn in beide gelijk.
 - **Houtskeletwand**: onder- en bovenregel, een stijl aan elk einde en op het raster vanaf x = 0; naast een opening een doorlopende stijl en een draagstijl, een latei erop, bij een raam een regel eronder, korte stijlen op het raster. Een opening te dicht bij een rand wordt ingekort (`meldingen`, `vlak.openingen`). Een voorstelling, geen berekening; een vakman moet het recept nalezen.
-- **Beperking**: rond een opening bestaat een laag uit meerdere blokken; op die naden kan een dunne stippellijn doorschemeren (zelfde oorzaak als bij het dak). De kijker kent geen vlak met een gat en geen doorzichtig materiaal behalve glas.
+- **Beperking**: rond een opening bestaat een laag uit meerdere blokken; op die naden schemert een dunne stippellijn door, en in vooraanzicht ook een stijl vlak achter een folie (zelfde verschijnsel als de naden bij het dak; de oorzaak is niet uitgezocht). De kijker kent geen vlak met een gat en geen doorzichtig materiaal behalve glas.
 - Tests: `core/test/opbouw.test.ts` en `bouwdelen.test.ts`.
 
 ## Inbouwen in Missing Link en extra afwerkingen (analyse 15/11, nog niet gebouwd)
