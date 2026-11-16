@@ -853,6 +853,15 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
 }
 /* B6: de knop van het standpunt waarin je kijkt (Buiten bij een raam, deur of poort; Schuin bij een vast model). */
 #p-3d-knoppen button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+/* B7: een raam, deur of poort die nog niet in de woning staat (in het overzicht en de configurator). */
+.label.niet-in-woning { font-size: .75rem; border: 1px solid var(--let-op); border-radius: 999px; padding: 0 8px; background: color-mix(in srgb, var(--let-op) 18%, transparent); color: var(--inkt); }
+#p-inwoning-vak { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+#p-inwoning-vak[hidden] { display: none; }
+/* B8: na verwijderen of een geplakte maatlijst onderaan het scherm een balk met Ongedaan maken. */
+.terugbalk { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 16px; border-radius: 10px; background: var(--inkt); color: var(--vlak); box-shadow: 0 8px 24px rgba(0, 0, 0, .3); font-size: .95rem; }
+.terugbalk[hidden] { display: none; }
+.terugbalk button { min-height: 44px; padding: 6px 16px; border: 1px solid var(--vlak); border-radius: 8px; background: var(--vlak); color: var(--inkt); font-weight: 600; cursor: pointer; white-space: nowrap; }
+#p-inwoning { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; min-height: 44px; }
 </style>
 </head>
 <body>
@@ -1046,6 +1055,7 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
       <label class="klein">Aantal <input type="number" id="p-aantal" min="1" step="1"></label>
       <span id="p-model" class="klein"></span>
       <button type="button" id="p-naarplan" class="tweede alleen-woning">Toon in plattegrond</button>
+      <span id="p-inwoning-vak" class="alleen-woning" hidden><span class="label niet-in-woning">staat nog niet in de woning</span> <button type="button" id="p-inwoning" title="Op een vrij stuk buitenmuur, in een ruimte van deze soort; daarna verschuif je het in de plattegrond.">In de woning zetten</button> <span id="p-inwoning-melding" class="klein" role="status"></span></span>
       <button type="button" id="p-vrij" hidden>Vrij verder tekenen in de plattegrond</button>
     </div>
     <div class="positieraster">
@@ -1266,6 +1276,7 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
       </section>
     </div>
   </div>
+  <div id="o-terug" class="terugbalk" role="status" hidden><span id="o-terug-tekst"></span><button type="button" id="o-terug-knop">Ongedaan maken</button></div>
 </main>
 <main id="view-varianten" class="view" hidden>
   <section class="kaart">

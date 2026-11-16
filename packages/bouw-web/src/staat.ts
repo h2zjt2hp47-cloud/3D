@@ -21,6 +21,7 @@ import {
   type HandmatigePost,
 } from '../../core/src/index.js';
 import { beslisStart, herstelIndex, voegLijstenSamen } from '../../core/src/projecten.js';
+import { plaatsNaast, vrijePlaats, type Plaats } from '../../core/src/openingplaats.js';
 import { UITBOUW_VOORBEELD_NAAM, UITBOUW_VOORBEELD_UITLEG, uitbouwVoorbeeld } from '../../core/voorbeelden/uitbouwvoorbeeld.js';
 import { aanbouw, aanbouwPrijslijst } from '../../core/voorbeelden/aanbouw.js';
 import { garagepoort, poortPrijslijst } from '../../core/voorbeelden/garagepoort.js';
@@ -697,6 +698,73 @@ function synchroniseer(bron: string) {
 
 export function klantKorting(): number {
   return t.meta.klanttype === 'aannemer' ? t.meta.korting : 0;
+}
+
+// ---------- in de woning zetten (doorloop B7) ----------
+const RAAM_NAAR_RUIMTE: Record<string, RuimteType[]> = {
+  leefruimte: ['leefruimte'], keuken: ['keuken'], slaapkamer: ['slaapkamer'], bureau: ['bureau'], badkamer: ['badkamer'],
+  wc: ['wc'], hal: ['hal'], berging: ['berging', 'garage'],
+};
+
+/** Kan deze positie een opening in de plattegrond worden (een raam, deur of garagepoort) en staat ze er nog niet in? */
+export const kanInWoning = (p: Positie) => (p.model === 'RAAM' || p.model === 'POORT') && !openingVan(p) && t.plan.ruimtes.length > 0 && !t.meta.zonderWoning;
+
+/** De opening van een positie op een plaats in de plattegrond (maten, soort en draairichting komen daarna van de positie). */
+function openingOp(p: Positie, plaats: Plaats, van?: Opening): Opening {
+  const b = typeof p.keuzes.breedte === 'number' ? p.keuzes.breedte / 10 : 100;
+  const h = typeof p.keuzes.hoogte === 'number' ? p.keuzes.hoogte / 10 : 140;
+  const type = String(p.keuzes.type ?? 'raam');
+  const soort: Opening['soort'] = p.model === 'POORT' ? 'garagepoort' : type === 'raam' || type === 'glaswand' ? 'raam' : ['schuif', 'hefschuif', 'vouwwand'].includes(type) ? 'schuifraam' : 'buitendeur';
+  const borst = soort === 'raam' && typeof p.keuzes.borstwering === 'number' ? p.keuzes.borstwering / 10 : 0;
+  return {
+    ...(van ? { scharnier: van.scharnier, naarPlus: van.naarPlus } : { scharnier: 'begin' as const, naarPlus: !!plaats.muur.plus }),
+    id: nieuweId('o'), soort, as: plaats.as, lijn: plaats.lijn, midden: plaats.midden, ...(plaats.richting ? { richting: plaats.richting } : {}),
+    breedte: b, hoogte: h, borstwering: borst, niveau: plaats.niveau, positie: p.id,
+  };
+}
+
+/**
+ * Zet een positie die nog niet in de woning staat op een vrij stuk buitenmuur: liefst in een ruimte van haar soort (de
+ * keuze *Ruimte*) en op haar verdieping, een garagepoort op het gelijkvloers. Geeft de id van de opening, of undefined als
+ * er nergens plaats is. Eén stap om ongedaan te maken.
+ */
+export function zetInWoning(id: string): string | undefined {
+  const p = t.posities.find((x) => x.id === id);
+  if (!p || !kanInWoning(p)) return undefined;
+  const poort = p.model === 'POORT';
+  const plaats = vrijePlaats(t.plan, {
+    breedte: typeof p.keuzes.breedte === 'number' ? p.keuzes.breedte / 10 : 100,
+    niveau: poort ? 0 : Number(p.keuzes.verdieping ?? 0) || 0,
+    ruimteTypes: poort ? ['garage', 'berging'] : RAAM_NAAR_RUIMTE[String(p.keuzes.ruimte ?? '')] ?? [],
+    alleenGelijkvloers: poort,
+  });
+  if (!plaats) return undefined;
+  const o = openingOp(p, plaats);
+  wijzig('positie', (tt) => {
+    tt.plan.openingen.push(o);
+    const q = tt.posities.find((x) => x.id === id);
+    if (q?.model === 'RAAM') q.keuzes.verdieping = plaats.niveau;
+  });
+  return o.id;
+}
+
+/**
+ * Dupliceren in het overzicht of de ramenlijst: de kopie komt achteraan in de nummering (de nummers van de andere ramen
+ * verschuiven niet), en staat het origineel in de plattegrond, dan staat de kopie ernaast op dezelfde muur als daar plaats
+ * is. Geeft de kopie en of ze in de woning staat.
+ */
+export function dupliceerPositie(id: string, opties: { naam?: (p: Positie) => string } = {}): { kopie: Positie; inWoning: boolean } | undefined {
+  const p = t.posities.find((x) => x.id === id);
+  if (!p) return undefined;
+  const kopie: Positie = { ...structuredClone(p), id: nieuweId('p'), naam: opties.naam ? opties.naam(p) : p.naam };
+  delete kopie.inmeting;
+  const origineel = openingVan(p);
+  const plaats = origineel ? plaatsNaast(t.plan, origineel) : undefined;
+  wijzig('positie', (tt) => {
+    tt.posities.push(kopie);
+    if (origineel && plaats) tt.plan.openingen.push(openingOp(kopie, plaats, origineel));
+  });
+  return { kopie: t.posities.find((x) => x.id === kopie.id) ?? kopie, inWoning: !!(origineel && plaats) };
 }
 
 // Bij het laden: plan en posities in overeenstemming brengen (na alle declaraties hierboven).

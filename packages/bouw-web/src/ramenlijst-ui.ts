@@ -7,7 +7,8 @@ import { tekenSvg, type Keuzes } from '../../core/src/index.js';
 import { leesMaatlijst } from '../../core/voorbeelden/maatlijst.js';
 import { raamdeur } from '../../core/voorbeelden/raam.js';
 import { $, btwLabel, el, eur, labelCellen, PRIJZEN, toonPrijs } from './hulp.js';
-import { MODELLEN, nieuwePositie, resultaat, toestand, wijzig, zonderPrijs, type Positie } from './staat.js';
+import { dupliceerPositie, MODELLEN, nieuwePositie, opWijziging, resultaat, toestand, wijzig, zonderPrijs, type Positie } from './staat.js';
+import { BRON_TERUG, toonTerug } from './terug-ui.js';
 
 const SOORTEN: [string, string][] = [['raam', 'Raam'], ['terrasdeur', 'Terrasdeur'], ['voordeur', 'Voordeur'], ['schuif', 'Schuifraam'], ['hefschuif', 'Hef-schuifdeur'], ['vouwwand', 'Vouwwand'], ['glaswand', 'Vaste glaswand']];
 /** Soorten met gelijke delen: de indeling is het aantal delen. */
@@ -146,11 +147,12 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
     acties.append(
       status,
       knop('Configureren', 'Alle keuzes in de configurator', () => nav.naarPositie(p.id), ''),
-      knop('⧉', 'Dupliceren', () => wijzig('offerte', (tt) => {
-        const kopie: Positie = { ...structuredClone(p), id: `${p.id}k${Date.now().toString(36)}` };
-        tt.posities.splice(tt.posities.findIndex((x) => x.id === p.id) + 1, 0, kopie);
-      })),
-      knop('×', 'Verwijderen', () => wijzig('offerte', (tt) => { tt.posities = tt.posities.filter((x) => x.id !== p.id); }), 'gevaar'),
+      // De kopie komt achteraan in de nummering: de nummers van de andere ramen verschuiven niet (doorloop B7).
+      knop('⧉', 'Dupliceren', () => { dupliceerPositie(p.id); }),
+      knop('×', 'Verwijderen', () => {
+        wijzig(BRON_TERUG, (tt) => { tt.posities = tt.posities.filter((x) => x.id !== p.id); });
+        toonTerug(`${p.code} · ${p.naam} verwijderd.`);
+      }, 'gevaar'),
     );
     tr.append(actiesCel);
     return tr;
@@ -167,6 +169,8 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
 }
 
 export function startRamenlijst() {
+  // Na Ongedaan maken klopt de melding van de maatlijst niet meer.
+  opWijziging((bron) => { if (bron === 'ongedaan') melding = ''; });
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-ramen-nieuw]')) {
     b.addEventListener('click', () => {
       const soort = b.dataset.ramenNieuw!;
@@ -186,15 +190,16 @@ export function startRamenlijst() {
       $('#o-maatlijst-melding').textContent = melding;
       return;
     }
-    wijzig('offerte', (t) => {
+    wijzig(BRON_TERUG, (t) => {
       for (const x of r.regels) {
-        const p = nieuwePositie('RAAM', { situatie: 'renovatie', ...x.keuzes }, x.naam);
+        const p = nieuwePositie(x.model ?? 'RAAM', { ...(x.model === 'POORT' ? {} : { situatie: 'renovatie' }), ...x.keuzes }, x.naam);
         p.aantal = x.aantal;
         t.posities.push(p);
       }
     });
+    toonTerug(`${r.regels.length} ${r.regels.length === 1 ? 'positie' : 'posities'} uit de maatlijst toegevoegd.`);
     const opm = [...r.regels.flatMap((x) => x.waarschuwingen.map((w) => `regel ${x.regel}: ${w}`)), ...r.overgeslagen.filter((x) => x.reden !== 'kopregel').map((x) => `regel ${x.regel} overgeslagen: ${x.reden}`)];
-    melding = `${r.regels.length} ${r.regels.length === 1 ? 'positie' : 'posities'} toegevoegd.${opm.length ? ` Let op: ${opm.join('; ')}.` : ''} Ongedaan maken kan met Ctrl+Z.`;
+    melding = `${r.regels.length} ${r.regels.length === 1 ? 'positie' : 'posities'} toegevoegd.${opm.length ? ` Let op: ${opm.join('; ')}.` : ''} Terugdraaien kan met Ongedaan maken onderaan het scherm (of Ctrl+Z).`;
     vak.value = '';
     $('#o-maatlijst-melding').textContent = melding;
   });

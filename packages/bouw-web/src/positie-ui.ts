@@ -20,7 +20,7 @@ import { herstelKeuzes, isVastModel, meetstaatGroep, meetstaatTekst, VASTE_MODEL
 import { maak3D, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, alleenPrijs, el, eur, getal, kopieer, num, PRIJZEN } from './hulp.js';
 import { heeftConstructie, isGebouw, positieMaatlijnen, positieScene } from './positie-3d.js';
-import { bewaarInBibliotheek, klantKorting, MODELLEN, nieuweId, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
+import { bewaarInBibliotheek, kanInWoning, klantKorting, MODELLEN, nieuweId, openingVan, resultaat, toestand, vrijeMuur, wijzig, zetInWoning, zonderPrijs, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -622,6 +622,9 @@ export function toonPositie(id?: string) {
   $<HTMLInputElement>('#p-aantal').value = String(p.aantal);
   const o = openingVan(p);
   $('#p-naarplan').hidden = !o;
+  // Doorloop B7: een raam, deur of poort uit het overzicht staat nog niet in de woning: dat zeggen, met een knop.
+  $('#p-inwoning-vak').hidden = !kanInWoning(p);
+  $('#p-inwoning-melding').textContent = '';
   // Een aanbouw (model) kan als ruimte tegen een woning in de plattegrond, om er vrij aan verder te tekenen.
   $('#p-vrij').hidden = p.model !== 'AANBOUW';
   $<HTMLButtonElement>('#p-vrij').disabled = toestand().plan.ruimtes.length > 0;
@@ -943,6 +946,12 @@ export function startPositie(nav: { naarPlan: (openingId: string) => void; naarO
     if (p) p.aantal = Math.max(1, Math.round(Number((e.target as HTMLInputElement).value) || 1));
   }));
   $('#p-terug').addEventListener('click', () => naarOfferte());
+  $('#p-inwoning').addEventListener('click', () => {
+    const p = huidig();
+    const id = p ? zetInWoning(p.id) : undefined;
+    if (id) naarPlan(id);
+    else $('#p-inwoning-melding').textContent = 'Er is geen vrij stuk buitenmuur dat breed genoeg is: maak plaats in de plattegrond, of maak de positie smaller.';
+  });
   $('#p-naarplan').addEventListener('click', () => {
     const p = huidig();
     const o = p && openingVan(p);

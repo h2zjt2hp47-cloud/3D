@@ -16,7 +16,7 @@ import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
 import { controles, inbegrepen, meetstaatLijst, positieBeeld, samenvatting } from './positie-ui.js';
 import { tegelBeeld } from './snelstart-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
-import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zonderPrijs, type ModelCode, type Positie } from './staat.js';
+import { bibliotheek, dupliceerPositie, kanInWoning, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zetInWoning, zonderPrijs, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 import { maakPakket3D, maakZending } from './doorsturen.js';
 import { drukBlad } from './blad.js';
@@ -24,6 +24,7 @@ import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGe
 import { toonConstructieOverzicht } from './constructie-ui.js';
 import { toonTechniekOverzicht } from './techniek-ui.js';
 import { toonWerkenOverzicht } from './werken-ui.js';
+import { BRON_TERUG, startTerug, toonTerug } from './terug-ui.js';
 
 /** Het pictogram (van de snelstart) van een vast model zonder 3D-beeld in het overzicht. */
 const MINI_BEELD: Record<string, string> = { OVERKAPPING: 'overkapping', TUINHUIS: 'tuinhuis', LOODS: 'loods', BALUSTRADE: 'balustrade', LUIFEL: 'luifel', STAALTRAP: 'trap' };
@@ -168,6 +169,9 @@ function beeldVan(p: Positie): string | undefined {
   return b && b.sleutel === beeldSleutel(p) ? b.beeld : undefined;
 }
 
+/** Waarom een positie niet in de woning gezet kon worden (bij die regel). */
+let plaatsMelding: { id: string; tekst: string } | undefined;
+
 /** Beeld van het ontwerp bovenaan het overzicht: de 3D zoals ze laatst op het scherm stond, en de plattegrond per verdieping. */
 let laatsteBeeld: string | null = null;
 function toonOntwerp(nieuwBeeld: boolean) {
@@ -287,6 +291,11 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     kop.append(el('span', { class: 'code' }, p.code), el('strong', {}, p.naam));
     const opening = openingVan(p);
     if (opening) kop.append(el('span', { class: 'label' }, 'in plattegrond'));
+    // Doorloop B7: wat in het overzicht toegevoegd werd (+ Raam, uit de bibliotheek, een kopie zonder plaats ernaast) staat
+    // niet vanzelf in de woning: dat staat erbij, met een knop om het op een vrij stuk buitenmuur te zetten.
+    const inWoning = kanInWoning(p);
+    if (inWoning) kop.append(el('span', { class: 'label niet-in-woning' }, 'staat nog niet in de woning'));
+    else if (!opening && t.plan.ruimtes.length && (p.model === 'AANBOUW' || isVastModel(p.model))) kop.append(el('span', { class: 'label' }, 'los onderdeel, niet in de woning'));
     const c = controles(p, r);
     const nL = c.filter((x) => x.toestand === 'let-op').length;
     kop.append(el('span', { class: `status ${!r.geldig ? 'fout' : nL ? 'let-op' : 'ok'}` }, !r.geldig ? `${nFouten(r)} fout${nFouten(r) === 1 ? '' : 'en'}` : nL ? `${nL} aandachtspunt${nL === 1 ? '' : 'en'}` : 'in orde'));
@@ -299,15 +308,29 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     };
     acties.append(knop('Bewerken', () => naarPositie(p.id), ''));
     if (opening) acties.append(knop('Toon in plattegrond', () => naarPlan(opening.id)));
-    acties.append(knop('Dupliceren', () => wijzig('offerte', (tt) => {
-      const kopie: Positie = { ...structuredClone(p), id: `${p.id}k${Date.now().toString(36)}`, naam: `${p.naam} (kopie)` };
-      tt.posities.splice(tt.posities.indexOf(tt.posities.find((x) => x.id === p.id)!) + 1, 0, kopie);
-    })));
-    acties.append(knop('Verwijderen', () => wijzig('offerte', (tt) => {
-      tt.posities = tt.posities.filter((x) => x.id !== p.id);
-      tt.plan.openingen = tt.plan.openingen.filter((x) => x.positie !== p.id);
-    }), 'gevaar'));
+    if (inWoning) {
+      const zet = knop('In de woning zetten', () => {
+        const id = zetInWoning(p.id);
+        if (id) { plaatsMelding = undefined; naarPlan(id); return; }
+        plaatsMelding = { id: p.id, tekst: 'Er is geen vrij stuk buitenmuur dat breed genoeg is: maak plaats in de plattegrond, of maak de positie smaller.' };
+        toonOfferte();
+      }, '');
+      zet.title = 'Op een vrij stuk buitenmuur, in een ruimte van deze soort; daarna verschuif je het in de plattegrond.';
+      zet.dataset.inWoning = p.id;
+      acties.append(zet);
+    }
+    // De kopie komt achteraan in de nummering, en naast het origineel in de woning als daar plaats is (staat.ts).
+    acties.append(knop('Dupliceren', () => { dupliceerPositie(p.id, { naam: (q) => `${q.naam} (kopie)` }); }));
+    // Eén tik, met daarna onderaan *Ongedaan maken* (doorloop B8; ook Ctrl+Z op dit scherm).
+    acties.append(knop('Verwijderen', () => {
+      wijzig(BRON_TERUG, (tt) => {
+        tt.posities = tt.posities.filter((x) => x.id !== p.id);
+        tt.plan.openingen = tt.plan.openingen.filter((x) => x.positie !== p.id);
+      });
+      toonTerug(`${p.code} · ${p.naam} verwijderd${opening ? ' (ook uit de woning)' : ''}.`);
+    }, 'gevaar'));
     info.append(acties);
+    if (plaatsMelding?.id === p.id) info.append(el('p', { class: 'klein melding', role: 'status' }, plaatsMelding.tekst));
     const prijs = el('div', { class: 'positieprijs' });
     const aantal = el('input', { type: 'number', min: '0', step: '1', 'aria-label': `Aantal ${p.code}` }) as HTMLInputElement;
     aantal.value = String(p.aantal);
@@ -613,6 +636,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
     }
   });
   startRamenlijst();
+  startTerug();
   for (const [id, veld] of [['o-klant', 'klant'], ['o-adres', 'adres'], ['o-project', 'project'], ['o-nummer', 'nummer'], ['o-datum', 'datum']] as const) {
     $<HTMLInputElement>(`#${id}`).addEventListener('change', (e) => wijzig('meta', (t) => { t.meta[veld] = (e.target as HTMLInputElement).value; }));
   }
