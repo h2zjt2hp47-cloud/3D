@@ -60,6 +60,13 @@ export interface Ruimte {
    * Een convexe veelhoek (vierhoek, vijfhoek); zie `vormFouten`.
    */
   omtrek?: Punt[];
+  /**
+   * Bestaand (ronde 11): de ruimte bestaat al en blijft (de woning waar een uitbouw tegen komt). Ze staat neutraal in plan,
+   * gevels en 3D en telt niet mee in de meetstaat, de constructie, de aanwijzing voor EPB, de schatting van de stabiliteit,
+   * de telling van de techniek, de controles op nieuw werk en het overzicht. Een muur tussen bestaand en nieuw is de
+   * bestaande gevel: niet gebouwd (een opening erin wel). Alleen `true` telt; ontbreekt = nieuw, zoals altijd.
+   */
+  bestaand?: boolean;
 }
 
 export interface Rechthoek { x: number; y: number; b: number; d: number }
@@ -153,6 +160,12 @@ export interface Plattegrond {
    * blijven zoals ze zijn. Zie lossewand.ts. Ontbreekt = alles zoals vroeger.
    */
   losseWanden?: LosseWand[];
+  /**
+   * Tegen de buren (ronde 11): muurvlakken (sleutel zoals `vlakSleutel`, bv. `uitbouw:links`) die een bestaande
+   * scheidingsmuur van de buren zijn. Ze worden niet gebouwd (niet in meetstaat, constructie of gevel), staan neutraal in
+   * de 3D, met een eenvoudig volume van de buren erachter. Ontbreekt = geen buren, zoals altijd.
+   */
+  tegenBuren?: string[];
 }
 
 /** Kant van de woning (op de plattegrond): boven, onder, links of rechts. */
@@ -238,6 +251,67 @@ export function gevelAfwerking(plan: Plattegrond, cat: PlanCatalogus | undefined
   const kleur = mat.kleuren[keuze.kleur] ?? Object.values(mat.kleuren)[0];
   const voeg = keuze.voeg ? mat.voegen?.[keuze.voeg] : mat.voegen ? Object.values(mat.voegen)[0] : undefined;
   return { soort: mat.soort, kleur: kleur?.hex ?? plan.gevel.kleur, voeg: voeg?.hex };
+}
+
+// ---------- bestaand en tegen de buren (ronde 11) ----------
+
+/**
+ * Neutrale tinten (effen en licht) voor wat al bestaat of van de buren is: zichtbaar, maar ondergeschikt aan het nieuwe
+ * werk, dat in zijn eigen materialen en kleuren staat.
+ */
+export const NEUTRAAL = { gevel: '#dad7d0', binnen: '#e9e7e2', vloer: '#dedbd4', dak: '#aeaba4', buren: '#c9c6bf' } as const;
+
+/** Heeft het plan een bestaande ruimte of een muurvlak tegen de buren? Zo niet, dan rekent alles zoals vroeger. */
+export const heeftBestaand = (plan: Plattegrond) => plan.ruimtes.some((r) => r.bestaand === true) || !!plan.tegenBuren?.length;
+
+/** Is de ruimte met deze id bestaand (zie `Ruimte.bestaand`)? */
+export const isBestaand = (plan: Plattegrond, id?: string) => !!id && plan.ruimtes.some((r) => r.id === id && r.bestaand === true);
+
+/** Is alles op deze verdieping bestaand (en staat er iets)? Dan is het dak erop ook bestaand. */
+export function alleBestaand(plan: Plattegrond, n: number): boolean {
+  const r = plan.ruimtes.filter((x) => niveauVan(x) === n);
+  return r.length > 0 && r.every((x) => x.bestaand === true);
+}
+
+/**
+ * Wat een muur is voor het werk: `nieuw` (wordt gebouwd), `bestaand` (een muur van een bestaande ruimte, of de bestaande
+ * gevel tussen bestaand en nieuw: niet gebouwd, een opening erin wel) of `buren` (een muurvlak tegen de buren, zie
+ * `Plattegrond.tegenBuren`: de scheidingsmuur bestaat al).
+ */
+export type MuurStatus = 'nieuw' | 'bestaand' | 'buren';
+export function muurStatus(plan: Plattegrond, m: Muur): MuurStatus {
+  if (m.soort === 'binnen') return isBestaand(plan, m.plus) || isBestaand(plan, m.min) ? 'bestaand' : 'nieuw';
+  // Ook een bestaande woning kan tussen de buren staan: dan is haar zijmuur een scheidingsmuur (met de buren erachter).
+  if (plan.tegenBuren?.includes(vlakSleutel(m))) return 'buren';
+  return isBestaand(plan, m.plus ?? m.min) ? 'bestaand' : 'nieuw';
+}
+
+/** De buitenkant van een buitenmuur: neutraal als ze bestaat of van de buren is, anders het gekozen gevelmateriaal. */
+export function buitenAfwerking(plan: Plattegrond, cat: PlanCatalogus | undefined, m: Muur): GevelAfwerking {
+  const s = muurStatus(plan, m);
+  if (s !== 'nieuw') return { soort: 'gevel', kleur: s === 'buren' ? NEUTRAAL.buren : NEUTRAAL.gevel };
+  return gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m));
+}
+
+/**
+ * Het plan met alleen de techniek van het nieuwe werk (ronde 11), voor de telling: zonder de toestellen in een bestaande
+ * ruimte en zonder de leidingen die helemaal in bestaande ruimtes liggen. Zonder bestaande ruimte: hetzelfde plan.
+ */
+export function nieuweTechniek(plan: Plattegrond): Plattegrond {
+  if (!plan.ruimtes.some((r) => r.bestaand === true) || !(plan.toestellen?.length || plan.leidingen?.length)) return plan;
+  const oud = (x: number, y: number, n?: number) => ruimteOp(plan, x, y, n ?? 0)?.bestaand === true;
+  return {
+    ...plan,
+    ...(plan.toestellen ? { toestellen: plan.toestellen.filter((t) => !oud(t.x, t.y, t.niveau)) } : {}),
+    ...(plan.leidingen ? { leidingen: plan.leidingen.filter((l) => !l.punten.every(([x, y]) => oud(x, y, l.niveau))) } : {}),
+  };
+}
+
+/** Zet een muurvlak tegen de buren of niet (het veld verdwijnt als er geen meer is). */
+export function zetTegenBuren(plan: Plattegrond, sleutel: string, aan: boolean) {
+  const lijst = new Set(plan.tegenBuren ?? []);
+  if (aan) lijst.add(sleutel); else lijst.delete(sleutel);
+  if (lijst.size) plan.tegenBuren = [...lijst]; else delete plan.tegenBuren;
 }
 
 export type VerfBereik = 'vlak' | 'gevel' | 'verdieping' | 'woning';
@@ -731,6 +805,10 @@ export function tekenRuimteIn(plan: Plattegrond, nieuw: Ruimte): void {
  * waaruit ze komt; anders valt haar buitenmuur terug op de standaardgevel.
  */
 export function erfGevel(plan: Plattegrond, van: string, naar: string, overschrijven = true) {
+  // Tegen de buren (ronde 11): een muurvlak van de nieuwe ruimte aan dezelfde kant staat ook tegen de buren.
+  if (plan.tegenBuren?.length) {
+    for (const sleutel of plan.tegenBuren.filter((x) => x.startsWith(`${van}:`))) zetTegenBuren(plan, `${naar}:${sleutel.slice(van.length + 1)}`, true);
+  }
   const v = plan.gevelOntwerp?.vlakken;
   if (!v) return;
   for (const kant of ['boven', 'onder', 'links', 'rechts'] as const) {
@@ -1505,7 +1583,7 @@ function controleerTechniek(plan: Plattegrond, cat: PlanCatalogus | undefined, u
         for (let k = 1; k < stappen; k++) if (ruimteOp(p, a[0] + ((q[0] - a[0]) * k) / stappen, a[1] + ((q[1] - a[1]) * k) / stappen)?.id === r.id) return true;
         return false;
       });
-      for (const r of p.ruimtes.filter((x) => RUIMTE_TYPES[x.type].nat)) {
+      for (const r of p.ruimtes.filter((x) => RUIMTE_TYPES[x.type].nat && x.bestaand !== true)) {
         if (!afvoeren.some((l) => raakt(r, l))) uit.push({ ernst: 'waarschuwing', ruimte: r.id, melding: `${pre}${r.naam}: natte ruimte zonder afvoer (er loopt nog geen afvoerleiding).` });
       }
     }
@@ -1514,6 +1592,8 @@ function controleerTechniek(plan: Plattegrond, cat: PlanCatalogus | undefined, u
 
 function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], ingang: Set<string>, verbind: (a: string, b: string) => void) {
   const muren = murenVan(plan);
+  // Bestaande ruimtes (ronde 11): de controles op het daglicht en de verluchting gaan over nieuw werk.
+  const oud = heeftBestaand(plan);
   const naam = (id?: string) => plan.ruimtes.find((r) => r.id === id)?.naam ?? '?';
 
   // Overlappende ruimtes.
@@ -1541,7 +1621,8 @@ function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], in
     if (BUITEN.includes(o.soort) && m.soort === 'binnen') uit.push({ ernst: 'fout', opening: o.id, melding: `${pre}${wat} tussen ${naam(m.min)} en ${naam(m.plus)} staat in een binnenmuur.` });
     if (!BUITEN.includes(o.soort) && m.soort === 'buiten') uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${pre}${wat} in een buitenmuur (${naam(m.min ?? m.plus)}): gebruik een buitendeur.` });
     const vrij = Math.min(o.midden - o.breedte / 2 - m.van, m.tot - o.midden - o.breedte / 2);
-    if (vrij < 10) uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${pre}${wat} staat tegen een hoek (minder dan 10 cm muur): moeilijk te plaatsen en af te werken.` });
+    // Een raam dat al in een bestaande muur zit (ronde 11), plaatst niemand opnieuw.
+    if (vrij < 10 && !(oud && muurStatus(plan, m) === 'bestaand')) uit.push({ ernst: 'waarschuwing', opening: o.id, melding: `${pre}${wat} staat tegen een hoek (minder dan 10 cm muur): moeilijk te plaatsen en af te werken.` });
     if (o.borstwering + o.hoogte > plan.muurhoogte - 15) uit.push({ ernst: 'fout', opening: o.id, melding: `${pre}${wat} is te hoog voor de muur (latei nodig boven de opening).` });
     if ((o.soort === 'buitendeur' || o.soort === 'schuifraam' || o.soort === 'garagepoort') && m.soort === 'buiten') ingang.add((m.min ?? m.plus)!);
     if ((o.soort === 'binnendeur' || o.soort === 'doorgang') && m.plus && m.min) verbind(m.plus, m.min);
@@ -1573,6 +1654,7 @@ function controleerNiveau(plan: Plattegrond, pre: string, uit: PlanMelding[], in
 
   // Daglicht en ventilatie.
   for (const r of plan.ruimtes) {
+    if (oud && r.bestaand) continue;
     const t = RUIMTE_TYPES[r.type];
     const maten = ruimteMaten(plan, r, muren);
     if (t.daglicht) {
@@ -1813,19 +1895,34 @@ export function dakOpbouw(plan: Plattegrond): DakOpbouw | undefined {
   };
 }
 
+/**
+ * Bestaand (ronde 11): de m² plat dak boven nieuwe ruimtes, zonder de openingen van de daklichten erin (zoals `m2Plat`,
+ * maar zonder het dak van een bestaande ruimte). Een daklicht in een bestaand dak is wel nieuw werk, maar zijn opening
+ * zit dan niet in deze oppervlakte.
+ */
+export function nieuwPlatDak(plan: Plattegrond, dak: DakOpbouw): number {
+  const nieuw = (id: string) => !isBestaand(plan, id);
+  const stukken = dak.plat.filter((s) => nieuw(s.ruimte));
+  const lichten = dak.daklichten.filter((l) => !l.reden && stukken.some((s) => s.niveau === niveauVan(l.licht) && binnen(s, l.licht.x + l.licht.b / 2, l.licht.y + l.licht.d / 2)));
+  return Math.max(0, stukken.reduce((t, s) => t + deelOppervlakte(s), 0) / 10000 - lichten.reduce((t, l) => t + (l.licht.b * l.licht.d) / 10000, 0));
+}
+
 /** Hellend dak in 3D: de dakvlakken, en de buitenmuren van de bovenste verdieping doorgetrokken tot onder het dak. */
 function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: HellendDak, yb: number, bedekking: { soort: BlokSoort; kleur: string }): Blok[] {
   const uit = dakBlokken(d, yb, bedekking);
   const muren = murenVan(p);
   const pleister: GevelAfwerking = { soort: 'gevel', kleur: '#efeee9' };
   const wandVan = (id?: string): GevelAfwerking => {
-    const w = cat.wanden[p.ruimtes.find((r) => r.id === id)?.wand ?? ''];
+    const r = p.ruimtes.find((x) => x.id === id);
+    if (r?.bestaand === true) return { soort: 'gevel', kleur: NEUTRAAL.binnen };
+    const w = cat.wanden[r?.wand ?? ''];
     return w ? { soort: w.soort, kleur: w.kleur } : pleister;
   };
   for (const m of muren) {
     if (m.soort !== 'buiten') continue;
     const vlak = muurVlak(m, muren);
-    const buiten = gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m)), binnen = wandVan(m.plus ?? m.min);
+    // Bestaand of tegen de buren (ronde 11): neutraal; anders het gekozen gevelmateriaal (zoals vroeger).
+    const buiten = buitenAfwerking(plan, cat, m), binnen = wandVan(m.plus ?? m.min);
     // Langs de muur (a) en dwars door haar dikte (t).
     const [a0, a1, t0, t1] = m.as === 'h' ? [vlak.x, vlak.x + vlak.b, vlak.y, vlak.y + vlak.d] : [vlak.y, vlak.y + vlak.d, vlak.x, vlak.x + vlak.b];
     const buitenMin = !m.min;
@@ -2059,20 +2156,25 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     if (platHier) {
       const lichten = opbouw ? opbouw.daklichten.filter((l) => !l.reden && niveauVan(l.licht) === n).map((l) => l.licht) : [];
       const bedekt: Rechthoek[] = [], bedektVorm: Punt[][] = [];
+      // Het platte dak van een bestaande ruimte (ronde 11): neutraal, in zijn eigen laag.
+      const oudBedekt: Rechthoek[] = [], oudBedektVorm: Punt[][] = [];
+      const oudAfw = { soort: 'gevel' as BlokSoort, kleur: NEUTRAAL.dak };
       for (const { ruimte: r, stuk } of vrijeDakstukken(plan, n)) {
+        const oudDak = r.bestaand === true;
+        const afw = oudDak ? oudAfw : platAfw;
         if (stuk.omtrek) {
           // Vrije vorm: dezelfde opbouw, als prisma's met het grondvlak van het stuk (min de openingen van de daklichten).
           const v = vormVanDeel(stuk);
-          if (!opbouw) { blokken.push(grondPrisma(metDing(opties, 'dak', `dak_${r.id}`), 'dak', '#2e2e2e', v, y0 + H, VLOERDIKTE)); continue; }
+          if (!opbouw) { blokken.push(grondPrisma(metDing(opties, 'dak', `dak_${r.id}`), 'dak', oudDak ? NEUTRAAL.dak : '#2e2e2e', v, y0 + H, VLOERDIKTE)); continue; }
           for (const q of lichten.reduce<Punt[][]>((st, l) => st.flatMap((x) => trekVeelhoekAf(x, rechthoekVorm(l))), [v])) {
-            blokken.push(grondPrisma(metDing(opties, 'dak', `dakplaat_${r.id}`), 'gevel', '#c9c6bf', q, y0 + H, VLOERDIKTE - DAK_LAAG, { zijden: { 'y+': platAfw }, randen: q.map(() => platAfw) }));
-            bedektVorm.push(q);
+            blokken.push(grondPrisma(metDing(opties, 'dak', `dakplaat_${r.id}`), 'gevel', '#c9c6bf', q, y0 + H, VLOERDIKTE - DAK_LAAG, { zijden: { 'y+': afw }, randen: q.map(() => afw) }));
+            (oudDak ? oudBedektVorm : bedektVorm).push(q);
           }
           continue;
         }
         if (!opbouw) {
           // Zonder dakkeuze: het effen donkere blok van altijd.
-          blokken.push({ code: metDing(opties, 'dak', `dak_${r.id}`), soort: 'dak', vorm: 'blok', x: stuk.x, y: y0 + H, z: stuk.y, b: stuk.b, h: VLOERDIKTE, d: stuk.d, kleur: '#2e2e2e' });
+          blokken.push({ code: metDing(opties, 'dak', `dak_${r.id}`), soort: 'dak', vorm: 'blok', x: stuk.x, y: y0 + H, z: stuk.y, b: stuk.b, h: VLOERDIKTE, d: stuk.d, kleur: oudDak ? NEUTRAAL.dak : '#2e2e2e' });
           continue;
         }
         // Met dakkeuze: per ruimte een dakplaat met een lichte onderkant (het plafond), en een opening per daklicht.
@@ -2081,9 +2183,9 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
         for (const s of lichten.reduce<Rechthoek[]>((st, l) => st.flatMap((q) => trekAf(q, l)), [stuk])) {
           blokken.push({
             code: metDing(opties, 'dak', `dakplaat_${r.id}`), soort: 'gevel', vorm: 'blok', x: s.x, y: y0 + H, z: s.y, b: s.b, h: VLOERDIKTE - DAK_LAAG, d: s.d, kleur: '#c9c6bf',
-            zijden: { 'y+': platAfw, 'x-': platAfw, 'x+': platAfw, 'z-': platAfw, 'z+': platAfw },
+            zijden: { 'y+': afw, 'x-': afw, 'x+': afw, 'z-': afw, 'z+': afw },
           });
-          bedekt.push(s);
+          (oudDak ? oudBedekt : bedekt).push(s);
         }
       }
       // Daarop de bedekking als één laag voor de hele verdieping, in zo weinig mogelijk stroken: geen naad boven elke
@@ -2092,10 +2194,16 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
         blokken.push({ code: metDing(opties, 'dak', `dak_${n}`), soort: platAfw.soort, vorm: 'blok', x: s.x - 0.5, y: y0 + H + VLOERDIKTE - DAK_LAAG, z: s.y - 0.5, b: s.b + 1, h: DAK_LAAG, d: s.d + 1, kleur: platAfw.kleur });
       }
       for (const v of bedektVorm) blokken.push(grondPrisma(metDing(opties, 'dak', `dak_${n}`), platAfw.soort, platAfw.kleur, verschuifZijden(v, 0.5), y0 + H + VLOERDIKTE - DAK_LAAG, DAK_LAAG));
+      for (const s of voegSamen(oudBedekt)) {
+        blokken.push({ code: metDing(opties, 'dak', `dak_bestaand_${n}`), soort: oudAfw.soort, vorm: 'blok', x: s.x - 0.5, y: y0 + H + VLOERDIKTE - DAK_LAAG, z: s.y - 0.5, b: s.b + 1, h: DAK_LAAG, d: s.d + 1, kleur: oudAfw.kleur });
+      }
+      for (const v of oudBedektVorm) blokken.push(grondPrisma(metDing(opties, 'dak', `dak_bestaand_${n}`), oudAfw.soort, oudAfw.kleur, verschuifZijden(v, 0.5), y0 + H + VLOERDIKTE - DAK_LAAG, DAK_LAAG));
       for (const l of lichten) blokken.push(...daklichtBlokken(l, cat.daklichten?.[l.type]?.vorm ?? 'koepel', y0 + H + VLOERDIKTE, VLOERDIKTE).map((b) => ({ ...b, code: metDing(opties, 'dak', b.code) })));
     }
     if (hellendHier) {
-      const dak = hellendDak3D(plan, cat, p, opbouw.hellend!, y0 + H, dakAfwerking(cat, opbouw.keuze.bedekking));
+      // Het hellende dak van een bestaande woning (ronde 11): neutraal, zoals haar muren.
+      const bedekking = alleBestaand(plan, n) ? { soort: 'gevel' as BlokSoort, kleur: NEUTRAAL.dak } : dakAfwerking(cat, opbouw.keuze.bedekking);
+      const dak = hellendDak3D(plan, cat, p, opbouw.hellend!, y0 + H, bedekking);
       // De topgevel en de hoge gevel van een lessenaar horen bij het muurvlak eronder, de rest bij het dak.
       const muurVan = opties.dingen ? new Map(murenVan(p).map((m) => [m.id, m])) : undefined;
       const gevelVan = (code: string) => {
@@ -2109,19 +2217,24 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     // De hele woning, met dak (zonder dakkeuze een plat dak): alles wat daarvan niet getoond wordt, werpt alleen schaduw.
     // Glas laat het licht door. Het kader (voor de camera) blijft dat van wat je ziet.
     const vol = plattegrond3D(plan.dak ? plan : { ...plan, dak: standaardDak() }, cat, { meubels: opties.meubels, inhoud: opties.inhoud, dingen: opties.dingen }).blokken;
-    const getoond = new Set(blokken.map((b) => JSON.stringify(b)));
+    // De buren (ronde 11) worden getoond (na het kader, hieronder): hun volume hoeft er niet nog eens als schaduw bij.
+    const buren = burenBlokken(plan, opties, laatste, opbouw, topDak);
+    const getoond = new Set([...blokken, ...buren].map((b) => JSON.stringify(b)));
     const kader = kaderVan(blokken);
     for (const b of vol) {
       if (b.soort === 'glas' || b.soort === 'matglas' || getoond.has(JSON.stringify(b))) continue;
       blokken.push({ ...b, code: `schaduw_${b.code}`, alleenSchaduw: true });
     }
     if (opties.aanleg) blokken.push(...aanlegBlokken(plan));
+    blokken.push(...buren);
     blokken.push(...techniek3D(plan, cat, opties));
     return { blokken, kader };
   }
   // Het kader is dat van de woning zelf: met terras en pad erbij zou de camera verder weg gaan staan.
   const kader = kaderVan(blokken);
   if (opties.aanleg) blokken.push(...aanlegBlokken(plan));
+  // De buren (ronde 11): na het kader, zoals de aanleg, zodat de camera niet verder weg gaat staan.
+  blokken.push(...burenBlokken(plan, opties, laatste, opbouw, topDak));
   // Techniek (alleen met de optie): na het kader, zoals de aanleg (een buitenunit naast de woning verzet de camera niet).
   blokken.push(...techniek3D(plan, cat, opties));
   return { blokken, kader };
@@ -2196,6 +2309,51 @@ function uitgezet3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties)
   const kader = kaderVan(blokken);
   blokken.push(...techniek3D(plan, cat, opties));
   return { blokken, kader };
+}
+
+/** Hoe diep het volume van de buren is (cm), van de buitenkant van de scheidingsmuur naar buiten. Een benadering om het beeld af te maken. */
+const BUREN_DIEP = 450;
+
+/**
+ * De buren (ronde 11): achter elk muurvlak tegen de buren een eenvoudig, neutraal volume, zodat je ziet dat het een
+ * rijwoning is. Per verdieping zo hoog als de muur (op een verdieping ook de vloerplaat eronder), bovenaan de rand van
+ * een plat dak, en onder een hellend dak dat dwars op die muur staat de vorm van de topgevel. Geen ding (een tik erop
+ * kiest niets) en codes die niet met `muur_` of `dakrand_` beginnen (de maten van het gebouw lezen die). Alleen voor
+ * rechte muren; een schuine muur tegen de buren krijgt geen volume.
+ */
+function burenBlokken(plan: Plattegrond, opties: Plan3DOpties, laatste: number, opbouw: DakOpbouw | undefined, topDak: boolean): Blok[] {
+  if (!plan.tegenBuren?.length) return [];
+  const uit: Blok[] = [];
+  const H = plan.muurhoogte;
+  /** Staat er op verdieping n ook een muur tegen de buren op dezelfde lijn (dan hebben de buren daar nog een verdieping)? */
+  const erboven = (n: number, onder: Muur) => n <= laatste && murenVan(niveauPlan(plan, n)).some((m) =>
+    m.soort === 'buiten' && m.as === onder.as && gelijk(m.lijn, onder.lijn) && Math.min(m.tot, onder.tot) - Math.max(m.van, onder.van) > 1 && muurStatus(plan, m) === 'buren');
+  for (let n = 0; n <= laatste; n++) {
+    const p = niveauPlan(plan, n), muren = murenVan(p);
+    const y0 = vloerHoogte(plan, n);
+    const hellend = opbouw?.hellend && n === opbouw.top && topDak ? opbouw.hellend : undefined;
+    for (const m of muren) {
+      if (m.soort !== 'buiten' || m.as === 's' || muurStatus(plan, m) !== 'buren') continue;
+      const vlak = muurVlak(m, muren);
+      // Langs de muur (a0 tot a1) en naar buiten (t0 tot t1, vanaf de buitenkant van de muur).
+      const [a0, a1] = m.as === 'h' ? [vlak.x, vlak.x + vlak.b] : [vlak.y, vlak.y + vlak.d];
+      const buitenMin = !m.min;
+      const vlakT = m.as === 'h' ? [vlak.y, vlak.y + vlak.d] : [vlak.x, vlak.x + vlak.b];
+      const [t0, t1] = buitenMin ? [vlakT[0]! - BUREN_DIEP, vlakT[0]!] : [vlakT[1]!, vlakT[1]! + BUREN_DIEP];
+      // Bovenaan: de rand van een plat dak, tenzij de buren erboven nog een verdieping hebben (of er een hellend dak op staat).
+      const boven = n === laatste && opties.laag ? 0 : hellend || erboven(n + 1, m) ? 0 : VLOERDIKTE + 2;
+      const ya = n > 0 ? y0 - VLOERDIKTE : 0, yb = n === laatste && opties.laag ? y0 + Math.min(opties.laag, H) : y0 + H + boven;
+      const code = `buren_${m.id}_${n}`;
+      const basis = { code, soort: 'gevel' as BlokSoort, vorm: 'blok' as const, kleur: NEUTRAAL.buren, y: r2(ya), h: r2(yb - ya) };
+      uit.push(m.as === 'h' ? { ...basis, x: r2(a0), z: r2(t0), b: r2(a1 - a0), d: BUREN_DIEP } : { ...basis, x: r2(t0), z: r2(a0), b: BUREN_DIEP, d: r2(a1 - a0) });
+      // Onder een hellend dak dwars op deze muur: de vorm van de topgevel, doorgetrokken over het volume van de buren.
+      if (hellend && (m.as === 'h') !== (hellend.nokAs === 'x')) {
+        const punten = gevelOnderDak(hellend, a0, a1);
+        if (punten.length) uit.push(prisma(`${code}_dak`, 'gevel', NEUTRAAL.buren, m.as === 'h' ? 'z' : 'x', r2(t0), r2(t1), punten.map(([a, h]): [number, number] => [a, y0 + H + (h === 0 ? -1 : h)])));
+      }
+    }
+  }
+  return uit;
 }
 
 /** Maten van de aanleg (cm): diepte van een terras, lengte van het pad naar de voordeur, en hoe ver ze naast de opening uitsteken. */
@@ -2286,9 +2444,12 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   const top = opties.laag ? Math.min(opties.laag, H) : H;
   const pleister = '#efeee9';
   const ruimte = new Map(plan.ruimtes.map((r) => [r.id, r]));
+  // Bestaand en tegen de buren (ronde 11): neutraal. Zonder bestaande ruimte of buren is alles zoals vroeger.
+  const oud = heeftBestaand(plan);
   const wandVan = (id?: string): GevelAfwerking => {
     const r = id ? ruimte.get(id) : undefined;
     if (!r) return plan.gevel;
+    if (r.bestaand === true) return { soort: 'gevel', kleur: NEUTRAAL.binnen };
     const w = cat.wanden[r.wand];
     return w ? { soort: w.soort, kleur: w.kleur } : { soort: 'gevel' as BlokSoort, kleur: pleister };
   };
@@ -2303,7 +2464,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
 
   // Vloeren (met trapgat). Een vrije vorm is een prisma met haar grondvlak; de textuur volgt haar langste muur.
   for (const r of plan.ruimtes) {
-    const v = cat.vloeren[r.vloer];
+    const v = r.bestaand === true ? { soort: 'gevel' as BlokSoort, kleur: NEUTRAAL.vloer } : cat.vloeren[r.vloer];
     for (const deel of delenVan(r)) {
       if (deel.omtrek) {
         const vorm = vormVanDeel(deel);
@@ -2319,7 +2480,9 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   // Gevelafwerking: per muurvlak (gevelontwerp) en een sokkel onderaan het gelijkvloers.
   const sokkel = n === 0 && plan.gevelOntwerp?.sokkel && plan.gevelOntwerp.sokkel.hoogte > 0 ? plan.gevelOntwerp.sokkel : undefined;
   const sokkelAfw = sokkel ? gevelAfwerking(plan, cat, sokkel) : undefined;
-  const buitenAfw = (m: Muur, y: number) => (sokkel && sokkelAfw && y < sokkel.hoogte ? sokkelAfw : gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m)));
+  /** Een bestaande muur of een muur tegen de buren: neutraal, zonder sokkel. */
+  const neutraal = (m: Muur) => (oud && m.soort === 'buiten' && muurStatus(plan, m) !== 'nieuw' ? buitenAfwerking(plan, cat, m) : undefined);
+  const buitenAfw = (m: Muur, y: number) => neutraal(m) ?? (sokkel && sokkelAfw && y < sokkel.hoogte ? sokkelAfw : gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m)));
   // Kopse kant op een buitenhoek: het materiaal van de gevel ernaast (de loodrechte buitenmuur die daar eindigt).
   const hoekMuur = (m: Muur, p: number) => muren.find((v) => v.as !== m.as && v.as !== 's' && v.soort === 'buiten' && gelijk(v.lijn, p) && (gelijk(v.van, m.lijn) || gelijk(v.tot, m.lijn)));
 
@@ -2338,7 +2501,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       if (m.soort === 'buiten' && y0 === 0 && onderkant < 0) y0 = onderkant;
       if (b - a < 0.1 || y1 - y0 < 0.1) return;
       // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten.
-      if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1) {
+      if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1 && !neutraal(m)) {
         stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte);
         stuk(code, a, b, sokkel.hoogte, y1);
         return;

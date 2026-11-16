@@ -218,6 +218,16 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
   for (const st of c.stukken) {
     if (st.soort === 'trap') continue;
     for (const b of st.blokken) {
+      // Wat bestaat of van de buren is (ronde 11): een neutrale band zonder lagen, met de naam "Bestaand".
+      if (b.code.startsWith('bestaand_')) {
+        if (b.vorm === 'blok') {
+          const [a0, a1, u0, u1] = richting === 'langs' ? [b.z, b.z + b.d, b.x, b.x + b.b] : [b.x, b.x + b.b, b.z, b.z + b.d];
+          if (plaats <= a0 || plaats >= a1 || u1 - u0 < 1) continue;
+          vormen.push({ ...rechthoek(u0, u1, b.y, b.y + b.h, '#e3e0da'), naam: 'Bestaand (blijft)' });
+          noemOp('Bestaand', (u0 + u1) / 2, b.y + b.h / 2);
+        }
+        continue;
+      }
       if (b.vorm !== 'prisma' || b.as !== 'y' || !b.doorsnede) continue;
       // De snijpunten van de rand van het grondvlak met de lijn van de snede (een bolle vorm: één stuk).
       const us: number[] = [];

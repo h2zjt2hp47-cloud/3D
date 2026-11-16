@@ -24,6 +24,9 @@
  *     verdieping boven ligt. Een vloer of dak loopt aan een buitenmuur door tot de buitenkant van het skelet.
  *   - Zonder dakkeuze krijgt de constructie een plat dak (zoals de lichtinval): anders zou de meetstaat geen dak tellen.
  *   - Wat (nog) niet als bouwdeel kan, staat er als effen plaat en telt niet mee: een vloer of dak van een vrije vorm.
+ *   - Wat bestaat of van de buren is (ronde 11: `Ruimte.bestaand`, `Plattegrond.tegenBuren`), wordt niet gebouwd: het staat
+ *     er als effen, neutraal stuk (muren, vloerplaten, het dak, de topgevel) en telt niet mee in de meetstaat, de aanwijzing
+ *     voor EPB of de schatting van de stabiliteit. De muur tussen bestaand en nieuw is de bestaande gevel.
  *     De topgevel onder een hellend dak, de dakrand en de ramen en deuren zelf zitten niet in de constructie.
  *
  * Maten in cm (zoals de plattegrond); de opbouw zelf in mm.
@@ -32,11 +35,11 @@ import {
   bouwdeelBlokken, bouwdeelOpPlaats, dakvlak, meetstaat, vloervlak, wandvlak,
   type Bouwdeel, type MeetstaatRegel, type Stuk, type VlakRechthoek, type WandOpening,
 } from './bouwdelen.js';
-import { dakHoogte, daklichtBlokken, hellendDak, prisma, type HellendDak } from './dak.js';
+import { dakBlokken, dakHoogte, daklichtBlokken, gevelOnderDak, hellendDak, prisma, type HellendDak } from './dak.js';
 import { totaleDikte, type Opbouw, type OpbouwPlaats, type WoningOpbouwCatalogus } from './opbouw.js';
 import {
-  asVan, binnenVeelhoek, buitenKant, dakOpbouw, dakVan, delenVan, draaiBlokken, gevelAfwerking, gevelKeuzeVan, grondPrisma, meubelIn3D,
-  meubelVoetafdruk, murenVan, muurVanOpening, muurVlak, niveauPlan, niveauVan, plattegrond3D, snijVeelhoek, standaardDak, trekAf,
+  alleBestaand, asVan, binnenVeelhoek, buitenKant, dakOpbouw, dakVan, delenVan, draaiBlokken, gevelAfwerking, gevelKeuzeVan, grondPrisma, heeftBestaand,
+  isBestaand, meubelIn3D, meubelVoetafdruk, murenVan, muurStatus, muurVanOpening, muurVlak, NEUTRAAL, niveauPlan, niveauVan, plattegrond3D, snijVeelhoek, standaardDak, trekAf,
   veelhoekOppervlakte, verdiepingenVan, vlakSleutel, vloerHoogte, vormVanDeel, VLOERDIKTE,
   type Deel, type Muur, type PlanCatalogus, type Plattegrond, type Punt, type Rechthoek,
 } from './plattegrond.js';
@@ -185,13 +188,18 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
     else for (const lijn of [f.y, f.y + f.d]) steunen.push({ niveau, as: 'h', lijn, van: f.x, tot: f.x + f.b, draagt, breedte: f.d / 2 });
   };
 
+  // Bestaand en tegen de buren (ronde 11): niet gebouwd, als effen neutraal stuk. Zonder is alles zoals vroeger.
+  const oud = heeftBestaand(plan);
+  const nieuw = (m: Muur) => !oud || muurStatus(plan, m) === 'nieuw';
+
   // ---------- wanden ----------
   const buitenDikte: number[] = [];
   for (let n = 0; n <= top; n++) {
     const p = niveauPlan(plan, n);
     if (!p.ruimtes.length) continue;
     const y0 = vloerHoogte(plan, n), h = wandHoogte(n);
-    // De muren met de dikte van hun opbouw, zodat de hoeken met die dikte sluiten (`muurVlak` leest de buren).
+    // De muren met de dikte van hun opbouw, zodat de hoeken met die dikte sluiten (`muurVlak` leest de buren). Een muur
+    // die niet gebouwd wordt, houdt de dikte van het plan.
     const muren = murenVan(p).map((m) => ({ ...m }));
     const keuze = new Map<Muur, string>();
     for (const m of muren) {
@@ -199,12 +207,22 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
         ? opbouwVoor(plan, oc, 'buitenwand', { vlak: vlakSleutel(m), gevel: gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m)).soort })
         : opbouwVoor(plan, oc, 'binnenwand');
       keuze.set(m, code);
+      if (!nieuw(m)) continue;
       m.dikte = dikte(code) || m.dikte;
       if (m.soort === 'buiten' && n === top) buitenDikte.push(m.dikte);
     }
     for (const m of muren) {
       const code = keuze.get(m)!, T = m.dikte;
       const vlak = muurVlak(m, muren);
+      if (!nieuw(m)) {
+        // Een bestaande muur, de bestaande gevel of een scheidingsmuur van de buren: effen en neutraal, niet geteld.
+        const kleur = muurStatus(plan, m) === 'buren' ? NEUTRAAL.buren : NEUTRAAL.gevel;
+        const blok: Blok = vlak.punten
+          ? grondPrisma(`bestaand_wand_${n}_${m.id}`, 'gevel', kleur, vlak.punten, y0, h)
+          : { code: `bestaand_wand_${n}_${m.id}`, soort: 'gevel', vorm: 'blok', kleur, x: r2(vlak.x), y: r2(y0), z: r2(vlak.y), b: r2(vlak.b), h: r2(h), d: r2(vlak.d) };
+        uit.stukken.push({ niveau: n, soort: 'wand', blokken: [blok] });
+        continue;
+      }
       // Een schuine muur van hoek tot hoek op haar as (het verstek in de hoeken volgt de afgewerkte weergave niet).
       const [begin, einde] = m.as === 's' ? [m.van, m.tot] : m.as === 'h' ? [vlak.x, vlak.x + vlak.b] : [vlak.y, vlak.y + vlak.d];
       if (einde - begin < 1) continue;
@@ -244,6 +262,11 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
       const lengte = v.einde - v.begin;
       if (v.punten.length < 3 || lengte < 1) continue;
       const hw = lw.hoogte === undefined ? h : losseWandHoogte(plan, lw);
+      if (ruimte?.bestaand === true) {
+        // In een bestaande ruimte (ronde 11): bestaat al, effen en neutraal, niet geteld.
+        uit.stukken.push({ niveau: n, soort: 'wand', blokken: [grondPrisma(`bestaand_losse_wand_${lw.id}`, 'gevel', NEUTRAAL.gevel, v.punten, y0, hw)] });
+        continue;
+      }
       if (!ruimte) {
         uit.stukken.push({ niveau: n, soort: 'wand', blokken: [grondPrisma(`losse_wand_${lw.id}`, 'gevel', '#c9c6bf', v.punten, y0, hw)] });
         uit.meldingen.push(`Losse wand buiten (${String(Math.round(lengte) / 100).replace('.', ',')} m lang, ${Math.round(hw)} cm hoog): er is geen opbouw voor een tuinmuur in de catalogus. Ze staat er als effen muur en telt niet mee in de meetstaat.`);
@@ -284,8 +307,9 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
     const p = niveauPlan(plan, n);
     const delen = p.ruimtes.flatMap(delenVan);
     if (n === 0) {
-      // Vloer op de grond: per ruimte, met de bovenkant op het vloerpeil.
+      // Vloer op de grond: per ruimte, met de bovenkant op het vloerpeil. Een bestaande ruimte (ronde 11) niet: die ligt er al.
       for (const r of p.ruimtes) for (const [i, q] of delenVan(r).entries()) {
+        if (r.bestaand === true) continue;
         const code = opbouwVoor(plan, oc, 'grondvloer', { ruimte: r.id }), d = dikte(code);
         if (q.omtrek) {
           vrijeVormPlaat(vormVanDeel(q), -d, d, 0, 'vloer', `grondvloer_${r.id}_${i}`);
@@ -324,6 +348,12 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
       for (const [j, s] of bedekt.entries()) {
         const midden: [number, number] = [s.x + s.b / 2, s.y + s.d / 2];
         const boven = p.ruimtes.find((x) => binnenDelen(delenVan(x), midden[0], midden[1]));
+        if (r.bestaand === true || boven?.bestaand === true) {
+          // Een vloer in een bestaande woning (ronde 11): ligt er al, als effen neutrale plaat.
+          const y = vloerHoogte(plan, n) - VLOERDIKTE;
+          uit.stukken.push({ niveau: n, soort: 'vloer', blokken: [{ code: `bestaand_vloer_${n}_${r.id}_${i}_${j}`, soort: 'gevel', vorm: 'blok', kleur: NEUTRAAL.gevel, x: r2(s.x), y: r2(y), z: r2(s.y), b: r2(s.b), h: VLOERDIKTE, d: r2(s.d) }] });
+          continue;
+        }
         const code = opbouwVoor(plan, oc, 'verdiepingsvloer', { ruimte: boven?.id }), d = dikte(code);
         const f = totBuitenkant(s, onderDelen, halfBuiten);
         const deel = vloervlak({ lengte: f.b, breedte: f.d, opbouw: opbouw(code), openingen: gatenIn(f, trapgaten) }, oc.materialen);
@@ -355,6 +385,14 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
       const n = s.niveau, y = r2(vloerHoogte(plan, n) + wandHoogte(n));
       const code = opbouwVoor(plan, oc, 'platDak'), d = dikte(code);
       const naam = ruimteNaam.get(s.ruimte) ?? '';
+      if (oud && isBestaand(plan, s.ruimte)) {
+        // Het platte dak van een bestaande ruimte (ronde 11): ligt er al, als effen neutrale plaat.
+        const blok: Blok = s.omtrek
+          ? grondPrisma(`bestaand_dak_${n}_${i}`, 'gevel', NEUTRAAL.dak, vormVanDeel(s), y, d)
+          : { code: `bestaand_dak_${n}_${i}`, soort: 'gevel', vorm: 'blok', kleur: NEUTRAAL.dak, x: r2(s.x), y, z: r2(s.y), b: r2(s.b), h: d, d: r2(s.d) };
+        uit.stukken.push({ niveau: n, soort: 'dak', blokken: [blok] });
+        continue;
+      }
       if (s.omtrek) {
         vrijeVormPlaat(vormVanDeel(s), y, d, n, 'dak', `dak_${n}_${i}`);
         uit.meldingen.push(`Dak boven ${naam}: een vrije vorm staat er als effen plaat (niet in de meetstaat).`);
@@ -385,6 +423,20 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
       const d = hellendDak({ x: x0 - t, y: y0 - t, b: x1 - x0 + 2 * t, d: y1 - y0 + 2 * t }, dak.keuze);
       const yb = r2(vloerHoogte(plan, top) + H);
       uit.hellend = { dak: d, y: yb };
+      if (alleBestaand(plan, top)) {
+        // Het hellende dak van een bestaande woning (ronde 11): ligt er al. Effen en neutraal, met de vorm van de
+        // topgevels op de muren dwars op de nok; niet geteld.
+        const blokken: Blok[] = dakBlokken(d, yb, { soort: 'gevel', kleur: NEUTRAAL.dak }).map((b) => ({ ...b, code: `bestaand_${b.code}`, kleur: NEUTRAAL.dak }));
+        const p = niveauPlan(plan, top), muren = murenVan(p);
+        for (const m of muren) {
+          if (m.soort !== 'buiten' || m.as === 's' || (m.as === 'h') === (d.nokAs === 'x')) continue;
+          const vlak = muurVlak(m, muren);
+          const [a0, a1, t0, t1] = m.as === 'h' ? [vlak.x, vlak.x + vlak.b, vlak.y, vlak.y + vlak.d] : [vlak.y, vlak.y + vlak.d, vlak.x, vlak.x + vlak.b];
+          const punten = gevelOnderDak(d, a0, a1);
+          if (punten.length) blokken.push(prisma(`bestaand_topgevel_${m.id}`, 'gevel', muurStatus(plan, m) === 'buren' ? NEUTRAAL.buren : NEUTRAAL.gevel, m.as === 'h' ? 'z' : 'x', t0, t1, punten.map(([a, hh]): [number, number] => [a, yb + (hh === 0 ? -1 : hh)])));
+        }
+        uit.stukken.push({ niveau: top, soort: 'dak', blokken });
+      } else {
       const code = opbouwVoor(plan, oc, 'hellendDak');
       const ov = d.oversteek, lengte = r2(d.q1 - d.q0 + 2 * ov), y = r2(yb - ov * d.tan);
       // Zadeldak: twee dakvlakken van de dakvoet tot de nok; lessenaar: één van de lage naar de hoge kant.
@@ -412,6 +464,7 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
         if (w.plaats !== 'buitenwand' || w.niveau !== top || !w.muur || w.muur.muur.as === 's') continue;
         const g = topgevel(w, d, oc.materialen[w.deel.lagen[w.deel.dragend]?.materiaal ?? '']);
         if (g) uit.delen.push(g);
+      }
       }
     }
   }

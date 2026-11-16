@@ -14,7 +14,7 @@
  */
 import {
   ALLE_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, leidingLangsWanden, leidingVerloop, maatTekst, maatVan, murenVan, niveauPlan,
-  niveauVan, nieuwToestel, opToestelVlak, puntGroep, ruimteOp, technischeOpstelling, tegenWand, telTechniek, toestelMaten, toestelTekenBeeld, toestelVlak,
+  niveauVan, nieuweTechniek, nieuwToestel, opToestelVlak, puntGroep, ruimteOp, technischeOpstelling, tegenWand, telTechniek, toestelMaten, toestelTekenBeeld, toestelVlak,
   toestelVoetafdruk, verschuifLeidingPunten, vloerHoogte, vloerverwarmingLus, vormVanDeel,
   type Leiding, type LeidingHoogte, type Plattegrond, type Punt, type Ruimte, type TechniekRegel, type TechniekVak, type Toestel, type ToestelType,
 } from '../../core/src/index.js';
@@ -1014,7 +1014,8 @@ export function toonTechniekOverzicht() {
 
 function vulTelling(vakEl: HTMLElement) {
   const plan = toestand().plan;
-  const regels = telTechniek(plan, tc, { vloerHoogte: (k) => vloerHoogte(plan, k) });
+  // Alleen het nieuwe werk (ronde 11): de techniek in een bestaande ruimte blijft en telt niet mee.
+  const regels = telTechniek(nieuweTechniek(plan), tc, { vloerHoogte: (k) => vloerHoogte(plan, k) });
   const tabel = el('table', { class: 'meetstaat' });
   tabel.innerHTML = '<thead><tr><th>Wat</th><th>Maat</th><th class="num">Aantal</th><th class="num">Lengte</th></tr></thead>';
   const body = el('tbody');

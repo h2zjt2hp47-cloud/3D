@@ -86,3 +86,4 @@ export * from './maten3d.js';
 export * from './techniekplaatsen.js';
 export * from './constructie.js';
 export * from './doorsnede.js';
+export * from './posten.js';
