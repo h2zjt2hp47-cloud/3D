@@ -127,7 +127,7 @@ export interface MaatVraag {
    */
   meteenTypen?: boolean;
 }
-let vraag: { v: MaatVraag; doos: HTMLElement; toegepast: boolean; kant?: string } | undefined;
+let vraag: { v: MaatVraag; doos: HTMLElement; toegepast: boolean; kant?: string; waarnemer?: ResizeObserver } | undefined;
 /** Waar tijdens het toepassen van de maatvraag zelf (dan sluit een wijziging van het plan ze niet). */
 let bezig = false;
 
@@ -139,16 +139,18 @@ export function sluitMaatVraag(bevestig = true) {
   const q = vraag;
   if (!q) return;
   vraag = undefined;
+  q.waarnemer?.disconnect();
   q.doos.remove();
   if (!bevestig && q.toegepast) q.v.terug();
   q.v.na?.();
 }
 
 /**
- * Zet de maatvraag naast de tekening, nooit erop (na het hertekenen, zoomen of een andere maat): net onder de tekening
- * als daar op het scherm plaats is (een tablet staand: daar staat alleen de uitleg), anders net boven de tekening, over
- * de knoppen van de weergave en het zoomen. Zo blijft de tekening vrij voor de volgende tik, en staat de vraag in beeld
- * waar de tekening in beeld staat.
+ * Zet de maatvraag boven de tekening, nooit erop (na het hertekenen, zoomen of een andere maat): haar onderkant net boven
+ * de tekening, over de knoppen van de weergave en het zoomen. Is ze hoger dan die strook (een losse wand met drie maten,
+ * een melding erbij), dan loopt ze verder naar boven, tot de bovenkant van het venster (in het groot scherm tot de
+ * bovenkant van de kaart, die daar zelf scrolt). Zo blijft de tekening vrij voor de volgende tik, en ook op een tablet
+ * staand met het toetsenbord open staat de vraag boven wat ze wijzigt (onder de tekening kan het toetsenbord erover komen).
  */
 export function plaatsMaatVraag() {
   if (!vraag || !omg) return;
@@ -159,10 +161,9 @@ export function plaatsMaatVraag() {
   if (!tekening) return;
   const k = kaart.getBoundingClientRect();
   const nul = k.top + kaart.clientTop - kaart.scrollTop;
-  const h = doos.offsetHeight;
-  const onder = tekening.bottom + 4 + h <= window.innerHeight - 4;
-  doos.classList.toggle('onder', onder);
-  doos.style.top = `${Math.round(onder ? tekening.bottom + 4 - nul : Math.max(kaart.scrollTop, tekening.top - 4 - h - nul))}px`;
+  const scrolt = getComputedStyle(kaart).overflowY !== 'visible';
+  const hoogst = scrolt ? kaart.scrollTop : Math.min(kaart.scrollTop, 4 - nul);
+  doos.style.top = `${Math.round(Math.max(hoogst, tekening.top - 4 - doos.offsetHeight - nul))}px`;
 }
 
 /** Een kleine vraag naar een maat op de tekening (zie `MaatVraag`). */
@@ -275,7 +276,10 @@ export function vraagMaat(v: MaatVraag) {
       if (pasToe(true)) sluitMaatVraag(true);
     });
   }
-  vraag = { v, doos, toegepast: false, kant: v.kanten?.gekozen };
+  // Wordt de vraag hoger (een melding erbij), dan schuift ze naar boven: haar onderkant blijft boven de tekening.
+  const waarnemer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => plaatsMaatVraag()) : undefined;
+  waarnemer?.observe(doos);
+  vraag = { v, doos, toegepast: false, kant: v.kanten?.gekozen, waarnemer };
   toonKant();
   omg.kaart().append(doos);
   plaatsMaatVraag();

@@ -2009,7 +2009,7 @@ function toonGereedschapKaart() {
 /** De kop van een palet: terug naar het gereedschap, en Selecteren (om wat je plaatste te verslepen). */
 function paletKop(): HTMLElement {
   const kop = el('div', { class: 'knoppenrij tkop' });
-  const terug = el('button', { type: 'button', class: 'tweede', 'data-palet-terug': '' }, '← Gereedschap');
+  const terug = el('button', { type: 'button', class: 'tweede', 'data-palet-terug': '', title: 'Terug naar het gereedschap' }, '← Terug');
   terug.addEventListener('click', () => { palet = undefined; kiesGereedschap('kies'); });
   const kies = el('button', { type: 'button', 'data-palet-kies': '', 'aria-pressed': String(gereedschap === 'kies') }, 'Selecteren');
   kies.addEventListener('click', () => kiesGereedschap('kies'));
@@ -2255,7 +2255,11 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     if (techniekAan()) zetTechniek(false, { stil: true });
     if (matenPaneelOpen()) { sluitMatenPaneel(); gereedschap = 'kies'; for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === 'kies')); }
     // Een open palet hoort ook bij het vorige project: het nieuwe begint met het gereedschap.
-    if (palet) { palet = undefined; if (gereedschap === 'meubel' || gereedschap === 'daklicht') gereedschap = 'kies'; }
+    if (palet) palet = undefined;
+    if (gereedschap === 'meubel' || gereedschap === 'daklicht') {
+      gereedschap = 'kies';
+      for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === 'kies'));
+    }
     verbergTikMelding();
     if (weergave === '3d') toonNaastKnop();
     niveau = 0;

@@ -873,6 +873,13 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
 .paletlade[hidden] { display: none; }
 .paletlade .tkop { margin: 0; gap: 6px; }
 .paletlade .tkop button { flex: 1 1 auto; }
+/* De kop van een palet op één rij: ← Terug en Selecteren naast elkaar (ook in de techniek). */
+.paletlade .tkop, .techniekpalet .tkop { flex-wrap: nowrap; }
+.paletlade .tkop button, .techniekpalet .tkop button { font-size: .85rem; padding: 6px 8px; min-width: 0; }
+/* Leidingen in het techniekpalet: de streep links, de naam ernaast (lager dan een tegel met een teken). */
+.ttegels.leidingen .ttegel { display: flex; align-items: center; gap: 6px; text-align: left; padding: 4px 6px; }
+.ttegels.leidingen .ttegel .tlijn { flex: none; width: 6px; height: 28px; margin: 0; }
+.ttegels.leidingen .ttegel .tlijn.vloer { -webkit-mask: repeating-linear-gradient(180deg, #000 0 7px, transparent 7px 11px); mask: repeating-linear-gradient(180deg, #000 0 7px, transparent 7px 11px); }
 .paletlade [data-palet-kies] { border: 1px solid var(--lijn); background: var(--vlak); color: inherit; border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: .9rem; }
 .paletlade [data-palet-kies][aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
 .paletlade .ttegels { grid-template-columns: repeat(2, minmax(0, 1fr)); }

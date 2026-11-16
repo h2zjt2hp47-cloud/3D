@@ -729,7 +729,7 @@ export function toonPalet() {
   palet.hidden = !aan;
   if (!aan) { palet.replaceChildren(); return; }
   const kop = el('div', { class: 'knoppenrij tkop' });
-  const terug = el('button', { type: 'button', class: 'tweede', 'data-techniek-uit': '' }, '← Gereedschap');
+  const terug = el('button', { type: 'button', class: 'tweede', 'data-techniek-uit': '', title: 'Terug naar het gereedschap' }, '← Terug');
   terug.addEventListener('click', () => zetTechniek(false));
   const kies = el('button', { type: 'button', 'data-techniek-kies': '', 'aria-pressed': String(gereedschap.soort === 'kies') }, 'Selecteren');
   kies.addEventListener('click', () => kiesGereedschap({ soort: 'kies' }));
@@ -772,14 +772,14 @@ export function toonPalet() {
   const voorbeeld = el('button', { type: 'button', class: 'tweede', 'data-techniek-voorbeeld': '' }, 'Voorbeeld openen: woning met techniek');
   voorbeeld.addEventListener('click', openVoorbeeld);
   // Wat je het meest nodig hebt bovenaan, zodat het naast de tekening staat, ook op een tablet liggend (doorloop A6): de
-  // technische ruimte en de vloerverwarming (in één tik, voor elk vak), de vakken, de leidingen en dan de toestellen.
+  // technische ruimte en de vloerverwarming (in één tik, voor elk vak), de vakken, de leidingen (smalle tegels met een
+  // streep in hun kleur) en dan de toestellen (met hun teken); zonder koppen ertussen, de tegels zeggen zelf wat ze zijn.
   // Tonen, het voorbehoud en het voorbeeld onderaan.
   palet.replaceChildren(
     kop,
     el('p', { class: 'tsub', title: 'Kies, en tik dan op de ruimte' }, 'In één tik, op een ruimte'), een,
     tabs,
-    el('p', { class: 'tsub', title: 'Kies een leiding, en tik dan op twee toestellen' }, 'Leidingen'), leidingen,
-    el('p', { class: 'tsub', title: 'Kies een toestel, en tik in het plan (blijf tikken voor meer)' }, 'Toestellen'), toestellen,
+    leidingen, toestellen,
     el('p', { class: 'tsub' }, 'Tonen (het vak hierboven staat op de voorgrond, de andere lichter)'), vakSchakelaars(),
     el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD),
     voorbeeld,
