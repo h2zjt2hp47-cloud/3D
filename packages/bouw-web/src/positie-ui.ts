@@ -168,7 +168,8 @@ export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string]
     // Alles wat het model uitrekent en een naam heeft: palen, overspanning, profielen (een voorstelling), oppervlaktes.
     return VASTE_MODELLEN[p.model].model.afgeleid.flatMap((x): [string, string][] => {
       const w = a[x.code];
-      if (!x.label || w === null || w === undefined || w === '') return [];
+      // Een nul zegt hier niets (helling 0° bij een plat dak, 0 palen onder een luifel die er niet is).
+      if (!x.label || w === null || w === undefined || w === '' || w === 0) return [];
       const eenheid = /\((cm|m²|graden)\)$/.exec(x.label)?.[1];
       const label = x.label.replace(/ \((cm|m²|graden)\)$/, '');
       return [[label, typeof w === 'number' ? `${getal(w, w % 1 ? 1 : 0)}${eenheid === 'graden' ? '°' : eenheid ? ` ${eenheid}` : ''}` : String(w)]];
