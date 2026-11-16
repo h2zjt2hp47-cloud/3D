@@ -293,6 +293,9 @@ describe('loods: bekleding, buitenmaten en hoogte', () => {
     expect(wand.reduce((s, g) => s + (g.deel.vlak?.openingen.length ?? 0), 0)).toBe(2);
     const beton = delen(r, 'beton.rechts');
     expect(beton.reduce((s, g) => s + (g.deel.vlak?.openingen.length ?? 0), 0)).toBe(2);
+    // Een poort loopt door de betonpanelen tot bovenaan (geen strook beton over de poort).
+    for (const o of beton.flatMap((g) => g.deel.vlak!.openingen)) expect(o.v1).toBe(200);
+    for (const o of beton.flatMap((g) => g.deel.vlak!.openingen)) expect(o.v0).toBe(0);
     const blokken = loods3D(r, 'afgewerkt').blokken;
     expect(blokken.filter((b) => b.code.startsWith('poort2.omkasting.'))).toHaveLength(6);
     expect(blokken.filter((b) => b.code.startsWith('poort2.')).length).toBeGreaterThan(20);

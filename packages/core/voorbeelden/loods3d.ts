@@ -317,9 +317,13 @@ function bouwLoods(r: ConfiguratieResultaat): Samenstelling {
   }
 
   // ----- bekleding: zijgevels -----
-  const deurOpening = (o: LoodsOpening, za: number, zb: number, onder: number, hoogte: number, u: (z: number) => number): WandOpening[] => {
-    // Een opening die tot boven de wand reikt (een te hoge poort: het model meldt het), houdt 2 cm wand boven zich.
-    const a0 = Math.max(o.a0, za), a1 = Math.min(o.a1, zb), h = Math.min(hoogte - 2, y0 + o.hoogte - onder);
+  /**
+   * De opening in één stuk wand (van `onder` tot `onder + hoogte`). In de betonpanelen loopt een hogere poort over de hele
+   * hoogte door (`bovenaan` = er komt nog wand boven); in de bovenste wand houdt een opening die tot boven de wand reikt
+   * (een te hoge poort: het model meldt het) 2 cm wand boven zich: precies tot de rand gaf een strook van 0 cm hoog.
+   */
+  const deurOpening = (o: LoodsOpening, za: number, zb: number, onder: number, hoogte: number, u: (z: number) => number, bovenaan = true): WandOpening[] => {
+    const a0 = Math.max(o.a0, za), a1 = Math.min(o.a1, zb), h = Math.min(bovenaan ? hoogte - 2 : hoogte, y0 + o.hoogte - onder);
     if (a1 - a0 < 1 || h < 1 || y0 + o.hoogte <= onder) return [];
     const [u0, u1] = [u(a0), u(a1)].sort((p, q) => p - q) as [number, number];
     return [{ soort: 'deur', x: r2(u0), breedte: r2(u1 - u0), hoogte: r2(h) }];
@@ -332,7 +336,7 @@ function bouwLoods(r: ConfiguratieResultaat): Samenstelling {
       const u = (z: number) => (g === 'links' ? zb - z : z - za);
       const extra = alleen ? { alleen } : {};
       if (beton > 0) {
-        const o = hier.flatMap((x) => deurOpening(x, za, zb, y0, beton, u));
+        const o = hier.flatMap((x) => deurOpening(x, za, zb, y0, beton, u, false));
         S.zet(`beton.${g}`, wandvlak({ lengte: zb - za, hoogte: beton, opbouw: loodsBeton, openingen: o }, M), g === 'links' ? X0 : X1 - tb, y0, za, draai, extra);
       }
       const o = hier.flatMap((x) => deurOpening(x, za, zb, betonTop, hoog, u));
@@ -347,7 +351,7 @@ function bouwLoods(r: ConfiguratieResultaat): Samenstelling {
     if (beton > 0) {
       // Tussen de betonpanelen van de zijgevels.
       const b0 = X0 + tb, b1 = X1 - tb, u = (x: number) => (g === 'achter' ? x - b0 : b1 - x);
-      const o = hier.flatMap((x) => deurOpening(x, b0, b1, y0, beton, u));
+      const o = hier.flatMap((x) => deurOpening(x, b0, b1, y0, beton, u, false));
       S.zet(`beton.${g}`, wandvlak({ lengte: b1 - b0, hoogte: beton, opbouw: loodsBeton, openingen: o }, M), b0, y0, g === 'achter' ? Z0 : Z1 - tb, draai, extra);
     }
     const u = (x: number) => (g === 'achter' ? x - xa : xe - x);
@@ -467,11 +471,8 @@ function bouwLoods(r: ConfiguratieResultaat): Samenstelling {
     const nb = '#8c887f', hoogtes = verdeel(y0, betonTop, BETONPANEEL.hoogte).slice(1, -1);
     for (const g of ['links', 'rechts'] as const) {
       const x = g === 'links' ? X0 - uit : X1 - 0.1;
+      // Alleen liggende naden: een staande naad die voor de wand uitsteekt, vangt de zon op haar kant (een witte streep).
       naden(`betonnaad.zij.${g}`, nb, hoogtes, () => [Z0 + 1, Z1 - 1], ops.filter((o) => o.gevel === g), (c, a0, a1, y) => lijn(c, 'donker', x, y - dik / 2, a0, uit + 0.1, dik, a1 - a0));
-      for (let i = 1; i < n; i++) {
-        if (ops.some((o) => o.gevel === g && o.a0 < i * A + 2 && o.a1 > i * A - 2)) continue;
-        detail(lijn(`betonnaad.zij.${g}.staand.${i}`, 'donker', x, y0, i * A - dik / 2, uit + 0.1, beton, dik));
-      }
     }
     for (const g of ['achter', 'voor'] as const) {
       const z = g === 'achter' ? Z0 - uit : Z1 - 0.1;
