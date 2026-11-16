@@ -303,6 +303,13 @@ describe('warmte: wat ontbreekt of niet klopt', () => {
     expect(klaar.nagelezen).toBe(true);
     expect(klaar.voorbehoud).toEqual([WARMTE_VOORBEHOUD]);
     expect(klaar.aannames.join(' ')).not.toMatch(/niet nagelezen/);
+    // Is de opbouw zelf een voorbeeld dat niemand nagelezen heeft, dan zegt de uitkomst dat ook, los van de tabel.
+    const voorbeeldOpbouw: Opbouw = { ...tweeLagen(), herkomst: { bron: 'algemene kennis', nagelezen: false } };
+    const opVoorbeeld = uWaarde(voorbeeldOpbouw, proefMaterialen, proefWaarden(true));
+    expect(opVoorbeeld.nagelezen).toBe(false);
+    expect(opVoorbeeld.aannames.join(' ')).toMatch(/De opbouw zelf .* is een voorbeeld dat geen vakman nagelezen heeft/);
+    expect(opVoorbeeld.voorbehoud).toEqual([WARMTE_VOORBEHOUD]);
+    expect(voorbeeld('hsb_hout').aannames.join(' ')).toMatch(/De opbouw zelf .* is een voorbeeld/);
   });
 
   it('rekent niet met een opbouw die niet klopt of met een ongeldig getal, en geeft nooit NaN', () => {

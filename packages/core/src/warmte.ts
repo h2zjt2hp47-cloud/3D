@@ -139,7 +139,10 @@ export interface WarmteUitkomst {
   toets: WarmteToets;
   /** Vaste zinnen die bij elke uitkomst horen. */
   voorbehoud: string[];
-  /** Zijn alle gebruikte waarden nagelezen? Zolang dit niet zo is, zijn het richtwaarden. */
+  /**
+   * Zijn alle gebruikte waarden nagelezen, en ook de opbouw zelf (als ze haar herkomst zegt)? Zolang dit niet zo is,
+   * rust de uitkomst op richtwaarden of op een voorbeeldopbouw.
+   */
   nagelezen: boolean;
 }
 
@@ -226,8 +229,8 @@ export function uWaarde(opbouw: Opbouw, materialen: Record<string, BouwMateriaal
     lagen, aannames, ontbreekt, toets,
     voorbehoud: nagelezen ? [WARMTE_VOORBEHOUD] : [WARMTE_VOORBEHOUD, WARMTE_NIET_NAGELEZEN],
     ...rest,
-    // Zonder U-waarde is er niets dat nagelezen kan zijn.
-    nagelezen: nagelezen && eindig(rest.uWaarde),
+    // Zonder U-waarde is er niets dat nagelezen kan zijn; een opbouw die zelf een voorbeeld is, telt ook als niet nagelezen.
+    nagelezen: nagelezen && eindig(rest.uWaarde) && opbouw?.herkomst?.nagelezen !== false,
   });
   const geenUWaarde = (rest: Partial<WarmteUitkomst> = {}) => klaar(rest, { oordeel: 'niet te zeggen', uitleg: 'Er is geen U-waarde, dus er valt niets te vergelijken.' });
   if (!waarden || typeof waarden !== 'object') {
@@ -372,6 +375,7 @@ export function uWaarde(opbouw: Opbouw, materialen: Record<string, BouwMateriaal
 
   // De aannames, in de volgorde waarin iemand ze naleest.
   aannames.push('Rekenwijze: de weerstand van elke laag is haar dikte gedeeld door de warmtegeleiding van het materiaal. Alle weerstanden worden opgeteld, met een overgangsweerstand aan elke kant. De U-waarde is 1 gedeeld door die som.');
+  if (opbouw.herkomst?.nagelezen === false) aannames.push('De opbouw zelf (de lagen, hun diktes en het hout) is een voorbeeld dat geen vakman nagelezen heeft.');
   const afgeleid = opties.grenst === undefined ? 'Afgeleid uit de opbouw' : 'Opgegeven';
   if (grenst === 'verwarmde ruimte') aannames.push(`${afgeleid}: aan beide kanten ligt een verwarmde ruimte (${soort === 'vloer' ? 'een verdiepingsvloer met een plafond eronder' : 'een binnenwand'}). Aan elke kant geldt de overgangsweerstand van binnen.`);
   else if (grenst === 'grond') aannames.push(`${afgeleid}: het bouwdeel ligt tegen de grond. De grond zelf is niet meegerekend (dat hangt af van de vorm en de grootte van het gebouw): de echte U-waarde is daardoor lager (beter) dan dit getal.${opties.grenst === undefined ? ' Ligt de vloer boven een kelder, een kruipruimte of de buitenlucht, geef dat dan mee.' : ''}`);

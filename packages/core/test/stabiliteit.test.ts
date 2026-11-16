@@ -204,6 +204,20 @@ describe('stabiliteit: gedrag', () => {
     gewoneGegevens(zonderTabel);
   });
 
+  it('waarschuwt als een maat wellicht in de verkeerde eenheid staat (cm voor het gebouw, mm voor het hout)', () => {
+    const letOp = (extra: Partial<BalkInvoer>) => schatBalk(vloerbalk(400, extra), S).aannames.filter((a) => a.startsWith('Let op'));
+    expect(letOp({})).toEqual([]);
+    // De hart-op-hartafstand van een opbouw staat in mm: 400 "cm" is een vergissing, en geeft stil "te licht".
+    expect(letOp({ belasteBreedte: 400 }).join(' ')).toMatch(/hart-op-hartafstand van 400 cm is ongewoon.*niet in mm/);
+    // Een overspanning in meter (4 in plaats van 400) zou stil "volstaat" geven.
+    expect(schatBalk(vloerbalk(4), S).oordeel).toBe('volstaat');
+    expect(letOp({ overspanning: 4 }).join(' ')).toMatch(/overspanning van 4 cm is ongewoon/);
+    expect(letOp({ doorsnede: { breedte: 7, hoogte: 22 } }).join(' ')).toMatch(/doorsnede van 7 × 22 mm is ongewoon/);
+    // Bij een latei is de belaste breedte een strook dak of vloer: die mag breed zijn.
+    const latei = schatBalk({ rol: 'latei', draagt: 'plat_dak', overspanning: 120, doorsnede: { breedte: 140, hoogte: 190 }, belasteBreedte: 250 }, S);
+    expect(latei.aannames.filter((a) => a.startsWith('Let op'))).toEqual([]);
+  });
+
   it('zegt bij elke uitkomst dat het een schatting is, wat erbuiten valt en of de waarden nagelezen zijn', () => {
     expect(STABILITEIT_VOORBEHOUD).toBe('Schatting; een ingenieur rekent na.');
     for (const woord of ['staal', 'funderingen', 'windverband', 'verbindingen', 'knik', 'puntlasten', 'sneeuwophoping', 'opwaaien']) expect(STABILITEIT_BUITEN_BEREIK).toContain(woord);

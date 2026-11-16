@@ -175,6 +175,11 @@ export const STABILITEIT_BUITEN_BEREIK = 'Buiten deze schatting: staal, funderin
 
 /** Valversnelling in m/s²: van kg naar newton. */
 const VALVERSNELLING = 9.81;
+/**
+ * Grenzen van gezond verstand (geen normwaarden): daarbuiten staat een maat wellicht in de verkeerde eenheid. De
+ * overspanning en de belaste breedte zijn in cm, de doorsnede in mm; een opbouw geeft haar hart-op-hartafstand in mm.
+ */
+const ONGEWOON = { overspanning: [50, 1500], hartOpHart: [15, 150], hout: [15, 1000] } as const;
 const ROL_NAAM: Record<BalkRol, string> = { vloerbalk: 'vloerbalk', dakbalk: 'dakbalk', keper: 'keper', latei: 'latei' };
 const DUUR_NAAM: Record<LastDuur, string> = { blijvend: 'blijvende', middellang: 'middellange', kort: 'korte' };
 const STANDAARD_LAST: Partial<Record<BalkRol, LastSoort>> = { vloerbalk: 'vloer_woning', dakbalk: 'plat_dak', keper: 'hellend_dak' };
@@ -346,7 +351,15 @@ export function schatBalk(invoer: BalkInvoer, waarden: StabiliteitsWaarden): Bal
   const factoren = [f.lastBlijvend, f.lastVeranderlijk, f.materiaal, f.duur.blijvend, f.duur[last.duur]];
   const factorStatus = factoren.every((x) => x.herkomst?.nagelezen === true) ? 'nagelezen' : 'richtwaarden, niet nagelezen';
 
+  // Een maat in de verkeerde eenheid geeft stil een fout oordeel: zeg het als een maat ongewoon is.
+  const buiten = (x: number, [min, max]: readonly [number, number]) => x < min || x > max;
+  const letOp: string[] = [];
+  if (buiten(invoer.overspanning, ONGEWOON.overspanning)) letOp.push(`Let op: een overspanning van ${kort(invoer.overspanning)} cm is ongewoon. Staat ze wel in cm?`);
+  if (rol !== 'latei' && buiten(invoer.belasteBreedte, ONGEWOON.hartOpHart)) letOp.push(`Let op: een hart-op-hartafstand van ${kort(invoer.belasteBreedte)} cm is ongewoon. Staat ze wel in cm (en niet in mm, zoals in een opbouw)?`);
+  if (buiten(invoer.doorsnede.breedte, ONGEWOON.hout) || buiten(invoer.doorsnede.hoogte, ONGEWOON.hout)) letOp.push(`Let op: een doorsnede van ${maat(invoer.doorsnede)} is ongewoon. Staat ze wel in mm?`);
+
   const aannames: string[] = [
+    ...letOp,
     'Rekenwijze: een balk op twee steunpunten met een gelijkmatig verdeelde last over de hele lengte. Grootste buigmoment = last × overspanning² / 8; '
     + 'doorbuiging = 5 × last × overspanning⁴ / (384 × elasticiteit × traagheidsmoment). De opzet van de Eurocode voor houtconstructies, sterk vereenvoudigd.',
     `${ROL_NAAM[rol][0]!.toUpperCase()}${ROL_NAAM[rol].slice(1)} van ${maat(invoer.doorsnede)} (de hoogte staat rechtop), overspanning ${kort(invoer.overspanning)} cm${rol === 'keper' ? `, gemeten langs de helling van ${kort(r.helling, 1)}°` : ''}.`,
