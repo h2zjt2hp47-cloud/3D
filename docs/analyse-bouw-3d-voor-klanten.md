@@ -323,7 +323,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 3 | 1 | *(loopt sinds 15/11)* **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
 | 4 | 1 | **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
-| 5 | 2 | **Bouwdelen en opbouw als gegevens** (hoofdstuk 3): de basis voor wat volgt | M |
+| 5 | 2 | **Klaar (16/11), alleen de motor:** bouwdelen en opbouw als gegevens (hoofdstuk 3 en 16); de woning en de schermen gebruiken ze nog niet | – |
 | 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
 | 6b | 2 | **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | *(loopt sinds 15/11, naar voren gehaald: de uitbouw uit hoofdstuk 10 heeft het hefschuifraam nodig)* **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
@@ -551,3 +551,55 @@ schatting van de stabiliteit zijn een eigen ronde erna.
 2. **Waar wordt bewaard?** Voor de link naar de klant en voor het beheer: in Missing Link, of op een eigen server van de configurator?
 3. **De volgorde wijkt af van jouw keuze.** Jij koos de constructieweergave als eerste na het dak. Ik zet er twee rondes vóór: ronde 2 (prijzen uit beeld en gebruiksgemak) en ronde 3 (bouwdelen en opbouw als gegevens). Akkoord, of wil je de constructieweergave meteen, ook als het skelet dan later opnieuw gemaakt moet worden voor carport en loods?
 4. **Welk bijgebouw en welk soort loods eerst?** Een concrete klant of een voorbeeld (foto, folder) helpt meer dan een algemene beschrijving.
+
+---
+
+## 16. Gebouwd op 16/11: bouwdelen en opbouw als gegevens (ronde 5)
+
+De basis uit hoofdstuk 3 staat in de motor, met tests en met echte beelden uit de losse kijker. **De woning en de schermen
+gebruiken ze nog niet**: dat is ronde 6 (constructieweergave, doorsnede en meetstaat op het scherm).
+
+| Wat | Waar | Inhoud |
+|---|---|---|
+| **De opbouw** | `packages/core/src/opbouw.ts` | Een wand, vloer of dak als lagen (wand: van binnen naar buiten; vloer en dak: van onder naar boven), elke laag met materiaal, dikte en rol. Een skeletlaag kent haar hout: doorsnede, hart-op-hart, vulling. Gewone gegevens, met een controle in gewone taal. Maten in **mm**. |
+| **De bouwdelen** | `packages/core/src/bouwdelen.ts` | Wandvlak (met raam- en deuropeningen: stijlen ernaast, latei erboven, regel onder een raam), vloervlak, dakvlak plat en hellend, paal, ligger, spant. Elk in twee weergaven: *afgewerkt* en *constructie*. Maten in **cm**, doorsneden in mm. |
+| **De meetstaat** | `meetstaat(...)` in `bouwdelen.ts` | Hout per doorsnede met aantal en lengte, latten in lopende meter, platen, isolatie, folie en bekleding in m². Netto en zonder prijzen. De test telt het hout in de 3D en legt het naast de meetstaat. |
+| **Negen voorbeelden** | `packages/core/voorbeelden/opbouwen.ts` | Buitenwand in houtskelet met hout, met steenstrips en met sierpleister; spouwmuur; binnenwand; plat dak (warm dak); hellend dak met pannen; vloer op volle grond; verdiepingsvloer in hout. **Voorbeelden, door geen vakman nagelezen** (elk draagt `nagelezen: false`). |
+
+**De constructieweergave** toont het skelet over het hele bouwdeel en aan één einde een *staal* van de lagen, trapsgewijs: zo zie
+je het hout én waaruit de wand bestaat. Voorbeeld van een meetstaat (wand van 4 m × 2,7 m met een raam, houtskelet met houten
+gevel): 16 stijlen en regels van 38 × 140 mm, samen 33,2 m; één latei; 8,8 m² OSB, dampscherm, gevelfolie, gipsplaat en
+gevelplanken; 7,3 m² isolatie.
+
+**Wat ronde 6 moet weten**
+
+- Hellend dak en spant plaats je met `plaatsBouwdeel` (in `bouwdelen.ts`), niet met `plaatsBlokken`: die laatste verschuift de
+  doorsnede van een schuin stuk niet mee.
+- Rond een opening bestaat een laag uit meerdere blokken; op de naden schemert een dunne stippellijn door (duidelijk op een
+  folie, vaag op steenstrips). Oorzaak niet uitgezocht; op te lossen in de kijker (een vlak met een gat) of door de lagen anders
+  te snijden.
+- Twee eenheden (opbouw in mm, bouwdelen in cm): bewust, maar een bron van vergissingen.
+- Roep eerst `controleerOpbouw` aan: een foute opbouw wordt toch getekend.
+- Nog te beslissen: vervangt het bouwdeel de bestaande muur van de woning ook in de afgewerkte weergave, of voedt het alleen de
+  constructieweergave? Voorstel: alleen de constructieweergave, zodat het afgewerkte beeld (gevelmaterialen per vlak) blijft wat
+  het is.
+- Een wand van 4 m is 35 blokken, een zadeldak 97. Een hele woning in constructieweergave is niet gemeten; de kijker tekent elk
+  blok apart (hoofdstuk 7, risico snelheid).
+- De kijker mist: een vlak met een gat, een half doorzichtig materiaal, een eigen tekening voor isolatie, OSB, folie en beton, en
+  een stalen I-profiel in één blok. Staal komt erbij als een extra vorm van doorsnede en een eigen groep in de meetstaat.
+
+**Wat een vakman moet nalezen** (hoort bij punt 1 van hoofdstuk 15)
+
+1. Alle lagen en diktes van de negen opbouwen.
+2. Naast een opening: dubbele stijl, en een latei uit één stuk van 190 mm hoog (zelf gekozen).
+3. Een stijl op het raster vervalt als hij binnen één stijlbreedte van een vaste stijl valt (zelf gekozen).
+4. Enkele onder- en bovenregel.
+5. Roostering 70 × 220 mm om de 40 cm met een randbalk; geen klossen, geen raveling rond een trapgat of koepel.
+6. Kepers 50 × 180 mm om de 45 cm; muurplaat, gordingen en nokbalk zitten niet in het dakvlak.
+7. Latten: maten, richting, enkel of dubbel latwerk, en de latafstand van de pannen.
+8. Plat dak zonder afschot.
+9. Spouwmuur zonder lateien en spouwankers.
+10. De volgorde van de lagen in de vloer op volle grond.
+11. Het spant heeft geen verbindingen.
+12. De meetstaat is netto: zonder snijverlies en handelslengtes; isolatie is het vlak min het hout.
+
