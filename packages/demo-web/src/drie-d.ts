@@ -12,8 +12,10 @@ import { HOOGTE_KLEUR, KAART_PX, WEEFSEL_CM, WEEFSELKAART, weefselCanvas, weefse
 import { bouwDecor, type DecorSpec } from './decor3d.js';
 
 import * as THREE_ from 'three';
-import { RenderPipeline, WebGPURenderer } from 'three/webgpu';
+import { NodeMaterial, RenderPipeline, WebGPURenderer } from 'three/webgpu';
 import { float, mix, mrt, normalView, output, packNormalToRGB, pass, sample, smoothstep, unpackRGBToNormal, vec4 } from 'three/tsl';
+// Lucht achter een gebouw (zie `maakBuiten`): een eigen, berekende hemel, geen beeld van derden.
+import { atan, cameraProjectionMatrix, dot, equirectUV, max, modelViewMatrix, normalWorldGeometry, positionLocal, pow, sin, texture as tslTextuur, uniform, vec2 } from 'three/tsl';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { denoise } from 'three/addons/tsl/display/DenoiseNode.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
@@ -59,8 +61,18 @@ export interface Viewer3D {
    * null = terug naar het vaste licht van de lichtsfeer (het beeld is dan exact zoals zonder deze functie).
    */
   zon?(stand: ZonIn3D | null): void;
+  /**
+   * Omgeving rond wat getoond wordt (bouw; de zetels hebben decors). 'buiten' = een gebouw in open lucht: lucht en
+   * horizon, gras tot aan de einder, licht dat bij de lucht past en, in de kwaliteit Mooi, zachte schaduw in de hoeken.
+   * 'geen' (standaard) = de effen achtergrond van altijd, voor een los raam of een losse deur. De aanroeper kiest, per
+   * scène die hij toont; de kijker gokt niet op de inhoud. De zon blijft de baas: lucht en licht volgen `zon()`.
+   */
+  omgeving?(naam: OmgevingNaam): void;
   formaat(): void;
 }
+
+/** Omgeving rond een gebouw (zie Viewer3D.omgeving). */
+export type OmgevingNaam = 'geen' | 'buiten';
 
 /** Stand van de zon voor de kijker, in graden (zie Viewer3D.zon). */
 export interface ZonIn3D { richting: number; hoogte: number }
@@ -280,6 +292,92 @@ function omgevingVoor(naam: LichtNaam) {
   return t;
 }
 
+// ---------- lucht voor gebouwen (omgeving 'buiten', zie Viewer3D.omgeving) ----------
+/**
+ * Stand van de zon buiten als de aanroeper er geen koos: schuin van rechts voor en halfhoog (een heldere namiddag).
+ * Zo krijgt de gevel die je in het standpunt Schuin ziet strijklicht, ligt de zijgevel in de schaduw en valt de
+ * schaduw van de woning zichtbaar op het gras.
+ */
+const ZON_BUITEN: ZonIn3D = { richting: 148, hoogte: 43 };
+type Rgb = [number, number, number];
+/** Lineaire kleur uit een sRGB-hex. */
+const lineair = (hex: string): Rgb => { const c = new THREE.Color(hex); return [c.r, c.g, c.b]; };
+const meng = (a: Rgb, b: Rgb, t: number): Rgb => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const maal = (a: Rgb, f: number): Rgb => [a[0] * f, a[1] * f, a[2] * f];
+const zachteStap = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+/** Kleur voor een deel `f` naar grijs van dezelfde helderheid (minder verzadigd). */
+const ontkleur = (k: Rgb, f: number): Rgb => { const grijs = 0.2126 * k[0] + 0.7152 * k[1] + 0.0722 * k[2]; return [k[0] + (grijs - k[0]) * f, k[1] + (grijs - k[1]) * f, k[2] + (grijs - k[2]) * f]; };
+
+/** De lucht en het licht bij één stand van de zon: alles wat de kijker nodig heeft om lucht, licht en mist te zetten. */
+interface Lucht {
+  /** Richting naar de zon in de scène (eenheidsvector). */
+  naarZon: Rgb;
+  /** Lineaire kleuren: recht boven, aan de horizon, de gloed rond de zon, de bomenrij, de wolken en de mist waarin het gras ver weg oplost. */
+  zenit: Rgb; horizon: Rgb; gloed: Rgb; bomen: Rgb; wolk: Rgb; mist: Rgb;
+  /** Bodem in het omgevingsbeeld (wat een muur van onder en een ruit van boven weerkaatst). */
+  grond: Rgb;
+  zonKleur: Rgb;
+  /** 0 = nacht, 1 = volop dag; 1 = zon aan de horizon (warm licht), 0 = hoog aan de hemel. */
+  dag: number; warm: number;
+  /** Zon boven de horizon? */
+  op: boolean;
+}
+/**
+ * Eigen, eenvoudig luchtmodel (geen beeld of gegevens van derden): een verloop van de horizon naar het zenit dat met
+ * de hoogte van de zon van helder blauw over warm avondlicht naar nacht gaat. Geen natuurkundige simulatie: de
+ * kleuren zijn op het oog gekozen. De zon is de baas: dit volgt de stand, niet omgekeerd.
+ */
+function luchtVan(stand: ZonIn3D): Lucht {
+  const h = stand.hoogte, r = (stand.richting * Math.PI) / 180, e = (Math.max(h, -20) * Math.PI) / 180;
+  const dag = zachteStap(-6, 5, h), warm = 1 - zachteStap(3, 30, h);
+  // Na zonsondergang het blauwe uur, geen zwart beeld: de woning blijft leesbaar (de lichtinval loopt tot 22 u).
+  const zenit = meng(lineair('#1c2a4a'), meng(lineair('#3a78cc'), lineair('#536fae'), warm * 0.8), dag);
+  const horizon = meng(lineair('#4a5876'), meng(lineair('#d3e2ef'), lineair('#f4cfa8'), warm * 0.85), dag);
+  const gloed = maal(meng(lineair('#fff3d8'), lineair('#ffae66'), warm), dag);
+  return {
+    naarZon: [Math.sin(r) * Math.cos(e), Math.sin(e), -Math.cos(r) * Math.cos(e)],
+    zenit, horizon, gloed,
+    bomen: meng(horizon, maal(lineair('#46583f'), 0.3 + 0.7 * dag), 0.62),
+    // Verre velden in de nevel: tussen de lucht aan de horizon en een flets groen (geen witte band onder de bomenrij).
+    mist: meng(horizon, maal(lineair('#8a9c7c'), 0.3 + 0.7 * dag), 0.62),
+    wolk: maal(meng(lineair('#ffffff'), lineair('#ffd9b5'), warm * 0.8), 0.2 + 0.8 * dag),
+    grond: maal(meng(lineair('#66784d'), lineair('#8a877c'), 0.45), 0.3 + 0.32 * dag),
+    zonKleur: meng(lineair('#fff2df'), lineair('#ffc48a'), warm * 0.7),
+    dag, warm, op: h > 0,
+  };
+}
+/** Kleur van de lucht in een richting (lineair), zonder wolken en bomen: voor het omgevingsbeeld (weerkaatsing en strooilicht). */
+function luchtKleur(l: Lucht, x: number, y: number, z: number): Rgb {
+  const t = Math.pow(Math.max(y, 0), 0.45), cz = Math.max(0, x * l.naarZon[0] + y * l.naarZon[1] + z * l.naarZon[2]);
+  const g = Math.pow(cz, 10) * 0.3 + Math.pow(cz, 120) * 1.4;
+  return [0, 1, 2].map((k) => l.horizon[k]! + (l.zenit[k]! - l.horizon[k]!) * t + l.gloed[k]! * g) as Rgb;
+}
+/**
+ * Omgevingsbeeld van de lucht (equirect, halve getallen) in `doel` (W × H × 4). `alleenLucht` = ook onder de horizon
+ * lucht: voor glas, zodat een ruit die je van boven ziet de hemel spiegelt in plaats van het gras (een bewuste
+ * vereenvoudiging: zo leest een raam als glas).
+ */
+function vulLuchtbeeld(doel: Uint16Array, W: number, H: number, l: Lucht, alleenLucht: boolean) {
+  const half = THREE.DataUtils.toHalfFloat, een = half(1);
+  for (let y = 0; y < H; y++) {
+    const el = ((y + 0.5) / H - 0.5) * Math.PI, sy = Math.sin(el), c = Math.cos(el);
+    for (let x = 0; x < W; x++) {
+      const az = ((x + 0.5) / W - 0.5) * 2 * Math.PI;
+      const dx = c * Math.cos(az), dz = c * Math.sin(az);
+      let k: Rgb;
+      if (alleenLucht) k = luchtKleur(l, dx, 0.08 + 0.8 * Math.abs(sy), dz);
+      else {
+        // Zachte overgang rond de horizon, zoals in `hdrBeeld`. Als lichtbron is de lucht grotendeels ontkleurd: het
+        // volle blauw maakt een witte muur in de schaduw koud en grijsblauw.
+        const boven = zachteStap(-0.05, 0.03, sy);
+        k = boven > 0 ? meng(l.grond, ontkleur(luchtKleur(l, dx, Math.max(sy, 0), dz), 0.68), boven) : l.grond;
+      }
+      const i = (y * W + x) * 4;
+      doel[i] = half(Math.min(k[0], 60)); doel[i + 1] = half(Math.min(k[1], 60)); doel[i + 2] = half(Math.min(k[2], 60)); doel[i + 3] = een;
+    }
+  }
+}
+
 export interface Opties3D {
   /** Zetelweergave: contactschaduw onder de zetel en keuze van decor (niet voor woningen). */
   zetel?: boolean;
@@ -315,7 +413,7 @@ function vasteReeks(sleutel: string) {
  * met een uitleg in plaats van eindeloos te herstarten.
  */
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
-  const toestand: { scene?: Scene3D; decor?: DecorNaam; licht?: LichtNaam; kwaliteit?: Kwaliteit; weergave: Partial<Weergave3D>; markeer?: string | null; standpunt?: Standpunt } = { weergave: {} };
+  const toestand: { scene?: Scene3D; decor?: DecorNaam; licht?: LichtNaam; kwaliteit?: Kwaliteit; weergave: Partial<Weergave3D>; markeer?: string | null; standpunt?: Standpunt; omgeving?: OmgevingNaam } = { weergave: {} };
   let verliezen: number[] = [];
   let huidige: EigenViewer | null = null;
   /** Laatst gezette stand van de zon (zie Viewer3D.zon), om na een herstart terug te zetten. */
@@ -336,6 +434,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     huidige = start(opWebGL);
     if (!huidige) return;
     if (toestand.kwaliteit) huidige.kwaliteit?.(toestand.kwaliteit);
+    if (toestand.omgeving) huidige.omgeving?.(toestand.omgeving);
     if (toestand.decor) huidige.decor?.(toestand.decor);
     if (toestand.licht) huidige.licht?.(toestand.licht);
     if (Object.keys(toestand.weergave).length) huidige.instellen?.(toestand.weergave);
@@ -363,6 +462,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     instellen(w) { toestand.weergave = { ...toestand.weergave, ...w }; huidige?.instellen?.(w); },
     markeer(id) { toestand.markeer = id; huidige?.markeer?.(id); },
     zon(stand) { zonToestand = stand; huidige?.zon?.(stand); },
+    omgeving(naam) { toestand.omgeving = naam; huidige?.omgeving?.(naam); },
     formaat() { huidige?.formaat(); },
     // Voor de tests: doen alsof het toestel wegvalt (zoals de browser het meldt).
     proefVerlies() { huidige?.proefVerlies(); },
@@ -461,7 +561,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   /** Onzichtbaar voor het oog, wel in de schaduwkaart: voor blokken met `alleenSchaduw` (woning, lichtinval). */
   const schaduwMateriaal = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
   const studioVloer = new THREE.MeshStandardMaterial({ color: 0xdcd8d0, roughness: 1, envMapIntensity: 0.4 });
-  const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), studioVloer);
+  // Bouw: dezelfde vloer, maar ze wijkt in de diepte voor wat op dezelfde hoogte ligt (het terras en de vloer bij een
+  // los raam lagen er precies op en flikkerden in strepen).
+  const bouwVloer = opties.zetel ? studioVloer : Object.assign(studioVloer.clone(), { polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 6 });
+  const vloer = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), bouwVloer);
   vloer.rotation.x = -Math.PI / 2;
   vloer.receiveShadow = true;
   scene.add(vloer);
@@ -769,6 +872,300 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     }
   });
 
+  // ---------- rijkere materialen voor gebouwen (alleen de bouw; de zetels en hun decors houden de tekeningen hierboven) ----------
+  // Elke structuur is hier zelf getekend (geen foto's, geen bestanden van fabrikanten): een kleurkaart en een
+  // hoogtekaart (bumpMap), zodat voegen, groeven en de golf van een dakpan licht vangen. Grotere tegels dan hierboven,
+  // met een vaste tint per steen of plank die over de rand doorloopt: geen naad en minder zichtbare herhaling.
+  // De schaal (beeldpunten per cm) is zo gekozen dat één laag, plank of pan een geheel aantal beeldpunten telt dat
+  // een paar keer door twee deelbaar is. De grafische kaart tekent van ver met verkleinde versies van de tekening
+  // (telkens de helft); valt een voeg daar niet op een geheel beeldpunt, dan krijgt de gevel lichte en donkere banden.
+  const BOUW_ANISOTROPIE = 8;
+  /** Hoeveel sterker glas de lucht spiegelt in de omgeving 'buiten' (anders zie je alleen de kamer erachter). */
+  const GLAS_SPIEGELT = 2.6;
+  const STEEN_RIJK = { b: 176, h: 120 }, PLANK_RIJK = { b: 96, h: 240 }, LIGGEND_RIJK = { b: 240, h: 120 }, LEIEN_RIJK = { b: 160, h: 96 };
+  const PANNEN_RIJK = { b: 180, h: 136 }, HOUT_RIJK = { b: 64, h: 128 };
+  if (!opties.zetel) Object.assign(textuurMaat, { steen: STEEN_RIJK, planken: PLANK_RIJK, planken_h: LIGGEND_RIJK, leien: LEIEN_RIJK, pannen: PANNEN_RIJK, hout: HOUT_RIJK });
+  const grijs = (v: number) => { const k = Math.max(0, Math.min(255, Math.round(v))); return `rgb(${k},${k},${k})`; };
+  type Tekenvlak = CanvasRenderingContext2D;
+  /** Kleurkaart en hoogtekaart samen getekend: `teken` krijgt de twee tekenvlakken (kleur, hoogte: licht = hoog) en de schaal. */
+  const metRelief = (b: number, h: number, px: number, teken: (g: Tekenvlak, r: Tekenvlak, px: number) => void) => {
+    const vlak = () => { const c = document.createElement('canvas'); c.width = Math.round(b * px); c.height = Math.round(h * px); return c; };
+    const ck = vlak(), cr = vlak(), r = cr.getContext('2d')!;
+    r.fillStyle = grijs(128);
+    r.fillRect(0, 0, cr.width, cr.height);
+    teken(ck.getContext('2d')!, r, px);
+    const textuur = (c: HTMLCanvasElement, kleur: boolean) => {
+      const t = new THREE.CanvasTexture(c);
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      if (kleur) t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = BOUW_ANISOTROPIE;
+      return t;
+    };
+    return { map: textuur(ck, true), bumpMap: textuur(cr, false) };
+  };
+  /** Fijne korrel over een vlak: donkere en lichte puntjes. */
+  const korrel = (g: Tekenvlak, toeval: () => number, x: number, y: number, w: number, h: number, aantal: number, sterkte: number) => {
+    for (let n = 0; n < aantal; n++) {
+      g.fillStyle = toeval() < 0.5 ? `rgba(0,0,0,${toeval() * sterkte})` : `rgba(255,255,255,${toeval() * sterkte * 0.8})`;
+      g.fillRect(x + toeval() * w, y + toeval() * h, 1.6, 1.6);
+    }
+  };
+  /** Gevelsteen: 8 stenen × 20 lagen, elke steen een eigen tint (hier en daar een donker gebakken), de voeg verdiept. */
+  const baksteenRijk = (hex: string, voeg = '#cfc8bb') => metRelief(STEEN_RIJK.b, STEEN_RIJK.h, 4, (g, r, px) => {
+    const toeval = vasteReeks('baksteenrijk' + hex + voeg);
+    const W = STEEN_RIJK.b * px, H = STEEN_RIJK.h * px;
+    g.fillStyle = voeg;
+    g.fillRect(0, 0, W, H);
+    korrel(g, toeval, 0, 0, W, H, 5000, 0.12);
+    r.fillStyle = grijs(60);
+    r.fillRect(0, 0, W, H);
+    for (let rij = 0; rij < 20; rij++) {
+      const off = rij % 2 ? 11 : 0;
+      // Eén tint en hoogte per steen van de rij; de steen op de rand krijgt links en rechts dezelfde.
+      const stenen = Array.from({ length: 8 }, () => ({ f: toeval() < 0.06 ? 0.7 + toeval() * 0.1 : 0.86 + toeval() * 0.25, hoog: 170 + toeval() * 60, vlek: toeval() }));
+      // Elke laag gemiddeld even licht: van ver zie je anders lichte en donkere lagen als banden.
+      const gemiddeld = stenen.reduce((som, st) => som + st.f, 0) / stenen.length;
+      for (const st of stenen) st.f += 0.97 - gemiddeld;
+      for (let s = -1; s < 9; s++) {
+        const st = stenen[(s + 8) % 8]!, x = (s * 22 + off) * px, y = rij * 6 * px, w = 21 * px, h = 5 * px;
+        g.fillStyle = tint(hex, st.f);
+        g.fillRect(x, y, w, h);
+        // Een lichtere of donkerdere helft (bakkleur), een lichte bovenrand en een donkere onderrand.
+        g.fillStyle = st.vlek < 0.5 ? `rgba(255,255,255,${0.02 + st.vlek * 0.1})` : `rgba(0,0,0,${(st.vlek - 0.5) * 0.12})`;
+        g.fillRect(x + ((st.vlek * 7) % 1) * w * 0.5, y, w * 0.5, h);
+        g.fillStyle = 'rgba(255,255,255,.07)';
+        g.fillRect(x, y, w, 0.3 * px);
+        g.fillStyle = 'rgba(0,0,0,.14)';
+        g.fillRect(x, y + h - 0.3 * px, w, 0.3 * px);
+        r.fillStyle = grijs(st.hoog);
+        r.fillRect(x, y, w, h);
+      }
+    }
+    korrel(g, toeval, 0, 0, W, H, 9000, 0.1);
+    korrel(r, toeval, 0, 0, W, H, 6000, 0.12);
+  });
+  /** Tekent één plank met nerf en hier en daar een kwast; `staand` = de plank loopt van boven naar onder. */
+  const plankMetNerf = (g: Tekenvlak, r: Tekenvlak, toeval: () => number, hex: string, x: number, y: number, w: number, h: number, staand: boolean, f: number, kwast = 0.4) => {
+    g.fillStyle = tint(hex, f);
+    g.fillRect(x, y, w, h);
+    r.fillStyle = grijs(176 + toeval() * 30);
+    r.fillRect(x, y, w, h);
+    const breed = staand ? w : h, lang = staand ? h : w;
+    for (let n = 0; n < Math.round(breed / 1.6); n++) {
+      const p = toeval() * breed, dik = 0.5 + toeval() * 1.4, donker = toeval() < 0.6;
+      g.fillStyle = donker ? `rgba(0,0,0,${0.03 + toeval() * 0.09})` : `rgba(255,255,255,${0.02 + toeval() * 0.06})`;
+      const a = toeval() * lang * 0.5, l = lang * (0.4 + toeval() * 0.6);
+      if (staand) g.fillRect(x + p, y + a, dik, l); else g.fillRect(x + a, y + p, l, dik);
+      if (donker && toeval() < 0.35) { r.fillStyle = 'rgba(0,0,0,.1)'; if (staand) r.fillRect(x + p, y + a, dik, l); else r.fillRect(x + a, y + p, l, dik); }
+    }
+    if (toeval() < kwast) {
+      // Kwast: een donkere ovaal met een kern.
+      const kx = x + (0.2 + toeval() * 0.6) * w, ky = y + (0.1 + toeval() * 0.8) * h, kr = Math.min(breed * 0.16, 9) * (0.6 + toeval() * 0.6);
+      g.fillStyle = 'rgba(0,0,0,.2)';
+      g.beginPath(); g.ellipse(kx, ky, staand ? kr : kr * 1.6, staand ? kr * 1.6 : kr, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(0,0,0,.28)';
+      g.beginPath(); g.ellipse(kx, ky, kr * 0.5, kr * 0.5, 0, 0, Math.PI * 2); g.fill();
+    }
+  };
+  /** Staande planken van 12 cm met een schaduwgroef; 8 planken per tegel. */
+  const plankenRijk = (hex: string) => metRelief(PLANK_RIJK.b, PLANK_RIJK.h, 8 / 3, (g, r, px) => {
+    const toeval = vasteReeks('plankenrijk' + hex);
+    for (let p = 0; p < 8; p++) {
+      plankMetNerf(g, r, toeval, hex, p * 12 * px, 0, 12 * px, PLANK_RIJK.h * px, true, 0.84 + toeval() * 0.26);
+      for (const vlak of [g, r]) { vlak.fillStyle = vlak === g ? 'rgba(0,0,0,.45)' : grijs(30); vlak.fillRect((p * 12 + 11.3) * px, 0, 0.7 * px, PLANK_RIJK.h * px); }
+      r.fillStyle = 'rgba(255,255,255,.18)';
+      r.fillRect(p * 12 * px, 0, 0.6 * px, PLANK_RIJK.h * px);
+    }
+  });
+  /** Liggende planken van 15 cm (rabat): elke plank helt naar voren en werpt een schaduwlijn op de plank eronder. */
+  const plankenLiggendRijk = (hex: string) => metRelief(LIGGEND_RIJK.b, LIGGEND_RIJK.h, 32 / 15, (g, r, px) => {
+    const toeval = vasteReeks('plankenliggendrijk' + hex);
+    const W = LIGGEND_RIJK.b * px;
+    for (let rij = 0; rij < 8; rij++) {
+      const y = rij * 15 * px, h = 15 * px, naad = ((rij * 97) % 240) * px, f1 = 0.84 + toeval() * 0.26, f2 = 0.84 + toeval() * 0.26;
+      plankMetNerf(g, r, toeval, hex, 0, y, naad, h, false, f1);
+      plankMetNerf(g, r, toeval, hex, naad, y, W - naad, h, false, f2);
+      // Rabat: bovenaan diep (onder de plank erboven), onderaan naar voren.
+      const helling = r.createLinearGradient(0, y, 0, y + h);
+      helling.addColorStop(0, 'rgba(0,0,0,.5)');
+      helling.addColorStop(0.25, 'rgba(0,0,0,.12)');
+      helling.addColorStop(1, 'rgba(255,255,255,.3)');
+      r.fillStyle = helling;
+      r.fillRect(0, y, W, h);
+      const schaduw = g.createLinearGradient(0, y, 0, y + 2.2 * px);
+      schaduw.addColorStop(0, 'rgba(0,0,0,.5)');
+      schaduw.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = schaduw;
+      g.fillRect(0, y, W, 2.2 * px);
+      for (const vlak of [g, r]) { vlak.fillStyle = vlak === g ? 'rgba(0,0,0,.4)' : grijs(40); vlak.fillRect(naad, y, 0.5 * px, h); }
+    }
+  });
+  /** Gevelleien 20 × 12 cm zichtbaar: elke lei een eigen tint, de onderrand ligt op de lei eronder. */
+  const leienRijk = (hex: string) => metRelief(LEIEN_RIJK.b, LEIEN_RIJK.h, 4, (g, r, px) => {
+    const toeval = vasteReeks('leienrijk' + hex);
+    const W = LEIEN_RIJK.b * px, H = LEIEN_RIJK.h * px;
+    g.fillStyle = tint(hex, 0.5);
+    g.fillRect(0, 0, W, H);
+    r.fillStyle = grijs(40);
+    r.fillRect(0, 0, W, H);
+    for (let rij = 0; rij < 8; rij++) {
+      const off = rij % 2 ? 10 : 0, tinten = Array.from({ length: 8 }, () => 0.86 + toeval() * 0.24);
+      for (let s = -1; s < 9; s++) {
+        const x = (s * 20 + off + 0.25) * px, y = (rij * 12 + 0.3) * px, w = 19.5 * px, h = 11.5 * px;
+        g.fillStyle = tint(hex, tinten[(s + 8) % 8]!);
+        g.fillRect(x, y, w, h);
+        const op = r.createLinearGradient(0, y, 0, y + h);
+        op.addColorStop(0, grijs(90));
+        op.addColorStop(1, grijs(215));
+        r.fillStyle = op;
+        r.fillRect(x, y, w, h);
+        g.fillStyle = 'rgba(255,255,255,.07)';
+        g.fillRect(x, y + h - 0.5 * px, w, 0.5 * px);
+      }
+      const schaduw = g.createLinearGradient(0, rij * 12 * px, 0, (rij * 12 + 2.4) * px);
+      schaduw.addColorStop(0, 'rgba(0,0,0,.42)');
+      schaduw.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = schaduw;
+      g.fillRect(0, rij * 12 * px, W, 2.4 * px);
+    }
+    korrel(g, toeval, 0, 0, W, H, 7000, 0.07);
+  });
+  /**
+   * Keramische dakpannen, 30 × 34 cm zichtbaar, 6 × 4 per tegel: de golf van elke pan en de trap waar ze op de pan
+   * eronder ligt, ook in de hoogtekaart. De bovenkant van de tekening ligt hoger op het dak (zie prismaGeometrie).
+   */
+  const pannenRijk = (hex: string) => metRelief(PANNEN_RIJK.b, PANNEN_RIJK.h, 4, (g, r, px) => {
+    const toeval = vasteReeks('pannenrijk' + hex);
+    for (let rij = 0; rij < 4; rij++) for (let s = 0; s < 6; s++) {
+      const x = s * 30 * px, y = rij * 34 * px, w = 30 * px, h = 34 * px, f = 0.9 + toeval() * 0.2;
+      const golf = g.createLinearGradient(x, 0, x + w, 0), hoogte = r.createLinearGradient(x, 0, x + w, 0);
+      for (const [waar, licht, hoog] of [[0, 0.74, 40], [0.14, 1.0, 150], [0.46, 1.12, 235], [0.82, 0.9, 120], [1, 0.68, 40]] as const) {
+        golf.addColorStop(waar, tint(hex, licht * f));
+        hoogte.addColorStop(waar, grijs(hoog));
+      }
+      g.fillStyle = golf;
+      g.fillRect(x, y, w, h);
+      r.fillStyle = hoogte;
+      r.fillRect(x, y, w, h);
+      // Bovenaan de schaduw van de pan erboven; in de hoogtekaart loopt de pan naar haar onderrand op.
+      const schaduw = g.createLinearGradient(0, y, 0, y + 7 * px);
+      schaduw.addColorStop(0, 'rgba(0,0,0,.5)');
+      schaduw.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = schaduw;
+      g.fillRect(x, y, w, 7 * px);
+      g.fillStyle = 'rgba(255,255,255,.1)';
+      g.fillRect(x, y + h - 1.2 * px, w, 1.2 * px);
+      const trap = r.createLinearGradient(0, y, 0, y + h);
+      trap.addColorStop(0, 'rgba(0,0,0,.55)');
+      trap.addColorStop(0.5, 'rgba(0,0,0,.1)');
+      trap.addColorStop(1, 'rgba(255,255,255,.25)');
+      r.fillStyle = trap;
+      r.fillRect(x, y, w, h);
+    }
+  });
+  /** Zink met staande naad om de 43 cm: de naad staat op in de hoogtekaart. */
+  const zinkRijk = (hex: string) => metRelief(ZINK.b, ZINK.h, 3, (g, r, px) => {
+    const toeval = vasteReeks('zinkrijk' + hex);
+    const W = ZINK.b * px, H = ZINK.h * px, verloop = g.createLinearGradient(0, 0, W, 0);
+    verloop.addColorStop(0, tint(hex, 0.96));
+    verloop.addColorStop(0.5, tint(hex, 1.04));
+    verloop.addColorStop(1, tint(hex, 0.94));
+    g.fillStyle = verloop;
+    g.fillRect(0, 0, W, H);
+    // Patina: lichte, staande vegen.
+    for (let n = 0; n < 70; n++) { g.fillStyle = `rgba(255,255,255,${toeval() * 0.04})`; g.fillRect(toeval() * W, toeval() * H, 1 + toeval() * 3, H * (0.2 + toeval() * 0.5)); }
+    g.fillStyle = tint(hex, 1.25);
+    g.fillRect(0, 0, 1.2 * px, H);
+    g.fillStyle = 'rgba(0,0,0,.35)';
+    g.fillRect(1.2 * px, 0, 0.6 * px, H);
+    r.fillStyle = grijs(245);
+    r.fillRect(0, 0, 1.4 * px, H);
+  });
+  /** Parket: planken van 20 × 120 cm in halfsteens verband, met nerf en een fijne groef tussen de planken. */
+  const parketRijk = (hex: string) => metRelief(PARKET.b, PARKET.h, 3.2, (g, r, px) => {
+    const toeval = vasteReeks('parketrijk' + hex);
+    for (let rij = 0; rij < 4; rij++) {
+      const off = (rij % 2) * 60, tinten = [0.86 + toeval() * 0.24, 0.86 + toeval() * 0.24];
+      // Dezelfde plank links en rechts van de rand: dezelfde reeks, dus dezelfde nerf.
+      for (let s = -1; s < 2; s++) plankMetNerf(g, r, vasteReeks(`parketplank${hex}${rij}${(s + 2) % 2}`), hex, (s * 120 + off) * px, rij * 20 * px, 120 * px, 20 * px, false, tinten[(s + 2) % 2]!, 0.08);
+      for (const vlak of [g, r]) {
+        vlak.fillStyle = vlak === g ? 'rgba(0,0,0,.3)' : grijs(60);
+        vlak.fillRect(0, rij * 20 * px, PARKET.b * px, 1);
+        for (let s = -1; s < 2; s++) vlak.fillRect((s * 120 + off) * px, rij * 20 * px, 1, 20 * px);
+      }
+    }
+  });
+  /** Tegels van 60 × 60 cm: een wolkige tint per tegel en een verdiepte voeg. */
+  const tegelsRijk = (hex: string) => metRelief(TEGEL.b, TEGEL.h, 4, (g, r, px) => {
+    const toeval = vasteReeks('tegelsrijk' + hex);
+    const W = TEGEL.b * px;
+    g.fillStyle = tint(hex, 0.74);
+    g.fillRect(0, 0, W, W);
+    r.fillStyle = grijs(70);
+    r.fillRect(0, 0, W, W);
+    for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+      const x = (i * 60 + 0.3) * px, y = (j * 60 + 0.3) * px, w = 59.4 * px;
+      g.fillStyle = tint(hex, 0.95 + toeval() * 0.08);
+      g.fillRect(x, y, w, w);
+      g.save();
+      g.beginPath(); g.rect(x, y, w, w); g.clip();
+      for (let n = 0; n < 9; n++) {
+        const cx = x + toeval() * w, cy = y + toeval() * w, straal = (8 + toeval() * 22) * px, wolk = g.createRadialGradient(cx, cy, 0, cx, cy, straal);
+        wolk.addColorStop(0, toeval() < 0.5 ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.05)');
+        wolk.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = wolk;
+        g.fillRect(cx - straal, cy - straal, straal * 2, straal * 2);
+      }
+      g.restore();
+      r.fillStyle = grijs(200);
+      r.fillRect(x, y, w, w);
+    }
+    korrel(g, toeval, 0, 0, W, W, 4000, 0.05);
+  });
+  /** Hout met nerf in ware maat (meubels, trap, houten ramen): lange nerven en brede banen in een iets andere tint. */
+  const houtRijk = (hex: string) => metRelief(HOUT_RIJK.b, HOUT_RIJK.h, 4, (g, r, px) => {
+    const toeval = vasteReeks('houtrijk' + hex);
+    const W = HOUT_RIJK.b * px, H = HOUT_RIJK.h * px;
+    g.fillStyle = hex;
+    g.fillRect(0, 0, W, H);
+    for (let n = 0; n < 14; n++) { g.fillStyle = toeval() < 0.5 ? `rgba(0,0,0,${toeval() * 0.07})` : `rgba(255,255,255,${toeval() * 0.07})`; g.fillRect(toeval() * W, 0, (2 + toeval() * 9) * px, H); }
+    for (let n = 0; n < 150; n++) {
+      const x = toeval() * W, w = 0.5 + toeval() * 1.5, donker = toeval() < 0.6;
+      g.fillStyle = donker ? `rgba(0,0,0,${0.04 + toeval() * 0.1})` : `rgba(255,255,255,${0.03 + toeval() * 0.07})`;
+      g.fillRect(x, 0, w, H);
+      if (donker) { r.fillStyle = 'rgba(0,0,0,.12)'; r.fillRect(x, 0, w, H); }
+    }
+  });
+  /**
+   * Materiaal voor een gebouw (niet voor de zetels): rijker getekend, met reliëf. Null = de gewone tekening hieronder.
+   * `userData.buiten` = hoeveel sterker dit materiaal de lucht spiegelt in de omgeving 'buiten' (glas).
+   */
+  function bouwMateriaal(b: { soort: Blok['soort']; kleur: string; voeg?: string }): any {
+    const std = (p: Record<string, unknown>) => new THREE.MeshStandardMaterial({ color: 0xffffff, ...p });
+    switch (b.soort) {
+      case 'steen': return std({ roughness: 0.93, bumpScale: 0.9, ...baksteenRijk(b.kleur, b.voeg) });
+      case 'planken': return std({ roughness: 0.68, bumpScale: 0.7, ...plankenRijk(b.kleur) });
+      case 'planken_h': return std({ roughness: 0.68, bumpScale: 0.9, ...plankenLiggendRijk(b.kleur) });
+      case 'leien': return std({ roughness: 0.6, bumpScale: 0.6, ...leienRijk(b.kleur) });
+      case 'pannen': return std({ roughness: 0.7, bumpScale: 1.6, ...pannenRijk(b.kleur) });
+      case 'zink': return std({ roughness: 0.4, metalness: 0.5, bumpScale: 0.6, ...zinkRijk(b.kleur) });
+      case 'parket': return std({ roughness: 0.52, bumpScale: 0.25, ...parketRijk(b.kleur) });
+      case 'tegel': return std({ roughness: 0.42, bumpScale: 0.35, ...tegelsRijk(b.kleur) });
+      case 'hout': return std({ roughness: 0.5, bumpScale: 0.15, ...houtRijk(b.kleur) });
+      // Losse korrel: de tekening zelf dient als reliëf (lichte keien en plukjes liggen hoger).
+      case 'grind': { const t = grind(b.kleur); t.anisotropy = BOUW_ANISOTROPIE; return std({ roughness: 1, map: t, bumpMap: t, bumpScale: 0.45 }); }
+      case 'groendak': { const t = groendak(b.kleur); t.anisotropy = BOUW_ANISOTROPIE; return std({ roughness: 1, map: t, bumpMap: t, bumpScale: 1.4 }); }
+      case 'roofing': { const t = roofing(b.kleur); t.anisotropy = BOUW_ANISOTROPIE; return std({ roughness: 0.94, map: t, bumpMap: t, bumpScale: 0.5 }); }
+      case 'glas': case 'matglas': {
+        const m = new THREE.MeshPhysicalMaterial({ color: glasTint(b.kleur), metalness: 0, roughness: b.soort === 'glas' ? 0.03 : 0.55, transmission: 1, ior: 1.5, thickness: 1 });
+        m.userData.buiten = b.soort === 'glas' ? GLAS_SPIEGELT : 1;
+        m.userData.glas = true;
+        return m;
+      }
+      default: return null;
+    }
+  }
+
   /**
    * UV in wereldmaat (cm) per vlak, zodat stenen en planken hun echte maat houden.
    * `maten` per vlak van de balk (volgorde +x, −x, +y, −y, +z, −z; 4 hoekpunten per vlak), zodat
@@ -822,6 +1219,15 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       // De foto zelf dient ook als reliëf (lichte delen komen naar voor).
       m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: t, bumpMap: t, bumpScale: 0.5, envMapIntensity: OMGEVING });
       materialen.set(sleutel, m);
+    }
+    if (!m && !opties.zetel) {
+      // Gebouw: het rijkere materiaal als er een is; glas spiegelt buiten de lucht sterker (zie zetOmgeving).
+      m = bouwMateriaal(b);
+      if (m) {
+        m.envMapIntensity = omgevingVan(m);
+        if (m.userData.glas && isBuiten() && buitenDelen) m.envMap = buitenDelen.glasbeeld;
+        materialen.set(sleutel, m);
+      }
     }
     if (!m) {
       if (b.soort === 'metaal') m = new THREE.MeshStandardMaterial({ color: kleur(b.kleur), metalness: 0.85, roughness: 0.3 });
@@ -1819,6 +2225,233 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     }
     return new THREE.MeshStandardMaterial({ color: kleur(w.kleur), roughness: 0.95, envMapIntensity: 0.4 });
   }
+  // ---------- omgeving voor gebouwen: lucht, gras en horizon (alleen op vraag van de aanroeper, zie Viewer3D.omgeving) ----------
+  let omgevingNaam: OmgevingNaam = 'geen';
+  const isBuiten = () => !opties.zetel && omgevingNaam === 'buiten';
+  /** Sterkte van het omgevingslicht buiten (de lucht als lichtbron en als spiegelbeeld) en de belichting van het beeld. */
+  const OMGEVING_BUITEN = 0.72, BELICHTING_BUITEN = 0.92;
+  /** Omgevingslicht van een materiaal: de sterkte van de lichtsfeer, buiten maal wat het materiaal extra spiegelt (glas). */
+  const omgevingVan = (m: any) => OMGEVING * (isBuiten() ? m?.userData?.buiten ?? 1 : 1);
+  /** Gras: straal van het vlak (tot voorbij de mist) en de maat van één tegel van de tekening, in cm. */
+  const GRAS = { straal: 90000, tegel: 1400 };
+  // Maat van de twee omgevingsbeelden (equirect). Klein gehouden: de lucht is een zacht verloop, en three maakt van elk
+  // beeld een reeks vervaagde kubussen. Voor glas volstaat het kleinste: daar spiegelt alleen het verloop van de hemel.
+  // (Gemeten zonder grafische kaart: de maat maakte voor het eerste beeld geen meetbaar verschil; een proef zonder het
+  // tweede beeld was ±1 s sneller, in één meting.)
+  const LUCHT_W = 256, LUCHT_H = 128, GLAS_W = 64, GLAS_H = 32;
+  type BuitenDelen = { gras: any; koepel: any; mist: any; luchtbeeld: any; glasbeeld: any; u: Record<'zon' | 'zenit' | 'horizon' | 'gloed' | 'schijf' | 'wolk' | 'bomen' | 'mist', any> };
+  let buitenDelen: BuitenDelen | null = null;
+  /** Voor welke stand van de zon het omgevingsbeeld gemaakt is ('' = nog niet), en de uitgestelde vernieuwing. */
+  let luchtSleutel = '', luchtGepland = 0;
+  /** Alles wat de omgeving 'buiten' nodig heeft, één keer gemaakt bij het eerste gebruik (niets ervan bestaat bij de zetels). */
+  function maakBuiten(): BuitenDelen {
+    // Gras: één grote tegel met vlekken (lichter, donkerder, wat geler) en sprietjes, herhaald tot aan de horizon. De
+    // vlekken lopen over de rand door, zodat er geen naad is.
+    const grasTextuur = canvasTextuur(1024, 1024, 1, (g) => {
+      const toeval = vasteReeks('gras'), W = 1024;
+      g.fillStyle = '#5e7842';
+      g.fillRect(0, 0, W, W);
+      const tinten = ['rgba(132,158,88,', 'rgba(62,86,44,', 'rgba(148,150,92,', 'rgba(84,116,58,'];
+      for (let n = 0; n < 420; n++) {
+        const x = toeval() * W, y = toeval() * W, straal = 16 + toeval() * 90, tint = tinten[Math.floor(toeval() * tinten.length)]!, sterkte = 0.04 + toeval() * 0.08;
+        for (const dx of [-W, 0, W]) for (const dy of [-W, 0, W]) {
+          if (x + dx + straal < 0 || x + dx - straal > W || y + dy + straal < 0 || y + dy - straal > W) continue;
+          const vlek = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, straal);
+          vlek.addColorStop(0, `${tint}${sterkte})`);
+          vlek.addColorStop(1, `${tint}0)`);
+          g.fillStyle = vlek;
+          g.fillRect(x + dx - straal, y + dy - straal, straal * 2, straal * 2);
+        }
+      }
+      for (let n = 0; n < 42000; n++) {
+        g.fillStyle = toeval() < 0.5 ? `rgba(170,192,118,${0.06 + toeval() * 0.16})` : `rgba(38,58,26,${0.07 + toeval() * 0.2})`;
+        g.fillRect(toeval() * W, toeval() * W, 1 + toeval() * 1.2, 1.5 + toeval() * 3);
+      }
+    });
+    grasTextuur.repeat.set((2 * GRAS.straal) / GRAS.tegel, (2 * GRAS.straal) / GRAS.tegel);
+    grasTextuur.anisotropy = BOUW_ANISOTROPIE;
+    // Het gras wijkt in de diepte voor wat erop ligt (terras, pad, een vloer op maaiveld): geen flikkerende vlakken.
+    const grasMateriaal = new THREE.MeshStandardMaterial({ color: 0xffffff, map: grasTextuur, roughness: 1, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 6 });
+    grasMateriaal.userData.buiten = 0.55;
+    const gras = new THREE.Mesh(new THREE.CircleGeometry(GRAS.straal, 48), grasMateriaal);
+    gras.rotation.x = -Math.PI / 2;
+    gras.receiveShadow = true;
+    gras.visible = false;
+    scene.add(gras);
+
+    // Wolken: zachte stapelwolken laag aan de hemel, als doorzichtigheid in één kaart (de bovenste helft van de
+    // hemelbol: onderaan de horizon, bovenaan het zenit). De kleur komt van de lucht, dus ze kleuren mee met de zon.
+    const wolkTextuur = canvasTextuur(2048, 512, 1, (g) => {
+      const toeval = vasteReeks('wolken'), W = 2048, H = 512;
+      g.fillStyle = '#000000';
+      g.fillRect(0, 0, W, H);
+      for (let n = 0; n < 15; n++) {
+        // Midden van de wolk: rondom, 5° tot 27° boven de horizon; breed en plat, met blauw ertussen.
+        const cx = toeval() * W, cy = H - ((5 + toeval() * 22) / 90) * H, rx = 35 + toeval() * 95, ry = 6 + toeval() * 10;
+        for (let k = 0; k < 13; k++) {
+          const x = cx + (toeval() - 0.5) * 2 * rx, y = cy - toeval() * ry * 1.6 + ry * 0.4, straal = 11 + toeval() * 24, sterkte = 0.16 + toeval() * 0.22;
+          for (const dx of [-W, 0, W]) {
+            const bol = g.createRadialGradient(x + dx, y, 0, x + dx, y, straal);
+            bol.addColorStop(0, `rgba(255,255,255,${sterkte})`);
+            bol.addColorStop(1, 'rgba(255,255,255,0)');
+            g.fillStyle = bol;
+            g.save();
+            // Platter dan breed, zoals wolken vlak boven de horizon.
+            g.translate(x + dx, y);
+            g.scale(2.4, 0.62);
+            g.translate(-(x + dx), -y);
+            g.fillRect(x + dx - straal, y - straal, straal * 2, straal * 2);
+            g.restore();
+          }
+        }
+      }
+    });
+    wolkTextuur.wrapT = THREE.ClampToEdgeWrapping;
+    wolkTextuur.generateMipmaps = false;
+    wolkTextuur.minFilter = wolkTextuur.magFilter = THREE.LinearFilter;
+
+    // De lucht zelf, per beeldpunt berekend uit de kijkrichting (TSL): verloop van horizon naar zenit, de gloed en de
+    // schijf van de zon, wolken, een wazige bomenrij aan de einder, en onder de horizon de kleur van de mist. De
+    // kleuren zijn getallen die met de zon mee veranderen (zie luchtVan): een andere stand kost geen nieuw beeld.
+    const kleurU = () => uniform(new THREE.Color(0xffffff));
+    const u = { zon: uniform(new THREE.Vector3(0, 1, 0)), zenit: kleurU(), horizon: kleurU(), gloed: kleurU(), schijf: kleurU(), wolk: kleurU(), bomen: kleurU(), mist: kleurU() };
+    const richting = normalWorldGeometry.normalize(), hoog = richting.y;
+    const naarZon = max(dot(richting, u.zon), 0);
+    let lucht: any = mix(u.horizon, u.zenit, pow(max(hoog, 0), 0.45));
+    lucht = lucht.add(u.gloed.mul(pow(naarZon, 10).mul(0.3))).add(u.gloed.mul(pow(naarZon, 160).mul(0.9)));
+    lucht = lucht.add(u.schijf.mul(smoothstep(0.99962, 0.99982, naarZon)));
+    const bol = equirectUV(richting);
+    const wolken = tslTextuur(wolkTextuur, vec2(bol.x, bol.y.sub(0.5).mul(2))).r;
+    lucht = mix(lucht, u.wolk, wolken.mul(smoothstep(0.025, 0.1, hoog)).mul(0.85));
+    const rond = atan(richting.z, richting.x);
+    const kruin = float(0.011).add(sin(rond.mul(9).add(1.3)).mul(0.0045)).add(sin(rond.mul(23).add(0.4)).mul(0.003)).add(sin(rond.mul(57)).mul(0.0018)).add(sin(rond.mul(131).add(2.1)).mul(0.0009));
+    lucht = mix(lucht, u.bomen, float(1).sub(smoothstep(kruin.sub(0.0012), kruin.add(0.0012), hoog)));
+    lucht = mix(u.mist, lucht, smoothstep(-0.005, 0, hoog));
+
+    // De lucht staat op een bol rond de camera, op de verste diepte, en wordt na de woning en het gras getekend: zo
+    // wordt ze alleen berekend waar ze echt te zien is. Als achtergrond van de scène (`backgroundNode`) werd eerst elk
+    // beeldpunt met lucht gevuld, ook achter de woning: in een meting zonder grafische kaart ±0,25 s per beeld, ook als
+    // er geen lucht in beeld is (standpunt Schuin). De bol verschuift niet met de camera mee (w = 0), zoals de
+    // achtergrond van three.
+    const luchtMateriaal = new NodeMaterial();
+    luchtMateriaal.side = THREE.BackSide;
+    luchtMateriaal.depthWrite = false;
+    luchtMateriaal.fog = false;
+    luchtMateriaal.lights = false;
+    const geprojecteerd = cameraProjectionMatrix.mul(vec4(modelViewMatrix.mul(vec4(positionLocal, 0)).xyz, 1));
+    luchtMateriaal.vertexNode = geprojecteerd.setZ(geprojecteerd.w);
+    luchtMateriaal.colorNode = vec4(lucht, 1);
+    const koepel = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), luchtMateriaal);
+    koepel.frustumCulled = false;
+    koepel.renderOrder = 999;
+    koepel.visible = false;
+    scene.add(koepel);
+
+    const beeld = (W: number, H: number) => {
+      const t = new THREE.DataTexture(new Uint16Array(W * H * 4), W, H, THREE.RGBAFormat, THREE.HalfFloatType);
+      t.mapping = THREE.EquirectangularReflectionMapping;
+      t.colorSpace = THREE.LinearSRGBColorSpace;
+      t.magFilter = t.minFilter = THREE.LinearFilter;
+      t.needsUpdate = true;
+      return t;
+    };
+    return { gras, koepel, mist: new THREE.Fog(0xffffff, 1000, 30000), luchtbeeld: beeld(LUCHT_W, LUCHT_H), glasbeeld: beeld(GLAS_W, GLAS_H), u };
+  }
+  /** Schaduw van de zon bij een gebouw: zachter in de kwaliteit Mooi (PCF met een straal; de zetels gebruiken VSM). */
+  function zetSchaduwZachtheid() {
+    if (opties.zetel) return;
+    zon.shadow.radius = isBuiten() ? (kwaliteitNu === 'mooi' ? 2.6 : 1.6) : 1;
+  }
+  /** Zet de omgeving aan of uit volgens `omgevingNaam` (alleen de bouw): lucht, gras, mist, omgevingsbeeld en het bereik van de camera. */
+  function zetOmgeving() {
+    const aan = isBuiten();
+    if (aan && !buitenDelen) {
+      try { buitenDelen = maakBuiten(); } catch (fout) { console.error('Omgeving niet gemaakt:', fout); omgevingNaam = 'geen'; }
+    }
+    const d = isBuiten() ? buitenDelen : null;
+    vloer.visible = !d;
+    if (buitenDelen) buitenDelen.gras.visible = buitenDelen.koepel.visible = !!d;
+    scene.fog = d ? d.mist : null;
+    scene.environment = d ? d.luchtbeeld : omgevingVoor('studio');
+    // Glas spiegelt buiten een eigen beeld van de lucht (zie vulLuchtbeeld).
+    for (const m of materialen.values()) {
+      if (!m?.userData?.glas) continue;
+      const beeld = d ? d.glasbeeld : null;
+      if (m.envMap !== beeld) { m.envMap = beeld; m.needsUpdate = true; }
+    }
+    // Buiten kijk je tot aan de horizon; de voorste grens gaat mee op, voor een fijnere diepte (minder flikkeren).
+    camera.near = d ? 4 : 1;
+    camera.far = d ? GRAS.straal * 2 : 5000;
+    camera.updateProjectionMatrix();
+    zetSchaduwZachtheid();
+    if (!d) { clearTimeout(luchtGepland); luchtSleutel = ''; }
+  }
+  /** Het omgevingslicht buiten: sterker dan de studio, en glas spiegelt extra (na de gewone regeling in zetLicht). */
+  function lichtBuiten() {
+    OMGEVING = OMGEVING_BUITEN;
+    scene.traverse((o: any) => {
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of ms) if ('envMapIntensity' in m && m !== bouwVloer) m.envMapIntensity = omgevingVan(m);
+    });
+    for (const m of materialen.values()) if (m && 'envMapIntensity' in m) m.envMapIntensity = omgevingVan(m);
+  }
+  /**
+   * Zon, lucht en mist buiten, uit de stand van de zon (die van de aanroeper, anders ZON_BUITEN): de zon is de baas.
+   * Het licht en de lucht erachter verzetten meteen; het omgevingsbeeld (weerkaatsing en strooilicht) volgt na een
+   * korte rust, zodat schuiven met het uur vlot blijft.
+   */
+  function zonBuiten() {
+    const d = buitenDelen;
+    if (!d) return;
+    const stand = zonStand ?? ZON_BUITEN, l = luchtVan(stand);
+    const grootte = Math.max(kader.b, kader.d, 120), bereik = grootte * 1.5, ver = grootte * 2.2;
+    const r = (stand.richting * Math.PI) / 180, hoek = (Math.max(stand.hoogte, 1) * Math.PI) / 180;
+    zon.position.set(doel.x + Math.sin(r) * Math.cos(hoek) * ver, doel.y + Math.sin(hoek) * ver, doel.z - Math.cos(r) * Math.cos(hoek) * ver);
+    zon.target.position.copy(doel);
+    // Ruim schaduwbereik: de schaduw van de woning valt op het gras ernaast.
+    const sc = zon.shadow.camera;
+    sc.left = sc.bottom = -bereik;
+    sc.right = sc.top = bereik;
+    sc.near = 1;
+    sc.far = bereik * 6;
+    sc.updateProjectionMatrix();
+    // Vlak boven de horizon is de zon zwakker en warmer; eronder is er geen zon en blijft alleen het licht van de lucht.
+    zon.color.setRGB(l.zonKleur[0], l.zonKleur[1], l.zonKleur[2]);
+    zon.intensity = l.op ? PI * 2.0 * Math.min(1, Math.max(0.3, stand.hoogte / 8)) : 0;
+    const hemelKleur = ontkleur(meng(l.zenit, l.horizon, 0.72), 0.78), bodem = maal(l.grond, 1.5);
+    hemel.color.setRGB(hemelKleur[0], hemelKleur[1], hemelKleur[2]);
+    hemel.groundColor.setRGB(bodem[0], bodem[1], bodem[2]);
+    hemel.intensity = PI * (0.22 + 0.2 * l.dag);
+    vul.intensity = 0;
+    // Bij een lage zon en na zonsondergang iets ruimer belicht, zoals een fotograaf zou doen: de gevels in de schaduw
+    // blijven leesbaar.
+    renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * BELICHTING_BUITEN * (1 + 0.3 * l.warm + 0.9 * (1 - l.dag));
+    d.u.zon.value.set(l.naarZon[0], l.naarZon[1], l.naarZon[2]);
+    const zet = (naam: 'zenit' | 'horizon' | 'gloed' | 'schijf' | 'wolk' | 'bomen' | 'mist', k: Rgb) => d.u[naam].value.setRGB(k[0], k[1], k[2]);
+    zet('zenit', l.zenit);
+    zet('horizon', l.horizon);
+    zet('gloed', l.gloed);
+    zet('schijf', maal(l.zonKleur, l.op ? 5 : 0));
+    zet('wolk', l.wolk);
+    zet('bomen', l.bomen);
+    zet('mist', l.mist);
+    d.mist.color.setRGB(l.mist[0], l.mist[1], l.mist[2]);
+    // Het omgevingsbeeld: de eerste keer meteen, daarna pas als de stand even niet meer verandert.
+    const sleutel = `${stand.richting.toFixed(1)}:${stand.hoogte.toFixed(1)}`;
+    if (sleutel === luchtSleutel) return;
+    const vulBeelden = () => {
+      if (gesloten || buitenDelen !== d) return;
+      luchtSleutel = sleutel;
+      vulLuchtbeeld(d.luchtbeeld.image.data, LUCHT_W, LUCHT_H, l, false);
+      vulLuchtbeeld(d.glasbeeld.image.data, GLAS_W, GLAS_H, l, true);
+      for (const t of [d.luchtbeeld, d.glasbeeld]) { t.needsUpdate = true; t.needsPMREMUpdate = true; }
+      render();
+    };
+    clearTimeout(luchtGepland);
+    if (!luchtSleutel) vulBeelden();
+    else luchtGepland = window.setTimeout(vulBeelden, 140);
+  }
+
   /** Wanden van het decor (wegvallen als de camera erachter staat) en hoe ver het schaduwbereik moet reiken. */
   let decorWanden: { obj: any; punt: [number, number, number]; normaal: [number, number, number] }[] = [];
   let decorMarge = 0;
@@ -1855,7 +2488,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       lamp.intensity = LICHTEN[lichtNaam].lamp * 1.7 * PI * 190;
     };
     if (!opties.zetel || !dc.vloer) {
-      vloer.material = studioVloer;
+      vloer.material = bouwVloer;
+      if (!opties.zetel) zetOmgeving();
       virtueleLamp();
       zetLicht();
       return;
@@ -1909,9 +2543,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     // Alle materialen volgen het omgevingslicht van de sfeer.
     scene.traverse((o: any) => {
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-      for (const m of ms) if ('envMapIntensity' in m && m !== studioVloer) m.envMapIntensity = l.omgeving;
+      for (const m of ms) if ('envMapIntensity' in m && m !== bouwVloer) m.envMapIntensity = l.omgeving;
     });
     for (const m of materialen.values()) if (m && 'envMapIntensity' in m) m.envMapIntensity = l.omgeving;
+    if (isBuiten()) lichtBuiten();
     zetZon();
   }
   function zetZon() {
@@ -1948,6 +2583,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       hemel.intensity = LICHTEN[lichtNaam].hemel * PI * (op ? 0.72 : 0.5);
       renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * (op ? 0.8 : 0.9);
     }
+    // Gebouw in open lucht: zon, lucht en mist volgen dezelfde stand (of de standaardstand buiten).
+    if (isBuiten()) zonBuiten();
   }
 
   // ---------- camera (eenvoudige orbit) ----------
@@ -1966,6 +2603,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const g = Math.max(kader.b, kader.d, 120);
       scene.fog.near = afstand + g * 0.9;
       scene.fog.far = afstand + g * 4.5;
+      // Buiten: de woning zelf blijft helder, het gras loopt ver weg op in de kleur van de horizon.
+      if (isBuiten()) { scene.fog.near = afstand + g * 1.6; scene.fog.far = scene.fog.near + 26000; }
     }
     render();
   };
@@ -2135,11 +2774,15 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     plaatsCamera();
   }, { passive: false });
 
-  // Nabewerking (alleen zetel, kwaliteit Mooi): ambient occlusion (GTAO) voor schaduw in hoeken, naden en onder kussens.
+  // Nabewerking (kwaliteit Mooi): ambient occlusion (GTAO) voor schaduw in hoeken, naden en onder kussens.
   // WebGPU (04-11): een RenderPipeline met TSL-knopen (pass met normalen, GTAO op halve resolutie, ontruisd), zelfde
   // instellingen als vroeger met de GTAOPass; de AO dempt het beeld voor 90 %. Tonemapping en sRGB doet de pijplijn.
-  let composer: { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void } | null = null;
-  function maakComposer() {
+  // Zetel: een straal van 14 cm, tot op 10 à 16 m. Gebouw in open lucht (omgeving 'buiten'): dezelfde pijplijn met de
+  // maten van een woning (schaduw in de hoek van twee muren, onder een dakrand, in een raamnis), tot op 70 à 120 m.
+  const AO_ZETEL = { straal: 14, dikte: 8, schaal: 1.1, ver: [1000, 1600], sterkte: 0.9 };
+  const AO_BOUW = { straal: 48, dikte: 18, schaal: 1.05, ver: [7000, 12000], sterkte: 0.78 };
+  let composer: { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void; sluit?(): void } | null = null;
+  function maakComposer(maten = AO_ZETEL) {
     try {
       const pijplijn = new RenderPipeline(renderer);
       const scenePass = pass(scene, camera, { samples: 4 });
@@ -2150,23 +2793,23 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const normaal = sample((uv: unknown) => unpackRGBToNormal(normaalKleur.sample(uv)));
       const aoPass = ao(diepte, normaal, camera);
       aoPass.resolutionScale = 0.5;
-      aoPass.radius.value = 14; aoPass.distanceExponent.value = 1.2; aoPass.thickness.value = 8;
-      aoPass.scale.value = 1.1; aoPass.samples.value = 12; aoPass.distanceFallOff.value = 1;
+      aoPass.radius.value = maten.straal; aoPass.distanceExponent.value = 1.2; aoPass.thickness.value = maten.dikte;
+      aoPass.scale.value = maten.schaal; aoPass.samples.value = 12; aoPass.distanceFallOff.value = 1;
       const aoZacht = denoise(aoPass.getTextureNode(), diepte, normaal, camera);
       aoZacht.lumaPhi.value = 10; aoZacht.depthPhi.value = 2; aoZacht.normalPhi.value = 3; aoZacht.radius.value = 6;
       // Op grote afstand (de rand van het achterdoek, de verre vloer) geen AO: daar ziet GTAO valse hoeken (streepjes). De
       // zetel staat altijd dichter dan 10 m.
       // Afstand tot de camera van de scène (niet cameraNear/cameraFar: in de nabewerking is dat de camera van het schermvlak).
       const afstand = scenePass.getViewZNode().negate();
-      const dichtbij = float(1).sub(smoothstep(1000, 1600, afstand));
-      pijplijn.outputNode = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(0.9))), kleur.a);
-      composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {} };
+      const dichtbij = float(1).sub(smoothstep(maten.ver[0], maten.ver[1], afstand));
+      pijplijn.outputNode = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(maten.sterkte))), kleur.a);
+      composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {}, sluit: () => pijplijn.dispose?.() };
     } catch (fout) {
       console.warn('Nabewerking (GTAO) niet beschikbaar:', fout);
       composer = null;
     }
   }
-  const metNabewerking = () => opties.zetel && kwaliteitNu === 'mooi' && composer;
+  const metNabewerking = () => (opties.zetel || isBuiten()) && kwaliteitNu === 'mooi' && composer;
   // Tijdens draaien en zoomen: het snelle beeld; 180 ms na de laatste beweging één keer het mooie beeld (met GTAO).
   let mooiGepland = 0;
   // Veel aanvragen kort na elkaar (slepen, schuifregelaar) worden samengevoegd tot één beeld per schermverversing.
@@ -2555,7 +3198,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       zetZon();
       vul.position.set(doel.x + grootte, grootte * 0.6, doel.z - grootte);
       if (veranderd) afstand = Math.max(200, grootte * 1.5);
-      if (decorNaam !== 'studio' || !scene.fog) zetDecor(s);
+      // De bouw heeft buiten ook mist (de horizon): daar altijd opnieuw zetten, zoals vroeger zonder mist.
+      if (decorNaam !== 'studio' || !scene.fog || !opties.zetel) zetDecor(s);
       plaatsCamera();
     },
     decor(naam) {
@@ -2575,8 +3219,17 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       renderer.setPixelRatio(k === 'mooi' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
       // VSM vervaagt de schaduw zelf: 2048 is scherp genoeg en veel lichter dan 4096.
       const maat = k === 'mooi' ? 2048 : 1024;
+      // Bouw: krijgt de schaduwkaart een andere maat terwijl de nabewerking al bestaat, dan tekende die daarna met een
+      // gewiste schaduwkaart (muren, dak en gras verdwenen na Snel → Mooi; three vernieuwt de koppeling met de kaart
+      // niet voor een pijplijn die intussen niet getekend werd). Daarom de pijplijn weggooien: `formaat` maakt een nieuwe.
+      if (!opties.zetel && composer && zon.shadow.mapSize.x !== maat) {
+        clearTimeout(mooiGepland);
+        try { composer.sluit?.(); } catch { /* al weg */ }
+        composer = null;
+      }
       // De schaduwkaart past zich zelf aan de nieuwe maat aan (WebGPURenderer).
       zon.shadow.mapSize.set(maat, maat);
+      zetSchaduwZachtheid();
       schaduwOpnieuw();
       viewer.formaat();
     },
@@ -2692,6 +3345,20 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       zetLicht();
       render();
     },
+    omgeving(naam) {
+      if (opties.zetel || naam === omgevingNaam || (naam !== 'buiten' && naam !== 'geen')) return;
+      omgevingNaam = naam;
+      // Een uitgesteld mooi beeld (met nabewerking) van de vorige omgeving niet meer tekenen.
+      clearTimeout(mooiGepland);
+      // Eerst terug naar het vaste licht (belichting, vullicht, bodemkleur van het hemellicht); buiten zet `zonBuiten`
+      // ze daarna zelf. Zo is 'geen' na 'buiten' weer exact het beeld van vroeger.
+      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
+      vul.intensity = 0.16 * PI;
+      hemel.groundColor.set(0xb8b2a7);
+      zetDecor(null);
+      viewer.formaat();
+      plaatsCamera();
+    },
     instellen(w) {
       // Alleen opnieuw opbouwen wat veranderd is: een schuifregelaar mag het decor niet bij elke stap herbouwen.
       const oud = weergave;
@@ -2702,7 +3369,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
         camera.fov = weergave.lens;
         camera.updateProjectionMatrix();
       }
-      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid);
+      renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * (isBuiten() ? BELICHTING_BUITEN : 1);
       if (weergave.zonRichting !== oud.zonRichting) zetZon();
       if (weergave.maten !== oud.maten) zetMaten();
       if (((weergave.echtModel !== false) !== (oud.echtModel !== false) || weergave.vormen !== oud.vormen) && laatsteScene) viewer.toon(laatsteScene);
@@ -2728,6 +3395,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const h = groot ? Math.max(320, Math.min(Math.round(b * 1.1), window.innerHeight - 200)) : Math.round(b * 0.62);
       renderer.setSize(b, h);
       if (opties.zetel && !composer) maakComposer();
+      if (isBuiten() && kwaliteitNu === 'mooi' && !composer) maakComposer(AO_BOUW);
       if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(b, h); }
       camera.aspect = b / h;
       camera.updateProjectionMatrix();

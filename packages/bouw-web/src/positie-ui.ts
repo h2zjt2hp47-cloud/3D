@@ -5,7 +5,7 @@
  * Ramen en deuren: bovenaan de indeling staan kant-en-klare indelingen als tegels met een tekening (één tik);
  * de instelling per vak zit eronder achter "Meer opties". Kleuren staan als een waaier van stalen.
  */
-import { tekenSvg, type ConfiguratieResultaat, type Kenmerk } from '../../core/src/index.js';
+import { passendKader, tekenSvg, type ConfiguratieResultaat, type Kenmerk } from '../../core/src/index.js';
 import { berekenRaam, ruitenVan } from '../../core/voorbeelden/raam.js';
 import { INDELINGEN, indelingVan, pasIndelingToe, type Indeling } from '../../core/voorbeelden/raamindelingen.js';
 import { raamKeuzes } from '../../core/voorbeelden/woning.js';
@@ -486,7 +486,7 @@ export function herbereken() {
   const meer = document.getElementById('p-meer-opties');
   if (meer && !meer.hasAttribute('open') && meer.querySelector('.veld.heeft-fout:not([hidden])')) meer.setAttribute('open', '');
   $('#p-tekening').innerHTML = r.tekening ? tekenSvg(r.tekening, { breedtePx: 640, lijnkleur: '#2b2b28', maatkleur: '#34505f' }) : '';
-  if (weergave === '3d' && viewer) viewer.toon(scene(p, r));
+  if (weergave === '3d') toon3D(p, r);
 
   const lijst = controles(p, r);
   // Staat de positie in de plattegrond: past de opening nog op haar muur, tussen de hoeken en de openingen ernaast?
@@ -572,6 +572,18 @@ function scene(p: Positie, r: ConfiguratieResultaat) {
   return positieScene(p, r);
 }
 
+/**
+ * Toont de 3D van de positie. Een raam, deur of poort komt helemaal in beeld, ook een deur van 2,5 m met een bovenlicht
+ * (de kijker kadreert zelf alleen op breedte en diepte), op een rustige achtergrond. Een aanbouw is een gebouw: die
+ * staat in de omgeving (lucht, gras), zoals de woning.
+ */
+function toon3D(p: Positie, r: ConfiguratieResultaat) {
+  if (!viewer) return;
+  const gebouw = p.model === 'AANBOUW';
+  viewer.omgeving?.(gebouw ? 'buiten' : 'geen');
+  viewer.toon(gebouw ? scene(p, r) : passendKader(scene(p, r)));
+}
+
 function toonWeergave(w: 'voor' | '3d') {
   weergave = w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.pWeergave === w));
@@ -583,7 +595,7 @@ function toonWeergave(w: 'voor' | '3d') {
     const p = huidig();
     if (viewer && p) {
       viewer.formaat();
-      viewer.toon(scene(p, resultaat(p)));
+      toon3D(p, resultaat(p));
     }
   }
 }

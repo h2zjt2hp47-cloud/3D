@@ -43,8 +43,10 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `husk-schuin` | strakke arm (eigen doorsnede) |
 | `pebble-schuin` | kuipfauteuil met verdekte voet |
 | `stockholm-schuin` | ronde poef |
-| `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code) |
+| `bouw-woning`, `bouw-raam` | de 3D van de bouwdemo (dezelfde 3D-code). Sinds 15/11 staat de woning in haar omgeving (gras, schaduw op het gras, terras en stoep); het losse raam blijft op de effen achtergrond |
 | `bouw-dak` | dak en lichtkoepel (15/11): zadeldak met rode pannen op de verdieping (topgevels, oversteek, nokvorst), grind op het lage platte dak en een lichtkoepel erin. Genomen ná de twee beelden hierboven: het zet een dak in het project |
+| `bouw-gevel` | omgeving van een gebouw (15/11): de voorgevel van lager bekeken, met de lucht, de wolken, de bomenrij aan de horizon en het gras dat erin wegloopt; baksteen, hout en pannen met reliëf, glas dat de lucht spiegelt. Genomen ná `bouw-dak` |
+| `bouw-binnen` | binnenkijken met lage muren (15/11): vloeren met nerf en voeg, de schaduw van de zon en, in *Mooi*, schaduw in de hoeken. Genomen ná `bouw-dak` |
 | `bouw-zon` | lichtinval (15/11): 21 juni om 13 u, van boven in het gelijkvloers gekeken. De verdieping en het dak zijn verborgen maar werpen schaduw; de zonnevlekken van het schuifraam, de terrasdeur en de lichtkoepel liggen op de vloer. Genomen ná `bouw-dak` (de koepel komt daar vandaan) |
 | `bouw-stolp`, `bouw-deur-zijlicht`, `bouw-hefschuif`, `bouw-vouwwand`, `bouw-steellook` | de raamtypes van 15/11: een raam van de voorbeeldwoning krijgt met één tegel een andere indeling (stolp, deur met zij- en bovenlicht, hef-schuif 3-delig, vouwwand 4-delig, steellook) |
 | `bouw-garagepoort` | sectionale garagepoort met cassettes en vensters (eigen model, 15/11) |

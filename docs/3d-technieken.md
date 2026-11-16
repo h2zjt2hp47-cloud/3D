@@ -1,7 +1,7 @@
 # 3D-technieken: wat werkt waarvoor (kennisbank)
 
 *Stand 15/11/2026.* Wat we bij de zetels leerden over 3D, en hoe je het hergebruikt: voor een nieuw zetelmodel, een ander
-meubel of de ramen en deuren van de bouwdemo. De uitwerking per onderwerp staat in de notities onderaan.
+meubel of de ramen en deuren van de bouwdemo. Sinds 15/11 ook: gebouwen in hun omgeving (lucht, gras, rijkere materialen). De uitwerking per onderwerp staat in de notities onderaan.
 
 ## De opvatting sinds 13/11: eerst het echte product, dan de techniek
 
@@ -171,6 +171,53 @@ WebGPU), niet meer met eigen WebGL-shaders. In de cloudsessie is er geen WebGPU:
     hangen, zodat camera en vorm elkaar compenseren. Meet dus ook lijnen binnen de omtrek, hang de camera aan iets
     buiten de bekleding (poten, frame), en laat het oog van Jonas beslissen op een blad met foto, vorig en nieuw.
     Uitleg: `scripts/blender/LEESMIJ.md`, "Nameten op de foto's".
+
+## Gebouwen in hun omgeving (ronde 3 van de bouw, 15/11)
+
+Vraag van Jonas: *"Maak onze 3D mooier"*, voor een verkoper die na het eerste gesprek een woning toont. Wat de kijker
+(`drie-d.ts`) nu voor gebouwen kan, naast de decors van de zetels:
+
+| Wat | Hoe | Kost |
+|---|---|---|
+| **Lucht** | Per beeldpunt berekend uit de kijkrichting (TSL), op een bol rond de camera die na de woning getekend wordt: verloop van horizon naar zenit, gloed en schijf van de zon, wolken uit één zelf getekende kaart, een wazige bomenrij, en onder de horizon de kleur van de mist. De kleuren zijn getallen die de zon volgen (`luchtVan`). Eigen model, op het oog gekozen: geen beeld of gegevens van derden. | Alleen waar lucht te zien is; een andere stand van de zon kost geen nieuw beeld |
+| **Omgevingsbeeld** | Dezelfde lucht als klein HDR-beeld (256 × 128) voor weerkaatsing en strooilicht; een tweede, nog kleiner (64 × 32), voor glas. | Wordt 140 ms na de laatste wijziging van de zon vernieuwd |
+| **Gras en horizon** | Eén getekende tegel van 14 m, herhaald op een schijf van 900 m; mist in de kleur van verre velden. | Eén vlak |
+| **Terras en pad** | Gegevens uit `plattegrond3D` (`aanleg`), geen weergave. | Een paar blokken |
+| **Materialen** | Kleurkaart en hoogtekaart samen getekend (`metRelief`), per soort en kleur. | Getekend bij het eerste gebruik; ±30 texturen voor de voorbeeldwoning |
+| **Schaduw in de hoeken** | Dezelfde nabewerking als bij de zetels (GTAO), met de maten van een woning (straal 48 cm in plaats van 14). | Alleen in *Mooi*: 1,5 à 2 keer de tekentijd |
+
+De keuze voor een omgeving is van de aanroeper (`viewer.omgeving('buiten')`): een los raam blijft een rustig beeld.
+Uitleg, wat in *Snel* en wat in *Mooi* zit en de metingen: de skill `bouw-woning`, hoofdstuk *Omgeving en mooiere 3D*.
+
+Gemeten zonder grafische kaart (voorbeeldwoning, 704 × 436): een beeld in *Snel* ±0,41 → ±0,56 s, in *Mooi* ±0,44 →
+0,7 à 1,0 s; het eerste beeld na het openen van de 3D 3 à 4 s → ±7 s (op een drukke machine alles ±2 keer langer, met
+dezelfde verhoudingen). Op een echt toestel is niets gemeten.
+
+Wat we leerden:
+- **Een achtergrond wordt overal getekend, ook waar je ze niet ziet.** De lucht als achtergrond van de scène kostte
+  in een meting ±0,25 s per beeld (zonder grafische kaart), ook in het standpunt waar geen lucht in beeld is. Als bol die na de
+  woning getekend wordt, op de verste diepte, kost ze alleen waar ze te zien is.
+- **Meet met onderdelen aan en uit, en meet vóór en na om beurten.** De machine was druk (metingen schommelden tot een
+  factor twee); pas met een meetpunt dat op de grafische kaart wacht en met afwisselend de oude en de nieuwe versie
+  kwam de lucht als oorzaak naar boven. Voor anisotropie, hoogtekaarten, mist en gras was er geen meetbaar verschil.
+  Waarom het eerste beeld twee keer zo lang duurt (3 à 4 s → ±7 s), is grotendeels niet gevonden.
+- **Een tekening die van ver banden geeft, heeft de verkeerde schaal.** De eerste gevelsteen (3 beeldpunten per cm,
+  18 per laag) gaf in het vooraanzicht lichte en donkere banden; de oude (4 per cm, 24 per laag) niet. De grafische
+  kaart tekent van ver met verkleinde versies (telkens de helft): een laag moet daarin een geheel aantal beeldpunten
+  blijven. Kies de schaal dus per materiaal: 24 of 32 beeldpunten per laag of plank.
+- **Een omgeving is vooral grond.** In het gewone standpunt (schuin van boven) ligt de horizon boven het beeld: je ziet
+  gras, de schaduw van de woning erop en een terras, geen lucht. De lucht telt pas van lager.
+- **De zon als baas houdt alles samenhangend.** Eén stand van de zon bepaalt het licht, de kleur van de lucht, de mist
+  en de belichting. Zo kan de lichtinval (dag en uur) dezelfde lucht gebruiken, tot en met het blauwe uur.
+- **Een ruit van boven spiegelt de grond.** Met het echte omgevingsbeeld waren de ramen dof groen. Glas krijgt daarom
+  een eigen beeld met alleen lucht. Niet natuurgetrouw, wel leesbaar als glas.
+- **Blauw strooilicht maakt binnen koud.** Half ontkleuren, en het hemellicht warmer houden dan de lucht zelf.
+- **Gedeelde tekenfuncties niet aanraken.** De rijkere materialen zijn nieuwe functies naast de oude: de decors van de
+  zetels gebruiken `baksteen`, `parket` en `planken` ook, en de beeldvergelijking dekt maar twee decors.
+- **Een fout in de gegevens lost geen licht op.** De witte strepen in de gevel waren kopse kanten van binnenmuren. Met
+  meer licht vielen ze meer op; de oplossing zat in `plattegrond3D`, niet in de kijker.
+- **WebGPU in software** (`--enable-unsafe-webgpu`) viel hier weg vóór het eerste beeld, ook in de versie van vóór deze
+  ronde: de omgeving en het dak zijn dus alleen op de WebGL2-weg gezien. Nakijken op een echt toestel.
 
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
@@ -353,6 +400,15 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
   boven de afgeronde schouder van de zitting, met een diepe gleuf eronder.
 - **Schuine poten zonder scheve boven- en onderkant:** een afschuiving van de kegel (de voet verschoven, de vlakken
   blijven horizontaal), geen kanteling. De schaduw op de vloer ligt bij de voet.
+- **Een grondvlak op de hoogte van iets anders flikkert.** Het terras en de vloer bij een los raam lagen precies op de
+  vloer van de studio: strepen. De grond van de bouw wijkt nu in de diepte (`polygonOffset`), zonder iets te verschuiven.
+- **Een schaduwkaart die van maat verandert, en een nabewerking die even niet tekent.** Bij de bouw (PCF-schaduw,
+  1024 in *Snel*, 2048 in *Mooi*) gaf Snel → Mooi tijdens het kijken een stuk beeld: de pijplijn van de nabewerking
+  gebruikte nog de gewiste schaduwkaart (`bindTexture: attempt to use a deleted object`). De pijplijn wordt nu opnieuw
+  gemaakt als de maat verandert. Gevonden door de keuze in de browser om te zetten, niet door de vaste reeks beelden:
+  die zet de kwaliteit vóór het laden.
+- **Een nieuwe mist verandert oude voorwaarden.** `toon` gebruikte `!scene.fog` als teken dat het decor nog gezet moest
+  worden. Toen de bouw ook mist kreeg, werd de omgeving niet meer bijgewerkt: de voorwaarde staat er nu uitdrukkelijk.
 - **Meer:** de skills `zetel-3d` (`.claude/skills/zetel-3d/SKILL.md`) en `bouw-woning`
   (`.claude/skills/bouw-woning/SKILL.md`).
 
