@@ -135,7 +135,7 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   for (const m of muren) {
     const v = muurVlak(m, muren);
     uit.push(v.punten
-      ? `<polygon data-soort="muur" data-id="${esc(m.id)}" points="${punten(v.punten)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}"/>`
+      ? `<polygon data-soort="muur" data-id="${esc(m.id)}" points="${punten(v.punten)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke-width="0.6" stroke-linejoin="round"/>`
       : `<rect data-soort="muur" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}"/>`);
   }
 
@@ -167,7 +167,8 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     const [p, q] = m.punten!;
     // maatlijn legt de maat links van de richting, en dat is de plus-kant: aan de min-kant dus omgekeerd tekenen.
     const buitenMin = m.soort === 'buiten' && !m.min;
-    const afst = m.dikte / 2 + 26 * Math.max(k, 0.5);
+    // Voorbij het label van een raam of deur in die muur (dat staat op een halve muurdikte + 22).
+    const afst = m.dikte / 2 + 50 * Math.max(k, 0.5);
     uit.push(buitenMin ? maatlijn(q[0], q[1], p[0], p[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k) : maatlijn(p[0], p[1], q[0], q[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k));
   }
 

@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  binnenVorm, isBol, langsAs, metDeKlok, murenVan, muurVanOpening, muurVlak, openingAfstanden, plattegrond3D, ruimteMaten, snijVeelhoek,
+  binnenVorm, isBol, langsAs, opMuur, metDeKlok, murenVan, muurVanOpening, muurVlak, openingAfstanden, plattegrond3D, ruimteMaten, snijVeelhoek,
   tekenPlattegrond, veelhoekOppervlakte, verschuifZijden, vormVanDeel, zetOmtrek,
   type Blok, type Muur, type Opening, type Plattegrond, type Punt, type Ruimte,
 } from '../src/index.js';
@@ -201,5 +201,23 @@ describe('verstek: geen gat en geen overlap op de hoeken', () => {
       expect(overlap(vlakVan(buitenmuren[i]!, muren), vlakVan(buitenmuren[j]!, muren))).toBeLessThan(1);
     }
     expect(vlakken.length).toBe(muren.length);
+  });
+});
+
+describe('aanleg voor een schuine gevel', () => {
+  it('een terras voor een schuifraam in de afgeschuinde hoek ligt schuin, buiten de woning, tegels langs de gevel', () => {
+    const r = ruimte('v', 0, 0, 0, 0);
+    zetOmtrek(r, [[0, 0], [600, 0], [600, 250], [400, 450], [0, 450]]);
+    const p: Plattegrond = { ...plan(), ruimtes: [r], openingen: [] };
+    const s = murenVan(p).find((m) => m.as === 's')!;
+    p.openingen.push({ id: 'sr', soort: 'schuifraam', ...opMuur(s, (s.van + s.tot) / 2), breedte: 200, hoogte: 230, borstwering: 0, scharnier: 'begin', naarPlus: true });
+    const terras = plattegrond3D(p, planCatalogus, { aanleg: true }).blokken.filter((b) => b.code.startsWith('terras_sr'));
+    expect(terras.length).toBe(1);
+    const t = terras[0]!;
+    expect(t.vorm).toBe('prisma');
+    // 200 + 2 × 110 breed en 320 diep, helemaal buiten de woning (de vorm plus een halve muurdikte).
+    expect(veelhoekOppervlakte(t.doorsnede as Punt[])).toBeCloseTo(420 * 320, 0);
+    expect(veelhoekOppervlakte(snijVeelhoek(metDeKlok(t.doorsnede as Punt[]), verschuifZijden(vormVanDeel(r), 15)))).toBeLessThan(1);
+    expect(Math.abs(t.vlakRichting!)).toBe(45);
   });
 });

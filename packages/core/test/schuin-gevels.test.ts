@@ -41,7 +41,10 @@ describe('gevels van een schuine muur', () => {
 
   it('een eigen aanzicht, recht ervoor bekeken, na de vier kanten', () => {
     const p = aanbouw();
-    const gevels = gevelAanzichten(p, (o) => ({ label: o.id, vakken: ['draai_l', 'vast'] }), planCatalogus);
+    const info = (o: Opening) => ({ label: o.id, vakken: ['draai_l', 'vast'] });
+    // Zonder de optie alleen de vier kanten (de schermen van vóór de schuine muren kiezen een gevel op zijn kant).
+    expect(gevelAanzichten(p, info, planCatalogus).length).toBe(4);
+    const gevels = gevelAanzichten(p, info, planCatalogus, { schuin: true });
     expect(gevels.slice(0, 4).map((g) => g.kant)).toEqual(['boven', 'onder', 'links', 'rechts']);
     expect(gevels.length).toBe(5);
     const g = gevels[4]!;
@@ -63,6 +66,17 @@ describe('gevels van een schuine muur', () => {
     const o = p.openingen[0]!;
     expect(g.vanU(g.naarU(o.midden))).toBeCloseTo(o.midden, 9);
     expect(Math.abs(g.naarU(o.midden + 60) - g.naarU(o.midden - 60))).toBeCloseTo(120, 9);
+  });
+
+  it('in de vier kanten staat de schuine muur in verkort, bij de kant waar ze het meest naar kijkt', () => {
+    const p = aanbouw();
+    const [boven, , , rechts] = gevelAanzichten(p, (o) => ({ label: o.id }), planCatalogus);
+    expect(boven!.tekening.vormen.some((v) => v.code.startsWith('muur.0.s'))).toBe(false);
+    // Van rechts gezien: het buitenvlak loopt van y = 805 tot y = 1215 (410 cm), het raam van 120 cm wordt 120 × cos.
+    const muur = rechts!.tekening.vormen.find((v) => v.code.startsWith('muur.0.s'))!;
+    expect(muur.breedte).toBe(410);
+    expect(rechts!.vlakken.find((v) => v.code === muur.code)?.sleutel).toBe('aan:s76');
+    expect(rechts!.tekening.vormen.find((v) => v.code === 'kader.r')!.breedte).toBeCloseTo(120 * c, 6);
   });
 
   it('oppervlakte van het schuine muurvlak, en verven van alleen dat vlak', () => {

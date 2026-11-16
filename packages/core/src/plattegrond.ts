@@ -1010,7 +1010,8 @@ function schuinVlak(m: Muur, muren: Muur[], extra = 0): MuurVlak {
     const P = langsAs(m, s, m.lijn);
     const naarLijf: Punt = isBegin ? d : [-d[0], -d[1]];
     const op = (x: Muur) => { const [t, w] = opAs(x, P); return gelijk(w, x.lijn) && t > x.van - 0.5 && t < x.tot + 0.5; };
-    const rond = muren.filter((x) => x !== m && op(x));
+    // (op id: `muren` kan een andere lijst zijn dan die waar m uit komt)
+    const rond = muren.filter((x) => x.id !== m.id && op(x));
     // Loopt er een muur door dit punt (ook als ze daar in stukken geknipt is)? Wisselt ze daar van dikte (binnen- naar
     // buitenmuur), dan de dunste: dan blijft er geen spleet, en wat in de dikkere muur steekt, valt erbinnen.
     const door = rond.filter((x) => {
@@ -1792,10 +1793,12 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
       const murenN = murenVan(p);
       for (const { muur: m, vlak, van, tot } of dakrandStukken(plan, n)) {
         if (m.as === 's') {
-          // Schuine muur: haar grondvlak (met dakkeuze 1,5 cm breder aan elke kant, zoals de muurkap) tussen van en tot.
+          // Schuine muur: haar grondvlak (met dakkeuze 1,5 cm breder aan elke kant, zoals de muurkap) tussen van en tot. Aan
+          // een einde van de muur zelf niet afknippen: daar loopt de bredere kap tot in de hoek (anders een gat in de hoek).
           const g = schuinVlak(m, murenN, opbouw ? 1.5 : 0), { d } = asVan(m);
-          let [pts] = knipMetRanden(g.punten!, g.randen!, -d[0], -d[1], -van, 'snede' as MuurRand);
-          [pts] = knipMetRanden(pts, pts.map(() => 'snede' as MuurRand), d[0], d[1], tot, 'snede');
+          const langs = vlak.punten!.map((q) => opAs(m, q)[0]);
+          let [pts] = gelijk(van, Math.min(...langs)) ? [g.punten!] : knipMetRanden(g.punten!, g.randen!, -d[0], -d[1], -van, 'snede' as MuurRand);
+          if (!gelijk(tot, Math.max(...langs))) [pts] = knipMetRanden(pts, pts.map(() => 'snede' as MuurRand), d[0], d[1], tot, 'snede');
           if (pts.length >= 3) blokken.push(grondPrisma(`dakrand_${m.id}_${r2(van)}`, 'kunststof', '#2b2b2b', pts, opbouw ? y0 + H - 1 : y0 + H, opbouw ? VLOERDIKTE + 3 : VLOERDIKTE + 2));
           continue;
         }
@@ -1909,7 +1912,9 @@ function aanlegBlokken(plan: Plattegrond): Blok[] {
     const gelegdV: Punt[][] = [];
     const legV = (code: string, soort: BlokSoort, kleur: string, v: Punt[], m: Muur) => {
       const stukken = [...woningV, ...gelegdV].reduce<Punt[][]>((st, w) => st.flatMap((x) => trekVeelhoekAf(x, w)), [metDeKlok(v)]);
-      const hoek = Math.atan2(asVan(m).d[1], asVan(m).d[0]) * GRAAD;
+      // De richting van de gevel (tussen −90° en 90°: een tegel of plank ligt in beide zinnen even goed).
+      let hoek = ((Math.atan2(asVan(m).d[1], asVan(m).d[0]) * GRAAD) % 180 + 180) % 180;
+      if (hoek > 90) hoek -= 180;
       stukken.forEach((x, i) => {
         if (veelhoekOppervlakte(x) < 25) return;
         uit.push(grondPrisma(stukken.length > 1 ? `${code}_${i}` : code, soort, kleur, x, AANLEG.boven - AANLEG.dik, AANLEG.dik, m.as === 'h' ? {} : { vlakRichting: fijn(hoek) }));
@@ -1918,7 +1923,7 @@ function aanlegBlokken(plan: Plattegrond): Blok[] {
     };
     // Vlak tegen de gevel, in de assen van de muur (s langs, w dwars), naar buiten.
     const vlakV = (o: Opening, m: Muur, naast: number, vanaf: number, diep: number): Punt[] => {
-      const naarPlus = !m.min, rand = m.lijn + (naarPlus ? m.dikte / 2 : -m.dikte / 2);
+      const naarPlus = !!m.min, rand = m.lijn + (naarPlus ? m.dikte / 2 : -m.dikte / 2);
       const a = o.midden - o.breedte / 2 - naast, b = a + o.breedte + 2 * naast;
       const w0 = naarPlus ? rand + vanaf : rand - vanaf - diep, w1 = w0 + diep;
       return [langsAs(m, a, w0), langsAs(m, b, w0), langsAs(m, b, w1), langsAs(m, a, w1)];
@@ -1991,7 +1996,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   const sokkelAfw = sokkel ? gevelAfwerking(plan, cat, sokkel) : undefined;
   const buitenAfw = (m: Muur, y: number) => (sokkel && sokkelAfw && y < sokkel.hoogte ? sokkelAfw : gevelAfwerking(plan, cat, gevelKeuzeVan(plan, m)));
   // Kopse kant op een buitenhoek: het materiaal van de gevel ernaast (de loodrechte buitenmuur die daar eindigt).
-  const hoekMuur = (m: Muur, p: number) => muren.find((v) => v.as !== m.as && v.soort === 'buiten' && gelijk(v.lijn, p) && (gelijk(v.van, m.lijn) || gelijk(v.tot, m.lijn)));
+  const hoekMuur = (m: Muur, p: number) => muren.find((v) => v.as !== m.as && v.as !== 's' && v.soort === 'buiten' && gelijk(v.lijn, p) && (gelijk(v.van, m.lijn) || gelijk(v.tot, m.lijn)));
 
   // Muren met openingen.
   const muurAfw = new Map(muren.map((x) => [x.id, x]));
@@ -2324,7 +2329,7 @@ export function meubelBlokken(vorm: MeubelVorm, B: number, D: number, H: number,
 
 /** Dikte van de dwarsmuur op een punt van een muur (0 als er geen is). */
 function dwarsDikte(m: Muur, p: number, muren: Muur[]): number {
-  const loodrecht = muren.filter((x) => x.as !== m.as && gelijk(x.lijn, p) && x.van <= m.lijn + 0.5 && x.tot >= m.lijn - 0.5);
+  const loodrecht = muren.filter((x) => x.as !== m.as && x.as !== 's' && gelijk(x.lijn, p) && x.van <= m.lijn + 0.5 && x.tot >= m.lijn - 0.5);
   return loodrecht.length ? Math.max(...loodrecht.map((x) => x.dikte)) : 0;
 }
 
