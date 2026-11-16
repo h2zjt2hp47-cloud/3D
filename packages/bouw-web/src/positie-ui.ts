@@ -806,7 +806,8 @@ function aanbouwVrijTekenen() {
   const ids = new Map(posities.map((x) => [x.id, nieuweId('p')]));
   for (const o of plan.openingen) if (o.positie) o.positie = ids.get(o.positie);
   wijzig('plan', (t) => {
-    t.plan = plan;
+    // Losse wanden die er al stonden (een tuinmuur op een plan zonder ruimtes), blijven staan.
+    t.plan = t.plan.losseWanden ? { ...plan, losseWanden: t.plan.losseWanden } : plan;
     t.posities = [...t.posities.filter((x) => x.id !== p.id), ...posities.map((x) => ({ ...x, id: ids.get(x.id)! }))];
     t.meta.regels = { ...t.meta.regels, gevel: true, dak: true };
   });

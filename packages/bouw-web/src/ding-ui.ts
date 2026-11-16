@@ -6,12 +6,13 @@
  *   opening:<id>            kleur van het schrijnwerk en zonwering (raam, deur) of kleur (poort); de rest in de configurator
  *   ruimte:<id>             vloer en wandkleur
  *   meubel:<id>             draaien of verwijderen
+ *   wand:<id>               een losse wand (ronde 2d): hoogte, afwerking of gevelmateriaal, verwijderen
  * Ook hier: de stijlen (één tik zet het hele ontwerp in een stijl) en een variant maken (een kopie om te vergelijken).
  */
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
 import { pasStijlToe, raamInStijl, stijlCatalogus, type Stijl } from '../../core/voorbeelden/stijlen.js';
-import { murenVan, niveauPlan, verfGevel, vlakSleutel, type GevelKant, type VerfBereik } from '../../core/src/index.js';
+import { losseWandRuimte, murenVan, niveauPlan, verfGevel, vlakSleutel, type GevelKant, type LosseWand, type VerfBereik } from '../../core/src/index.js';
 import { bedekkingKeuze, dakVormKnoppen, koepelTeller, metDak, zetDak } from './dak-ui.js';
 import { gevelStaal } from './gevel-ui.js';
 import { el } from './hulp.js';
@@ -20,7 +21,7 @@ import { actiefProject, dupliceerProject, positieVan, toestand, wijzig, type Toe
 import { familie } from './meegeven.js';
 
 /** Is dit een ding dat je kan aantikken? Andere namen (binnenmuur, terras, schaduw) geven geen keuzes. */
-export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:)/.test(id);
+export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:|wand:)/.test(id);
 
 /** Kleuren voor het schrijnwerk die in één tik te kiezen zijn; de hele waaier staat in de configurator. */
 const SNELLE_KLEUREN = ['wit', 'creme', 'ral7035', 'ral7022', 'antraciet', 'zwart'];
@@ -150,6 +151,55 @@ function meubelKeuzes(vak: HTMLElement, id: string, nadien: () => void) {
   vak.append(rij);
 }
 
+/** Een losse wand (ronde 2d): hoe hoog, in welke afwerking (binnen) of welk gevelmateriaal (buiten); of weg. */
+function wandKeuzes(vak: HTMLElement, id: string, nadien: () => void) {
+  const plan = toestand().plan;
+  const w = plan.losseWanden?.find((x) => x.id === id);
+  if (!w) return;
+  const binnen = losseWandRuimte(plan, w);
+  const zet = (f: (x: LosseWand) => void) => wijzig('plan', (t) => { const x = t.plan.losseWanden?.find((y) => y.id === id); if (x) f(x); });
+  const hoogtes: [string, string][] = binnen ? [['vol', 'Tot het plafond'], ['110', '110 cm'], ['90', '90 cm']] : [['100', '100 cm'], ['180', '180 cm'], ['200', '200 cm']];
+  const nu = w.hoogte === undefined ? 'vol' : String(w.hoogte);
+  vak.append(el('p', { class: 'klein' }, `Hoogte: ${w.hoogte === undefined ? 'tot het plafond' : `${w.hoogte} cm`}`),
+    tabs('Hoogte', hoogtes, nu, (k) => zet((x) => { if (k === 'vol') delete x.hoogte; else x.hoogte = Number(k); }), 'wand-hoogte'));
+  if (binnen) {
+    const rij = el('div', { class: 'gv-rij', role: 'group', 'aria-label': 'Afwerking' });
+    const code = w.wand ?? binnen.wand;
+    for (const [c, a] of Object.entries(cat.wanden)) rij.append(staalKnop(a.kleur, a.label, c === code, () => zet((x) => { if (c === binnen.wand) delete x.wand; else x.wand = c; }), { 'data-wand-afwerking': c }));
+    vak.append(el('p', { class: 'klein' }, `Afwerking: ${(cat.wanden[code]?.label ?? code).toLowerCase()}${w.wand ? '' : ' (zoals de ruimte)'}`), rij);
+  } else {
+    const nu2 = w.gevel ?? plan.gevelOntwerp?.standaard ?? gevelOntwerpVan(plan).standaard;
+    const tegels = el('div', { class: 'gv-tegels keuze-tegels' });
+    for (const [code, m] of Object.entries(gevelCatalogus)) {
+      const kleur = code === nu2.materiaal ? nu2.kleur : Object.keys(m.kleuren)[0]!;
+      const b = el('button', { type: 'button', class: 'gv-tegel', 'aria-pressed': String(code === nu2.materiaal), 'data-wand-materiaal': code, title: m.uitleg ?? m.label });
+      const s = el('span', { class: 'gv-staal' });
+      s.innerHTML = gevelStaal(code, kleur, nu2.voeg);
+      b.append(s, el('span', {}, m.label));
+      b.addEventListener('click', () => zet((x) => { x.gevel = { materiaal: code, kleur, ...(m.voegen ? { voeg: nu2.voeg && m.voegen[nu2.voeg] ? nu2.voeg : Object.keys(m.voegen)[0]! } : {}) }; }));
+      tegels.append(b);
+    }
+    vak.append(tegels);
+    const mat = gevelCatalogus[nu2.materiaal];
+    if (mat) {
+      const rij = el('div', { class: 'gv-rij', role: 'group', 'aria-label': 'Kleur' });
+      for (const [code, k] of Object.entries(mat.kleuren)) rij.append(staalKnop(k.hex, k.label, code === nu2.kleur, () => zet((x) => { x.gevel = { ...nu2, kleur: code }; }), { 'data-wand-kleur': code }));
+      vak.append(el('p', { class: 'klein' }, `Kleur: ${(mat.kleuren[nu2.kleur]?.label ?? nu2.kleur).toLowerCase()}`), rij);
+    }
+  }
+  const knoppen = el('div', { class: 'knoppenrij' });
+  const weg = el('button', { type: 'button', class: 'gevaar' }, 'Verwijderen');
+  weg.addEventListener('click', () => {
+    wijzig('plan', (t) => {
+      t.plan.losseWanden = t.plan.losseWanden?.filter((y) => y.id !== id);
+      if (!t.plan.losseWanden?.length) delete t.plan.losseWanden;
+    });
+    nadien();
+  });
+  knoppen.append(weg);
+  vak.append(el('p', { class: 'klein' }, 'Lengte en plaats: in de plattegrond (tik op de wand of haar maat).'), knoppen);
+}
+
 /** Titel van een ding, in gewone taal. */
 function titel(ding: string): string {
   const t = toestand();
@@ -160,6 +210,12 @@ function titel(ding: string): string {
   if (soort === 'opening') { const o = t.plan.openingen.find((x) => x.id === id); const p = o && positieVan(o); return p ? `${p.code} · ${p.naam}` : 'Opening'; }
   if (soort === 'ruimte') return t.plan.ruimtes.find((r) => r.id === id)?.naam ?? 'Ruimte';
   if (soort === 'meubel') { const m = t.plan.meubels.find((x) => x.id === id); return cat.meubels[m?.type ?? '']?.label ?? 'Meubel'; }
+  if (soort === 'wand') {
+    const w = t.plan.losseWanden?.find((x) => x.id === id);
+    if (!w) return '';
+    const r = losseWandRuimte(t.plan, w);
+    return r ? `Losse wand · ${r.naam}` : 'Losse muur buiten';
+  }
   return '';
 }
 
@@ -193,6 +249,7 @@ export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: ()
   else if (soort === 'opening') openingKeuzes(vak, id, nav.naarPositie);
   else if (soort === 'ruimte') ruimteKeuzes(vak, id);
   else if (soort === 'meubel') meubelKeuzes(vak, id, nav.sluit);
+  else if (soort === 'wand') wandKeuzes(vak, id, nav.sluit);
 }
 
 // ---------- stijlen en varianten ----------

@@ -41,6 +41,7 @@ import {
   type Deel, type Muur, type PlanCatalogus, type Plattegrond, type Punt, type Rechthoek,
 } from './plattegrond.js';
 import { kaderVan, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
+import { losseWandAs, losseWandHoogte, losseWandRuimte, losseWandVlak, opLosseWand } from './lossewand.js';
 import { schatBouwdeel, type BouwdeelSchatting, type BouwdeelSchattingOpties, type LastSoort, type StabiliteitsWaarden } from './stabiliteit.js';
 import { uWaarde, type WarmteUitkomst, type WarmteWaarden } from './warmte.js';
 
@@ -85,8 +86,8 @@ export interface ConstructieDeel {
 /** Een effen stuk in de constructieweergave dat geen bouwdeel is (en dus niet in de meetstaat zit). */
 export interface ConstructieStuk {
   niveau: number;
-  /** `vloer`, `dak` of `trap`: om te weten wanneer het getoond wordt. */
-  soort: 'vloer' | 'dak' | 'trap';
+  /** `vloer`, `dak`, `trap` of `wand` (een losse wand buiten): om te weten wanneer het getoond wordt. */
+  soort: 'vloer' | 'dak' | 'trap' | 'wand';
   blokken: Blok[];
 }
 
@@ -229,6 +230,47 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
         code: `wand_${n}_${m.id.replace(/\./g, ',')}`, plaats: m.soort === 'buiten' ? 'buitenwand' : 'binnenwand', opbouw: code, niveau: n, wat, deel,
         zet: { ...zet }, ...(m.soort === 'buiten' ? { ding: `gevel:${vlakSleutel(m)}` } : {}),
         muur: { muur: m, begin, einde, buitenMin, hoogte: h },
+      });
+    }
+    // Losse wanden (ronde 2d). Binnen: een binnenwand met de opbouw van de binnenmuren, op haar as, van het vlak van de muur
+    // waartegen ze staat (met de dikte van haar opbouw) tot haar vrije einde, op haar eigen hoogte. Buiten (een tuinmuur):
+    // geen opbouw in de catalogus, dus een effen muur die niet in de meetstaat telt (met een melding).
+    const losse = p.losseWanden ?? [];
+    const codeBinnen = opbouwVoor(plan, oc, 'binnenwand'), TB = dikte(codeBinnen);
+    const losseT = losse.map((x) => (losseWandRuimte(p, x) && TB ? { ...x, dikte: TB } : x));
+    for (const lw of losseT) {
+      const ruimte = losseWandRuimte(p, lw);
+      const v = losseWandVlak(lw, muren, losseT);
+      const lengte = v.einde - v.begin;
+      if (v.punten.length < 3 || lengte < 1) continue;
+      const hw = lw.hoogte === undefined ? h : losseWandHoogte(plan, lw);
+      if (!ruimte) {
+        uit.stukken.push({ niveau: n, soort: 'wand', blokken: [grondPrisma(`losse_wand_${lw.id}`, 'gevel', '#c9c6bf', v.punten, y0, hw)] });
+        uit.meldingen.push(`Losse wand buiten (${String(Math.round(lengte) / 100).replace('.', ',')} m lang, ${Math.round(hw)} cm hoog): er is geen opbouw voor een tuinmuur in de catalogus. Ze staat er als effen muur en telt niet mee in de meetstaat.`);
+        continue;
+      }
+      // Als muur van de plattegrond: liggend, staand of schuin (richting met dy > 0, zoals een schuine muur).
+      const { d } = losseWandAs(lw), T = lw.dikte;
+      const a = opLosseWand(lw, v.begin), b = opLosseWand(lw, v.einde);
+      let muur: Muur;
+      if (Math.abs(d[1]) < 1e-9) muur = { id: `losse_${lw.id}`, as: 'h', lijn: a[1], van: Math.min(a[0], b[0]), tot: Math.max(a[0], b[0]), soort: 'binnen', dikte: T };
+      else if (Math.abs(d[0]) < 1e-9) muur = { id: `losse_${lw.id}`, as: 'v', lijn: a[0], van: Math.min(a[1], b[1]), tot: Math.max(a[1], b[1]), soort: 'binnen', dikte: T };
+      else {
+        const r: Punt = d[1] > 0 ? d : [-d[0], -d[1]], nn: Punt = [r[1], -r[0]];
+        const sa = a[0] * r[0] + a[1] * r[1], sb = b[0] * r[0] + b[1] * r[1];
+        muur = { id: `losse_${lw.id}`, as: 's', lijn: a[0] * nn[0] + a[1] * nn[1], van: Math.min(sa, sb), tot: Math.max(sa, sb), soort: 'binnen', dikte: T, richting: r, punten: sa <= sb ? [a, b] : [b, a] };
+      }
+      const begin = r2(muur.van), einde = r2(muur.tot);
+      const deel = wandvlak({ lengte: r2(einde - begin), hoogte: r2(hw), opbouw: opbouw(codeBinnen), openingen: [] }, oc.materialen);
+      const wat = `Losse wand in ${ruimte.naam} (${verdieping(n)})`;
+      for (const x of deel.meldingen) uit.meldingen.push(`${wat}: ${x}`);
+      const draai = muur.as === 'h' ? 180 : 90;
+      const zet = muur.as === 'h'
+        ? { x: begin, y: y0, z: r2(muur.lijn - T / 2), draai } as const
+        : { x: r2(muur.lijn - T / 2), y: y0, z: begin, draai, ...(muur.as === 's' ? { hoek: Math.atan2(asVan(muur).n[1], asVan(muur).n[0]) * GRAAD } : {}) } as const;
+      uit.delen.push({
+        code: `losse_wand_${n}_${lw.id}`, plaats: 'binnenwand', opbouw: codeBinnen, niveau: n, wat, deel, zet: { ...zet }, ding: `wand:${lw.id}`,
+        muur: { muur, begin, einde, buitenMin: false, hoogte: r2(hw) },
       });
     }
   }
@@ -501,7 +543,7 @@ export function constructie3D(plan: Plattegrond, cat: PlanCatalogus, opties: Con
   const topDak = opties.dak !== false && !opties.laag && opties.totNiveau === undefined;
   /** Wordt een dak of vloer op verdieping n getoond? Een plat dak op een lagere verdieping altijd, op de bovenste alleen met het dak. */
   const dakHier = (n: number) => n < laatste || (n === c.top && topDak);
-  const toon = (soort: OpbouwPlaats | 'vloer' | 'dak' | 'trap', n: number) => {
+  const toon = (soort: OpbouwPlaats | 'vloer' | 'dak' | 'trap' | 'wand', n: number) => {
     if (soort === 'hellendDak') return topDak;
     if (soort === 'platDak' || soort === 'dak') return n <= laatste && dakHier(n);
     return n <= laatste;
@@ -527,7 +569,12 @@ export function constructie3D(plan: Plattegrond, cat: PlanCatalogus, opties: Con
       if (k && k.h > 0.05) blokken.push(k);
     }
   }
-  for (const s of c.stukken) if (toon(s.soort, s.niveau)) blokken.push(...s.blokken);
+  for (const s of c.stukken) {
+    if (!toon(s.soort, s.niveau)) continue;
+    if (s.soort !== 'wand') { blokken.push(...s.blokken); continue; }
+    // Een losse wand buiten: op de bovenste getoonde verdieping ook laag, zoals de wanden.
+    for (const b of s.blokken) { const k = s.niveau === laatste ? knip(b) : b; if (k && k.h > 0.05) blokken.push(k); }
+  }
   const kader = opties.kader ?? plattegrond3D(plan, cat, { laag: opties.laag, totNiveau: opties.totNiveau, dak: opties.dak, meubels: false }).kader;
   return { blokken, kader: blokken.length ? kader : kaderVan(blokken), samenvoegen: true };
 }

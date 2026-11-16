@@ -70,6 +70,7 @@ export { controleerCatalogus, maakCode, tekenstijlen } from './catalogus.js';
 export * from './dak.js';
 export * from './zon.js';
 export * from './plattegrond.js';
+export * from './lossewand.js';
 export * from './plattegrondsvg.js';
 export * from './maatinvoer.js';
 export * from './offerte.js';

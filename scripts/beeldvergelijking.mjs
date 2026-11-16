@@ -120,6 +120,11 @@ const BOUWBEELDEN = [
   { naam: 'bouw-schuin-binnen', schuin: 'binnen', toetsen: 'R5U4Z1' },
   // Constructie met schuine muren (ronde 6): de schuine wanden gedraaid mee, de vloer en het dak van een vrije vorm effen.
   { naam: 'bouw-schuin-constructie', schuin: 'constructie', toetsen: 'L9U2Z3' },
+  // Losse wanden (ronde 2d, 16/11), op een eigen pagina met een vers project: de voorbeeldwoning met een halfhoog muurtje
+  // en een muur die halverwege stopt in de leefruimte, een tuinmuur langs de zijgevel en een lage tuinmuur in natuursteen
+  // met een hoek in verstek en een schuin stuk (`LOSSE_WANDEN`). De tekening, en de 3D van het gelijkvloers zonder dak.
+  { naam: 'bouw-losse-plan', losse: 'plan' },
+  { naam: 'bouw-losse-3d', losse: '3d', toetsen: 'R5U4' },
   // Techniek voor de installateur (ronde 10, 16/11): de configurator toont ze nog niet, dus uit de motor (tsx) in de losse
   // kijker: de uitgeruste voorbeeldwoning in de uitgezette weergave, en de tekening van het gelijkvloers met de tekens.
   { naam: 'bouw-techniek', techniek: '3d', toetsen: 'O1' },
@@ -156,6 +161,16 @@ function laadPlaywright() {
 }
 
 /** Wacht tot het canvas twee keer na elkaar hetzelfde beeld geeft (de zachte vormen en het mooie beeld komen later). */
+/** De losse wanden van de beelden `bouw-losse-…` (ronde 2d), bovenop het plan van de voorbeeldwoning. */
+const LOSSE_WANDEN = [
+  { id: 'lw1', van: [320, 380], tot: [320, 505], dikte: 10, hoogte: 110 },
+  { id: 'lw2', van: [0, 760], tot: [180, 760], dikte: 10 },
+  { id: 'lw3', van: [1525, 150], tot: [1525, 750], dikte: 20, hoogte: 180 },
+  { id: 'lw4', van: [150, 1300], tot: [650, 1300], dikte: 25, hoogte: 90, gevel: { materiaal: 'natuursteen', kleur: 'blauwgrijs' } },
+  { id: 'lw5', van: [650, 1300], tot: [650, 1450], dikte: 25, hoogte: 90, gevel: { materiaal: 'natuursteen', kleur: 'blauwgrijs' } },
+  { id: 'lw6', van: [650, 1450], tot: [900, 1350], dikte: 25, hoogte: 90, gevel: { materiaal: 'natuursteen', kleur: 'blauwgrijs' } },
+];
+
 async function wachtTotStil(p, selector, maxMs = 40000) {
   const start = Date.now();
   let vorig = '';
@@ -366,6 +381,42 @@ async function maakBeelden() {
         if (b.schuin === 'binnen') await p.check('#pl-laag'); else await p.uncheck('#pl-laag');
         await p.click('[data-pl-standpunt="voor"]');
         // Draaien, hoger en dichterbij met de pijltjes en + (zoals een gebruiker met het toetsenbord).
+        await p.locator('#pl-3d canvas').focus();
+        const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
+        for (const [, k, n] of b.toetsen.matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+      }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  const losse = bouw.filter((x) => x.losse);
+  if (losse.length) {
+    // Een verse pagina (vers project, de voorbeeldwoning), de losse wanden erbij via het bewaarde project, en herladen.
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.evaluate((wanden) => {
+      const index = JSON.parse(localStorage.getItem('bouw-demo.projecten.v1'));
+      const sleutel = `bouw-demo.project.${index.actief}`;
+      const t = JSON.parse(localStorage.getItem(sleutel));
+      t.plan.losseWanden = wanden;
+      localStorage.setItem(sleutel, JSON.stringify(t));
+    }, LOSSE_WANDEN);
+    await p.reload();
+    await p.waitForTimeout(1500);
+    for (const b of losse) {
+      process.stdout.write(`  ${b.naam} … `);
+      await p.click('.nav [data-weergave="plan"]');
+      if (b.losse === 'plan') {
+        await p.click('[data-pl-weergave="plan"]');
+        await p.waitForTimeout(800);
+        beelden.set(b.naam, PNG.sync.read(await p.locator('#pl-canvas').screenshot()));
+      } else {
+        // Alleen het gelijkvloers: zonder dak en zonder verdieping erboven, zodat je in de leefruimte kijkt.
+        await p.click('[data-pl-weergave="3d"]');
+        await p.uncheck('#pl-alle-niveaus');
+        await p.click('[data-pl-standpunt="schuin"]');
         await p.locator('#pl-3d canvas').focus();
         const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
         for (const [, k, n] of b.toetsen.matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);

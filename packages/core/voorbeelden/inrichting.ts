@@ -4,7 +4,7 @@
  * En de omzetting van een plattegrond naar offerteregels (vloeren, wanden, deuren, ruwbouw, inrichting).
  */
 import {
-  dakOpbouw, gevelOppervlaktes, murenVan, niveauPlan, niveauVan, ruimteMaten, verdiepingenVan,
+  dakOpbouw, gevelOppervlaktes, losseWandHoogte, losseWandLengte, losseWandRuimte, losseWandVlak, murenVan, niveauPlan, niveauVan, ruimteMaten, verdiepingenVan,
   type DakBedekking, type DakLichtType, type DakMateriaal, type GevelMateriaal, type GevelOntwerp, type Muur, type OfferteRegel, type PlanCatalogus, type Plattegrond,
 } from '../src/index.js';
 
@@ -228,6 +228,13 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
     tel(`vloer:${r.vloer}`, m.netto);
     tel(`wand:${r.wand}`, m.wand);
   }
+  // Losse wanden (ronde 2d): gebouwde lengte × hoogte; binnen telt de afwerking van beide zijden bij de wanden.
+  const losse = (plan.losseWanden ?? []).map((w) => {
+    const p = niveauPlan(plan, niveauVan(w));
+    const v = losseWandVlak(w, murenPerNiveau[niveauVan(w)] ?? murenVan(p), p.losseWanden);
+    return { w, ruimte: losseWandRuimte(p, w), m2: (losseWandLengte(v) * losseWandHoogte(plan, w)) / 10000 };
+  }).filter((x) => x.m2 > 0);
+  for (const x of losse) if (x.ruimte) tel(`wand:${x.w.wand && cat.wanden[x.w.wand] ? x.w.wand : x.ruimte.wand}`, 2 * x.m2);
   const rond1 = (x: number) => Math.round(x * 10) / 10;
   if (opties.vloeren) {
     for (const [k, m2] of som) if (k.startsWith('vloer:') && m2 > 0) {
@@ -275,8 +282,14 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
       const bs = sokkel ? beschrijf(sokkel) : undefined;
       if (sokkel && bs && v.sokkel > 0) zet(`sokkel:${sokkel.materiaal}:${sokkel.kleur}`, v.sokkel, `Sokkel ${sokkel.hoogte} cm: ${bs.tekst}`, bs.mat.prijs, bs.mat.kost);
     }
+    // Een losse muur buiten (tuinmuur) in gevelmateriaal: beide zijden, een eigen regel per materiaal.
+    for (const x of losse) {
+      if (x.ruimte) continue;
+      const keuze = x.w.gevel ?? plan.gevelOntwerp!.standaard, b = beschrijf(keuze);
+      if (b) zet(`gevel:losse:${keuze.materiaal}:${keuze.kleur}:${keuze.voeg ?? ''}`, 2 * x.m2, `Losse muur buiten (tuinmuur), beide zijden: ${b.tekst}`, b.mat.prijs, b.mat.kost);
+    }
     for (const [k, x] of som) {
-      regels.push({ code: k, groep: 'Gevel', omschrijving: `${x.omschrijving} (netto, zonder ramen en deuren)`, eenheid: 'm²', hoeveelheid: rond1(x.m2), eenheidsprijs: x.prijs, kostprijs: x.kost });
+      regels.push({ code: k, groep: 'Gevel', omschrijving: k.startsWith('gevel:losse:') ? x.omschrijving : `${x.omschrijving} (netto, zonder ramen en deuren)`, eenheid: 'm²', hoeveelheid: rond1(x.m2), eenheidsprijs: x.prijs, kostprijs: x.kost });
     }
   }
   // Dak: alleen de hoeveelheden uit de dakopbouw (m² bedekking, lopende meter dakrand, aantal daklichten).
@@ -314,6 +327,19 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
         eenheid: 'm²', hoeveelheid: m2, eenheidsprijs: prijs(k)[0], kostprijs: prijs(k)[1],
       });
     }
+    // Losse wanden (ronde 2d): één zijde, per plaats en dikte. De richtprijs is die van een binnenmuur (demo).
+    const perSoort = new Map<string, { m2: number; binnen: boolean; dikte: number }>();
+    for (const x of losse) {
+      const k = `losse_wand:${x.ruimte ? 'binnen' : 'buiten'}:${x.w.dikte}`;
+      const nu = perSoort.get(k) ?? { m2: 0, binnen: !!x.ruimte, dikte: x.w.dikte };
+      nu.m2 += x.m2;
+      perSoort.set(k, nu);
+    }
+    for (const [k, x] of perSoort) regels.push({
+      code: k, groep: 'Ruwbouw',
+      omschrijving: x.binnen ? `Losse wand ${x.dikte} cm binnen (snelbouw, bepleisterd; deelt geen ruimte)` : `Losse muur ${x.dikte} cm buiten (tuinmuur, metselwerk, zonder fundering)`,
+      eenheid: 'm²', hoeveelheid: rond1(x.m2), eenheidsprijs: prijs('binnenmuur')[0], kostprijs: prijs('binnenmuur')[1],
+    });
   }
   if (opties.inrichting) {
     const aantal = new Map<string, number>();

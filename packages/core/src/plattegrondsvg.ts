@@ -33,9 +33,10 @@ import {
   type Toestel,
   type ToestelType,
 } from './plattegrond.js';
+import { losseWandAfstanden, losseWandAs, losseWandLengte, losseWandRuimte, losseWandVlak, opLosseWand, type LosseWand } from './lossewand.js';
 
 export interface PlanSvgOpties {
-  selectie?: { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'toestel' | 'leiding'; id: string };
+  selectie?: { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'toestel' | 'leiding' | 'wand'; id: string };
   /**
    * Techniek (ronde 10): een teken per toestel en een gekleurde lijn per leiding, per vak aan of uit: `true` = alle vakken,
    * of de lijst van de vakken die getekend worden. Vraagt `cat.techniek`. Ontbreekt = geen techniek (de tekening van
@@ -65,6 +66,8 @@ export interface PlanSvgOpties {
   onderlegger?: Plattegrond;
   /** Lijn die getekend wordt (nieuwe wand). */
   voorbeeldWand?: { x1: number; y1: number; x2: number; y2: number };
+  /** Een losse wand die getekend wordt (ronde 2d): haar grondvlak, half doorzichtig, met haar lengte. */
+  voorbeeldLosseWand?: LosseWand;
   /** Centimeter per schermpixel: bij inzoomen blijven tekst en labels even groot op het scherm. */
   schaal?: number;
   /** Raster per 10 cm tonen (bij inzoomen). */
@@ -93,8 +96,12 @@ const m2 = (x: number) => `${x.toFixed(1).replace('.', ',')} m²`;
 export function planKader(plan: Plattegrond, marge = 130): { x: number; y: number; b: number; d: number } {
   const delen = plan.ruimtes.flatMap(delenVan);
   if (!delen.length) return { x: -marge, y: -marge, b: 1200 + 2 * marge, d: 800 + 2 * marge };
-  const x0 = Math.min(...delen.map((r) => r.x)), y0 = Math.min(...delen.map((r) => r.y));
-  const x1 = Math.max(...delen.map((r) => r.x + r.b)), y1 = Math.max(...delen.map((r) => r.y + r.d));
+  let x0 = Math.min(...delen.map((r) => r.x)), y0 = Math.min(...delen.map((r) => r.y));
+  let x1 = Math.max(...delen.map((r) => r.x + r.b)), y1 = Math.max(...delen.map((r) => r.y + r.d));
+  // Een losse wand buiten de ruimtes (een tuinmuur) komt mee in beeld; binnen verandert er niets.
+  for (const w of plan.losseWanden ?? []) for (const [x, y] of [w.van, w.tot]) {
+    x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+  }
   return { x: x0 - marge, y: y0 - marge, b: x1 - x0 + 2 * marge, d: y1 - y0 + 2 * marge };
 }
 
@@ -181,6 +188,11 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
       ? `<polygon data-soort="muur" data-id="${esc(m.id)}" points="${punten(v.punten)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke="${m.soort === 'buiten' ? '#383836' : '#86857f'}" stroke-width="0.6" stroke-linejoin="round"/>`
       : `<rect data-soort="muur" x="${n(v.x)}" y="${n(v.y)}" width="${n(v.b)}" height="${n(v.d)}" fill="${m.soort === 'buiten' ? '#383836' : '#86857f'}"/>`);
   }
+
+  // Losse wanden (ronde 2d): na de muren en vóór de openingen. Zie `losseWandSvg`.
+  const losse = plan.losseWanden ?? [];
+  for (const w of losse) uit.push(losseWandSvg(plan, w, muren, losse, opties, k, sel?.soort === 'wand' && sel.id === w.id, fouten.has(w.id), raak));
+  if (opties.voorbeeldLosseWand) uit.push(`<g opacity="0.6" pointer-events="none">${losseWandSvg(plan, opties.voorbeeldLosseWand, muren, losse, { ...opties, afdruk: true }, k, true, false, () => undefined)}</g>`);
 
   // Openingen.
   for (const o of plan.openingen) uit.push(openingSvg(o, muurVanOpening(o, muren), opties, sel?.soort === 'opening' && sel.id === o.id, fouten.has(o.id)));
@@ -343,6 +355,77 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
 
 /** Punten als SVG-lijst. */
 const punten = (v: Punt[]) => v.map(([x, y]) => `${n(x)},${n(y)}`).join(' ');
+
+/**
+ * Een losse wand in de tekening: haar grondvlak (volle hoogte zoals een muur, lager licht met een rand en de hoogte erbij),
+ * haar gebouwde lengte als maat (aan de kant weg van de dichtste evenwijdige muur), en in de editor een onzichtbare strook
+ * van minstens 44 beeldpunten om ze aan te tikken. Gekozen: blauw, een greep op elk eindpunt (`data-wandgreep`) en de
+ * vrije maat tot de evenwijdige muren (`data-maat="wandafstand:<id>:<kant>"`).
+ */
+function losseWandSvg(plan: Plattegrond, w: LosseWand, muren: Muur[], losse: LosseWand[], opties: PlanSvgOpties, k: number, gekozen: boolean, fout: boolean,
+  raak: (doel: string) => { doel: string; schaal: number } | undefined): string {
+  const v = losseWandVlak(w, muren, losse);
+  if (v.punten.length < 3) return '';
+  const binnen = !!losseWandRuimte(plan, w);
+  const h = w.hoogte ?? plan.muurhoogte, vol = h >= plan.muurhoogte - 0.5;
+  const kleur = binnen ? '#86857f' : '#5d5a54';
+  const lijn = fout ? '#c0392b' : gekozen ? '#2f6fd0' : kleur;
+  const vulling = vol ? kleur : binnen ? '#d6d3cb' : '#bdb8ad';
+  const a = opLosseWand(w, v.begin), b = opLosseWand(w, v.einde);
+  const schaal = opties.schaal ?? 1;
+  const uit: string[] = [`<g data-soort="wand" data-id="${esc(w.id)}" style="cursor:pointer">`];
+  uit.push(`<polygon points="${punten(v.punten)}" fill="${vulling}" stroke="${lijn}" stroke-width="${gekozen || fout ? 3 : vol ? 0.6 : 1.6}" stroke-linejoin="round"/>`);
+  if (!vol) {
+    // Een lage wand: arcering, zoals een borstwering op een plan.
+    const stap = Math.max(12, w.dikte * 1.2), half = w.dikte / 2;
+    const arcering: string[] = [];
+    for (let s = v.begin + stap / 2; s < v.einde - 2; s += stap) {
+      const p = opLosseWand(w, s - half * 0.8, -half), q = opLosseWand(w, s + half * 0.8, half);
+      arcering.push(`M ${n(p[0])} ${n(p[1])} L ${n(q[0])} ${n(q[1])}`);
+    }
+    if (arcering.length) uit.push(`<path d="${arcering.join(' ')}" stroke="${kleur}" stroke-width="1" fill="none" pointer-events="none"/>`);
+  }
+  if (!opties.afdruk) uit.push(`<line x1="${n(a[0])}" y1="${n(a[1])}" x2="${n(b[0])}" y2="${n(b[1])}" stroke="#2f6fd0" stroke-opacity="0" stroke-width="${n(Math.max(w.dikte, 44 * schaal))}" stroke-linecap="butt"/>`);
+  uit.push('</g>');
+  // De lengte als maat, aan de kant weg van de dichtste evenwijdige muur (bij een tuinmuur: weg van de gevel).
+  const af = losseWandAfstanden(w, muren);
+  const naarMin = !!af.plus && (!af.min || af.plus.vrij <= af.min.vrij);
+  // Gekozen (met grepen van 44 beeldpunten op de eindpunten): de maat zo ver dat haar tikvlak naast de grepen ligt, ook
+  // bij een korte wand op een tablet.
+  const afst = Math.max(w.dikte / 2 + 30 * Math.max(k, 0.5), gekozen && opties.maatDoelen && !opties.afdruk ? w.dikte / 2 + 46 * schaal : 0);
+  const tekst = `${Math.round(losseWandLengte(v))}`, maatKleur = gekozen ? '#2f6fd0' : '#4b5753';
+  // maatlijn legt de maat links van de richting (langs n van de wand): voor de min-kant de richting omdraaien.
+  uit.push(naarMin ? maatlijn(b[0], b[1], a[0], a[1], afst, tekst, maatKleur, k, raak(`wand:${w.id}`)) : maatlijn(a[0], a[1], b[0], b[1], afst, tekst, maatKleur, k, raak(`wand:${w.id}`)));
+  // De hoogte bij een lage wand (en de dikte als ze gekozen is), aan de andere kant.
+  if (!vol || gekozen) {
+    const m = opLosseWand(w, (v.begin + v.einde) / 2, (naarMin ? 1 : -1) * (w.dikte / 2 + 14 * Math.max(k, 0.5)));
+    const label = `${gekozen ? `${n(w.dikte)} cm dik · ` : ''}${vol ? 'tot het plafond' : `h ${Math.round(h)}`}`;
+    let hoek = (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
+    if (hoek > 90 || hoek <= -90) hoek += 180;
+    uit.push(`<text x="${n(m[0])}" y="${n(m[1])}" font-size="${n(14 * k)}" fill="${gekozen ? '#2f6fd0' : '#4b5753'}" text-anchor="middle" dominant-baseline="central" transform="rotate(${n(hoek)} ${n(m[0])} ${n(m[1])})" pointer-events="none">${esc(label)}</text>`);
+  }
+  if (gekozen && !opties.afdruk) {
+    // De vrije maat tot de evenwijdige muren. Aan te tikken aan de kant zonder de lengtemaat (anders liggen hun tikvlakken
+    // op elkaar); de maatvraag van de lengte kent ook de afstand aan de andere kant.
+    for (const x of [af.min, af.plus]) {
+      if (!x || x.vrij < 0.5) continue;
+      const z = x.kant === 'plus' ? 1 : -1, s = (v.begin + v.einde) / 2;
+      const p = opLosseWand(w, s, z * (w.dikte / 2)), q = opLosseWand(w, s, z * (w.dikte / 2 + x.vrij));
+      uit.push(`<g pointer-events="none" stroke="#2f6fd0" stroke-width="1.5"><line x1="${n(p[0])}" y1="${n(p[1])}" x2="${n(q[0])}" y2="${n(q[1])}" stroke-dasharray="6 4"/></g>`);
+      const tikbaar = x.kant !== (naarMin ? 'min' : 'plus');
+      uit.push(maatlijn(p[0], p[1], q[0], q[1], 0, `${Math.round(x.vrij * 10) / 10}`.replace('.', ','), '#2f6fd0', k, tikbaar ? raak(`wandafstand:${w.id}:${x.kant}`) : undefined));
+    }
+    // Een greep op elk eindpunt van de as (een eindpunt tegen een muur ligt op haar as). Het tikvlak van 44 beeldpunten ligt
+    // grotendeels voorbij het eindpunt: zo blijft het midden van een korte wand vrij om de hele wand te verslepen.
+    const straal = 11 * Math.max(k, 0.35), R = 22 * schaal, { d } = losseWandAs(w);
+    for (const [code, [x, y], z] of [['van', w.van, -1], ['tot', w.tot, 1]] as const) {
+      const cx = x + z * d[0] * R * 0.8, cy = y + z * d[1] * R * 0.8;
+      uit.push(`<circle data-wandgreep="${code}" cx="${n(x)}" cy="${n(y)}" r="${n(straal)}" fill="#fff" stroke="#2f6fd0" stroke-width="${n(3 * Math.max(k, 0.35))}" style="cursor:move"/>`
+        + `<circle data-wandgreep="${code}" cx="${n(cx)}" cy="${n(cy)}" r="${n(R)}" fill="#2f6fd0" fill-opacity="0" style="cursor:move"/>`);
+    }
+  }
+  return uit.join('');
+}
 
 /** Zwaartepunt van een veelhoek. */
 function zwaartepunt(v: Punt[]): Punt {

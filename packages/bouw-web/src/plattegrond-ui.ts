@@ -47,6 +47,17 @@ import {
   type Scene3DMetMaten,
   gebouwMaatlijnen,
   raamMaatlijnen,
+  dwarsVerschoven,
+  kleefAanWand,
+  LOSSE_WAND_MIN,
+  losseWandAfstanden,
+  losseWandDoorMuur,
+  losseWandLengte,
+  losseWandMidden,
+  losseWandRuimte,
+  losseWandVlak,
+  metLengte,
+  type LosseWand,
 } from '../../core/src/index.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { maak3D, type Kwaliteit, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
@@ -78,14 +89,15 @@ import {
   wijzig,
 } from './staat.js';
 
-type Gereedschap = 'kies' | 'ruimte' | 'maten' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'garagepoort' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
-type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht'; id: string } | undefined;
+type Gereedschap = 'kies' | 'ruimte' | 'maten' | 'wand' | 'losse_wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'garagepoort' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
+type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'wand'; id: string } | undefined;
 
 const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
   { code: 'kies', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
   { code: 'ruimte', label: 'Ruimte tekenen', toets: 'T', hint: 'Sleep een rechthoek, ook binnen een bestaande ruimte ("ruimte in ruimte"): wat overlapt wordt uit de oude ruimte gesneden. Muren volgen automatisch.' },
   { code: 'maten', label: 'Ruimte met maten', toets: 'N', hint: 'Typ de maten van de muren in cm (rechthoek, of vier zijden en een diagonaal voor schuine muren) en kies waar de ruimte komt: tegen een gevel (tik op de muur), los of als nieuw project.' },
-  { code: 'wand', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld.' },
+  { code: 'wand', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld (er komt een ruimte bij). Een muur die niets opdeelt (een muurtje, een muur die halverwege stopt, een tuinmuur)? Kies Losse wand.' },
+  { code: 'losse_wand', label: 'Losse wand (deelt niets)', toets: 'L', hint: 'Sleep van het begin naar het einde van de muur, ook schuin; ze kleeft aan muren en hoekpunten. Een losse wand deelt niets: de ruimte blijft één ruimte (een muurtje, een muur die halverwege stopt, buiten een tuinmuur). Daarna typ je lengte, afstand tot de muur en hoogte.' },
   { code: 'wand_v', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
   { code: 'wand_h', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
   { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een regel in het overzicht bij.' },
@@ -121,6 +133,8 @@ let weergave: 'plan' | 'gevels' | '3d' | 'doorsnede' = 'plan';
 let niveau = 0;
 let alleNiveaus = true;
 let voorbeeldWand: { x1: number; y1: number; x2: number; y2: number } | undefined;
+/** Een losse wand die getekend wordt (gereedschap *Losse wand*). */
+let voorbeeldLosseWand: LosseWand | undefined;
 let viewer: Viewer3D | null | undefined;
 let laag = false;
 let toonMeubels = true;
@@ -148,9 +162,17 @@ function ruimKaderVan(s: Scene3D): Scene3D {
 }
 
 interface Sleep {
-  soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'hoek' | 'opening' | 'meubel' | 'daklicht';
+  soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'hoek' | 'opening' | 'meubel' | 'daklicht' | 'losse' | 'lossewand' | 'wandeind';
   /** Een hoekpunt van een vrije vorm (greep `data-hoekgreep`). */
   hoek?: number;
+  /** Een eindpunt van een losse wand (greep `data-wandgreep`). */
+  eind?: 'van' | 'tot';
+  /**
+   * Een losse wand: waar het slepen begon, op het scherm en op het plan. Elke volgende plaats rekent vanaf daar met de
+   * schaal van de tekening, niet met de ligging van de tekening op het scherm: die kan tijdens het slepen verschuiven
+   * (in een proef 58 beeldpunten bij de eerste wijziging na het herladen), en dan zou de wand een stuk mee springen.
+   */
+  scherm?: { x: number; y: number; px: number; py: number };
   start: { x: number; y: number };
   id?: string;
   kant?: 'n' | 's' | 'w' | 'o';
@@ -219,6 +241,12 @@ function selectieKader(): Kader | undefined {
     const l = pl.daklichten?.find((x) => x.id === s.id);
     return l ? { x: l.x, y: l.y, b: l.b, d: l.d } : undefined;
   }
+  if (s.soort === 'wand') {
+    const w = pl.losseWanden?.find((x) => x.id === s.id);
+    if (!w) return undefined;
+    const xs = [w.van[0], w.tot[0]], ys = [w.van[1], w.tot[1]];
+    return { x: Math.min(...xs) - 40, y: Math.min(...ys) - 40, b: Math.max(...xs) - Math.min(...xs) + 80, d: Math.max(...ys) - Math.min(...ys) + 80 };
+  }
   const o = pl.openingen.find((x) => x.id === s.id);
   if (!o) return undefined;
   if (o.as === 's') {
@@ -252,7 +280,7 @@ export function render() {
   const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   viewBox = zoom ? zoom.kijkvak() : passendKader();
   houder.innerHTML = tekenPlattegrond(plan(), cat, {
-    selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(),
+    selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, voorbeeldLosseWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(),
     dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN, noordpijl: true,
     // Maten aantikken om ze te wijzigen, en het voorbeeld van een ruimte met maten.
     maatDoelen: true, voorbeeldVorm: matenVoorbeeld(),
@@ -307,6 +335,7 @@ function toonNiveaus() {
         t.plan.openingen = t.plan.openingen.filter((o) => niveauVan(o) !== n);
         t.plan.meubels = t.plan.meubels.filter((m) => niveauVan(m) !== n);
         if (t.plan.daklichten) t.plan.daklichten = t.plan.daklichten.filter((l) => niveauVan(l) !== n);
+        if (t.plan.losseWanden) t.plan.losseWanden = t.plan.losseWanden.filter((w) => niveauVan(w) !== n);
         t.plan.verdiepingen = verdiepingenVan(t.plan).slice(0, n);
       });
       niveau = n - 1;
@@ -605,6 +634,117 @@ function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number): boo
   return true;
 }
 
+// ---------- losse wand (ronde 2d): een muur die niets opdeelt ----------
+
+/** De losse wanden van de actieve verdieping, behalve één (die gesleept of gemeten wordt). */
+const andereWanden = (behalve?: string) => (plan().losseWanden ?? []).filter((w) => w.id !== behalve);
+/** Tot hoever naast een muur een eindpunt eraan kleeft: 14 beeldpunten. */
+const wandMarge = () => Math.max(6, 14 * schaalNu());
+
+/**
+ * Een eindpunt van een losse wand: op de as van een muur of een andere losse wand als je er tot 14 beeldpunten naast tikt
+ * (daar sluit ze aan), anders aan de lijnen van de ruimtes en het raster, zoals een ruimte tekenen.
+ */
+function wandPunt(x: number, y: number, behalve?: string): Punt {
+  const k = kleefAanWand([x, y], murenVan(plan()), andereWanden(behalve), wandMarge());
+  return k ? k.punt : [kleef(x, 'x', 12), kleef(y, 'y', 12)];
+}
+
+/**
+ * Het tweede eindpunt tijdens het slepen: bijna liggend of staand (binnen 6°) wordt recht (een vinger sleept nooit helemaal
+ * recht), en het kleeft aan een muur als dat op die rechte lijn kan. Schuin: op het raster.
+ */
+function wandEind(start: Punt, x: number, y: number, behalve?: string): Punt {
+  const dx = x - start[0], dy = y - start[1];
+  const hoek = (Math.atan2(Math.abs(dy), Math.abs(dx)) * 180) / Math.PI;
+  const recht = Math.hypot(dx, dy) < 1 ? undefined : hoek < 6 ? 'h' : hoek > 84 ? 'v' : undefined;
+  const los: Punt = recht === 'h' ? [x, start[1]] : recht === 'v' ? [start[0], y] : [x, y];
+  const k = kleefAanWand(los, murenVan(plan()), andereWanden(behalve), wandMarge());
+  if (k && (!recht || Math.abs(recht === 'h' ? k.punt[1] - start[1] : k.punt[0] - start[0]) < 0.5)) return k.punt;
+  if (recht === 'h') return [kleef(los[0], 'x', 12), start[1]];
+  if (recht === 'v') return [start[0], kleef(los[1], 'y', 12)];
+  return [snap(los[0], fijn()), snap(los[1], fijn())];
+}
+
+/** Een nieuwe losse wand: binnen zo dik als een binnenmuur en tot het plafond, buiten 20 cm dik en 180 cm hoog (een tuinmuur). */
+function nieuweLosseWand(van: Punt, tot: Punt, id: string): LosseWand {
+  const w: LosseWand = { id, van, tot, dikte: plan().binnenmuur, niveau };
+  return losseWandRuimte(plan(), w) ? w : { ...w, dikte: 20, hoogte: 180 };
+}
+
+/** Bewaart een net getekende losse wand en vraagt haar maten (wie niets typt, houdt wat hij sleepte). */
+function plaatsLosseWand(w: LosseWand) {
+  const v = losseWandVlak(w, murenVan(plan()), andereWanden());
+  if (losseWandLengte(v) < LOSSE_WAND_MIN) {
+    melding = `Sleep van het begin naar het einde van de muur (minstens ${LOSSE_WAND_MIN} cm).`;
+    render();
+    toonEigenschappen();
+    return;
+  }
+  wijzig('plan', (t) => { (t.plan.losseWanden ??= []).push(w); });
+  selectie = { soort: 'wand', id: w.id };
+  melding = losseWandRuimte(plan(), w) ? 'Losse wand geplaatst: de ruimte blijft één ruimte.' : 'Losse muur buiten geplaatst (bv. een tuinmuur).';
+  kiesGereedschap('kies');
+  vraagLosseWand(w.id);
+}
+
+/**
+ * De maten van een losse wand, na het tekenen of na een tik op haar maat: de lengte (wat gebouwd wordt, vanaf de muur
+ * waartegen ze staat; het vrije einde schuift), de vrije maat tot de evenwijdige muur aan een gekozen kant (de wand
+ * schuift dwars) en de hoogte. Wat je typt, zie je meteen; één keer *Ongedaan maken* zet alles terug.
+ */
+function vraagLosseWand(id: string, anker?: DOMRect, kant?: string) {
+  const pl = plan();
+  const w0 = pl.losseWanden?.find((x) => x.id === id);
+  if (!w0) return;
+  const muren = murenVan(pl), andere = andereWanden(id);
+  const v0 = losseWandVlak(w0, muren, andere);
+  const af = losseWandAfstanden(w0, muren);
+  const kanten = (['min', 'plus'] as const).filter((k) => af[k]);
+  const kant0 = kanten.find((k) => k === kant) ?? [...kanten].sort((a, b) => af[a]!.vrij - af[b]!.vrij)[0];
+  // Het vrije einde schuift als de lengte verandert; een einde tegen een muur blijft staan.
+  const welk = v0.aan[1].soort === 'vrij' || v0.aan[0].soort !== 'vrij' ? 'einde' : 'begin';
+  const binnen = !!losseWandRuimte(pl, w0), H = pl.muurhoogte;
+  const alDoor = !!losseWandDoorMuur(w0, muren, andere, v0);
+  const nieuw = (w: Record<string, number>, k: string | undefined): LosseWand => {
+    let x = metLengte(w0, v0, w.lengte!, welk);
+    if ((k === 'min' || k === 'plus') && w.afstand !== undefined) {
+      const nu = losseWandAfstanden(x, muren)[k];
+      if (nu) x = dwarsVerschoven(x, (k === 'min' ? 1 : -1) * (w.afstand - nu.vrij));
+    }
+    const rest: LosseWand = { ...x };
+    delete rest.hoogte;
+    return binnen && w.hoogte! >= H - 0.5 ? rest : { ...rest, hoogte: w.hoogte! };
+  };
+  vraagMaat({
+    anker: anker ?? losseWandMidden(w0, v0),
+    titel: binnen ? 'Losse wand: maten' : 'Losse muur buiten: maten',
+    velden: [
+      { code: 'lengte', label: 'Lengte', waarde: Math.round(losseWandLengte(v0) * 10) / 10, min: LOSSE_WAND_MIN },
+      ...(kant0 ? [{ code: 'afstand', label: 'Vrij tot de muur', waarde: af[kant0]!.vrij, min: 0 }] : []),
+      { code: 'hoogte', label: 'Hoogte', waarde: w0.hoogte ?? H, min: 20, max: binnen ? H : 600 },
+    ],
+    ...(kant0 ? { kanten: { label: 'Tot de muur', opties: kanten.map((k): [string, string] => [k, af[k]!.naam]), gekozen: kant0 } } : {}),
+    bijKant: (k): Record<string, number> => {
+      const x = plan().losseWanden?.find((q) => q.id === id);
+      const a = x && (k === 'min' || k === 'plus') ? losseWandAfstanden(x, muren)[k] : undefined;
+      return a ? { afstand: a.vrij } : {};
+    },
+    knoppen: binnen ? [{ label: 'Tot het plafond', waarden: () => ({ hoogte: H }) }] : [],
+    uitleg: `Lengte: wat gebouwd wordt${v0.aan.some((a) => a.soort !== 'vrij') ? ', vanaf de muur waartegen ze staat' : ''}. Vrij tot de muur: van het vlak van de muur tot de wand. Een losse wand deelt de ruimte niet.`,
+    meteenTypen: !!anker,
+    toepassen: (w, k, eerste) => {
+      const x = nieuw(w, k);
+      const v = losseWandVlak(x, muren, andere);
+      if (Math.abs(losseWandLengte(v) - w.lengte!) > 0.5 || (!alDoor && losseWandDoorMuur(x, muren, andere, v))) return 'Zo kan het niet: de wand zou door een muur lopen.';
+      if (eerste) momentopname();
+      wijzig('plan', (t) => { const i = t.plan.losseWanden?.findIndex((q) => q.id === id) ?? -1; if (i >= 0) t.plan.losseWanden![i] = x; }, { zonderOngedaan: true });
+      return undefined;
+    },
+    terug: () => ongedaan(),
+  });
+}
+
 // ---------- maten typen: na een tik, en op de tekening ----------
 
 /** Namen van de twee uiteinden van een muur: links en rechts (liggend), boven en onder (staand of schuin). */
@@ -688,6 +828,12 @@ function vraagWand(staand: boolean, lijn: number, p: Punt, rand: [number, number
 /** Wat een maat op de tekening is (zie `maatDoelen` in tekenPlattegrond) en wat er gebeurt als je ze wijzigt. */
 function tikOpMaat(doel: string, vak: DOMRect) {
   const [soort, id, extra] = doel.split(':') as [string, string, string | undefined];
+  // Een losse wand: haar lengte of de vrije maat tot een muur (de maatvraag kent alle drie de maten).
+  if (soort === 'wand' || soort === 'wandafstand') {
+    if (selectie?.soort !== 'wand' || selectie.id !== id) { selectie = { soort: 'wand', id }; melding = ''; render(); toonEigenschappen(); }
+    vraagLosseWand(id, vak, extra);
+    return;
+  }
   const pl = plan();
   const oud = JSON.parse(JSON.stringify(pl)) as Plattegrond;
   /** Een wijziging op het plan (zoals slepen): telkens vanaf het plan van toen je de maat aantikte; eerst op een kopie. */
@@ -860,7 +1006,10 @@ function naPointerDown(ev: PointerEvent) {
   const onderMaat = maat && gereedschap === 'kies'
     ? (document.elementsFromPoint(ev.clientX, ev.clientY).find((e) => e !== maat && e.closest('#pl-canvas') && e.closest('[data-soort]:not([data-soort="leeg"]):not([data-soort="muur"])'))?.closest('[data-soort]') as SVGElement | undefined)
     : undefined;
-  maatNaKlik = onderMaat && maat ? { doel: maat.dataset.maat!, vak: maat.getBoundingClientRect(), x: ev.clientX, y: ev.clientY } : undefined;
+  // Een korte losse wand ligt onder haar eigen lengtemaat: de eerste tik kiest de wand (geen maatvraag over de tekening),
+  // een tik op haar maat als ze gekozen is, opent de maatvraag.
+  const eersteTikOpWand = onderMaat?.dataset.soort === 'wand' && !(selectie?.soort === 'wand' && selectie.id === onderMaat.dataset.id);
+  maatNaKlik = onderMaat && maat && !eersteTikOpWand ? { doel: maat.dataset.maat!, vak: maat.getBoundingClientRect(), x: ev.clientX, y: ev.clientY } : undefined;
   if (((maat && gereedschap === 'kies') || gereedschap === 'maten') && !onderMaat) {
     // Pas bij het loslaten (als de vinger niet schoof): de maat aantikken, of met Ruimte met maten de gevel kiezen.
     // Slepen verschuift het beeld, zoals op een leeg stuk.
@@ -882,6 +1031,12 @@ function naPointerDown(ev: PointerEvent) {
     houder.setPointerCapture(ev.pointerId);
     return;
   }
+  if (gereedschap === 'losse_wand') {
+    const [x, y] = wandPunt(p.x, p.y);
+    sleep = { soort: 'losse', start: { x, y }, bewogen: false, scherm: { x: ev.clientX, y: ev.clientY, px: p.x, py: p.y } };
+    houder.setPointerCapture(ev.pointerId);
+    return;
+  }
   if (gereedschap === 'meubel') {
     const t = cat.meubels[meubelType];
     if (!t) return;
@@ -896,16 +1051,19 @@ function naPointerDown(ev: PointerEvent) {
 
   const greep = doel.closest('[data-greep]') as SVGElement | null;
   const hoekgreep = doel.closest('[data-hoekgreep]') as SVGElement | null;
+  const wandgreep = doel.closest('[data-wandgreep]') as SVGElement | null;
   const item = (onderMaat ?? doel.closest('[data-soort]')) as SVGElement | null;
   const orig = JSON.stringify(plan());
   if (greep && selectie?.soort === 'ruimte') {
     sleep = { soort: 'greep', start: p, id: selectie.id, kant: greep.dataset.greep as Sleep['kant'], bewogen: false, orig };
   } else if (hoekgreep && selectie?.soort === 'ruimte') {
     sleep = { soort: 'hoek', start: p, id: selectie.id, hoek: Number(hoekgreep.dataset.hoekgreep), bewogen: false, orig };
-  } else if (item && ['ruimte', 'opening', 'meubel', 'daklicht'].includes(item.dataset.soort ?? '')) {
-    const soort = item.dataset.soort as 'ruimte' | 'opening' | 'meubel' | 'daklicht';
+  } else if (wandgreep && selectie?.soort === 'wand') {
+    sleep = { soort: 'wandeind', start: p, id: selectie.id, eind: wandgreep.dataset.wandgreep === 'van' ? 'van' : 'tot', bewogen: false, orig, scherm: { x: ev.clientX, y: ev.clientY, px: p.x, py: p.y } };
+  } else if (item && ['ruimte', 'opening', 'meubel', 'daklicht', 'wand'].includes(item.dataset.soort ?? '')) {
+    const soort = item.dataset.soort as 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'wand';
     selectie = { soort, id: item.dataset.id! };
-    sleep = { soort, start: p, id: item.dataset.id!, bewogen: false, orig };
+    sleep = { soort: soort === 'wand' ? 'lossewand' : soort, start: p, id: item.dataset.id!, bewogen: false, orig, ...(soort === 'wand' ? { scherm: { x: ev.clientX, y: ev.clientY, px: p.x, py: p.y } } : {}) };
     melding = '';
     render();
     toonEigenschappen();
@@ -926,7 +1084,9 @@ function naPointerMove(ev: PointerEvent) {
     zoom?.beweegPan(ev);
     return;
   }
-  const p = punt(ev);
+  // Een losse wand: vanaf het begin van het slepen met de schaal van de tekening (zie `Sleep.scherm`).
+  const sch = sleep?.scherm, eenheid = 1 / (($('#pl-canvas').querySelector('svg') as SVGSVGElement | null)?.getScreenCTM()?.a || 1);
+  const p = sch ? { x: sch.px + (ev.clientX - sch.x) * eenheid, y: sch.py + (ev.clientY - sch.y) * eenheid } : punt(ev);
   if (!sleep) {
     // Voorbeeld van een nieuwe opening onder de muisaanwijzer.
     if (['raam', 'buitendeur', 'schuifraam', 'garagepoort', 'binnendeur', 'doorgang'].includes(gereedschap)) {
@@ -946,7 +1106,8 @@ function naPointerMove(ev: PointerEvent) {
   if (!sleep.bewogen && Math.hypot(dx, dy) < 4) return;
   // Gestart op een maat: pas slepen als de vinger meer dan 8 beeldpunten schoof (anders is het een tik op de maat).
   if (!sleep.bewogen && maatNaKlik && Math.hypot(ev.clientX - maatNaKlik.x, ev.clientY - maatNaKlik.y) < 8) return;
-  if (!sleep.bewogen && sleep.soort !== 'teken') momentopname();
+  // Tekenen (een ruimte of een losse wand) bewaart pas bij het loslaten: geen extra stap voor ongedaan maken.
+  if (!sleep.bewogen && sleep.soort !== 'teken' && sleep.soort !== 'losse') momentopname();
   sleep.bewogen = true;
   if (sleep.soort === 'wand') {
     // Recht: horizontaal of verticaal, volgens de grootste beweging.
@@ -954,6 +1115,12 @@ function naPointerMove(ev: PointerEvent) {
     voorbeeldWand = staand
       ? { x1: sleep.start.x, y1: sleep.start.y, x2: sleep.start.x, y2: snap(p.y) }
       : { x1: sleep.start.x, y1: sleep.start.y, x2: snap(p.x), y2: sleep.start.y };
+    render();
+    return;
+  }
+  if (sleep.soort === 'losse') {
+    const start: Punt = [sleep.start.x, sleep.start.y];
+    voorbeeldLosseWand = nieuweLosseWand(start, wandEind(start, p.x, p.y), 'voorbeeld');
     render();
     return;
   }
@@ -1007,6 +1174,12 @@ function naPointerMove(ev: PointerEvent) {
         const l = pl.daklichten?.find((x) => x.id === l0.id);
         if (l) { l.x = l0.x + ddx; l.y = l0.y + ddy; }
       }
+      // Losse wanden in de ruimte (het midden van hun as) ook; anders bleef een muurtje achter en werd het een tuinmuur.
+      for (const w0 of oud.losseWanden ?? []) {
+        if (!binnenR0((w0.van[0] + w0.tot[0]) / 2, (w0.van[1] + w0.tot[1]) / 2)) continue;
+        const w = pl.losseWanden?.find((x) => x.id === w0.id);
+        if (w) { w.van = [w0.van[0] + ddx, w0.van[1] + ddy]; w.tot = [w0.tot[0] + ddx, w0.tot[1] + ddy]; }
+      }
       // Een vrije vorm: de ramen en deuren in haar muren (ook schuine) gaan mee.
       if (heeftVrijeVorm(r0)) verzetOpeningen(oud, pl, id);
       else for (const o0 of oud.openingen) {
@@ -1017,6 +1190,29 @@ function naPointerMove(ev: PointerEvent) {
         const o = pl.openingen.find((x) => x.id === o0.id)!;
         o.lijn = o0.lijn + (o0.as === 'h' ? ddy : ddx);
         o.midden = o0.midden + (o0.as === 'h' ? ddx : ddy);
+      }
+    }
+    if (sleep!.soort === 'lossewand') {
+      // Een losse wand verslepen: kleeft een eindpunt aan een muur, dan dat; anders kleeft het begin aan de lijnen en het
+      // raster. Het andere eindpunt gaat even ver mee (de wand draait niet).
+      const w0 = oud.losseWanden?.find((x) => x.id === id), w = pl.losseWanden?.find((x) => x.id === id);
+      if (w0 && w) {
+        const los0: Punt = [w0.van[0] + dx, w0.van[1] + dy], los1: Punt = [w0.tot[0] + dx, w0.tot[1] + dy];
+        const muren = murenVan(oud), andere = (oud.losseWanden ?? []).filter((x) => x.id !== id);
+        const k0 = kleefAanWand(los0, muren, andere, wandMarge()), k1 = k0 ? undefined : kleefAanWand(los1, muren, andere, wandMarge());
+        const [naar, van]: [Punt, Punt] = k0 ? [k0.punt, los0] : k1 ? [k1.punt, los1] : [[kleef(los0[0], 'x', 12), kleef(los0[1], 'y', 12)], los0];
+        const sx = naar[0] - van[0], sy = naar[1] - van[1];
+        w.van = [los0[0] + sx, los0[1] + sy];
+        w.tot = [los1[0] + sx, los1[1] + sy];
+      }
+    }
+    if (sleep!.soort === 'wandeind') {
+      // Een eindpunt verslepen: recht als het bijna liggend of staand is, kleven aan muren en het raster.
+      const w0 = oud.losseWanden?.find((x) => x.id === id), w = pl.losseWanden?.find((x) => x.id === id);
+      if (w0 && w) {
+        const [vast, eind] = sleep!.eind === 'van' ? [w0.tot, w0.van] : [w0.van, w0.tot];
+        const q = wandEind(vast, eind[0] + dx, eind[1] + dy, id);
+        if (sleep!.eind === 'van') w.van = q; else w.tot = q;
       }
     }
     if (sleep!.soort === 'greep') verschuifWand(oud, pl, id, sleep!.kant!, p);
@@ -1137,6 +1333,15 @@ function naPointerUp(ev: PointerEvent) {
     render();
     return;
   }
+  if (s?.soort === 'losse') {
+    const w = voorbeeldLosseWand;
+    voorbeeldLosseWand = undefined;
+    if (w && s.bewogen) { plaatsLosseWand({ ...w, id: nieuweId('w') }); return; }
+    melding = 'Sleep van het begin naar het einde van de muur.';
+    render();
+    toonEigenschappen();
+    return;
+  }
   if (s?.soort === 'teken') {
     const v = voorbeeld;
     voorbeeld = undefined;
@@ -1168,6 +1373,11 @@ function verwijderSelectie() {
     if (s.soort === 'ruimte') t.plan.ruimtes = t.plan.ruimtes.filter((r) => r.id !== s.id);
     if (s.soort === 'meubel') t.plan.meubels = t.plan.meubels.filter((m) => m.id !== s.id);
     if (s.soort === 'daklicht') t.plan.daklichten = t.plan.daklichten?.filter((l) => l.id !== s.id);
+    if (s.soort === 'wand') {
+      t.plan.losseWanden = t.plan.losseWanden?.filter((w) => w.id !== s.id);
+      // De laatste weg: het plan is weer een plan zonder losse wanden.
+      if (!t.plan.losseWanden?.length) delete t.plan.losseWanden;
+    }
     if (s.soort === 'opening') {
       const o = t.plan.openingen.find((x) => x.id === s.id);
       if (o?.positie) t.posities = t.posities.filter((p) => p.id !== o.positie);
@@ -1365,6 +1575,8 @@ function toonEigenschappen() {
     const r = el('div', { class: 'knoppenrij' });
     r.append(knop('Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
     vak.append(r);
+  } else if (s?.soort === 'wand') {
+    if (!toonLosseWand(vak, pl, s.id)) { selectie = undefined; return toonEigenschappen(); }
   } else if (s?.soort === 'daklicht') {
     const l = pl.daklichten?.find((x) => x.id === s.id);
     if (!l) { selectie = undefined; return toonEigenschappen(); }
@@ -1420,6 +1632,71 @@ function toonEigenschappen() {
   toonOverzicht();
 }
 
+/** Eigenschappen van een losse wand: maten in cm, de afwerking (binnen) of het gevelmateriaal (buiten), verwijderen. */
+function toonLosseWand(vak: HTMLElement, pl: Plattegrond, id: string): boolean {
+  const w = pl.losseWanden?.find((x) => x.id === id);
+  if (!w) return false;
+  const muren = murenVan(pl), andere = andereWanden(id);
+  const v = losseWandVlak(w, muren, andere), r = losseWandRuimte(pl, w);
+  const zet = (f: (x: LosseWand) => void) => wijzig('plan', (t) => { const x = t.plan.losseWanden?.find((y) => y.id === id); if (x) f(x); });
+  vak.append(el('h3', {}, r ? 'Losse wand' : 'Losse muur buiten'));
+  vak.append(el('p', { class: 'klein' }, r
+    ? `In ${r.naam}. Ze deelt de ruimte niet: de ruimte, haar oppervlakte en de controles blijven zoals ze zijn.`
+    : 'Buiten de woning (een tuinmuur of keermuur), in een gevelmateriaal. Ze deelt niets op.'));
+  const H = pl.muurhoogte;
+  const welk = v.aan[1].soort === 'vrij' || v.aan[0].soort !== 'vrij' ? 'einde' : 'begin';
+  const maten = el('div', { class: 'maten' });
+  maten.append(
+    cmMaatveld('Lengte', losseWandLengte(v), (L) => {
+      const x = metLengte(w, v, L, welk);
+      if (Math.abs(losseWandLengte(losseWandVlak(x, muren, andere)) - L) > 0.5) { melding = 'Zo lang kan ze niet: ze zou door een muur lopen.'; toonEigenschappen(); return; }
+      zet((y) => { y.van = x.van; y.tot = x.tot; });
+    }, LOSSE_WAND_MIN),
+    cmMaatveld('Hoogte', w.hoogte ?? H, (h) => zet((y) => { if (r && h >= H - 0.5) delete y.hoogte; else y.hoogte = Math.min(r ? H : 600, h); })),
+    cmMaatveld('Dikte', w.dikte, (d) => zet((y) => { y.dikte = Math.min(60, d); }), 5),
+  );
+  vak.append(maten);
+  if (r) {
+    const hoog = el('div', { class: 'knoppenrij' });
+    hoog.append(
+      knop(w.hoogte === undefined ? 'Tot het plafond ✓' : 'Tot het plafond', () => zet((y) => { delete y.hoogte; })),
+      knop(w.hoogte === 110 ? 'Halfhoog, 110 cm ✓' : 'Halfhoog, 110 cm', () => zet((y) => { y.hoogte = 110; })),
+    );
+    vak.append(hoog);
+  }
+  // De vrije maat tot de evenwijdige muren: typen verschuift de wand dwars.
+  const af = losseWandAfstanden(w, muren);
+  const plaats = el('div', { class: 'maten' });
+  for (const k of ['min', 'plus'] as const) {
+    const a = af[k];
+    if (a) plaats.append(cmMaatveld(`Vrij tot de muur ${a.naam}`, a.vrij, (nieuw) => zet((y) => {
+      const x = dwarsVerschoven(y, (k === 'min' ? 1 : -1) * (nieuw - a.vrij));
+      y.van = x.van;
+      y.tot = x.tot;
+    }), 0));
+  }
+  if (plaats.childElementCount) vak.append(plaats);
+  const rij = (label: string, inhoud: HTMLElement) => { const l = el('label', { class: 'eig' }); l.append(el('span', {}, label), inhoud); return l; };
+  if (r) {
+    const eigen = cat.wanden[r.wand]?.label ?? r.wand;
+    vak.append(rij('Afwerking', keuzelijst('pl-losse-afwerking', [['', `Zoals de ruimte (${eigen.toLowerCase()})`], ...Object.entries(cat.wanden).map(([k, x]): [string, string] => [k, x.label])], w.wand ?? '', (k) => zet((y) => { if (k) y.wand = k; else delete y.wand; }))));
+  } else {
+    const st = toestand().plan.gevelOntwerp?.standaard, stMat = st ? gevelCatalogus[st.materiaal] : undefined;
+    const zoals = stMat ? `Zoals de gevel (${stMat.label.toLowerCase()})` : 'Zoals de gevel';
+    vak.append(rij('Materiaal', keuzelijst('pl-losse-gevel', [['', zoals], ...Object.entries(gevelCatalogus).map(([k, m]): [string, string] => [k, m.label])], w.gevel?.materiaal ?? '', (k) => zet((y) => {
+      const m = gevelCatalogus[k];
+      if (!m) { delete y.gevel; return; }
+      y.gevel = { materiaal: k, kleur: Object.keys(m.kleuren)[0]!, ...(m.voegen ? { voeg: Object.keys(m.voegen)[0]! } : {}) };
+    }))));
+    const m = w.gevel ? gevelCatalogus[w.gevel.materiaal] : undefined;
+    if (w.gevel && m) vak.append(rij('Kleur', keuzelijst('pl-losse-kleur', Object.entries(m.kleuren).map(([k, x]): [string, string] => [k, x.label]), w.gevel.kleur, (k) => zet((y) => { if (y.gevel) y.gevel.kleur = k; }))));
+  }
+  const knoppen = el('div', { class: 'knoppenrij' });
+  knoppen.append(knop('Maten typen', () => vraagLosseWand(id)), knop('Verwijderen', verwijderSelectie, 'gevaar'));
+  vak.append(knoppen, el('p', { class: 'klein' }, 'Tip: sleep de wand of een eindpunt (de blauwe bolletjes), of tik op een maat in de tekening om ze te typen.'));
+  return true;
+}
+
 function toonOverzicht() {
   toonDak();
   toonZon();
@@ -1448,13 +1725,13 @@ function toonOverzicht() {
   meldingen.sort((a, b) => (a.ernst === b.ernst ? 0 : a.ernst === 'fout' ? -1 : 1));
   $('#pl-meldingen').replaceChildren(...meldingen.map((m) => {
     const li = el('li', { class: m.ernst }, m.melding);
-    const id = m.opening ?? m.daklicht ?? m.ruimte;
+    const id = m.wand ?? m.opening ?? m.daklicht ?? m.ruimte;
     if (id) {
       li.style.cursor = 'pointer';
       li.addEventListener('click', () => {
-        const item = m.opening ? alles.openingen.find((o) => o.id === id) : m.daklicht ? alles.daklichten?.find((l) => l.id === id) : alles.ruimtes.find((r) => r.id === id);
+        const item = m.wand ? alles.losseWanden?.find((w) => w.id === id) : m.opening ? alles.openingen.find((o) => o.id === id) : m.daklicht ? alles.daklichten?.find((l) => l.id === id) : alles.ruimtes.find((r) => r.id === id);
         if (item) niveau = niveauVan(item);
-        selectie = { soort: m.opening ? 'opening' : m.daklicht ? 'daklicht' : 'ruimte', id };
+        selectie = { soort: m.wand ? 'wand' : m.opening ? 'opening' : m.daklicht ? 'daklicht' : 'ruimte', id };
         render();
         toonEigenschappen();
       });
@@ -1475,6 +1752,7 @@ function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPane
   if (g !== 'maten' && matenPaneelOpen()) sluitMatenPaneel();
   gereedschap = g;
   voorbeeldOpening = undefined;
+  voorbeeldLosseWand = undefined;
   if (g === 'maten') {
     if (weergave !== 'plan') toonWeergave('plan');
     openMatenPaneel(matenOmgeving, begin);
@@ -1618,12 +1896,13 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     wielZoomt: () => document.body.classList.contains('heeft-groot-scherm'),
     opKnijpen: () => {
       // Tweede vinger: de lopende actie annuleren (en een begonnen verplaatsing terugdraaien).
-      if (sleep?.bewogen && sleep.soort !== 'teken' && sleep.soort !== 'wand') ongedaan();
+      if (sleep?.bewogen && sleep.soort !== 'teken' && sleep.soort !== 'wand' && sleep.soort !== 'losse') ongedaan();
       sleep = undefined;
       pannen = undefined;
       tikWacht = undefined;
       voorbeeld = undefined;
       voorbeeldWand = undefined;
+      voorbeeldLosseWand = undefined;
     },
   });
   const vlak = document.createElement('div');
@@ -1700,8 +1979,9 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       const weg = new Set(t.plan.openingen.map((o) => o.positie).filter(Boolean));
       t.posities = t.posities.filter((p) => !weg.has(p.id));
       t.plan = { ...t.plan, ruimtes: [], openingen: [], meubels: [], verdiepingen: [{ naam: 'Gelijkvloers' }] };
-      // De lichtkoepels gaan mee weg; de dakkeuze (vorm en bedekking) blijft, zoals de gevel.
+      // De lichtkoepels en de losse wanden gaan mee weg; de dakkeuze (vorm en bedekking) blijft, zoals de gevel.
       delete t.plan.daklichten;
+      delete t.plan.losseWanden;
     });
     kiesGereedschap('ruimte');
   });
@@ -1737,6 +2017,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
         if (s.soort === 'meubel') { const m = t.plan.meubels.find((x) => x.id === s.id); if (m) { m.x += v[0]; m.y += v[1]; } }
         if (s.soort === 'daklicht') { const l = t.plan.daklichten?.find((x) => x.id === s.id); if (l) { l.x += v[0]; l.y += v[1]; } }
         if (s.soort === 'opening') { const o = t.plan.openingen.find((x) => x.id === s.id); if (o) o.midden += o.as === 'h' ? v[0] : v[1]; }
+        if (s.soort === 'wand') { const w = t.plan.losseWanden?.find((x) => x.id === s.id); if (w) { w.van = [w.van[0] + v[0], w.van[1] + v[1]]; w.tot = [w.tot[0] + v[0], w.tot[1] + v[1]]; } }
       });
     }
   });
@@ -1771,6 +2052,6 @@ export function naWijziging() {
   // toestand van daarnet, dus dicht (wat er getypt was, blijft).
   if (maatVraagOpen() && !maatVraagBezig()) sluitMaatVraag(true);
   render();
-  if (!sleep || sleep.soort === 'meubel' || sleep.soort === 'opening' || sleep.soort === 'daklicht') toonEigenschappen();
+  if (!sleep || sleep.soort === 'meubel' || sleep.soort === 'opening' || sleep.soort === 'daklicht' || sleep.soort === 'lossewand' || sleep.soort === 'wandeind') toonEigenschappen();
   else toonOverzicht();
 }
