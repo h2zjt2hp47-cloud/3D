@@ -118,6 +118,8 @@ const BOUWBEELDEN = [
   { naam: 'bouw-schuin-plan', schuin: 'plan' },
   { naam: 'bouw-schuin-3d', schuin: '3d', toetsen: 'L9U2Z3' },
   { naam: 'bouw-schuin-binnen', schuin: 'binnen', toetsen: 'R5U4Z1' },
+  // Constructie met schuine muren (ronde 6): de schuine wanden gedraaid mee, de vloer en het dak van een vrije vorm effen.
+  { naam: 'bouw-schuin-constructie', schuin: 'constructie', toetsen: 'L9U2Z3' },
   // Techniek voor de installateur (ronde 10, 16/11): de configurator toont ze nog niet, dus uit de motor (tsx) in de losse
   // kijker: de uitgeruste voorbeeldwoning in de uitgezette weergave, en de tekening van het gelijkvloers met de tekens.
   { naam: 'bouw-techniek', techniek: '3d', toetsen: 'O1' },
@@ -130,6 +132,11 @@ const BOUWBEELDEN = [
   { naam: 'bouw-model-loods', model: ['loods', null, 'hal'], klik: [] },
   { naam: 'bouw-model-loods-constructie', model: ['loods', null, 'hal'], klik: ['[data-p-bouw="constructie"]'] },
   { naam: 'bouw-model-trap', model: ['staalwerk', 'trap', 'staaltrap'], klik: ['#p-maten-label'] },
+  // Constructie (ronde 6, 16/11), op een eigen pagina met een vers project: de voorbeeldwoning met een zadeldak in de
+  // constructieweergave (houtskelet, balklagen met trapgat, kepers, topgevels, één staal van de lagen per opbouw; gelijke
+  // stukken samen getekend), en de doorsnede dwars door de woning (tekening).
+  { naam: 'bouw-constructie', constructie: '3d' },
+  { naam: 'bouw-doorsnede', constructie: 'doorsnede' },
 ];
 
 /**
@@ -355,12 +362,39 @@ async function maakBeelden() {
         beelden.set(b.naam, PNG.sync.read(await p.locator('#pl-canvas').screenshot()));
       } else {
         await p.click('[data-pl-weergave="3d"]');
+        if (b.schuin === 'constructie') await p.click('[data-3d-weergave="constructie"]');
         if (b.schuin === 'binnen') await p.check('#pl-laag'); else await p.uncheck('#pl-laag');
         await p.click('[data-pl-standpunt="voor"]');
         // Draaien, hoger en dichterbij met de pijltjes en + (zoals een gebruiker met het toetsenbord).
         await p.locator('#pl-3d canvas').focus();
         const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
         for (const [, k, n] of b.toetsen.matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+      }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  const constructie = bouw.filter((x) => x.constructie);
+  if (constructie.length) {
+    // Een verse pagina (vers project: de voorbeeldwoning), een zadeldak via de kaart Dak, dan Constructie of Doorsnede.
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.click('.nav [data-weergave="plan"]');
+    await p.click('[data-pl-weergave="plan"]');
+    await p.click('[data-dak-vorm="zadel"]');
+    await p.click('[data-dak-kleur="rood"]');
+    for (const b of constructie) {
+      process.stdout.write(`  ${b.naam} … `);
+      if (b.constructie === 'doorsnede') {
+        await p.click('[data-pl-weergave="doorsnede"]');
+        await p.waitForTimeout(800);
+        beelden.set(b.naam, PNG.sync.read(await p.locator('#pl-doorsnede-tekening svg').screenshot()));
+      } else {
+        await p.click('[data-pl-weergave="3d"]');
+        await p.click('[data-3d-weergave="constructie"]');
+        await p.click('[data-pl-standpunt="schuin"]');
         beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       }
       console.log('klaar');

@@ -735,6 +735,39 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
   .a-totaal .sterk td { font-weight: 700; border-top: 2px solid #111; }
   .a-handtekening { display: grid; grid-template-columns: 1fr 1fr; gap: 20mm; margin-top: 12mm; }
 }
+/* Constructie (ronde 6): knop Afgewerkt / Constructie, de opbouw bij Woning, de doorsnede en het blok in het overzicht. */
+.constructiebalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 8px 0 4px; }
+.constructienoot { margin: 0; flex: 1 1 280px; }
+details.opbouwkeuze { margin-top: 12px; border-top: 1px solid var(--lijn); padding-top: 8px; }
+details.opbouwkeuze > summary, details.opbouwlagen > summary, details.constructiedeel > summary, details.aannames > summary { cursor: pointer; }
+details.opbouwkeuze > summary { font-weight: 600; }
+.opbouwrij { display: grid; grid-template-columns: minmax(7em, 9em) 1fr; gap: 6px; align-items: center; margin: 6px 0; }
+.opbouwrij select { min-width: 0; width: 100%; }
+details.opbouwlagen { margin: 0 0 8px; padding-left: 10px; font-size: .9rem; }
+details.opbouwlagen ol { margin: 4px 0; padding-left: 20px; }
+details.constructiedeel { border-top: 1px solid var(--lijn); padding: 6px 0; }
+details.constructiedeel > summary { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-weight: 600; padding: 6px 0; }
+.constructieinhoud { padding: 4px 0 8px; }
+.voorbehoud { background: color-mix(in srgb, var(--let-op) 12%, transparent); border-left: 3px solid var(--let-op); padding: 6px 10px; font-size: .9rem; border-radius: 4px; }
+table.meetstaat tr.groep th { text-align: left; padding-top: 10px; font: inherit; font-weight: 600; }
+table.stabiliteit td, table.epb td, table.meetstaat td { white-space: normal; vertical-align: top; }
+table.stabiliteit td:last-child { min-width: 12em; }
+table.epb .status, table.stabiliteit .status { white-space: nowrap; display: inline-block; }
+table.meetstaat td.num { white-space: nowrap; }
+details.aannames { margin: 6px 0; }
+details.aannames ul { margin: 4px 0; padding-left: 20px; }
+.constructieinhoud h4 { margin: 12px 0 4px; }
+#pl-doorsnede { margin-top: 8px; }
+.doorsnedebalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin-bottom: 8px; }
+.doorsnedebalk input[type="range"] { flex: 1 1 200px; min-width: 160px; }
+#pl-doorsnede-tekening svg { width: 100%; height: auto; display: block; background: #fff; border: 1px solid var(--lijn); border-radius: 6px; }
+@media (pointer: coarse) {
+  .opbouwrij select, details.opbouwkeuze > summary, details.opbouwlagen > summary, details.constructiedeel > summary, details.aannames > summary, .doorsnedebalk button, .doorsnedebalk input { min-height: 44px; }
+  .doorsnedebalk button { min-width: 44px; }
+  /* Op een aanraakscherm is een kop een flexvak (zie hoger) en verdwijnt het pijltje: een eigen pijltje, zodat je ziet dat hij openklapt. */
+  details.opbouwkeuze > summary::before, details.opbouwlagen > summary::before, details.constructiedeel > summary::before, details.aannames > summary::before { content: '▸'; margin-right: 8px; }
+  details.opbouwkeuze[open] > summary::before, details.opbouwlagen[open] > summary::before, details.constructiedeel[open] > summary::before, details.aannames[open] > summary::before { content: '▾'; }
+}
 </style>
 </head>
 <body>
@@ -857,6 +890,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <button type="button" data-pl-weergave="plan" aria-pressed="true">Plattegrond</button>
           <button type="button" data-pl-weergave="gevels" aria-pressed="false">Gevels</button>
           <button type="button" data-pl-weergave="3d" aria-pressed="false">3D</button>
+          <button type="button" data-pl-weergave="doorsnede" aria-pressed="false" title="Een snede door de woning: de lagen van wanden, vloeren en dak">Doorsnede</button>
         </div>
       </div>
       <div id="gv-editor" hidden>

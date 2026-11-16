@@ -234,3 +234,52 @@ export function controleerOpbouw(o: Opbouw, materialen?: Record<string, BouwMate
   if (o.herkomst && o.herkomst.nagelezen === false) letOp(`De opbouw ${naam} is een voorbeeld: ze is niet nagelezen door een vakman.`);
   return uit;
 }
+
+// ---------- de opbouw van een woning (ronde 6) ----------
+
+/**
+ * Waar een opbouw in de woning komt: de buitenmuren, de binnenmuren, de vloer tussen twee verdiepingen, de vloer op de
+ * grond, een plat dak en een hellend dak. Elke plaats heeft haar eigen keuzelijst (zie `WoningOpbouwCatalogus`).
+ */
+export type OpbouwPlaats = 'buitenwand' | 'binnenwand' | 'verdiepingsvloer' | 'grondvloer' | 'platDak' | 'hellendDak';
+
+/** De plaatsen in de volgorde van een scherm of een lijst. */
+export const OPBOUW_PLAATSEN: OpbouwPlaats[] = ['buitenwand', 'binnenwand', 'grondvloer', 'verdiepingsvloer', 'platDak', 'hellendDak'];
+
+/**
+ * De opbouw van een woning, als optioneel veld in het plan (`Plattegrond.opbouw`): per plaats de code van een opbouw
+ * uit de catalogus (de standaard voor de hele woning) en, als dat nodig is, een afwijking per muurvlak of per ruimte.
+ * Ontbreekt het veld (of een plaats), dan geldt de standaard van de catalogus: een oud project opent zoals vroeger en
+ * de standaarden worden nooit in het plan geschreven.
+ */
+export interface WoningOpbouw {
+  buitenwand?: string;
+  binnenwand?: string;
+  verdiepingsvloer?: string;
+  grondvloer?: string;
+  platDak?: string;
+  hellendDak?: string;
+  /** Afwijking per buitenmuurvlak: `vlakSleutel` (`<ruimte>:<kant>`, zoals bij de gevel) → code van een buitenwand. */
+  vlakken?: Record<string, string>;
+  /** Afwijking per ruimte: id van de ruimte → code van de opbouw van haar vloer (vloer op de grond of verdiepingsvloer). */
+  vloeren?: Record<string, string>;
+}
+
+/** Een plaats in de catalogus: de naam in gewone taal, de opbouwen die er kunnen en de standaard. */
+export interface OpbouwPlaatsKeuze {
+  label: string;
+  keuzes: string[];
+  standaard: string;
+}
+
+/**
+ * De opbouwen die een woning kan krijgen (zoals de gevelcatalogus): de opbouwen zelf, hun materialen en per plaats de
+ * keuzes en de standaard. `volgensGevel`: zonder keuze voor de buitenwand volgt de opbouw de soort van het gevelmateriaal
+ * van dat muurvlak (gevelsteen → steenstrips, hout → houten bekleding, pleister → sierpleister); anders de standaard.
+ */
+export interface WoningOpbouwCatalogus {
+  opbouwen: Record<string, Opbouw>;
+  materialen: Record<string, BouwMateriaal>;
+  plaatsen: Record<OpbouwPlaats, OpbouwPlaatsKeuze>;
+  volgensGevel?: Partial<Record<BlokSoort, string>>;
+}

@@ -61,6 +61,8 @@ import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { familie } from './meegeven.js';
 import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
+import { constructieAan, constructieScene, opbouwKeuze, startConstructie, toonOpbouwVanDing } from './constructie-ui.js';
+import { startDoorsnede, toonDoorsnede } from './doorsnede-ui.js';
 
 export { gevelSvgs } from './gevel-ui.js';
 import {
@@ -115,7 +117,7 @@ let tikWacht: { soort: 'maat'; doel: string; el: Element } | { soort: 'gevel'; x
 let maatNaKlik: { doel: string; vak: DOMRect; x: number; y: number } | undefined;
 let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeldOpening: Opening | undefined;
-let weergave: 'plan' | 'gevels' | '3d' = 'plan';
+let weergave: 'plan' | 'gevels' | '3d' | 'doorsnede' = 'plan';
 let niveau = 0;
 let alleNiveaus = true;
 let voorbeeldWand: { x1: number; y1: number; x2: number; y2: number } | undefined;
@@ -279,6 +281,7 @@ export function render() {
   toonNiveaus();
   if (weergave === '3d') plan3D();
   if (weergave === 'gevels') gevelNaWijziging();
+  if (weergave === 'doorsnede') toonDoorsnede();
 }
 
 function toonNiveaus() {
@@ -337,8 +340,8 @@ function nieuweVerdieping() {
 
 let wachtend3D = false;
 function plan3D() {
-  // De schakelaar "Dak tonen" heeft alleen zin met een dakkeuze.
-  $('#pl-toon-dak-label').hidden = !heeftDak();
+  // De schakelaar "Dak tonen" heeft alleen zin met een dakkeuze (de constructie heeft altijd een dak).
+  $('#pl-toon-dak-label').hidden = !heeftDak() && !constructieAan();
   if (!viewer || wachtend3D) return;
   wachtend3D = true;
   requestAnimationFrame(() => {
@@ -358,14 +361,19 @@ function plan3D() {
       totNiveau: alleNiveaus && !laag ? undefined : niveau,
       inhoud: openingInhoud,
     });
+    // Constructie (ronde 6): wanden, vloeren en dak als skelet, met het kader van de afgewerkte woning (de camera springt niet).
+    const constructie = constructieAan();
+    const getoond = constructie ? constructieScene({ laag: laag ? 110 : undefined, dak: toonDakIn3D, totNiveau: alleNiveaus && !laag ? undefined : niveau, kader: scene.kader, dingen: true }) : scene;
     // Maten tonen: breedte, diepte, hoogte en nok van het gebouw, en breedte en hoogte van het aangetikte raam of de deur.
+    // De maten komen altijd van de afgewerkte woning.
     const metMaten: Scene3DMetMaten = toonMaten ? {
-      ...scene,
-      maatlijnen: [...gebouwMaatlijnen(scene, { hoogtes: !laag }), ...(gekozenDing?.startsWith('opening:') ? raamMaatlijnen(scene.blokken, { ding: gekozenDing }) : [])],
-    } : scene;
+      ...getoond,
+      maatlijnen: [...gebouwMaatlijnen(scene, { hoogtes: !laag }), ...(!constructie && gekozenDing?.startsWith('opening:') ? raamMaatlijnen(scene.blokken, { ding: gekozenDing }) : [])],
+    } : getoond;
     // Na de snelstart een ruimer kader: de camera staat verder, zodat de hele woning met lucht erboven in beeld komt.
     viewer?.toon(ruimKader ? ruimKaderVan(metMaten) : metMaten);
-    beeldActueel = !!viewer;
+    // Het beeld in het overzicht (Het ontwerp) is dat van de afgewerkte woning, niet van het skelet.
+    beeldActueel = !!viewer && !constructie;
     if (volgendStandpunt) { viewer?.standpunt(volgendStandpunt); volgendStandpunt = undefined; }
   });
   toonDingKeuzes();
@@ -385,6 +393,12 @@ function tikIn3D(id: string | null) {
 function toonDingKeuzes() {
   const vak = $('#pl-3d-keuze');
   if (weergave !== '3d') { vak.hidden = true; return; }
+  // In de constructie: de opbouw van wat je aantikt (een buitenmuur kan een eigen opbouw krijgen).
+  if (constructieAan()) {
+    toonOpbouwVanDing(vak, gekozenDing, () => tikIn3D(null));
+    if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
+    return;
+  }
   toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); } });
   // Bestaat het ding niet meer (verwijderd, ongedaan gemaakt): ook de aanduiding weg.
   if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
@@ -1400,6 +1414,8 @@ function toonEigenschappen() {
     const gk = knop('Gevel ontwerpen', () => toonWeergave('gevels'));
     g.append(el('span', {}, 'Gevel'), el('span', { class: 'klein' }, gevelTekst));
     vak.append(g, gk, el('p', { class: 'klein' }, 'Selecteer een ruimte, raam, deur of meubel om het aan te passen.'));
+    // De opbouw van wanden, vloeren en dak (constructie, detail): dicht tot je hem openklapt.
+    vak.append(opbouwKeuze());
   }
   toonOverzicht();
 }
@@ -1472,11 +1488,11 @@ function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPane
   toonEigenschappen();
 }
 
-function toonWeergave(w: 'plan' | 'gevels' | '3d') {
+function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
   if (w !== weergave) sluitMaatVraag(true);
   weergave = w;
   // In 3D op een tablet: de 3D over de hele breedte, het gereedschap (voor de plattegrond) eronder.
-  $('#view-plan').classList.toggle('driedmodus', w === '3d');
+  $('#view-plan').classList.toggle('driedmodus', w === '3d' || w === 'doorsnede');
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.plWeergave === w));
   // Het tekenvlak met zijn zoomknoppen.
   $('#pl-canvas').parentElement!.hidden = w !== 'plan';
@@ -1486,6 +1502,9 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d') {
   if (w === 'gevels') gevelNaWijziging();
   $('#pl-3d').hidden = w !== '3d';
   $('#pl-3d-knoppen').hidden = w !== '3d';
+  // De doorsnede (ronde 6): een tekening uit de constructie, onder de knoppen van de weergave.
+  $('#pl-doorsnede').hidden = w !== 'doorsnede';
+  if (w === 'doorsnede') toonDoorsnede();
   if (w !== '3d') { gekozenDing = null; viewer?.markeer?.(null); }
   toonDingKeuzes();
   $('#pl-hint').hidden = w !== 'plan';
@@ -1621,7 +1640,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   houder.addEventListener('pointerleave', () => {
     if (voorbeeldOpening || (gereedschap === 'daklicht' && voorbeeld)) { voorbeeldOpening = undefined; voorbeeld = undefined; render(); }
   });
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | 'gevels' | '3d'));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.plWeergave as 'plan' | 'gevels' | '3d' | 'doorsnede'));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pl-standpunt]')) b.addEventListener('click', () => {
     // Een standpunt kiezen: terug naar het gewone kader van de woning.
     if (ruimKader) { ruimKader = false; plan3D(); volgendStandpunt = b.dataset.plStandpunt as Standpunt; return; }
@@ -1638,6 +1657,9 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     try { localStorage.setItem(SLEUTEL_KWALITEIT, k); } catch { /* geen opslag */ }
     viewer?.kwaliteit?.(k);
   });
+  // Afgewerkt of Constructie (ronde 6): de knop boven de knoppen van de 3D.
+  startConstructie({ opnieuw: () => plan3D() });
+  startDoorsnede();
   // Lichtinval: aan of uit bouwt de 3D opnieuw op (verborgen delen als schaduwwerper); dag en uur verzetten alleen de zon.
   startZon({ opnieuw: () => plan3D(), zon: () => viewer?.zon?.(zonVoorKijker()) });
   $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
