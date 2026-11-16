@@ -167,6 +167,12 @@ interface Sleep {
   hoek?: number;
   /** Een eindpunt van een losse wand (greep `data-wandgreep`). */
   eind?: 'van' | 'tot';
+  /**
+   * Een losse wand: waar het slepen begon, op het scherm en op het plan. Elke volgende plaats rekent vanaf daar met de
+   * schaal van de tekening, niet met de ligging van de tekening op het scherm: die kan tijdens het slepen verschuiven
+   * (de kop van de pagina zegt na de eerste wijziging iets anders), en dan zou de wand een stuk mee springen.
+   */
+  scherm?: { x: number; y: number; px: number; py: number };
   start: { x: number; y: number };
   id?: string;
   kant?: 'n' | 's' | 'w' | 'o';
@@ -1000,7 +1006,10 @@ function naPointerDown(ev: PointerEvent) {
   const onderMaat = maat && gereedschap === 'kies'
     ? (document.elementsFromPoint(ev.clientX, ev.clientY).find((e) => e !== maat && e.closest('#pl-canvas') && e.closest('[data-soort]:not([data-soort="leeg"]):not([data-soort="muur"])'))?.closest('[data-soort]') as SVGElement | undefined)
     : undefined;
-  maatNaKlik = onderMaat && maat ? { doel: maat.dataset.maat!, vak: maat.getBoundingClientRect(), x: ev.clientX, y: ev.clientY } : undefined;
+  // Een korte losse wand ligt onder haar eigen lengtemaat: de eerste tik kiest de wand (geen maatvraag over de tekening),
+  // een tik op haar maat als ze gekozen is, opent de maatvraag.
+  const eersteTikOpWand = onderMaat?.dataset.soort === 'wand' && !(selectie?.soort === 'wand' && selectie.id === onderMaat.dataset.id);
+  maatNaKlik = onderMaat && maat && !eersteTikOpWand ? { doel: maat.dataset.maat!, vak: maat.getBoundingClientRect(), x: ev.clientX, y: ev.clientY } : undefined;
   if (((maat && gereedschap === 'kies') || gereedschap === 'maten') && !onderMaat) {
     // Pas bij het loslaten (als de vinger niet schoof): de maat aantikken, of met Ruimte met maten de gevel kiezen.
     // Slepen verschuift het beeld, zoals op een leeg stuk.
@@ -1024,7 +1033,7 @@ function naPointerDown(ev: PointerEvent) {
   }
   if (gereedschap === 'losse_wand') {
     const [x, y] = wandPunt(p.x, p.y);
-    sleep = { soort: 'losse', start: { x, y }, bewogen: false };
+    sleep = { soort: 'losse', start: { x, y }, bewogen: false, scherm: { x: ev.clientX, y: ev.clientY, px: p.x, py: p.y } };
     houder.setPointerCapture(ev.pointerId);
     return;
   }
@@ -1050,11 +1059,11 @@ function naPointerDown(ev: PointerEvent) {
   } else if (hoekgreep && selectie?.soort === 'ruimte') {
     sleep = { soort: 'hoek', start: p, id: selectie.id, hoek: Number(hoekgreep.dataset.hoekgreep), bewogen: false, orig };
   } else if (wandgreep && selectie?.soort === 'wand') {
-    sleep = { soort: 'wandeind', start: p, id: selectie.id, eind: wandgreep.dataset.wandgreep === 'van' ? 'van' : 'tot', bewogen: false, orig };
+    sleep = { soort: 'wandeind', start: p, id: selectie.id, eind: wandgreep.dataset.wandgreep === 'van' ? 'van' : 'tot', bewogen: false, orig, scherm: { x: ev.clientX, y: ev.clientY, px: p.x, py: p.y } };
   } else if (item && ['ruimte', 'opening', 'meubel', 'daklicht', 'wand'].includes(item.dataset.soort ?? '')) {
     const soort = item.dataset.soort as 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'wand';
     selectie = { soort, id: item.dataset.id! };
-    sleep = { soort: soort === 'wand' ? 'lossewand' : soort, start: p, id: item.dataset.id!, bewogen: false, orig };
+    sleep = { soort: soort === 'wand' ? 'lossewand' : soort, start: p, id: item.dataset.id!, bewogen: false, orig, ...(soort === 'wand' ? { scherm: { x: ev.clientX, y: ev.clientY, px: p.x, py: p.y } } : {}) };
     melding = '';
     render();
     toonEigenschappen();
@@ -1075,7 +1084,9 @@ function naPointerMove(ev: PointerEvent) {
     zoom?.beweegPan(ev);
     return;
   }
-  const p = punt(ev);
+  // Een losse wand: vanaf het begin van het slepen met de schaal van de tekening (zie `Sleep.scherm`).
+  const sch = sleep?.scherm, eenheid = 1 / (($('#pl-canvas').querySelector('svg') as SVGSVGElement | null)?.getScreenCTM()?.a || 1);
+  const p = sch ? { x: sch.px + (ev.clientX - sch.x) * eenheid, y: sch.py + (ev.clientY - sch.y) * eenheid } : punt(ev);
   if (!sleep) {
     // Voorbeeld van een nieuwe opening onder de muisaanwijzer.
     if (['raam', 'buitendeur', 'schuifraam', 'garagepoort', 'binnendeur', 'doorgang'].includes(gereedschap)) {

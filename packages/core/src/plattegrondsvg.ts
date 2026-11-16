@@ -33,7 +33,7 @@ import {
   type Toestel,
   type ToestelType,
 } from './plattegrond.js';
-import { losseWandAfstanden, losseWandLengte, losseWandRuimte, losseWandVlak, opLosseWand, type LosseWand } from './lossewand.js';
+import { losseWandAfstanden, losseWandAs, losseWandLengte, losseWandRuimte, losseWandVlak, opLosseWand, type LosseWand } from './lossewand.js';
 
 export interface PlanSvgOpties {
   selectie?: { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'toestel' | 'leiding' | 'wand'; id: string };
@@ -390,7 +390,9 @@ function losseWandSvg(plan: Plattegrond, w: LosseWand, muren: Muur[], losse: Los
   // De lengte als maat, aan de kant weg van de dichtste evenwijdige muur (bij een tuinmuur: weg van de gevel).
   const af = losseWandAfstanden(w, muren);
   const naarMin = !!af.plus && (!af.min || af.plus.vrij <= af.min.vrij);
-  const afst = w.dikte / 2 + 30 * Math.max(k, 0.5);
+  // Gekozen (met grepen van 44 beeldpunten op de eindpunten): de maat zo ver dat haar tikvlak naast de grepen ligt, ook
+  // bij een korte wand op een tablet.
+  const afst = Math.max(w.dikte / 2 + 30 * Math.max(k, 0.5), gekozen && opties.maatDoelen && !opties.afdruk ? w.dikte / 2 + 46 * schaal : 0);
   const tekst = `${Math.round(losseWandLengte(v))}`, maatKleur = gekozen ? '#2f6fd0' : '#4b5753';
   // maatlijn legt de maat links van de richting (langs n van de wand): voor de min-kant de richting omdraaien.
   uit.push(naarMin ? maatlijn(b[0], b[1], a[0], a[1], afst, tekst, maatKleur, k, raak(`wand:${w.id}`)) : maatlijn(a[0], a[1], b[0], b[1], afst, tekst, maatKleur, k, raak(`wand:${w.id}`)));
@@ -403,19 +405,23 @@ function losseWandSvg(plan: Plattegrond, w: LosseWand, muren: Muur[], losse: Los
     uit.push(`<text x="${n(m[0])}" y="${n(m[1])}" font-size="${n(14 * k)}" fill="${gekozen ? '#2f6fd0' : '#4b5753'}" text-anchor="middle" dominant-baseline="central" transform="rotate(${n(hoek)} ${n(m[0])} ${n(m[1])})" pointer-events="none">${esc(label)}</text>`);
   }
   if (gekozen && !opties.afdruk) {
-    // De vrije maat tot de evenwijdige muren (aantikken om ze te typen).
+    // De vrije maat tot de evenwijdige muren. Aan te tikken aan de kant zonder de lengtemaat (anders liggen hun tikvlakken
+    // op elkaar); de maatvraag van de lengte kent ook de afstand aan de andere kant.
     for (const x of [af.min, af.plus]) {
       if (!x || x.vrij < 0.5) continue;
       const z = x.kant === 'plus' ? 1 : -1, s = (v.begin + v.einde) / 2;
       const p = opLosseWand(w, s, z * (w.dikte / 2)), q = opLosseWand(w, s, z * (w.dikte / 2 + x.vrij));
       uit.push(`<g pointer-events="none" stroke="#2f6fd0" stroke-width="1.5"><line x1="${n(p[0])}" y1="${n(p[1])}" x2="${n(q[0])}" y2="${n(q[1])}" stroke-dasharray="6 4"/></g>`);
-      uit.push(maatlijn(p[0], p[1], q[0], q[1], 0, `${Math.round(x.vrij * 10) / 10}`.replace('.', ','), '#2f6fd0', k, raak(`wandafstand:${w.id}:${x.kant}`)));
+      const tikbaar = x.kant !== (naarMin ? 'min' : 'plus');
+      uit.push(maatlijn(p[0], p[1], q[0], q[1], 0, `${Math.round(x.vrij * 10) / 10}`.replace('.', ','), '#2f6fd0', k, tikbaar ? raak(`wandafstand:${w.id}:${x.kant}`) : undefined));
     }
-    // Een greep op elk eindpunt van de as (een eindpunt tegen een muur ligt op haar as).
-    const straal = 11 * Math.max(k, 0.35);
-    for (const [code, [x, y]] of [['van', w.van], ['tot', w.tot]] as const) {
+    // Een greep op elk eindpunt van de as (een eindpunt tegen een muur ligt op haar as). Het tikvlak van 44 beeldpunten ligt
+    // grotendeels voorbij het eindpunt: zo blijft het midden van een korte wand vrij om de hele wand te verslepen.
+    const straal = 11 * Math.max(k, 0.35), R = 22 * schaal, { d } = losseWandAs(w);
+    for (const [code, [x, y], z] of [['van', w.van, -1], ['tot', w.tot, 1]] as const) {
+      const cx = x + z * d[0] * R * 0.8, cy = y + z * d[1] * R * 0.8;
       uit.push(`<circle data-wandgreep="${code}" cx="${n(x)}" cy="${n(y)}" r="${n(straal)}" fill="#fff" stroke="#2f6fd0" stroke-width="${n(3 * Math.max(k, 0.35))}" style="cursor:move"/>`
-        + `<circle data-wandgreep="${code}" cx="${n(x)}" cy="${n(y)}" r="${n(22 * schaal)}" fill="#2f6fd0" fill-opacity="0" style="cursor:move"/>`);
+        + `<circle data-wandgreep="${code}" cx="${n(cx)}" cy="${n(cy)}" r="${n(R)}" fill="#2f6fd0" fill-opacity="0" style="cursor:move"/>`);
     }
   }
   return uit.join('');
