@@ -56,6 +56,17 @@ export interface PlanSvgOpties {
   /** Vaste viewBox (cm); anders passend rond de plattegrond. */
   viewBox?: { x: number; y: number; b: number; d: number };
   breedtePx?: number;
+  /**
+   * Een nieuwe vorm uit gemeten maten (het scherm *Ruimte met maten*): de omtrek waarop gemeten is, de as van de muren,
+   * en maten (bv. de afstand tot de hoek van de gevel).
+   */
+  voorbeeldVorm?: { punten: Punt[]; gemeten: Punt[]; maten: { van: Punt; tot: Punt; tekst: string }[]; fout?: boolean };
+  /**
+   * Maten aantikken (de editor): elke maat krijgt een onzichtbaar vlak `data-maat` van minstens 44 beeldpunten, en een
+   * gekozen vrije vorm toont de maat van elke zijde en een greep per hoekpunt (`data-hoekgreep`). Zonder deze optie blijft
+   * de tekening zoals vroeger.
+   */
+  maatDoelen?: boolean;
 }
 
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -78,6 +89,8 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
   const fouten = opties.fouten ?? new Set<string>();
   // Tekstfactor: 1 bij passend beeld, kleiner bij inzoomen.
   const k = opties.schaal ? Math.min(1, Math.max(0.06, opties.schaal / 1.6)) : 1;
+  /** Met `maatDoelen`: een vlak om deze maat aan te tikken. */
+  const raak = (doel: string) => (opties.maatDoelen && !opties.afdruk ? { doel, schaal: opties.schaal ?? 1 } : undefined);
   const uit: string[] = [];
   const breedte = opties.breedtePx ? ` width="${opties.breedtePx}" height="${Math.round((opties.breedtePx * vb.d) / vb.b)}"` : '';
   uit.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${n(vb.x)} ${n(vb.y)} ${n(vb.b)} ${n(vb.d)}"${breedte} font-family="system-ui, sans-serif" role="img" aria-label="Plattegrond">`);
@@ -169,7 +182,7 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     const buitenMin = m.soort === 'buiten' && !m.min;
     // Voorbij het label van een raam of deur in die muur (dat staat op een halve muurdikte + 22).
     const afst = m.dikte / 2 + 50 * Math.max(k, 0.5);
-    uit.push(buitenMin ? maatlijn(q[0], q[1], p[0], p[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k) : maatlijn(p[0], p[1], q[0], q[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k));
+    uit.push(buitenMin ? maatlijn(q[0], q[1], p[0], p[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k, raak(`muur:${m.id}`)) : maatlijn(p[0], p[1], q[0], q[1], afst, `${Math.round(m.tot - m.van)}`, '#4b5753', k, raak(`muur:${m.id}`)));
   }
 
   // Namen en oppervlaktes.
@@ -193,11 +206,24 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     }
     // Een vrije vorm heeft (nog) geen grepen: haar muren zijn gemeten, niet getrokken (zie zetOmtrek).
     if (gekozen && !opties.afdruk && !r.delen?.length && !r.omtrek) {
-      uit.push(maatlijn(r.x, r.y, r.x + r.b, r.y, -28 * k, `${Math.round(r.b)}`, '#2f6fd0', k));
-      uit.push(maatlijn(r.x, r.y + r.d, r.x, r.y, -28 * k, `${Math.round(r.d)}`, '#2f6fd0', k));
+      // Om de maat aan te tikken staat haar tekst naast de greep in het midden (anders neemt een vinger de greep).
+      const opzij = (l: number) => Math.max(0, Math.min(l / 2 - 24 * k, Math.max(0.22 * l, 34 * (opties.schaal ?? 1))));
+      const rb = raak(`ruimte:${r.id}:b`), rd = raak(`ruimte:${r.id}:d`);
+      uit.push(maatlijn(r.x, r.y, r.x + r.b, r.y, -28 * k, `${Math.round(r.b)}`, '#2f6fd0', k, rb && { ...rb, schuif: opzij(r.b) }));
+      uit.push(maatlijn(r.x, r.y + r.d, r.x, r.y, -28 * k, `${Math.round(r.d)}`, '#2f6fd0', k, rd && { ...rd, schuif: opzij(r.d) }));
       for (const [greep, gx, gy] of [['n', r.x + r.b / 2, r.y], ['s', r.x + r.b / 2, r.y + r.d], ['w', r.x, r.y + r.d / 2], ['o', r.x + r.b, r.y + r.d / 2]] as const) {
         uit.push(`<circle data-greep="${greep}" cx="${n(gx)}" cy="${n(gy)}" r="${n(11 * Math.max(k, 0.35))}" fill="#fff" stroke="#2f6fd0" stroke-width="${n(3 * Math.max(k, 0.35))}" style="cursor:${greep === 'n' || greep === 's' ? 'ns' : 'ew'}-resize"/>`);
       }
+    } else if (gekozen && !opties.afdruk && !r.delen?.length && r.omtrek && opties.maatDoelen) {
+      // Een gekozen vrije vorm: de maat van elke zijde (op de as, binnen de vorm) en een greep op elk hoekpunt.
+      const v = vormVanDeel(delenVan(r)[0]!);
+      v.forEach((p, i) => {
+        const q = v[(i + 1) % v.length]!;
+        uit.push(maatlijn(p[0], p[1], q[0], q[1], -28 * k, `${Math.round(Math.hypot(q[0] - p[0], q[1] - p[1]))}`, '#2f6fd0', k, raak(`zijde:${r.id}:${i}`)));
+      });
+      const straal = 11 * Math.max(k, 0.35);
+      v.forEach(([x, y], i) => uit.push(`<circle data-hoekgreep="${i}" cx="${n(x)}" cy="${n(y)}" r="${n(straal)}" fill="#fff" stroke="#2f6fd0" stroke-width="${n(3 * Math.max(k, 0.35))}" style="cursor:move"/>`
+        + `<circle data-hoekgreep="${i}" cx="${n(x)}" cy="${n(y)}" r="${n(22 * (opties.schaal ?? 1))}" fill="#2f6fd0" fill-opacity="0" style="cursor:move"/>`));
     }
   }
 
@@ -207,8 +233,8 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     const x0 = Math.min(...delen.map((r) => r.x)), y0 = Math.min(...delen.map((r) => r.y));
     const x1 = Math.max(...delen.map((r) => r.x + r.b)), y1 = Math.max(...delen.map((r) => r.y + r.d));
     const t = plan.buitenmuur / 2;
-    uit.push(maatlijn(x1 + t, y1 + t, x0 - t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(x1 - x0 + 2 * t)}`, '#4b5753', k));
-    uit.push(maatlijn(x1 + t, y0 - t, x1 + t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(y1 - y0 + 2 * t)}`, '#4b5753', k));
+    uit.push(maatlijn(x1 + t, y1 + t, x0 - t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(x1 - x0 + 2 * t)}`, '#4b5753', k, raak('totaal:b')));
+    uit.push(maatlijn(x1 + t, y0 - t, x1 + t, y1 + t, 70 * Math.max(k, 0.5), `${Math.round(y1 - y0 + 2 * t)}`, '#4b5753', k, raak('totaal:d')));
   }
 
   // Maatvoering: kettingmaat langs de muur voor de gekozen (of te plaatsen) opening, afstanden tot de muren voor een meubel.
@@ -226,10 +252,11 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
         const tekst = `${Math.round(b - a)}`;
         if (m.as === 's') {
           const [p, q] = [langsAs(m, a, m.lijn), langsAs(m, b, m.lijn)];
-          uit.push(maatlijn(p[0], p[1], q[0], q[1], -afst, tekst, maatKleur, k));
+          uit.push(maatlijn(p[0], p[1], q[0], q[1], -afst, tekst, maatKleur, k, opties.voorbeeldOpening ? undefined : raak(`ketting:${maatOpening.id}:${i}`)));
           continue;
         }
-        uit.push(m.as === 'h' ? maatlijn(a, m.lijn, b, m.lijn, afst, tekst, maatKleur, k) : maatlijn(m.lijn, a, m.lijn, b, -afst, tekst, maatKleur, k));
+        const doel = opties.voorbeeldOpening ? undefined : raak(`ketting:${maatOpening.id}:${i}`);
+        uit.push(m.as === 'h' ? maatlijn(a, m.lijn, b, m.lijn, afst, tekst, maatKleur, k, doel) : maatlijn(m.lijn, a, m.lijn, b, -afst, tekst, maatKleur, k, doel));
       }
     }
   }
@@ -269,6 +296,12 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
     uit.push(`<rect x="${n(p.x)}" y="${n(p.y)}" width="${n(p.b)}" height="${n(p.d)}" fill="#2f6fd0" fill-opacity="0.12" stroke="#2f6fd0" stroke-width="3" stroke-dasharray="12 8" pointer-events="none"/>`);
     uit.push(`<text x="${n(p.x + p.b / 2)}" y="${n(p.y + p.d / 2)}" font-size="${n(20 * k)}" text-anchor="middle" fill="#2f6fd0" pointer-events="none">${Math.round(p.b)} × ${Math.round(p.d)}</text>`);
   }
+  if (opties.voorbeeldVorm?.gemeten.length) {
+    const v = opties.voorbeeldVorm, kleur = v.fout ? '#c0392b' : '#2f6fd0';
+    uit.push(`<g pointer-events="none"><polygon points="${punten(v.gemeten)}" fill="${kleur}" fill-opacity="0.12" stroke="${kleur}" stroke-width="3" stroke-dasharray="12 8"/>`
+      + (v.punten.length ? `<polygon points="${punten(v.punten)}" fill="none" stroke="${kleur}" stroke-width="1.2" stroke-opacity="0.6"/>` : '') + '</g>');
+    for (const m of v.maten) uit.push(maatlijn(m.van[0], m.van[1], m.tot[0], m.tot[1], -26 * Math.max(k, 0.5), m.tekst, kleur, k));
+  }
   uit.push('</svg>');
   return uit.join('');
 }
@@ -286,17 +319,25 @@ function zwaartepunt(v: Punt[]): Punt {
   return Math.abs(a) < 1e-9 ? v[0]! : [cx / (3 * a), cy / (3 * a)];
 }
 
-/** Maatlijn van punt 1 naar 2, verschoven over afstand (links van de richting). */
-function maatlijn(x1: number, y1: number, x2: number, y2: number, afstand: number, tekst: string, kleur: string, k = 1): string {
+/** Maatlijn van punt 1 naar 2, verschoven over afstand (links van de richting); met `raak` een vlak om de maat aan te tikken. */
+function maatlijn(x1: number, y1: number, x2: number, y2: number, afstand: number, tekst: string, kleur: string, k = 1, raak?: { doel: string; schaal: number; schuif?: number }): string {
   const dx = x2 - x1, dy = y2 - y1, l = Math.hypot(dx, dy) || 1;
   const nx = dy / l, ny = -dx / l;
   const a = [x1 + nx * afstand, y1 + ny * afstand], b = [x2 + nx * afstand, y2 + ny * afstand];
-  const mx = (a[0]! + b[0]!) / 2 + nx * 12 * k, my = (a[1]! + b[1]!) / 2 + ny * 12 * k;
+  // De tekst in het midden, of (`schuif`) een eind verder langs de lijn: weg van een greep in het midden.
+  const s = raak?.schuif ?? 0;
+  const mx = (a[0]! + b[0]!) / 2 + nx * 12 * k + (dx / l) * s, my = (a[1]! + b[1]!) / 2 + ny * 12 * k + (dy / l) * s;
   let hoek = (Math.atan2(dy, dx) * 180) / Math.PI;
   if (hoek > 90 || hoek <= -90) hoek += 180;
   return `<g pointer-events="none" stroke="${kleur}" stroke-width="1.5"><line x1="${n(a[0]!)}" y1="${n(a[1]!)}" x2="${n(b[0]!)}" y2="${n(b[1]!)}"/>`
     + `<line x1="${n(x1)}" y1="${n(y1)}" x2="${n(a[0]! + nx * 6)}" y2="${n(a[1]! + ny * 6)}" stroke-dasharray="4 4"/><line x1="${n(x2)}" y1="${n(y2)}" x2="${n(b[0]! + nx * 6)}" y2="${n(b[1]! + ny * 6)}" stroke-dasharray="4 4"/></g>`
-    + `<text x="${n(mx)}" y="${n(my)}" font-size="${n(17 * k)}" fill="${kleur}" text-anchor="middle" dominant-baseline="central" transform="rotate(${n(hoek)} ${n(mx)} ${n(my)})" pointer-events="none">${esc(tekst)}</text>`;
+    + `<text x="${n(mx)}" y="${n(my)}" font-size="${n(17 * k)}" fill="${kleur}" text-anchor="middle" dominant-baseline="central" transform="rotate(${n(hoek)} ${n(mx)} ${n(my)})" pointer-events="none">${esc(tekst)}</text>`
+    + (raak ? raakVlak(mx, my, hoek, Math.max(tekst.length * 17 * k * 0.62 + 16 * k, 56 * raak.schaal), 44 * raak.schaal, raak.doel) : '');
+}
+
+/** Een onzichtbaar vlak om een maat aan te tikken (minstens 44 beeldpunten hoog), gedraaid zoals de tekst. */
+function raakVlak(mx: number, my: number, hoek: number, b: number, h: number, doel: string): string {
+  return `<rect data-maat="${esc(doel)}" x="${n(mx - b / 2)}" y="${n(my - h / 2)}" width="${n(b)}" height="${n(h)}" rx="${n(h / 4)}" fill="#2f6fd0" fill-opacity="0" transform="rotate(${n(hoek)} ${n(mx)} ${n(my)})" style="cursor:pointer"><title>Tik om de maat te wijzigen</title></rect>`;
 }
 
 /** Deurboog: blad open (loodrecht op de muur) en de draaicirkel. */

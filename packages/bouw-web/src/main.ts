@@ -5,7 +5,7 @@
  */
 import { $, PRIJZEN, toonFout } from './hulp.js';
 import { geefMee, startOfferte, toonOfferte } from './offerte-ui.js';
-import { naWijziging, startPlattegrond, toonPlan, toonWoning3D } from './plattegrond-ui.js';
+import { naWijziging, openRuimteMetMaten, startPlattegrond, toonPlan, toonWoning3D } from './plattegrond-ui.js';
 import { herbereken, startPositie, toonPositie, toonPositie3D } from './positie-ui.js';
 import { startSnelstart, toonSnelstart } from './snelstart-ui.js';
 import { startWerf, toonWerf } from './werf-ui.js';
@@ -72,6 +72,8 @@ const nav = {
   /** Varianten van dit ontwerp in 3D naast elkaar. */
   naarVarianten: () => toon('varianten'),
   geefMee,
+  /** De plattegrond met het paneel Ruimte met maten (na de snelstart: een aanbouw met gemeten maten). */
+  naarMaten: (maten: { breedte: number; diepte: number }) => { toon('plan'); openRuimteMetMaten({ maten, plaats: 'tegen' }); },
 };
 
 /** Projectnaam en bewaarstatus in de kop. */

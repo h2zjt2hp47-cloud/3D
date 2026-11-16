@@ -3,6 +3,8 @@
  * muren zetten (gekoppeld aan offerteposities), meubels plaatsen, eigenschappen, controles en 3D.
  */
 import {
+  asVan,
+  binnenRand,
   controleerPlan,
   DAKLICHT_GLAS,
   dakOpbouw,
@@ -10,14 +12,22 @@ import {
   meubelAfstanden,
   openingAfstanden,
   dichtsteMuur,
+  heeftVrijeVorm,
   niveauPlan,
   niveauVan,
   splitsRuimtes,
   tekenRuimteIn,
   verdiepingenVan,
   meubelVoetafdruk,
+  langsAs,
   murenVan,
   muurVanOpening,
+  opAs,
+  opMuur,
+  verzetOpeningen,
+  vormFouten,
+  vormVanDeel,
+  zetOmtrek,
   planKader,
   plattegrond3D,
   RUIMTE_TYPES,
@@ -30,6 +40,7 @@ import {
   type Opening,
   type OpeningSoort,
   type Plattegrond,
+  type Punt,
   type Ruimte,
   type RuimteType,
   type Scene3D,
@@ -48,6 +59,7 @@ import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
 import { dakLijnen, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { familie } from './meegeven.js';
+import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 
 export { gevelSvgs } from './gevel-ui.js';
@@ -64,12 +76,13 @@ import {
   wijzig,
 } from './staat.js';
 
-type Gereedschap = 'kies' | 'ruimte' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'garagepoort' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
+type Gereedschap = 'kies' | 'ruimte' | 'maten' | 'wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'garagepoort' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
 type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht'; id: string } | undefined;
 
 const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
   { code: 'kies', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
   { code: 'ruimte', label: 'Ruimte tekenen', toets: 'T', hint: 'Sleep een rechthoek, ook binnen een bestaande ruimte ("ruimte in ruimte"): wat overlapt wordt uit de oude ruimte gesneden. Muren volgen automatisch.' },
+  { code: 'maten', label: 'Ruimte met maten', toets: 'N', hint: 'Typ de maten van de muren in cm (rechthoek, of vier zijden en een diagonaal voor schuine muren) en kies waar de ruimte komt: tegen een gevel (tik op de muur), los of als nieuw project.' },
   { code: 'wand', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld.' },
   { code: 'wand_v', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
   { code: 'wand_h', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
@@ -93,6 +106,13 @@ let viewBox: { x: number; y: number; b: number; d: number } | undefined;
 let zoom: Zoom | undefined;
 /** Slepen op een leeg stuk verschuift het beeld (een klik zonder bewegen deselecteert). */
 let pannen: { bewogen: boolean; x: number; y: number } | undefined;
+/**
+ * Een tik die pas bij het loslaten telt (zoals in de gevel-editor): op een maat (Selecteren) of op een muur (Ruimte met
+ * maten). Schuift de vinger meer dan 8 beeldpunten, dan was het verschuiven van het beeld.
+ */
+let tikWacht: { soort: 'maat'; doel: string; el: Element } | { soort: 'gevel'; x: number; y: number } | undefined;
+/** Een maat boven een ruimte, raam of meubel: na het loslaten zonder slepen de maatvraag (anders was het verslepen). */
+let maatNaKlik: { doel: string; vak: DOMRect; x: number; y: number } | undefined;
 let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeldOpening: Opening | undefined;
 let weergave: 'plan' | 'gevels' | '3d' = 'plan';
@@ -126,7 +146,9 @@ function ruimKaderVan(s: Scene3D): Scene3D {
 }
 
 interface Sleep {
-  soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'opening' | 'meubel' | 'daklicht';
+  soort: 'teken' | 'wand' | 'ruimte' | 'greep' | 'hoek' | 'opening' | 'meubel' | 'daklicht';
+  /** Een hoekpunt van een vrije vorm (greep `data-hoekgreep`). */
+  hoek?: number;
   start: { x: number; y: number };
   id?: string;
   kant?: 'n' | 's' | 'w' | 'o';
@@ -158,13 +180,21 @@ const snap = (v: number, s = rasterStap()) => Math.round(v / s) * s;
 
 /** Passend beeld: de verdieping, samen met de verdieping eronder (om erop te tekenen). */
 function passendKader(): Kader {
-  const a = planKader(plan(), 140);
+  const a = metVoorbeeld(planKader(plan(), 140));
   const onder = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   if (!onder?.ruimtes.length) return a;
   const b = planKader(onder, 140);
   if (!plan().ruimtes.length) return b;
   const x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y);
   return { x: x0, y: y0, b: Math.max(a.x + a.b, b.x + b.b) - x0, d: Math.max(a.y + a.d, b.y + b.d) - y0 };
+}
+
+/** Het voorbeeld van een ruimte met maten mee in beeld (met ruimte voor de maten). */
+function metVoorbeeld(a: Kader): Kader {
+  const v = matenKader();
+  if (!v) return a;
+  const x0 = Math.min(a.x, v.x - 140), y0 = Math.min(a.y, v.y - 140);
+  return { x: x0, y: y0, b: Math.max(a.x + a.b, v.x + v.b + 140) - x0, d: Math.max(a.y + a.d, v.y + v.d + 140) - y0 };
 }
 
 /** Kader rond de selectie (om erop in te zoomen). */
@@ -189,6 +219,12 @@ function selectieKader(): Kader | undefined {
   }
   const o = pl.openingen.find((x) => x.id === s.id);
   if (!o) return undefined;
+  if (o.as === 's') {
+    // Schuine muur: de hoeken van de opening (± 40 cm dwars) op het plan.
+    const hoeken = [-1, 1].flatMap((a) => [-40, 40].map((w) => langsAs(o, o.midden + (a * o.breedte) / 2, o.lijn + w)));
+    const xs = hoeken.map((q) => q[0]), ys = hoeken.map((q) => q[1]);
+    return { x: Math.min(...xs), y: Math.min(...ys), b: Math.max(...xs) - Math.min(...xs), d: Math.max(...ys) - Math.min(...ys) };
+  }
   return o.as === 'h' ? { x: o.midden - o.breedte / 2, y: o.lijn - 40, b: o.breedte, d: 80 } : { x: o.lijn - 40, y: o.midden - o.breedte / 2, b: 80, d: o.breedte };
 }
 
@@ -213,7 +249,13 @@ export function render() {
   niveau = Math.min(niveau, Math.max(0, verdiepingenVan(toestand().plan).length - 1));
   const onderlegger = niveau > 0 ? niveauPlan(toestand().plan, niveau - 1) : undefined;
   viewBox = zoom ? zoom.kijkvak() : passendKader();
-  houder.innerHTML = tekenPlattegrond(plan(), cat, { selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(), dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN, noordpijl: true });
+  houder.innerHTML = tekenPlattegrond(plan(), cat, {
+    selectie, voorbeeld, voorbeeldOpening, voorbeeldWand, onderlegger, raamInfo, fouten: fouten(), viewBox, fijnRaster: rasterStap() < 10, schaal: schaalNu(),
+    dakLijnen: dakLijnen(niveau), lichtstraten: LICHTSTRATEN, noordpijl: true,
+    // Maten aantikken om ze te wijzigen, en het voorbeeld van een ruimte met maten.
+    maatDoelen: true, voorbeeldVorm: matenVoorbeeld(),
+  });
+  plaatsMaatVraag();
   zoom?.bijwerken();
   const zi = document.getElementById('pl-zoomhint');
   if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
@@ -223,10 +265,14 @@ export function render() {
   let kaart = document.getElementById('pl-leeg-kaart');
   if (leeg && !kaart) {
     kaart = el('div', { id: 'pl-leeg-kaart', class: 'leeg-kaart', role: 'note' });
-    kaart.append(el('strong', {}, 'Begin met de eerste ruimte'), el('span', {}, 'Sleep op het raster een rechthoek (bv. 4 × 3 m). De muren volgen vanzelf; daarna plaats je ramen en deuren.'));
+    kaart.append(el('strong', {}, 'Begin met de eerste ruimte'), el('span', {}, 'Typ de maten van de muren in cm, of sleep op het raster een rechthoek (bv. 4 × 3 m). De muren volgen vanzelf; daarna plaats je ramen en deuren.'));
+    const metMaten = el('button', { type: 'button', 'data-leeg-maten': '' }, 'Ruimte met maten');
+    metMaten.addEventListener('click', () => kiesGereedschap('maten'));
     const proef = el('button', { type: 'button', class: 'tweede' }, 'Of start met de voorbeeldwoning');
     proef.addEventListener('click', () => naarProjecten());
-    kaart.append(proef);
+    const rij = el('div', { class: 'knoppenrij' });
+    rij.append(metMaten, proef);
+    kaart.append(rij);
     houder.before(kaart);
   }
   if (kaart) kaart.hidden = !leeg || weergave !== 'plan';
@@ -240,7 +286,7 @@ function toonNiveaus() {
   const vak = $('#pl-niveaus');
   vak.replaceChildren(...lijst.map((v, i) => {
     const b = el('button', { type: 'button', 'aria-pressed': String(i === niveau) }, v.naam);
-    b.addEventListener('click', () => { niveau = i; selectie = undefined; render(); toonEigenschappen(); });
+    b.addEventListener('click', () => { sluitMaatVraag(true); niveau = i; selectie = undefined; render(); toonEigenschappen(); });
     return b;
   }));
   const plus = el('button', { type: 'button', class: 'tweede' }, '+ Verdieping');
@@ -339,7 +385,7 @@ function tikIn3D(id: string | null) {
 function toonDingKeuzes() {
   const vak = $('#pl-3d-keuze');
   if (weergave !== '3d') { vak.hidden = true; return; }
-  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id) });
+  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); } });
   // Bestaat het ding niet meer (verwijderd, ongedaan gemaakt): ook de aanduiding weg.
   if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
 }
@@ -418,18 +464,23 @@ function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Openin
   if (!d) return undefined;
   const m = d.muur;
   const buiten = soort === 'raam' || soort === 'buitendeur' || soort === 'schuifraam' || soort === 'garagepoort';
-  const binnenRuimteId = m.soort === 'buiten' ? (m.plus ?? m.min) : (m.as === 'h' ? (y > m.lijn ? m.plus : m.min) : (x > m.lijn ? m.plus : m.min));
+  // Aan welke kant van de muur getikt werd (ook bij een schuine muur: dwars op haar as).
+  const plusKant = opAs(m, [x, y])[1] > m.lijn;
+  const binnenRuimteId = m.soort === 'buiten' ? (m.plus ?? m.min) : (plusKant ? m.plus : m.min);
   const ruimte = plan().ruimtes.find((r) => r.id === binnenRuimteId);
   const std = standaardOpening(soort, ruimte?.type);
   const lengte = m.tot - m.van;
   const breedte = Math.min(std.b, Math.max(40, lengte - 30));
   const midden = Math.min(m.tot - breedte / 2 - 10, Math.max(m.van + breedte / 2 + 10, snap(d.midden, fijn())));
-  const binnenPlus = m.soort === 'buiten' ? !!m.plus : (m.as === 'h' ? y > m.lijn : x > m.lijn);
+  const binnenPlus = m.soort === 'buiten' ? !!m.plus : plusKant;
   const opening: Opening = {
     niveau,
-    id: nieuweId('o'), soort, as: m.as, lijn: m.lijn, midden, breedte, hoogte: std.h, borstwering: std.borst,
+    id: nieuweId('o'), soort, ...opMuur(m, midden), breedte, hoogte: std.h, borstwering: std.borst,
     scharnier: 'begin', naarPlus: binnenPlus, deurtype: soort === 'binnendeur' ? 'schilder' : undefined,
   };
+  // Een halve rasterstap van het midden van de vrije muur: precies in het midden (anders blijft wat je tikte).
+  const af = openingAfstanden({ ...plan(), openingen: [...plan().openingen, opening] }, opening, muren);
+  if (af && Math.abs(opening.midden - (af.vlakBegin + af.vlakEinde) / 2) < fijn() / 2) opening.midden = Math.round(((af.vlakBegin + af.vlakEinde) / 2) * 10) / 10;
   let fout: string | undefined;
   if (buiten && m.soort !== 'buiten') fout = 'Ramen en buitendeuren horen in een buitenmuur.';
   if (!buiten && m.soort !== 'binnen') fout = 'Binnendeuren en doorgangen horen in een binnenmuur.';
@@ -444,6 +495,8 @@ function plaatsOpening(soort: OpeningSoort, x: number, y: number) {
   melding = '';
   selectie = { soort: 'opening', id: r.opening.id };
   kiesGereedschap('kies');
+  // Meteen de maten: breedte en afstand tot de dichtste hoek (wie niets typt, houdt wat hij tikte).
+  vraagOpening(r.opening.id);
 }
 
 /** Voegt een nieuwe opening toe; een raam of buitendeur krijgt meteen een offertepositie. */
@@ -481,7 +534,7 @@ function voegRaamToe(n: number, muurId: string, midden: number): string | undefi
   const breedte = Math.min(std.b, Math.max(40, m.tot - m.van - 30));
   const mid = Math.min(m.tot - breedte / 2 - 10, Math.max(m.van + breedte / 2 + 10, Math.round(midden / 5) * 5));
   const o: Opening = {
-    niveau: n, id: nieuweId('o'), soort: 'raam', as: m.as, lijn: m.lijn, midden: mid, breedte, hoogte: std.h, borstwering: std.borst,
+    niveau: n, id: nieuweId('o'), soort: 'raam', ...opMuur(m, mid), breedte, hoogte: std.h, borstwering: std.borst,
     scharnier: 'begin', naarPlus: !!m.plus,
   };
   bewaarNieuweOpening('raam', o, ruimte);
@@ -492,7 +545,11 @@ function splits(x: number, y: number, staand: boolean) {
   const r = ruimteOp(plan(), x, y);
   if (!r) return;
   const lijn = staand ? kleef(x, 'x', 10, r.id) : kleef(y, 'y', 10, r.id);
-  deelMetWand(staand ? 'v' : 'h', lijn, staand ? y : x, staand ? y : x);
+  // Het binnenvlak van de ruimte op die plaats en het plan vóór het indelen (om de wand op een gemeten plaats te zetten).
+  const rand = binnenRand(toestand().plan, r, staand ? 'v' : 'h', [x, y]);
+  const voor = structuredClone(toestand().plan);
+  if (!deelMetWand(staand ? 'v' : 'h', lijn, staand ? y : x, staand ? y : x) || !rand) return;
+  vraagWand(staand, lijn, [x, y], rand, voor);
 }
 
 /** Plaatst een lichtkoepel of lichtstraat met het midden op de klik; alleen op een plat dak, volledig boven één ruimte. */
@@ -518,7 +575,7 @@ function plaatsDaklicht(x: number, y: number) {
 }
 
 /** Deelt alle ruimtes die een wand kruist; minstens 60 cm aan elke kant. */
-function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number) {
+function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number): boolean {
   let nieuw: Ruimte[] = [];
   wijzig('plan', (t) => {
     nieuw = splitsRuimtes(t.plan, niveau, as, lijn, Math.min(van, tot), Math.max(van, tot), (oud) => ({ ...oud, id: nieuweId('r'), naam: nieuweRuimteNaam(), delen: undefined }), 60);
@@ -526,11 +583,251 @@ function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number) {
   if (!nieuw.length) {
     melding = 'Geen ruimte gedeeld: de wand moet door een ruimte lopen, minstens 60 cm van de rand.';
     toonEigenschappen();
-    return;
+    return false;
   }
   selectie = { soort: 'ruimte', id: nieuw[0]!.id };
   melding = `${nieuw.length === 1 ? 'Ruimte' : `${nieuw.length} ruimtes`} ingedeeld. Vergeet geen deur of doorgang naar de nieuwe ruimte.`;
   kiesGereedschap('kies');
+  return true;
+}
+
+// ---------- maten typen: na een tik, en op de tekening ----------
+
+/** Namen van de twee uiteinden van een muur: links en rechts (liggend), boven en onder (staand of schuin). */
+const eindNamen = (as: 'h' | 'v' | 's'): [string, string] => (as === 'h' ? ['links', 'rechts'] : ['boven', 'onder']);
+
+/** Een raam of deur net geplaatst (of aangetikt): breedte en afstand tot de dichtste hoek, in cm. */
+function vraagOpening(id: string) {
+  const o = plan().openingen.find((x) => x.id === id);
+  const af = o && openingAfstanden(toestand().plan, o);
+  if (!o || !af) return;
+  const vrij = af.vlakEinde - af.vlakBegin;
+  const kant = af.begin <= af.einde ? 'begin' : 'einde';
+  const [a, b] = eindNamen(o.as);
+  const titels: Record<OpeningSoort, string> = { raam: 'Raam', buitendeur: 'Buitendeur', schuifraam: 'Schuifraam', binnendeur: 'Binnendeur', doorgang: 'Doorgang', garagepoort: 'Garagepoort' };
+  const nu = () => { const x = plan().openingen.find((q) => q.id === id); return x && openingAfstanden(toestand().plan, x); };
+  vraagMaat({
+    anker: langsAs(o, o.midden, o.lijn),
+    titel: `${titels[o.soort]}: maten`,
+    velden: [
+      { code: 'breedte', label: 'Breedte', waarde: o.breedte, min: 40, max: vrij },
+      { code: 'afstand', label: 'Van de hoek', waarde: Math.round((kant === 'begin' ? af.begin : af.einde) * 10) / 10, min: 0 },
+    ],
+    kanten: { label: 'Gemeten vanaf de hoek', opties: [['begin', a], ['einde', b]], gekozen: kant },
+    bijKant: (k): Record<string, number> => { const x = nu(); return x ? { afstand: Math.round((k === 'begin' ? x.begin : x.einde) * 10) / 10 } : {}; },
+    knoppen: [{ label: 'Midden', waarden: (h) => ({ afstand: Math.round(((vrij - (h.breedte ?? o.breedte)) / 2) * 10) / 10 }) }],
+    uitleg: 'Vrije muur van het binnenvlak van de hoek tot de opening.',
+    meteenTypen: false,
+    toepassen: (w, k, eerste) => {
+      if (w.breedte! + w.afstand! > vrij + 0.5) return `Past niet: de vrije muur is ${getal(vrij)} cm, en ${getal(w.breedte!)} + ${getal(w.afstand!)} = ${getal(w.breedte! + w.afstand!)} cm.`;
+      if (eerste) momentopname();
+      wijzig('plan', (t) => {
+        const x = t.plan.openingen.find((q) => q.id === id);
+        if (!x) return;
+        x.breedte = w.breedte!;
+        x.midden = k === 'einde' ? af.vlakEinde - w.afstand! - w.breedte! / 2 : af.vlakBegin + w.afstand! + w.breedte! / 2;
+      }, { zonderOngedaan: true });
+      return undefined;
+    },
+    terug: () => ongedaan(),
+  });
+}
+
+/**
+ * Een wand net geplaatst met Indelen: de vrije maat tot de muur links of rechts (boven of onder), in cm. Typen zet de wand
+ * opnieuw op de gemeten plaats (het indelen van daarnet wordt ongedaan gemaakt en opnieuw gedaan, op de nieuwe lijn).
+ */
+function vraagWand(staand: boolean, lijn: number, p: Punt, rand: [number, number], voor: Plattegrond) {
+  const half = toestand().plan.binnenmuur / 2;
+  const as = staand ? 'v' : 'h';
+  const [a, b] = staand ? ['links', 'rechts'] : ['boven', 'onder'];
+  const vanBegin = lijn - half - rand[0];
+  // Standaard vanaf de linker- of bovenmuur (een andere kant kies je met één tik).
+  const kant = 'begin';
+  const w0 = staand ? p[1] : p[0];
+  let huidig = lijn;
+  const zet = (nieuw: number): string | undefined => {
+    // Eerst op een kopie: kan het (minstens 60 cm aan elke kant)?
+    const proef = structuredClone(voor);
+    if (!splitsRuimtes(proef, niveau, as, nieuw, w0, w0, (oud) => ({ ...oud, id: 'proef' }), 60).length) {
+      return 'Zo dicht bij de muur kan de wand niet: elke ruimte moet minstens 60 cm breed blijven.';
+    }
+    if (Math.abs(nieuw - huidig) < 0.05) return undefined;
+    ongedaan();
+    deelMetWand(as, nieuw, w0, w0);
+    huidig = nieuw;
+    return undefined;
+  };
+  vraagMaat({
+    anker: p,
+    titel: 'Wand: afstand tot de muur',
+    velden: [{ code: 'afstand', label: 'Vrij tot de muur', waarde: Math.round(vanBegin * 10) / 10, min: 0 }],
+    kanten: { label: 'Gemeten vanaf', opties: [['begin', a], ['einde', b]], gekozen: kant },
+    bijKant: (k) => ({ afstand: Math.round((k === 'begin' ? huidig - half - rand[0] : rand[1] - huidig - half) * 10) / 10 }),
+    uitleg: 'Vrije maat van het binnenvlak van de muur tot de nieuwe wand.',
+    meteenTypen: false,
+    toepassen: (w, k) => zet(k === 'einde' ? rand[1] - w.afstand! - half : rand[0] + w.afstand! + half),
+    terug: () => { zet(lijn); },
+  });
+}
+
+/** Wat een maat op de tekening is (zie `maatDoelen` in tekenPlattegrond) en wat er gebeurt als je ze wijzigt. */
+function tikOpMaat(doel: string, vak: DOMRect) {
+  const [soort, id, extra] = doel.split(':') as [string, string, string | undefined];
+  const pl = plan();
+  const oud = JSON.parse(JSON.stringify(pl)) as Plattegrond;
+  /** Een wijziging op het plan (zoals slepen): telkens vanaf het plan van toen je de maat aantikte; eerst op een kopie. */
+  const pas = (eerste: boolean, f: (t: Plattegrond) => string | undefined): string | undefined => {
+    // Telkens vanaf de toestand van toen (een andere kant kiezen mag de vorige wijziging niet laten staan).
+    const herstel = (t: Plattegrond) => {
+      for (const r of oud.ruimtes) { const i = t.ruimtes.findIndex((x) => x.id === r.id); if (i >= 0) t.ruimtes[i] = structuredClone(r); }
+      for (const o of oud.openingen) { const i = t.openingen.findIndex((x) => x.id === o.id); if (i >= 0) t.openingen[i] = structuredClone(o); }
+    };
+    const proef = structuredClone(toestand().plan);
+    herstel(proef);
+    const fout = f(proef);
+    if (fout) return fout;
+    if (eerste) momentopname();
+    wijzig('plan', (t) => { herstel(t.plan); f(t.plan); }, { zonderOngedaan: true });
+    return undefined;
+  };
+  const dikteOp = (as: 'h' | 'v', lijn: number, van: number, tot: number) => {
+    const m = murenVan(pl).filter((x) => x.as === as && Math.abs(x.lijn - lijn) < 0.5 && Math.min(x.tot, tot) - Math.max(x.van, van) > 1);
+    return m.length ? Math.max(...m.map((x) => x.dikte)) : 0;
+  };
+  if (soort === 'ruimte') maatRuimte(pl, oud, id, extra === 'b', vak, pas, dikteOp);
+  else if (soort === 'zijde' || soort === 'muur') maatZijde(pl, oud, soort, id, Number(extra), vak, pas);
+  else if (soort === 'ketting') maatKetting(pl, id, Number(extra), vak, pas);
+  else if (soort === 'totaal') maatTotaal(pl, oud, id === 'b', vak, pas);
+}
+
+type Pas = (eerste: boolean, f: (t: Plattegrond) => string | undefined) => string | undefined;
+
+/** Breedte of diepte van een rechthoekige ruimte: een muur schuift, met de buurruimtes (zoals de grepen). */
+function maatRuimte(pl: Plattegrond, oud: Plattegrond, id: string, breed: boolean, vak: DOMRect, pas: Pas, dikteOp: (as: 'h' | 'v', lijn: number, van: number, tot: number) => number) {
+  const r = pl.ruimtes.find((x) => x.id === id);
+  if (!r) return;
+  // Welke muur schuift: standaard rechts (of onder), tenzij daar een buurruimte ligt en aan de andere kant niet.
+  const buur = (lijn: number) => pl.ruimtes.some((q) => q.id !== r.id && delenVan(q).some((d) => (breed ? Math.abs(d.x + d.b - lijn) < 0.5 || Math.abs(d.x - lijn) < 0.5 : Math.abs(d.y + d.d - lijn) < 0.5 || Math.abs(d.y - lijn) < 0.5)));
+  const [begin, einde] = breed ? [r.x, r.x + r.b] : [r.y, r.y + r.d];
+  const kant = buur(einde) && !buur(begin) ? (breed ? 'w' : 'n') : breed ? 'o' : 's';
+  const [t0, t1] = breed ? [dikteOp('v', r.x, r.y, r.y + r.d), dikteOp('v', r.x + r.b, r.y, r.y + r.d)] : [dikteOp('h', r.y, r.x, r.x + r.b), dikteOp('h', r.y + r.d, r.x, r.x + r.b)];
+  const maat = breed ? r.b : r.d;
+  vraagMaat({
+    anker: vak,
+    titel: `${r.naam}: ${breed ? 'breedte' : 'diepte'}`,
+    velden: [{ code: 'maat', label: breed ? 'Breedte' : 'Diepte', waarde: maat, min: 60 }],
+    kanten: { label: 'Deze muur schuift', opties: breed ? [['w', '◀ links'], ['o', 'rechts ▶']] : [['n', '▲ boven'], ['s', 'onder ▼']], gekozen: kant },
+    uitleg: `Op de as van de muren (binnen ${getal(maat - t0 / 2 - t1 / 2)} cm, buiten ${getal(maat + t0 / 2 + t1 / 2)} cm). Typ +30 om 30 cm bij te tellen.`,
+    toepassen: (w, k, eerste) => pas(eerste, (t) => {
+      const gewenst = k === 'w' || k === 'n' ? einde - w.maat! : begin + w.maat!;
+      const echt = verschuifWandNaar(oud, t, r.id, k as 'n' | 's' | 'w' | 'o', gewenst);
+      return Math.abs(echt - gewenst) > 0.5 ? 'Zo kan het niet: een ruimte ernaast zou smaller worden dan 60 cm.' : undefined;
+    }),
+    terug: () => ongedaan(),
+  });
+}
+
+/** Een zijde van een vrije vorm of een schuine muur: een uiteinde schuift langs de zijde, de muur ernaast draait mee. */
+function maatZijde(pl: Plattegrond, oud: Plattegrond, soort: string, id: string, zijde: number, vak: DOMRect, pas: Pas) {
+  let r: Ruimte | undefined, i = zijde, verschil = 0;
+  if (soort === 'muur') {
+    const m = murenVan(pl).find((x) => x.id === id);
+    if (!m?.punten) return;
+    const kandidaten = [m.plus, m.min].map((x) => pl.ruimtes.find((q) => q.id === x)).filter((q): q is Ruimte => !!q?.omtrek);
+    r = kandidaten.find((q) => q.id === selectie?.id) ?? kandidaten[0];
+    if (!r) return;
+    const v = vormVanDeel(delenVan(r)[0]!);
+    i = v.findIndex((a, j) => {
+      const b = v[(j + 1) % v.length]!, l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      const op = (q: Punt) => Math.abs((q[0] - a[0]) * (b[1] - a[1]) - (q[1] - a[1]) * (b[0] - a[0])) / l < 1;
+      return op(m.punten![0]) && op(m.punten![1]);
+    });
+    if (i < 0) return;
+    const a = v[i]!, b = v[(i + 1) % v.length]!;
+    // De muur kan korter zijn dan de zijde (een buurruimte ertegen): het verschil blijft.
+    verschil = Math.hypot(b[0] - a[0], b[1] - a[1]) - (m.tot - m.van);
+  } else r = pl.ruimtes.find((x) => x.id === id);
+  if (!r) return;
+  const ruimte = r;
+  const v = vormVanDeel(delenVan(ruimte)[0]!);
+  const a = v[i]!, b = v[(i + 1) % v.length]!;
+  const lengte = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const letter = (j: number) => 'ABCDEFGH'[j % v.length] ?? '?';
+  vraagMaat({
+    anker: vak,
+    titel: `${ruimte.naam}: muur ${letter(i)}${letter(i + 1)}`,
+    velden: [{ code: 'maat', label: 'Lengte', waarde: Math.round((lengte - verschil) * 10) / 10, min: 20 }],
+    kanten: { label: 'Dit hoekpunt schuift', opties: [['begin', letter(i)], ['einde', letter(i + 1)]], gekozen: 'einde' },
+    uitleg: 'Op de as van de muren. Het hoekpunt schuift langs deze muur; de muur ernaast draait mee.',
+    toepassen: (w, k, eerste) => pas(eerste, (t) => {
+      const L = w.maat! + verschil;
+      const d: Punt = [(b[0] - a[0]) / lengte, (b[1] - a[1]) / lengte];
+      const nieuw = v.map((q) => [...q] as Punt);
+      if (k === 'begin') nieuw[i] = [b[0] - d[0] * L, b[1] - d[1] * L]; else nieuw[(i + 1) % v.length] = [a[0] + d[0] * L, a[1] + d[1] * L];
+      const fout = vormFouten(nieuw)[0];
+      if (fout) return fout;
+      zetOmtrek(t.ruimtes.find((q) => q.id === ruimte.id)!, nieuw);
+      verzetOpeningen(oud, t, ruimte.id);
+      return undefined;
+    }),
+    terug: () => ongedaan(),
+  });
+}
+
+/** Een stuk van de kettingmaat langs het gekozen raam: de afstand tot de hoek of een ander raam, of de breedte. */
+function maatKetting(pl: Plattegrond, id: string, j: number, vak: DOMRect, pas: Pas) {
+  const o = pl.openingen.find((x) => x.id === id);
+  const af = o && openingAfstanden(toestand().plan, o);
+  if (!o || !af) return;
+  const p = af.ketting[j]!, q = af.ketting[j + 1]!;
+  const a = o.midden - o.breedte / 2, e = o.midden + o.breedte / 2;
+  const zelf = Math.abs(p - a) < 0.2 && Math.abs(q - e) < 0.2;
+  const ervoor = Math.abs(q - a) < 0.2, erna = Math.abs(p - e) < 0.2;
+  if (!zelf && !ervoor && !erna) { melding = 'Tik op een maat naast het gekozen raam of de gekozen deur (of kies het andere raam).'; toonEigenschappen(); return; }
+  const [n1, n2] = eindNamen(o.as);
+  vraagMaat({
+    anker: vak,
+    titel: zelf ? 'Breedte van de opening' : 'Afstand',
+    velden: [{ code: 'maat', label: zelf ? 'Breedte' : 'Afstand', waarde: Math.round((q - p) * 10) / 10, min: zelf ? 40 : 0 }],
+    ...(zelf ? { kanten: { label: 'Deze kant schuift', opties: [['begin', n1], ['einde', n2]] as [string, string][], gekozen: 'einde' } } : {}),
+    uitleg: zelf ? 'De breedte van de opening; de andere kant blijft staan.' : 'Vrije maat langs de muur; de opening schuift, haar breedte blijft.',
+    toepassen: (w, k, eerste) => pas(eerste, (t) => {
+      const x = t.openingen.find((z) => z.id === id);
+      if (!x) return undefined;
+      if (zelf) {
+        x.breedte = w.maat!;
+        x.midden = k === 'begin' ? e - w.maat! / 2 : a + w.maat! / 2;
+      } else x.midden = ervoor ? p + w.maat! + o.breedte / 2 : q - w.maat! - o.breedte / 2;
+      const lo = x.midden - x.breedte / 2, hi = x.midden + x.breedte / 2;
+      return lo < af.vlakBegin - 0.5 || hi > af.vlakEinde + 0.5 ? `Past niet: de vrije muur is ${getal(af.vlakEinde - af.vlakBegin)} cm.` : undefined;
+    }),
+    terug: () => ongedaan(),
+  });
+}
+
+/** De totale buitenmaat: de buitenste muur aan één kant schuift, met alle ruimtes en ramen ertegen. */
+function maatTotaal(pl: Plattegrond, oud: Plattegrond, breed: boolean, vak: DOMRect, pas: Pas) {
+  const delen = pl.ruimtes.flatMap(delenVan);
+  if (!delen.length) return;
+  const x0 = Math.min(...delen.map((q) => q.x)), y0 = Math.min(...delen.map((q) => q.y));
+  const x1 = Math.max(...delen.map((q) => q.x + q.b)), y1 = Math.max(...delen.map((q) => q.y + q.d));
+  const t = pl.buitenmuur;
+  const [begin, einde] = breed ? [x0, x1] : [y0, y1];
+  vraagMaat({
+    anker: vak,
+    titel: breed ? 'Totale breedte (buiten)' : 'Totale diepte (buiten)',
+    velden: [{ code: 'maat', label: breed ? 'Breedte' : 'Diepte', waarde: Math.round(einde - begin + t), min: 60 + t }],
+    kanten: { label: 'Deze kant schuift', opties: breed ? [['begin', '◀ links'], ['einde', 'rechts ▶']] : [['begin', '▲ boven'], ['einde', 'onder ▼']], gekozen: 'einde' },
+    uitleg: 'Buitenmaat, van buitenkant tot buitenkant. De buitenste muur schuift met alle ruimtes en ramen ertegen.',
+    toepassen: (w, k, eerste) => pas(eerste, (tt) => {
+      const as = w.maat! - t;
+      const [lijn0, gewenst] = k === 'begin' ? [begin, einde - as] : [einde, begin + as];
+      const echt = verschuifRand(oud, tt, breed, lijn0, -1e9, 1e9, gewenst);
+      return Math.abs(echt - gewenst) > 0.5 ? 'Zo kan het niet: een ruimte aan die kant zou smaller worden dan 60 cm.' : undefined;
+    }),
+    terug: () => ongedaan(),
+  });
 }
 
 // ---------- muis ----------
@@ -539,6 +836,26 @@ function naPointerDown(ev: PointerEvent) {
   const p = punt(ev);
   const doel = ev.target as Element;
   const houder = $('#pl-canvas');
+  // Een maat aangetikt (met Selecteren): een veld om ze in cm te typen. Met een ander gereedschap telt de tik voor dat
+  // gereedschap (een raam op de muur, ook waar een maat staat).
+  const maat = doel.closest('[data-maat]') as SVGElement | null;
+  // Een tik ernaast sluit de maatvraag (wat getypt is, blijft).
+  if (maatVraagOpen()) sluitMaatVraag(true);
+  // Ligt er onder de maat een ruimte, raam of meubel: slepen versleept dat (zoals vroeger), een tik zonder schuiven opent
+  // de maat. Het vlak van de maat onthouden we nu: render() vervangt de tekening.
+  const onderMaat = maat && gereedschap === 'kies'
+    ? (document.elementsFromPoint(ev.clientX, ev.clientY).find((e) => e !== maat && e.closest('#pl-canvas') && e.closest('[data-soort]:not([data-soort="leeg"]):not([data-soort="muur"])'))?.closest('[data-soort]') as SVGElement | undefined)
+    : undefined;
+  maatNaKlik = onderMaat && maat ? { doel: maat.dataset.maat!, vak: maat.getBoundingClientRect(), x: ev.clientX, y: ev.clientY } : undefined;
+  if (((maat && gereedschap === 'kies') || gereedschap === 'maten') && !onderMaat) {
+    // Pas bij het loslaten (als de vinger niet schoof): de maat aantikken, of met Ruimte met maten de gevel kiezen.
+    // Slepen verschuift het beeld, zoals op een leeg stuk.
+    tikWacht = maat && gereedschap === 'kies' ? { soort: 'maat', doel: maat.dataset.maat!, el: maat } : { soort: 'gevel', x: p.x, y: p.y };
+    pannen = { bewogen: false, x: ev.clientX, y: ev.clientY };
+    zoom?.startPan(ev);
+    houder.setPointerCapture(ev.pointerId);
+    return;
+  }
   zoom?.vastzetten();
   if (gereedschap === 'ruimte') {
     sleep = { soort: 'teken', start: { x: kleef(p.x, 'x'), y: kleef(p.y, 'y') }, bewogen: false };
@@ -561,13 +878,16 @@ function naPointerDown(ev: PointerEvent) {
     return;
   }
   if (gereedschap === 'daklicht') { plaatsDaklicht(p.x, p.y); return; }
-  if (gereedschap !== 'kies') { plaatsOpening(gereedschap, p.x, p.y); return; }
+  if (gereedschap !== 'kies' && gereedschap !== 'maten') { plaatsOpening(gereedschap, p.x, p.y); return; }
 
   const greep = doel.closest('[data-greep]') as SVGElement | null;
-  const item = doel.closest('[data-soort]') as SVGElement | null;
+  const hoekgreep = doel.closest('[data-hoekgreep]') as SVGElement | null;
+  const item = (onderMaat ?? doel.closest('[data-soort]')) as SVGElement | null;
   const orig = JSON.stringify(plan());
   if (greep && selectie?.soort === 'ruimte') {
     sleep = { soort: 'greep', start: p, id: selectie.id, kant: greep.dataset.greep as Sleep['kant'], bewogen: false, orig };
+  } else if (hoekgreep && selectie?.soort === 'ruimte') {
+    sleep = { soort: 'hoek', start: p, id: selectie.id, hoek: Number(hoekgreep.dataset.hoekgreep), bewogen: false, orig };
   } else if (item && ['ruimte', 'opening', 'meubel', 'daklicht'].includes(item.dataset.soort ?? '')) {
     const soort = item.dataset.soort as 'ruimte' | 'opening' | 'meubel' | 'daklicht';
     selectie = { soort, id: item.dataset.id! };
@@ -610,6 +930,8 @@ function naPointerMove(ev: PointerEvent) {
   }
   const dx = p.x - sleep.start.x, dy = p.y - sleep.start.y;
   if (!sleep.bewogen && Math.hypot(dx, dy) < 4) return;
+  // Gestart op een maat: pas slepen als de vinger meer dan 8 beeldpunten schoof (anders is het een tik op de maat).
+  if (!sleep.bewogen && maatNaKlik && Math.hypot(ev.clientX - maatNaKlik.x, ev.clientY - maatNaKlik.y) < 8) return;
   if (!sleep.bewogen && sleep.soort !== 'teken') momentopname();
   sleep.bewogen = true;
   if (sleep.soort === 'wand') {
@@ -642,7 +964,9 @@ function naPointerMove(ev: PointerEvent) {
     if (sleep!.soort === 'opening') {
       const o0 = oud.openingen.find((o) => o.id === id)!, o = pl.openingen.find((x) => x.id === id)!;
       const muur = muurVanOpening(o0, murenVan(oud));
-      let midden = snap(o0.midden + (o0.as === 'h' ? dx : dy), fijn());
+      // Langs de muur: bij een schuine muur de beweging langs haar richting.
+      const d = asVan(o0.richting ? o0 : muur ?? o0).d;
+      let midden = snap(o0.midden + (o0.as === 'h' ? dx : o0.as === 'v' ? dy : dx * d[0] + dy * d[1]), fijn());
       if (muur) midden = Math.min(muur.tot - o.breedte / 2 - 5, Math.max(muur.van + o.breedte / 2 + 5, midden));
       o.midden = midden;
     }
@@ -651,7 +975,8 @@ function naPointerMove(ev: PointerEvent) {
       const nx = kleef(r0.x + dx, 'x', 18, id), ny = kleef(r0.y + dy, 'y', 18, id);
       const ddx = nx - r0.x, ddy = ny - r0.y;
       r.x = nx; r.y = ny;
-      if (r0.delen) r.delen = r0.delen.map((q) => ({ ...q, x: q.x + ddx, y: q.y + ddy }));
+      if (r0.delen) r.delen = r0.delen.map((q) => ({ ...q, x: q.x + ddx, y: q.y + ddy, ...(q.omtrek ? { omtrek: q.omtrek.map(([x, y]) => [x + ddx, y + ddy] as Punt) } : {}) }));
+      if (r0.omtrek) zetOmtrek(r, vormVanDeel(delenVan(r0)[0]!).map(([x, y]) => [x + ddx, y + ddy] as Punt));
       const binnenR0 = (x: number, y: number) => delenVan(r0).some((q) => x > q.x && x < q.x + q.b && y > q.y && y < q.y + q.d);
       // Meubels in de ruimte en openingen op de randen gaan mee.
       for (const m0 of oud.meubels) {
@@ -668,7 +993,9 @@ function naPointerMove(ev: PointerEvent) {
         const l = pl.daklichten?.find((x) => x.id === l0.id);
         if (l) { l.x = l0.x + ddx; l.y = l0.y + ddy; }
       }
-      for (const o0 of oud.openingen) {
+      // Een vrije vorm: de ramen en deuren in haar muren (ook schuine) gaan mee.
+      if (heeftVrijeVorm(r0)) verzetOpeningen(oud, pl, id);
+      else for (const o0 of oud.openingen) {
         const opRand = delenVan(r0).some((q) => (o0.as === 'h'
           ? (Math.abs(o0.lijn - q.y) < 0.5 || Math.abs(o0.lijn - (q.y + q.d)) < 0.5) && o0.midden > q.x && o0.midden < q.x + q.b
           : (Math.abs(o0.lijn - q.x) < 0.5 || Math.abs(o0.lijn - (q.x + q.b)) < 0.5) && o0.midden > q.y && o0.midden < q.y + q.d));
@@ -679,20 +1006,60 @@ function naPointerMove(ev: PointerEvent) {
       }
     }
     if (sleep!.soort === 'greep') verschuifWand(oud, pl, id, sleep!.kant!, p);
+    if (sleep!.soort === 'hoek') {
+      // Een hoekpunt van een vrije vorm: het kleeft aan de lijnen van de andere ruimtes en aan het raster.
+      const r0 = oud.ruimtes.find((r) => r.id === id)!, r = pl.ruimtes.find((x) => x.id === id)!;
+      const v = vormVanDeel(delenVan(r0)[0]!).map((q) => [...q] as Punt);
+      const i = sleep!.hoek!;
+      if (v[i]) {
+        const los: Punt = [v[i]![0] + dx, v[i]![1] + dy];
+        let q: Punt = [kleef(los[0], 'x', 12, id), kleef(los[1], 'y', 12, id)];
+        // Kleven aan een hoekpunt van een andere ruimte (binnen 15 cm), ook van een vrije vorm.
+        let best = 15;
+        for (const andere of oud.ruimtes) {
+          if (andere.id === id) continue;
+          for (const h of delenVan(andere).flatMap(vormVanDeel)) { const a = Math.hypot(h[0] - los[0], h[1] - los[1]); if (a < best) { best = a; q = h; } }
+        }
+        v[i] = q;
+        if (!vormFouten(v).length) { zetOmtrek(r, v); verzetOpeningen(oud, pl, id); }
+      }
+    }
   }, { zonderOngedaan: true });
 }
 
 /** Verschuift één rand van een ruimte; aangrenzende ruimtes(delen) en openingen op die rand schuiven mee. */
 function verschuifWand(oud: Plattegrond, pl: Plattegrond, id: string, kant: 'n' | 's' | 'w' | 'o', p: { x: number; y: number }) {
+  const staand = kant === 'w' || kant === 'o';
+  verschuifWandNaar(oud, pl, id, kant, kleef(staand ? p.x : p.y, staand ? 'x' : 'y', 12, id));
+}
+
+/** Zoals `verschuifWand`, naar een gemeten lijn; geeft de lijn waar de wand komt (elke ruimte blijft minstens 60 cm). */
+function verschuifWandNaar(oud: Plattegrond, pl: Plattegrond, id: string, kant: 'n' | 's' | 'w' | 'o', gewenst: number): number {
   const r0 = oud.ruimtes.find((r) => r.id === id)!;
   const staand = kant === 'w' || kant === 'o';
   const lijn0 = kant === 'w' ? r0.x : kant === 'o' ? r0.x + r0.b : kant === 'n' ? r0.y : r0.y + r0.d;
   const [van, tot] = staand ? [r0.y, r0.y + r0.d] : [r0.x, r0.x + r0.b];
-  let lijn = kleef(staand ? p.x : p.y, staand ? 'x' : 'y', 12, id);
+  return verschuifRand(oud, pl, staand, lijn0, van, tot, gewenst);
+}
+
+/**
+ * Verschuift de rand op `lijn0` (staand: x, liggend: y) tussen `van` en `tot` naar `gewenst`: alle ruimtes(delen) met een
+ * rand op die lijn in dat stuk schuiven mee, en de openingen erop. Geeft de lijn waar de rand werkelijk komt.
+ */
+function verschuifRand(oud: Plattegrond, pl: Plattegrond, staand: boolean, lijn0: number, van: number, tot: number, gewenst: number): number {
+  let lijn = gewenst;
   // Alle delen met een rand op dezelfde lijn binnen hetzelfde stuk schuiven mee (min. 60 cm).
   const betrokken: { ruimte: string; deel: number; q: { x: number; y: number; b: number; d: number } }[] = [];
+  // Een vrije vorm met hoekpunten op die lijn: die hoekpunten schuiven mee (de vorm rekt niet).
+  const vrij: { ruimte: string; deel: number; v: Punt[] }[] = [];
+  const c = staand ? 0 : 1, c2 = staand ? 1 : 0;
   for (const r of oud.ruimtes) {
     delenVan(r).forEach((q, deel) => {
+      if (q.omtrek) {
+        const v = vormVanDeel(q);
+        if (v.some((p) => Math.abs(p[c] - lijn0) < 0.5 && p[c2] >= van - 0.5 && p[c2] <= tot + 0.5)) vrij.push({ ruimte: r.id, deel, v });
+        return;
+      }
       const [a, b] = staand ? [q.y, q.y + q.d] : [q.x, q.x + q.b];
       const overlap = Math.min(b, tot) - Math.max(a, van) > 1;
       const opLijn = staand ? Math.abs(q.x - lijn0) < 0.5 || Math.abs(q.x + q.b - lijn0) < 0.5 : Math.abs(q.y - lijn0) < 0.5 || Math.abs(q.y + q.d - lijn0) < 0.5;
@@ -715,6 +1082,14 @@ function verschuifWand(oud: Plattegrond, pl: Plattegrond, id: string, kant: 'n' 
     if ((o0.as === 'v') !== staand || Math.abs(o0.lijn - lijn0) > 0.5 || o0.midden < van || o0.midden > tot) continue;
     pl.openingen.find((x) => x.id === o0.id)!.lijn = lijn;
   }
+  for (const { ruimte, deel, v } of vrij) {
+    const w = v.map((p): Punt => (Math.abs(p[c] - lijn0) < 0.5 ? (staand ? [lijn, p[1]] : [p[0], lijn]) : p));
+    if (vormFouten(w).length) continue;
+    const r = pl.ruimtes.find((x) => x.id === ruimte)!;
+    zetOmtrek(deel === 0 ? r : r.delen![deel - 1]!, w);
+    verzetOpeningen(oud, pl, ruimte);
+  }
+  return lijn;
 }
 
 function naPointerUp(ev: PointerEvent) {
@@ -723,9 +1098,17 @@ function naPointerUp(ev: PointerEvent) {
   $('#pl-canvas').releasePointerCapture?.(ev.pointerId);
   zoom?.losmaken();
   if (pannen) {
-    const klik = !pannen.bewogen;
+    const klik = !pannen.bewogen || Math.hypot(ev.clientX - pannen.x, ev.clientY - pannen.y) < 8;
     pannen = undefined;
     zoom?.stopPan();
+    const t = tikWacht;
+    tikWacht = undefined;
+    if (t && klik) {
+      if (t.soort === 'maat') { if (t.el.isConnected) tikOpMaat(t.doel, t.el.getBoundingClientRect()); }
+      else matenTik(t.x, t.y);
+      return;
+    }
+    if (t) return;
     if (klik) { selectie = undefined; render(); toonEigenschappen(); }
     return;
   }
@@ -757,6 +1140,10 @@ function naPointerUp(ev: PointerEvent) {
   }
   render();
   toonEigenschappen();
+  // Een tik (zonder slepen) op een maat boven een ruimte of raam: de maatvraag.
+  const m = maatNaKlik;
+  maatNaKlik = undefined;
+  if (m && s && !s.bewogen) tikOpMaat(m.doel, m.vak);
 }
 
 // ---------- eigenschappen ----------
@@ -790,6 +1177,33 @@ function draaiMeubel() {
     m.x = snap(cx - n.b / 2, 5);
     m.y = snap(cy - n.d / 2, 5);
   });
+}
+
+/** Een maatveld in cm voor de eigenschappen: typen (ook 4,5 m of +30) en Enter of uit het veld gaan past toe. */
+function cmMaatveld(label: string, waarde: number, bij: (w: number) => void, min = 20): HTMLElement {
+  const wrap = el('label', { class: 'maatveld' });
+  const i = cmVeld(waarde, { 'aria-label': `${label} in cm`, enterkeyhint: 'done' });
+  i.addEventListener('change', () => {
+    const w = leesCm(i.value, waarde);
+    if (w === undefined || w < min) { melding = w === undefined ? `"${i.value}" is geen maat: typ bv. 450, 4,5 m of 300+150.` : `${label}: minstens ${min} cm.`; toonEigenschappen(); return; }
+    if (Math.abs(w - waarde) >= 0.05) bij(w);
+  });
+  i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); i.blur(); } });
+  wrap.append(el('span', {}, label), i, el('span', { class: 'eenheid' }, 'cm'));
+  return wrap;
+}
+
+/** De lengte van zijde i van een vrije vorm (op de as): het tweede hoekpunt schuift langs de zijde. */
+function zijdeLengte(id: string, i: number, lengte: number) {
+  const oud = JSON.parse(JSON.stringify(plan())) as Plattegrond;
+  const r = oud.ruimtes.find((x) => x.id === id);
+  if (!r) return;
+  const v = vormVanDeel(delenVan(r)[0]!).map((q) => [...q] as Punt);
+  const a = v[i]!, b = v[(i + 1) % v.length]!, l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  v[(i + 1) % v.length] = [a[0] + ((b[0] - a[0]) * lengte) / l, a[1] + ((b[1] - a[1]) * lengte) / l];
+  const fout = vormFouten(v)[0];
+  if (fout) { melding = fout; toonEigenschappen(); return; }
+  wijzig('plan', (t) => { zetOmtrek(t.plan.ruimtes.find((x) => x.id === id)!, v); verzetOpeningen(oud, t.plan, id); });
 }
 
 function knop(tekst: string, f: () => void, cls = 'tweede'): HTMLButtonElement {
@@ -827,12 +1241,27 @@ function toonEigenschappen() {
     );
     if (r.delen?.length) {
       vak.append(el('p', { class: 'klein' }, `Samengestelde ruimte (${r.delen.length + 1} delen, L- of U-vorm). Verplaatsen kan; maten wijzig je door een wand te tekenen of een ruimte erin te tekenen.`));
-    } else {
+    } else if (r.omtrek) {
+      // Vrije vorm: de lengte van elke muur (op de as). Typen schuift het tweede hoekpunt langs de muur.
+      const v = vormVanDeel(delenVan(r)[0]!);
       const maten = el('div', { class: 'maten' });
-      maten.append(
-        getalVeld('Breedte', r.b, (w) => zet((x) => { x.b = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
-        getalVeld('Diepte', r.d, (w) => zet((x) => { x.d = Math.max(60, w); }), { min: 60, stap: 5, eenheid: 'cm' }),
-      );
+      v.forEach((a, i) => {
+        const b = v[(i + 1) % v.length]!;
+        const letter = (j: number) => 'ABCDEFGH'[j % v.length];
+        maten.append(cmMaatveld(`Muur ${letter(i)}${letter(i + 1)}`, Math.hypot(b[0] - a[0], b[1] - a[1]), (w) => zijdeLengte(r.id, i, w)));
+      });
+      vak.append(el('p', { class: 'klein' }, 'Vrije vorm met schuine muren. Typ een lengte (het tweede hoekpunt schuift langs die muur), sleep een hoekpunt, of tik op een maat in de tekening.'), maten);
+    } else {
+      // Breedte en diepte: de muur rechts (of onder) schuift, met de buurruimtes, zoals met de grepen.
+      const maten = el('div', { class: 'maten' });
+      const schuif = (kant: 'o' | 's', w: number) => {
+        const oud = JSON.parse(JSON.stringify(pl)) as Plattegrond;
+        const gewenst = kant === 'o' ? r.x + w : r.y + w;
+        let echt = gewenst;
+        wijzig('plan', (t) => { echt = verschuifWandNaar(oud, t.plan, r.id, kant, gewenst); });
+        if (Math.abs(echt - gewenst) > 0.5) { melding = 'Niet helemaal: een ruimte ernaast mag niet smaller worden dan 60 cm.'; toonEigenschappen(); }
+      };
+      maten.append(cmMaatveld('Breedte', r.b, (w) => schuif('o', w)), cmMaatveld('Diepte', r.d, (w) => schuif('s', w)));
       vak.append(maten);
     }
     const dl = el('dl', { class: 'detail' });
@@ -844,7 +1273,7 @@ function toonEigenschappen() {
     ]) dl.append(el('dt', {}, a!), el('dd', {}, b!));
     vak.append(dl, el('div', { class: 'knoppenrij' }));
     vak.lastElementChild!.append(knop('Verwijderen', verwijderSelectie, 'gevaar'));
-    vak.append(el('p', { class: 'klein' }, 'Tip: sleep de blauwe bolletjes om een wand te verschuiven; de buurruimte schuift mee.'));
+    vak.append(el('p', { class: 'klein' }, r.omtrek ? 'Tip: sleep een hoekpunt, of tik op een maat in de tekening om ze te typen.' : 'Tip: tik op een maat in de tekening om ze te typen, of sleep de blauwe bolletjes; de buurruimte schuift mee.'));
   } else if (s?.soort === 'opening') {
     const o = pl.openingen.find((x) => x.id === s.id);
     if (!o) { selectie = undefined; return toonEigenschappen(); }
@@ -1025,9 +1454,15 @@ function toonOverzicht() {
 }
 
 // ---------- gereedschap ----------
-function kiesGereedschap(g: Gereedschap) {
+function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPaneel>[1]) {
+  // Ruimte met maten: het paneel boven de tekening; een ander gereedschap sluit het.
+  if (g !== 'maten' && matenPaneelOpen()) sluitMatenPaneel();
   gereedschap = g;
   voorbeeldOpening = undefined;
+  if (g === 'maten') {
+    if (weergave !== 'plan') toonWeergave('plan');
+    openMatenPaneel(matenOmgeving, begin);
+  }
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === g));
   $('#pl-hint').textContent = GEREEDSCHAP.find((x) => x.code === g)?.hint ?? '';
   $('#pl-meubels').hidden = g !== 'meubel';
@@ -1038,6 +1473,7 @@ function kiesGereedschap(g: Gereedschap) {
 }
 
 function toonWeergave(w: 'plan' | 'gevels' | '3d') {
+  if (w !== weergave) sluitMaatVraag(true);
   weergave = w;
   // In 3D op een tablet: de 3D over de hele breedte, het gereedschap (voor de plattegrond) eronder.
   $('#view-plan').classList.toggle('driedmodus', w === '3d');
@@ -1116,7 +1552,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     const b = el('button', { type: 'button', 'data-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap) });
     b.append(el('span', {}, g.label));
     if (g.toets) b.append(el('kbd', {}, g.toets));
-    b.addEventListener('click', () => kiesGereedschap(g.code));
+    b.addEventListener('click', () => { sluitMaatVraag(true); kiesGereedschap(g.code); });
     return b;
   }));
   // Meubelpalet per groep.
@@ -1166,6 +1602,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       if (sleep?.bewogen && sleep.soort !== 'teken' && sleep.soort !== 'wand') ongedaan();
       sleep = undefined;
       pannen = undefined;
+      tikWacht = undefined;
       voorbeeld = undefined;
       voorbeeldWand = undefined;
     },
@@ -1173,6 +1610,10 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   const vlak = document.createElement('div');
   vlak.className = 'zoomvlak';
   houder.before(vlak);
+  // Het paneel Ruimte met maten staat over de hele breedte boven het gereedschap en de tekening (op een tablet blijft
+  // het zo boven het toetsenbord in beeld).
+  startMaten(matenOmgeving);
+  $('#view-plan .planraster').before(el('section', { id: 'pl-maatpaneel', class: 'maatpaneel', hidden: '', 'aria-label': 'Ruimte met maten' }));
   vlak.append(houder, zoom.knoppen({ selectie: selectieKader, grootScherm: $('#view-plan') }));
   houder.addEventListener('pointerdown', naPointerDown);
   houder.addEventListener('pointermove', naPointerMove);
@@ -1213,6 +1654,9 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   opWijziging((bron) => {
     beeldActueel = false;
     if (bron !== 'vervang') return;
+    // Een ander project: het paneel Ruimte met maten en een open maatvraag horen bij het vorige.
+    sluitMaatVraag(true);
+    if (matenPaneelOpen()) { sluitMatenPaneel(); gereedschap = 'kies'; for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === 'kies')); }
     if (weergave === '3d') toonNaastKnop();
     niveau = 0;
     selectie = undefined;
@@ -1220,7 +1664,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     viewer?.markeer?.(null);
     zoom?.passendMaken();
   });
-  $('#pl-ongedaan').addEventListener('click', () => ongedaan());
+  $('#pl-ongedaan').addEventListener('click', () => { sluitMaatVraag(true); ongedaan(); });
   $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());
   const wis = $<HTMLButtonElement>('#pl-leeg');
   wis.addEventListener('click', () => {
@@ -1277,8 +1721,33 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   kiesGereedschap('kies');
 }
 
+/** Wat het paneel Ruimte met maten van de plattegrond nodig heeft. */
+const matenOmgeving: MatenOmgeving = {
+  plan, niveau: () => niveau,
+  opnieuw: () => render(),
+  geplaatst: (id, tekst) => {
+    melding = tekst;
+    selectie = { soort: 'ruimte', id };
+    kiesGereedschap('kies');
+    // De nieuwe ruimte in beeld.
+    zoom?.passendMaken();
+  },
+  vlak: () => $('#pl-canvas').parentElement!,
+  svg: () => $('#pl-canvas').querySelector('svg'),
+  dicht: () => kiesGereedschap('kies'),
+  naar3D: () => toonWeergave('3d'),
+};
+
+/** Ruimte met maten openen van buiten de plattegrond (de 3D, de snelstart): eventueel tegen een gekozen muur. */
+export function openRuimteMetMaten(begin?: Parameters<typeof openMatenPaneel>[1]) {
+  kiesGereedschap('maten', begin);
+}
+
 /** Wordt opgeroepen na elke wijziging in de toestand. */
 export function naWijziging() {
+  // Een wijziging die niet van de open maatvraag komt (een veld, een ander gereedschap, slepen): de vraag hoort bij de
+  // toestand van daarnet, dus dicht (wat er getypt was, blijft).
+  if (maatVraagOpen() && !maatVraagBezig()) sluitMaatVraag(true);
   render();
   if (!sleep || sleep.soort === 'meubel' || sleep.soort === 'opening' || sleep.soort === 'daklicht') toonEigenschappen();
   else toonOverzicht();

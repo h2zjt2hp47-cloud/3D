@@ -2068,7 +2068,8 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
           return ruimte ? wandVan(ruimte) : R.soort === 'buiten' ? buitenAfw(R, y0) : null;
         };
         const top = onderHellendDak && buiten && y1 >= H - 0.1 ? { zijden: { 'y+': buiten } } : {};
-        voeg(grondPrisma(code, 'gevel', pleister, pts, y0, y1 - y0, { randen: rnd.map(afw), ...top }));
+        // Met `dingen`: een schuine buitenmuur hoort bij haar muurvlak, zoals een rechte (tik op de gevel in de 3D).
+        voeg(grondPrisma(metDing(opties, m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), 'gevel', pleister, pts, y0, y1 - y0, { randen: rnd.map(afw), ...top }));
         return;
       }
       // Binnenmuur die tot in het gevelvlak loopt (zie `Plan3DOpties.gevelkoppen`): de buitenmuur aan haar begin en einde.

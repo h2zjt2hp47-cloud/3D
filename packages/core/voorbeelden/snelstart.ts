@@ -95,17 +95,32 @@ export type SnelMaten = Record<string, number>;
 /**
  * Een getypte maat lezen, in **cm** tenzij er een eenheid bij staat: "450" = 450 cm, "4,5 m" of "4.5m" = 450 cm,
  * "4500 mm" = 450 cm. Een kommagetal zonder eenheid onder 50 is meter ("4,5" = 450 cm: een muur van 4,5 cm bestaat niet).
- * Geeft de waarde in de eenheid van de maat (cm of mm; een aantal wordt afgerond), of undefined als er geen getal staat.
- * Begrenzen tot min en max doet het scherm.
+ * Een rekensom met + en − mag ook, elk stuk met zijn eigen eenheid: "300+150" = 450 cm, "4 m - 20" = 380 cm (zoals een
+ * inmeter optelt wat hij in stukken mat). Geeft de waarde in de eenheid van de maat (cm of mm; een aantal wordt
+ * afgerond), of undefined als er geen getal staat. Begrenzen tot min en max doet het scherm (een som kan 0 of minder zijn).
  */
 export function leesMaat(tekst: string, m: Pick<SnelMaat, 'eenheid'>): number | undefined {
-  const r = /^(\d+(?:[.,]\d+)?)(mm|cm|m)?$/.exec(tekst.trim().toLowerCase().replace(/\s+/g, ''));
-  if (!r) return undefined;
-  const x = Number(r[1]!.replace(',', '.'));
-  if (m.eenheid === 'stuks') return Math.round(x);
-  const eenheid = r[2] ?? (/[.,]/.test(r[1]!) && x < 50 ? 'm' : 'cm');
-  const cm = eenheid === 'm' ? x * 100 : eenheid === 'mm' ? x / 10 : x;
-  return m.eenheid === 'mm' ? Math.round(cm * 10) : Math.round(cm);
+  const schoon = tekst.trim().toLowerCase().replace(/\s+/g, '').replace(/[−–]/g, '-');
+  // Stukken: een getal met een eventuele eenheid, het eerste zonder teken, de volgende na + of −.
+  const stuk = /([+-]?)(\d+(?:[.,]\d+)?)(mm|cm|m)?/y;
+  let som = 0, n = 0;
+  stuk.lastIndex = 0;
+  while (stuk.lastIndex < schoon.length) {
+    const r = stuk.exec(schoon);
+    if (!r || (n === 0 && r[1]) || (n > 0 && !r[1])) return undefined;
+    const x = Number(r[2]!.replace(',', '.'));
+    let waarde: number;
+    if (m.eenheid === 'stuks') waarde = x;
+    else {
+      const eenheid = r[3] ?? (/[.,]/.test(r[2]!) && x < 50 ? 'm' : 'cm');
+      waarde = eenheid === 'm' ? x * 100 : eenheid === 'mm' ? x / 10 : x;
+    }
+    som += r[1] === '-' ? -waarde : waarde;
+    n++;
+  }
+  if (!n) return undefined;
+  if (m.eenheid === 'stuks') return Math.round(som);
+  return m.eenheid === 'mm' ? Math.round(som * 10) : Math.round(som);
 }
 const r5 = (x: number) => Math.round(x / 5) * 5;
 const binnen = (x: number, min: number, max: number) => Math.min(max, Math.max(min, x));
@@ -323,6 +338,23 @@ export function aanbouwNaarPlan(k: Keuzes): { plan: Plattegrond; posities: DemoP
     plan.daklichten = [{ id: 'k1', type, x: r5(B / 2 - t.b / 2), y: r5(W + Da / 2 - t.d / 2), b: t.b, d: t.d }];
   }
   return { plan, posities: w.posities };
+}
+
+/**
+ * Alleen de bestaande woning van `aanbouwNaarPlan` (zonder de uitbouw, haar raampartij, de doorgang en de koepel): om er
+ * daarna in de plattegrond zelf een aanbouw tegen te zetten met gemeten maten (bv. met een schuine zijmuur). De voordeur
+ * ligt boven op het plan, de achtergevel onderaan.
+ */
+export function bestaandeWoning(k: Keuzes): { plan: Plattegrond; posities: DemoPositie[] } {
+  const { plan, posities } = aanbouwNaarPlan(k);
+  const W = 900;
+  plan.ruimtes = plan.ruimtes.filter((r) => r.id !== 'uitbouw');
+  plan.openingen = plan.openingen.filter((o) => !(o.as === 'h' && o.lijn > W - 0.5 && (o.niveau ?? 0) === 0));
+  delete plan.daklichten;
+  const vlakken = plan.gevelOntwerp?.vlakken;
+  if (vlakken) for (const s of Object.keys(vlakken)) if (s.startsWith('uitbouw:')) delete vlakken[s];
+  const nodig = new Set(plan.openingen.map((o) => o.positie));
+  return { plan, posities: posities.filter((p) => nodig.has(p.id)) };
 }
 
 /** Daklichten verdelen en tellen: in `daklichten.ts` (ook gebruikt door de stijlen). */

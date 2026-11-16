@@ -4,7 +4,7 @@
  * krijgt alleen een richting en een hoogte in graden (`viewer.zon`).
  */
 import {
-  gevelAanzichten, SEIZOENEN, uurTekst, zomertijd, zonnestand, zonOpEnOnder, zonOpGevels, zonRichtingOpPlan, zonTekst,
+  gevelAanzichten, SEIZOENEN, uurTekst, zomertijd, zonnestand, zonOpEnOnder, zonOpGevels, zonOpRichting, zonRichtingOpPlan, zonTekst,
   type GevelKant, type Seizoen,
 } from '../../core/src/index.js';
 import { $, el, getal } from './hulp.js';
@@ -47,7 +47,8 @@ export function toonZon() {
   $('#pl-zon-tekst').textContent = `${d.dag} ${MAANDEN[d.maand - 1]}, ${uurTekst(uur)} (${zomertijd(d.maand, d.dag) ? 'zomertijd' : 'wintertijd'}): de zon staat ${zonTekst(stand)}.`
     + (dag ? ` Zon op om ${uurTekst(dag.op)}, onder om ${uurTekst(dag.onder)}.` : '');
   // Per gevel: wanneer staat de zon erop?
-  const namen = new Map(gevelAanzichten(plan, (o) => ({ voordeur: positieVan(o)?.keuzes.type === 'voordeur' })).map((g) => [g.kant, g.naam.replace(/ \(.*\)$/, '')]));
+  const aanzichten = gevelAanzichten(plan, (o) => ({ voordeur: positieVan(o)?.keuzes.type === 'voordeur' }), undefined, { schuin: true });
+  const namen = new Map(aanzichten.filter((g) => !g.schuin).map((g) => [g.kant, g.naam.replace(/ \(.*\)$/, '')]));
   const tabel = el('table', { class: 'zon-gevels' });
   tabel.append(el('caption', {}, `Zon op de gevels op ${d.dag} ${MAANDEN[d.maand - 1]}`));
   const kop = el('tr');
@@ -62,6 +63,19 @@ export function toonZon() {
       el('td', {}, g.windstreek),
       el('td', {}, g.periodes.length ? g.periodes.map((p) => `${uurTekst(p.van)} – ${uurTekst(p.tot)}`).join(' en ') : 'geen zon'),
       el('td', { class: 'num' }, g.uren ? getal(g.uren, 1) : '–'),
+    );
+    tbody.append(tr);
+  }
+  // Een schuine gevel: een eigen rij, met de richting waarin ze kijkt.
+  for (const g of aanzichten) {
+    if (!g.schuin) continue;
+    const z = zonOpRichting(d.maand, d.dag, g.schuin.kijkt, noord);
+    const tr = el('tr', { 'data-schuin': String(g.schuin.kijkt) });
+    tr.append(
+      el('td', {}, g.naam),
+      el('td', {}, z.windstreek),
+      el('td', {}, z.periodes.length ? z.periodes.map((p) => `${uurTekst(p.van)} – ${uurTekst(p.tot)}`).join(' en ') : 'geen zon'),
+      el('td', { class: 'num' }, z.uren ? getal(z.uren, 1) : '–'),
     );
     tbody.append(tr);
   }
