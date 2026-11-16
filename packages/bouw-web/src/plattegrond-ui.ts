@@ -128,7 +128,7 @@ let meubelType = 'bank3';
 let daklichtType = 'koepel_100';
 /**
  * Het palet dat open staat (Meubel of Daklicht), of geen. Het blijft open na het plaatsen (dan staat Selecteren aan: wat
- * je plaatste, kun je meteen verslepen); *← Gereedschap* of een ander gereedschap sluit het.
+ * je plaatste, kun je meteen verslepen); *← Terug* of een ander gereedschap sluit het.
  */
 let palet: Palet | undefined;
 /** De groep van het meubelpalet die open staat (Zitten, Slapen, …, Trappen). */
@@ -1992,7 +1992,7 @@ function toonGereedschapKaart() {
   const nieuw = sleutel !== paletSleutel;
   paletSleutel = sleutel;
   const hint = tech ? techniekHint() : open && gereedschap === 'kies'
-    ? `Tik op wat je plaatste om het te verslepen, of kies hiernaast ${open === 'meubel' ? 'een meubel' : 'een daklicht'} om nog een te plaatsen. ← Gereedschap brengt het gereedschap terug.`
+    ? `Klik op wat je plaatste om het te verslepen, of kies hiernaast ${open === 'meubel' ? 'een meubel' : 'een daklicht'} om nog een te plaatsen. ← Terug brengt het gereedschap terug.`
     : GEREEDSCHAP.find((x) => x.code === gereedschap)?.hint ?? '';
   $('#pl-hint').textContent = voorVinger(hint);
   $('#pl-gereedschap').hidden = tech || !!open;
