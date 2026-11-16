@@ -33,6 +33,7 @@ import {
   type Plattegrond,
 } from './plattegrond.js';
 import { gebouwenVan } from './maatinvoer.js';
+import { losseWandHoogte, losseWandRuimte, losseWandVlak } from './lossewand.js';
 import type { MaatlijnResultaat, TekeningResultaat, VormResultaat } from './types.js';
 
 export interface GevelInfo {
@@ -327,8 +328,35 @@ export function gevelAanzichten(plan: Plattegrond, info: (o: Opening) => GevelIn
         }
       }
     }
+    // Losse wanden buiten (ronde 2d, een tuinmuur): vóór de gevel, als je ze van deze kant ziet (geen ruimte ertussen). Na
+    // alles van het gebouw: ze staan dichter bij wie kijkt. De maten van de gevel blijven die van het gebouw.
+    let wmin = umin, wmax = umax;
+    if (!schuin) {
+      const naarKijker: [number, number] = kant === 'boven' ? [0, -1] : kant === 'onder' ? [0, 1] : kant === 'links' ? [-1, 0] : [1, 0];
+      const alleDelen = plan.ruimtes.flatMap(delenVan);
+      for (let n = 0; n < niveaus; n++) {
+        const p = niveauPlan(plan, n);
+        for (const w of p.losseWanden ?? []) {
+          if (losseWandRuimte(p, w)) continue;
+          const v = losseWandVlak(w, murenVan(p), p.losseWanden);
+          if (v.punten.length < 3) continue;
+          const cx = v.punten.reduce((t, q) => t + q[0], 0) / v.punten.length, cy = v.punten.reduce((t, q) => t + q[1], 0) / v.punten.length;
+          // Staat er een ruimte tussen de wand en wie kijkt, dan zie je ze niet.
+          const verborgen = alleDelen.some((q) => (naarKijker[1]
+            ? cx > q.x && cx < q.x + q.b && (naarKijker[1] < 0 ? q.y < cy : q.y + q.d > cy)
+            : cy > q.y && cy < q.y + q.d && (naarKijker[0] < 0 ? q.x < cx : q.x + q.b > cx)));
+          if (verborgen) continue;
+          const us = v.punten.map((q) => nu(as === 'h' ? q[0] : q[1]));
+          const u0 = Math.min(...us), u1 = Math.max(...us), h = losseWandHoogte(plan, w), y0 = vloerHoogte(plan, n);
+          const afw = gevelAfwerking(plan, cat, w.gevel ?? plan.gevelOntwerp?.standaard);
+          vormen.push({ code: `wand.${w.id}`, x: r1(u0), y: sy(y0 + h), breedte: r1(u1 - u0), hoogte: r1(h), vulling: afw.kleur, lijn: '#55524c', ...patroonVan(afw) });
+          wmin = Math.min(wmin, u0); wmax = Math.max(wmax, u1);
+        }
+      }
+    }
     // Maaiveld.
-    vormen.push({ code: 'maaiveld', x: r1(umin - 80), y: sy(0), breedte: r1(umax - umin + 160), hoogte: 4, vulling: '#6b6862' });
+    const m0 = wmin < umin ? wmin - 40 : umin, m1 = wmax > umax ? wmax + 40 : umax;
+    vormen.push({ code: 'maaiveld', x: r1(m0 - 80), y: sy(0), breedte: r1(m1 - m0 + 160), hoogte: 4, vulling: '#6b6862' });
 
     // Kettingmaten per verdieping (onder de tekening), en de totale breedte.
     let afstand = 70;

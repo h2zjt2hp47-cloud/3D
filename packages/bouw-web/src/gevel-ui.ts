@@ -182,6 +182,11 @@ export function toonGevelEditor() {
     if (doel) markeer(getroffen(g, doel), 'gv-doel');
     else if (onderMuis && (gereedschap === 'pipet' || gereedschap === 'raam') && g.vlakken.some((v) => v.code === onderMuis!.code)) markeer([onderMuis.code], 'gv-doel');
     if (gekozen) markeer(g.tekening.vormen.filter((v) => v.code === `kader.${gekozen}`).map((v) => v.code), 'gv-gekozen');
+    // Een losse muur buiten (tuinmuur) staat voor de gevel: in de editor half doorzichtig en niet aan te tikken, zodat je
+    // de gevel en de ramen erachter nog kan verven en verschuiven (de afdruk toont ze vol).
+    for (const r of svg.querySelectorAll<SVGElement>('[data-code^="wand."]')) {
+      for (const x of [r, r.nextElementSibling?.classList.contains('patroon') ? r.nextElementSibling as SVGElement : undefined]) if (x) { x.style.opacity = '0.55'; x.style.pointerEvents = 'none'; }
+    }
   }
   zoom?.bijwerken();
   vak.dataset.gereedschap = gereedschap;

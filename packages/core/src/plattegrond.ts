@@ -12,6 +12,7 @@ import {
 } from './dak.js';
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
 import type { WoningOpbouw, WoningOpbouwCatalogus } from './opbouw.js';
+import { controleerLosseWanden, losseWandBlokken, type LosseWand } from './lossewand.js';
 import {
   toestelMaten, leidingVerloop, techniekBlokken, toestelVoetafdruk, voorRichting,
   type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
@@ -146,6 +147,12 @@ export interface Plattegrond {
    * de afgewerkte weergave, de gevels en de offerte lezen dit veld niet.
    */
   opbouw?: WoningOpbouw;
+  /**
+   * Losse wanden (ronde 2d): muren die geen ruimte opdelen (een muur die halverwege stopt, een halfhoog muurtje, een
+   * tuinmuur), elk met een `niveau`. Ze komen niet in `murenVan`: de ruimtes, hun oppervlakte, de muren en de controles
+   * blijven zoals ze zijn. Zie lossewand.ts. Ontbreekt = alles zoals vroeger.
+   */
+  losseWanden?: LosseWand[];
 }
 
 /** Kant van de woning (op de plattegrond): boven, onder, links of rechts. */
@@ -652,6 +659,7 @@ export function niveauPlan(plan: Plattegrond, niveau: number): Plattegrond {
     ...(plan.daklichten ? { daklichten: plan.daklichten.filter((l) => niveauVan(l) === niveau) } : {}),
     ...(plan.toestellen ? { toestellen: plan.toestellen.filter((t) => niveauVan(t) === niveau) } : {}),
     ...(plan.leidingen ? { leidingen: plan.leidingen.filter((l) => niveauVan(l) === niveau) } : {}),
+    ...(plan.losseWanden ? { losseWanden: plan.losseWanden.filter((w) => niveauVan(w) === niveau) } : {}),
   };
 }
 
@@ -1257,6 +1265,8 @@ export interface PlanMelding {
   /** Techniek: het toestel of de leiding waar de melding over gaat. */
   toestel?: string;
   leiding?: string;
+  /** Een losse wand (ronde 2d). */
+  wand?: string;
 }
 
 const BUITEN: OpeningSoort[] = ['raam', 'buitendeur', 'schuifraam', 'garagepoort'];
@@ -1297,6 +1307,7 @@ export function controleerPlan(plan: Plattegrond, cat?: PlanCatalogus): PlanMeld
   }
   controleerDak(plan, cat, uit);
   if (plan.toestellen?.length || plan.leidingen?.length) controleerTechniek(plan, cat, uit);
+  if (plan.losseWanden?.length) uit.push(...controleerLosseWanden(plan));
   return uit;
 }
 
@@ -2413,6 +2424,11 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       cursor = b;
     }
     stuk(`muur_${m.id}_eind`, cursor, einde, 0, H);
+  }
+
+  // Losse wanden (ronde 2d): op hun eigen hoogte, in hun afwerking; ze delen niets op. Met `dingen`: het ding `wand:<id>`.
+  for (const w of plan.losseWanden ?? []) {
+    for (const b of losseWandBlokken(plan, cat, w, muren)) voeg({ ...b, code: metDing(opties, `wand:${w.id}`, b.code) });
   }
 
   // Meubels.
