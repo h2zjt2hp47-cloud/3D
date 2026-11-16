@@ -242,8 +242,20 @@ export function vraagMaat(v: MaatVraag) {
   ok.addEventListener('click', () => { if (pasToe(true)) sluitMaatVraag(true); });
   doos.append(ok);
 
-  /** Leest alle velden en past ze toe; geeft false als iets niet kan (de melding staat er dan). */
+  /**
+   * Leest alle velden en past ze toe; geeft false als iets niet kan (de melding staat er dan). Wat al toegepast was, gaat
+   * dan terug naar het begin: typ je 650 waar het niet kan, dan blijft de 65 van daarnet niet staan.
+   */
   function pasToe(bevestig = false): boolean {
+    const ok = pasToe2(bevestig);
+    if (!ok && vraag?.toegepast) {
+      bezig = true;
+      try { vraag.v.terug(); } finally { bezig = false; }
+      vraag.toegepast = false;
+    }
+    return ok;
+  }
+  function pasToe2(bevestig: boolean): boolean {
     if (!vraag) return false;
     const waarden: Record<string, number> = {};
     for (const { veld, input } of velden) {

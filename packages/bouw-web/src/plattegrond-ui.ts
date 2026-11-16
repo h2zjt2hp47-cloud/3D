@@ -107,6 +107,8 @@ let pannen: { bewogen: boolean; x: number; y: number } | undefined;
  * maten). Schuift de vinger meer dan 8 beeldpunten, dan was het verschuiven van het beeld.
  */
 let tikWacht: { soort: 'maat'; doel: string; el: Element } | { soort: 'gevel'; x: number; y: number } | undefined;
+/** Een maat boven een ruimte, raam of meubel: na het loslaten zonder slepen de maatvraag (anders was het verslepen). */
+let maatNaKlik: { doel: string; vak: DOMRect; x: number; y: number } | undefined;
 let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeldOpening: Opening | undefined;
 let weergave: 'plan' | 'gevels' | '3d' = 'plan';
@@ -824,7 +826,13 @@ function naPointerDown(ev: PointerEvent) {
   const maat = doel.closest('[data-maat]') as SVGElement | null;
   // Een tik ernaast sluit de maatvraag (wat getypt is, blijft).
   if (maatVraagOpen()) sluitMaatVraag(true);
-  if ((maat && gereedschap === 'kies') || gereedschap === 'maten') {
+  // Ligt er onder de maat een ruimte, raam of meubel: slepen versleept dat (zoals vroeger), een tik zonder schuiven opent
+  // de maat. Het vlak van de maat onthouden we nu: render() vervangt de tekening.
+  const onderMaat = maat && gereedschap === 'kies'
+    ? (document.elementsFromPoint(ev.clientX, ev.clientY).find((e) => e !== maat && e.closest('#pl-canvas') && e.closest('[data-soort]:not([data-soort="leeg"]):not([data-soort="muur"])'))?.closest('[data-soort]') as SVGElement | undefined)
+    : undefined;
+  maatNaKlik = onderMaat && maat ? { doel: maat.dataset.maat!, vak: maat.getBoundingClientRect(), x: ev.clientX, y: ev.clientY } : undefined;
+  if (((maat && gereedschap === 'kies') || gereedschap === 'maten') && !onderMaat) {
     // Pas bij het loslaten (als de vinger niet schoof): de maat aantikken, of met Ruimte met maten de gevel kiezen.
     // Slepen verschuift het beeld, zoals op een leeg stuk.
     tikWacht = maat && gereedschap === 'kies' ? { soort: 'maat', doel: maat.dataset.maat!, el: maat } : { soort: 'gevel', x: p.x, y: p.y };
@@ -855,11 +863,11 @@ function naPointerDown(ev: PointerEvent) {
     return;
   }
   if (gereedschap === 'daklicht') { plaatsDaklicht(p.x, p.y); return; }
-  if (gereedschap !== 'kies') { plaatsOpening(gereedschap, p.x, p.y); return; }
+  if (gereedschap !== 'kies' && gereedschap !== 'maten') { plaatsOpening(gereedschap, p.x, p.y); return; }
 
   const greep = doel.closest('[data-greep]') as SVGElement | null;
   const hoekgreep = doel.closest('[data-hoekgreep]') as SVGElement | null;
-  const item = doel.closest('[data-soort]') as SVGElement | null;
+  const item = (onderMaat ?? doel.closest('[data-soort]')) as SVGElement | null;
   const orig = JSON.stringify(plan());
   if (greep && selectie?.soort === 'ruimte') {
     sleep = { soort: 'greep', start: p, id: selectie.id, kant: greep.dataset.greep as Sleep['kant'], bewogen: false, orig };
@@ -907,6 +915,8 @@ function naPointerMove(ev: PointerEvent) {
   }
   const dx = p.x - sleep.start.x, dy = p.y - sleep.start.y;
   if (!sleep.bewogen && Math.hypot(dx, dy) < 4) return;
+  // Gestart op een maat: pas slepen als de vinger meer dan 8 beeldpunten schoof (anders is het een tik op de maat).
+  if (!sleep.bewogen && maatNaKlik && Math.hypot(ev.clientX - maatNaKlik.x, ev.clientY - maatNaKlik.y) < 8) return;
   if (!sleep.bewogen && sleep.soort !== 'teken') momentopname();
   sleep.bewogen = true;
   if (sleep.soort === 'wand') {
@@ -1115,6 +1125,10 @@ function naPointerUp(ev: PointerEvent) {
   }
   render();
   toonEigenschappen();
+  // Een tik (zonder slepen) op een maat boven een ruimte of raam: de maatvraag.
+  const m = maatNaKlik;
+  maatNaKlik = undefined;
+  if (m && s && !s.bewogen) tikOpMaat(m.doel, m.vak);
 }
 
 // ---------- eigenschappen ----------
