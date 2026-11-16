@@ -333,7 +333,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 8 | 2 | **Klaar (16/11, hoofdstukken 19 en 25)**, ook op de schermen; de aanbouw staat nog niet op bouwdelen **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Klaar (16/11, hoofdstukken 20 en 25)**, ook op de schermen: **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
 | 10 | 2 | **Klaar (16/11, hoofdstukken 24 en 28), ook op het scherm; zonwering en avondbeeld nog niet:** **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
-| 11 | 2 | *(loopt sinds 16/11)* **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik; de bestaande woning neutraal en buiten de telling; tussen twee buren; werk zonder ding (afbraak, container) als regel; de uitbouw uit hoofdstuk 10 als voorbeeldproject | M |
+| 11 | 2 | ~~**Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik; de bestaande woning neutraal en buiten de telling; tussen twee buren; werk zonder ding (afbraak, container) als regel; de uitbouw uit hoofdstuk 10 als voorbeeldproject~~ **klaar** (hoofdstuk 31; fundering en afvoeren alleen als post) | M |
 | 11b | 2 | ~~**Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering~~ **klaar** (hoofdstuk 30; het paneel in de plattegrond heet nog *Lichtkoepel*) | M |
 | 12 | 2 | **Vloerafwerking** (legpatroon, formaat, voeg, plinten), het **plafond** en de rest van de afwerkingen | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
@@ -1057,4 +1057,48 @@ mee (zoals de zonweringskast); geen zonwering op koepels of lichtstraten.
 
 **Open punten (na te vragen bij een vakman):** 5 m en 50 cm per screen, 3° helling, een opzetkast van 10 cm en een ventilator van
 50 cm zijn eigen richtwaarden; hoe een monteur twee screens op een hef-schuif in drie delen verdeelt ("op de stijlen" geeft ±3,3 + 1,7 m).
+
+## 31. Gebouwd op 16/11: detail van de offerte (ronde 11)
+
+| Wat | Inhoud |
+|---|---|
+| **Bestaand** | Schakelaar *Bestaand (blijft)* bij een ruimte: lichte, effen tint in plan, gevels en 3D, "bestaand (blijft)" in plaats van de m². De muur tussen bestaand en nieuw is de bestaande gevel: niet gebouwd, een opening erin wel (post *Opening in de bestaande gevel*). Telt nergens mee: overzicht, meetstaat, EPB, stabiliteit, techniek, controles. De snelstart *Aanbouw* zet het vanzelf. |
+| **Tegen de buren** | Een muurvlak kan tegen de buren staan: niet gebouwd, neutraal, met een eenvoudig volume van de buren erachter (per verdieping, met de vorm van de topgevel; de camera springt niet) en een strook "buren" in het plan. Schakelaar in het keuzepaneel van een gevel en in de gevel-editor. Snelstart *Aanbouw*: *Ligging* (tussen twee buren, één buur, vrijstaand; vrijstaand is de standaard, dus geen extra tik). |
+| **Posten** | De lijst die een aannemer op zijn offerte zet, in de volgorde van het bouwen (voorbereiding, ruwbouw, wind- en waterdicht, binnenafwerking, techniek, supplementen), elk met een hoeveelheid, detail in gewone zinnen, hoeveelheden voor de aannemer en de delen in de 3D. Alles komt uit wat al bestaat (opbouw, meetstaat, posities, techniek, daklichten). |
+| **Werk zonder ding** | *+ Werk toevoegen* in het overzicht: tegels (afbraak terras, grondwerken, container, werfinrichting, opkuis) of vrije tekst. Bewaard bij het project. |
+| **Overzicht** | Kaart *Werken*: per groep, alles dicht tot je openklapt; *Toon in 3D* duidt de delen aan; *Kopieer als tekst* plakt als tabel in Excel of Word. |
+| **3D en bestand voor de klant** | Een tik op een ding toont onderaan het keuzepaneel zijn posten (dicht). De kijker toont de posten als lijst; een tik in de 3D opent de posten van dat ding. Geen m², lopende meters of hoeveelheden voor de aannemer naar de klant, geen prijswoorden. |
+| **Voorbeeldproject** | *Uitbouw achter een rijwoning (voorbeeld, 5,40 × 4,00 m)* via Projecten: tussen twee buren, houtskelet, plat dak met dakrand, drie platte dakramen 120 × 120 met screen, hef-schuifraam 4,00 × 2,35 m met twee screens en een zelfregelend rooster, achtergevel in hout staand, binnen schilderklaar, tegels, een kleine wc, elektriciteit, buitenkraan en drie werken zonder ding. Breedte en diepte, de wc en de plaats van de toestellen zijn voorbeeldmaten. |
+
+Gemeten (groot scherm en tablet gelijk): voorbeeldproject tot de 3D in 2 tikken; een werk toevoegen in 3; een post openklappen en
+*Toon in 3D* in 2; een tik op het dak tot het detail in 2. Fase 1 ongewijzigd (eerste 3D 4, uitbouw 16, variant 2, meegeven 2).
+
+**De tabel van hoofdstuk 10, opnieuw gescoord (na rondes 11 en 11b):**
+
+| Post | Kan het nu? |
+|---|---|
+| Bestaande woning | Ja: neutraal, telt niet mee. |
+| Afbraak terras, grondwerken, container | Ja: als werk zonder ding. |
+| Fundering, betonplaat, kimblokken | Deels: de vloerplaat uit de opbouw; de fundering alleen als post (lopende meter), niet getekend. |
+| Houtskeletwanden | Ja: post met de lagen, constructie en doorsnede. |
+| Dakstructuur | Ja: post plat dak en de constructieweergave (randbalken niet apart). |
+| Dakopbouw, dakrand, nood- en regenafvoer | Ja als post; de afvoeren zijn niet getekend. |
+| Drie platte dakramen 120 × 120 met zonwering | Ja (ronde 11b). |
+| Hefschuifraam 4,00 × 2,35 m | Ja. |
+| Twee screens | Ja (ronde 11b). |
+| Raamventilatie | Ja (ronde 11b; rooster of raamventilator). |
+| Thermisch behandeld hout verticaal, zijwanden tegen de buren | Ja. |
+| Gipsplaat op wand en plafond, schilderklaar | Ja als post; het plafond als eigen keuze komt in ronde 12. |
+| Vloeropbouw met tegels | Ja: post met de lagen, en in de doorsnede. |
+| Elektriciteit | Ja, behalve een avondbeeld. |
+| Sanitair: hangtoilet, buitenkraan, leidingen | Ja. |
+
+**Wat nog niet kan:** fundering en afvoeren getekend; het volume van de buren bij een schuine muur, in de constructie en in de
+gevelaanzichten (het terras steekt uit voor de buren); het dak van de bestaande woning deelt het ding *dak* met het nieuwe dak; de
+bestaande ramen staan met aantal 0 in de lijst van posities.
+
+**Open punten (na te vragen):** de indeling in groepen en de titels van de posten; de fundering telt alleen de nieuwe buitenmuren;
+"één regenafvoer per begonnen 50 m²" is een eigen voorstel; hoe de detailzinnen klinken voor een klant. Twee wijzigingen gelden voor
+alle projecten: de wandafwerking *schilderklaar* staat in de lijst, en een "×" in de naam van een download wordt een x (Chrome gaf
+anders een bestand zonder extensie).
 
