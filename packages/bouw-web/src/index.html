@@ -874,7 +874,8 @@ body.klantmodus #view-projecten .positieacties, body.klantmodus #view-projecten 
 /* Plattegrond: geen gereedschap, eigenschappen, dak of gevelpalet, Plattegrond wissen of + Verdieping; de tekening en de
    gevels vangen geen tik (zoomen met de knoppen −, + en Passend blijft); geen doorsnede (de lagen zijn technisch). */
 body.klantmodus #view-plan .alleen-plan, body.klantmodus #view-plan .alleen-gevel, body.klantmodus #pl-hint, body.klantmodus #gv-hint,
-body.klantmodus #pl-niveaus button.tweede, body.klantmodus #pl-niveaus button.gevaar, body.klantmodus [data-pl-weergave="doorsnede"] { display: none !important; }
+body.klantmodus #pl-niveaus button.tweede, body.klantmodus #pl-niveaus button.gevaar, body.klantmodus [data-pl-weergave="doorsnede"],
+body.klantmodus [data-gevel-buren] { display: none !important; }
 body.klantmodus #pl-canvas, body.klantmodus #gv-canvas { pointer-events: none; }
 body.klantmodus #pl-zoomhint, body.klantmodus #view-plan .planraster > aside.links { display: none !important; }
 body.klantmodus #view-plan:not(.groot-scherm) .planraster { grid-template-columns: minmax(0, 1fr) 340px; }
