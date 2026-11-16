@@ -22,10 +22,26 @@ import {
   type Opening,
   type PlanCatalogus,
   type Plattegrond,
+  ALLE_VAKKEN,
+  TECHNIEK_VAKKEN,
+  leidingVerloop,
+  maatVan,
+  toestelMaten,
+  vloerHoogte,
+  type TechniekCatalogus,
+  type TechniekVak,
+  type Toestel,
+  type ToestelType,
 } from './plattegrond.js';
 
 export interface PlanSvgOpties {
-  selectie?: { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht'; id: string };
+  selectie?: { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'toestel' | 'leiding'; id: string };
+  /**
+   * Techniek (ronde 10): een teken per toestel en een gekleurde lijn per leiding, per vak aan of uit: `true` = alle vakken,
+   * of de lijst van de vakken die getekend worden. Vraagt `cat.techniek`. Ontbreekt = geen techniek (de tekening van
+   * vroeger). Een leiding in de vloer is gestreept, tegen het plafond streep-punt, in de wand of op een eigen hoogte vol.
+   */
+  techniek?: boolean | TechniekVak[];
   /** Hellend dak boven deze verdieping: de rand met de oversteek (stippellijn) en de nok of de hoge kant. */
   dakLijnen?: { omtrek: { x: number; y: number; b: number; d: number }; nok: { x1: number; y1: number; x2: number; y2: number }; tekst: string };
   /** Lichtstraten krijgen een nok in de tekening: de codes (`type`) die een lichtstraat zijn. */
@@ -71,9 +87,23 @@ export function planKader(plan: Plattegrond, marge = 130): { x: number; y: numbe
   return { x: x0 - marge, y: y0 - marge, b: x1 - x0 + 2 * marge, d: y1 - y0 + 2 * marge };
 }
 
+/**
+ * De passende viewBox met de techniek erbij: een buitenunit, een leiding naar de straat of naar de regenwaterput ligt
+ * vaak buiten het kader van de ruimtes. Zonder toestellen en leidingen is ze gelijk aan `planKader`.
+ */
+export function planKaderMetTechniek(plan: Plattegrond, marge = 130): { x: number; y: number; b: number; d: number } {
+  const k = planKader(plan, marge);
+  const punten = [...(plan.toestellen ?? []).map((t): Punt => [t.x, t.y]), ...(plan.leidingen ?? []).flatMap((l) => l.punten)];
+  if (!punten.length) return k;
+  const x0 = Math.min(k.x, ...punten.map((p) => p[0] - 60)), y0 = Math.min(k.y, ...punten.map((p) => p[1] - 60));
+  const x1 = Math.max(k.x + k.b, ...punten.map((p) => p[0] + 60)), y1 = Math.max(k.y + k.d, ...punten.map((p) => p[1] + 60));
+  return { x: x0, y: y0, b: x1 - x0, d: y1 - y0 };
+}
+
 export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: PlanSvgOpties = {}): string {
   const muren = murenVan(plan);
-  const vb = opties.viewBox ?? planKader(plan);
+  // Met techniek ook wat buiten de woning ligt (buitenunit, leiding naar buiten); zonder blijft het kader van vroeger.
+  const vb = opties.viewBox ?? (opties.techniek && cat.techniek ? planKaderMetTechniek(plan) : planKader(plan));
   const sel = opties.selectie;
   const fouten = opties.fouten ?? new Set<string>();
   // Tekstfactor: 1 bij passend beeld, kleiner bij inzoomen.
@@ -152,6 +182,11 @@ export function tekenPlattegrond(plan: Plattegrond, cat: PlanCatalogus, opties: 
       ? (l.b >= l.d ? `<line x1="${n(l.x)}" y1="${n(l.y + l.d / 2)}" x2="${n(l.x + l.b)}" y2="${n(l.y + l.d / 2)}" ${lijn}/>` : `<line x1="${n(l.x + l.b / 2)}" y1="${n(l.y)}" x2="${n(l.x + l.b / 2)}" y2="${n(l.y + l.d)}" ${lijn}/>`)
       : `<line x1="${n(l.x)}" y1="${n(l.y)}" x2="${n(l.x + l.b)}" y2="${n(l.y + l.d)}" ${lijn}/><line x1="${n(l.x + l.b)}" y1="${n(l.y)}" x2="${n(l.x)}" y2="${n(l.y + l.d)}" ${lijn}/>`;
     uit.push(`<g data-soort="daklicht" data-id="${esc(l.id)}" style="cursor:move"><rect x="${n(l.x)}" y="${n(l.y)}" width="${n(l.b)}" height="${n(l.d)}" fill="#bfe0ee" fill-opacity="${gekozen ? 0.5 : 0.3}" ${lijn}/>${binnen}</g>`);
+  }
+  // Techniek (alleen met de optie, een catalogus en iets om te tekenen): leidingen en tekens van de toestellen.
+  if (opties.techniek && cat.techniek && (plan.toestellen?.length || plan.leidingen?.length)) {
+    const vakken = new Set(opties.techniek === true ? ALLE_VAKKEN : opties.techniek);
+    uit.push(techniekSvg(plan, cat.techniek, vakken, sel, fouten));
   }
   // Hellend dak: de dakrand met de oversteek en de nok (of de hoge kant van een lessenaar).
   if (opties.dakLijnen && !opties.afdruk) {
@@ -409,6 +444,152 @@ function openingSvg(o: Opening, m: Muur | undefined, opties: PlanSvgOpties, geko
   if (gekozen) delen.push(rect(a - 4, b + 4, -half - 6, half + 6, 'fill="none" stroke="#2f6fd0" stroke-width="3"'));
   delen.push('</g>');
   return delen.join('');
+}
+
+// ---------- techniek ----------
+
+/**
+ * De techniek van één verdieping: eerst de leidingen (een lijn in de vaste kleur van de soort, zo dik als de leiding
+ * maar minstens 2,5 cm, gestreept in de vloer en streep-punt tegen het plafond; een rondje waar ze naar een andere
+ * verdieping gaat), dan per toestel zijn teken in de kleur van zijn vak (zie `ToestelTeken` in techniek.ts).
+ */
+function techniekSvg(plan: Plattegrond, tc: TechniekCatalogus, vakken: Set<TechniekVak>, sel: PlanSvgOpties['selectie'], fouten: Set<string>): string {
+  const uit: string[] = ['<g data-soort="techniek">'];
+  const vh = (niveau: number) => vloerHoogte(plan, niveau);
+  for (const l of plan.leidingen ?? []) {
+    const soort = tc.leidingen[l.soort];
+    if (!soort || !vakken.has(soort.vak) || l.punten.length < 2) continue;
+    const maat = maatVan(l, soort);
+    const mm = Array.isArray(maat) ? (soort.vorm === 'plat' ? maat[0] : maat[0] + maat[1]) : maat;
+    const w = Math.min(14, Math.max(2.5, mm / 10));
+    const streep = l.hoogte === 'vloer' ? ' stroke-dasharray="10 6"' : l.hoogte === 'plafond' ? ' stroke-dasharray="18 6 4 6"' : '';
+    const pts = punten(l.punten);
+    const gekozen = sel?.soort === 'leiding' && sel.id === l.id, fout = fouten.has(l.id);
+    const rand = gekozen || fout ? `<polyline points="${pts}" fill="none" stroke="${fout ? '#c0392b' : '#2f6fd0'}" stroke-width="${n(w + 8)}" stroke-opacity="0.35" stroke-linejoin="round" stroke-linecap="round"/>` : '';
+    // Naar een andere verdieping (een stuk op of neer van meer dan een halve verdieping): een rondje met een punt.
+    const v = leidingVerloop(l, plan, tc, { vloerHoogte: vh }).punten, stijg: string[] = [];
+    for (let i = 1; i < v.length; i++) {
+      const p = v[i - 1]!, q = v[i]!;
+      if (Math.hypot(q[0] - p[0], q[2] - p[2]) < 0.5 && Math.abs(q[1] - p[1]) > plan.muurhoogte / 2) {
+        stijg.push(`<circle cx="${n(p[0])}" cy="${n(p[2])}" r="${n(w / 2 + 6)}" fill="#fff" stroke="${soort.kleur}" stroke-width="2"/><circle cx="${n(p[0])}" cy="${n(p[2])}" r="2.5" fill="${soort.kleur}"/>`);
+      }
+    }
+    // Wat in de vloer zit, ligt onder het snijvlak van de tekening: lichter, zoals een verborgen lijn.
+    const licht = l.hoogte === 'vloer' ? ' stroke-opacity="0.6"' : '';
+    uit.push(`<g data-soort="leiding" data-id="${esc(l.id)}">${rand}<polyline points="${pts}" fill="none" stroke="${soort.kleur}" stroke-width="${n(w)}" stroke-linejoin="round" stroke-linecap="round"${streep}${licht}/>${stijg.join('')}</g>`);
+  }
+  for (const t of plan.toestellen ?? []) {
+    const type = tc.toestellen[t.type];
+    if (!type || !vakken.has(type.vak)) continue;
+    const gekozen = sel?.soort === 'toestel' && sel.id === t.id, fout = fouten.has(t.id);
+    uit.push(`<g data-soort="toestel" data-id="${esc(t.id)}" style="cursor:move" transform="translate(${n(t.x)} ${n(t.y)}) rotate(${n(t.draai)})">${toestelTeken(t, type, gekozen, fout)}</g>`);
+  }
+  uit.push('</g>');
+  return uit.join('');
+}
+
+/**
+ * Het teken van een toestel in zijn eigen assen: het midden op 0, de voorkant naar +y (onder), de wand op y = −d/2.
+ * Kleine toestellen (elektriciteit, monden) hebben een vaste tekenmaat in cm; grote (kasten, units, boiler, radiator)
+ * staan op ware grootte met hun afkorting.
+ */
+function toestelTeken(t: Toestel, type: ToestelType, gekozen: boolean, fout: boolean): string {
+  const m = toestelMaten(type, t.aan);
+  const kleur = fout ? '#c0392b' : TECHNIEK_VAKKEN[type.vak].kleur;
+  const lijn = `stroke="${kleur}" stroke-width="1.8"`;
+  const w = -m.d / 2;
+  const tekst = (x: number, y: number, s: string, grootte: number) =>
+    `<text x="${n(x)}" y="${n(y)}" font-size="${n(grootte)}" font-weight="600" fill="${kleur}" text-anchor="middle" dominant-baseline="central" transform="rotate(${n(-t.draai)} ${n(x)} ${n(y)})">${esc(s)}</text>`;
+  const kruis = (cx: number, cy: number, r: number) => `<path d="M ${n(cx - r)} ${n(cy - r)} L ${n(cx + r)} ${n(cy + r)} M ${n(cx + r)} ${n(cy - r)} L ${n(cx - r)} ${n(cy + r)}" ${lijn} fill="none"/>`;
+  const d: string[] = [];
+  let omtrek = 14;
+  switch (type.teken) {
+    case 'lichtpunt':
+      d.push(`<circle r="12" fill="#fff" fill-opacity="0.6"/>`, kruis(0, 0, 10));
+      break;
+    case 'armatuur':
+      d.push(`<circle r="11" fill="#fff" ${lijn}/>`, kruis(0, 0, 7.5));
+      break;
+    case 'spot':
+      d.push(`<circle r="7" fill="#fff" ${lijn}/>`, kruis(0, 0, 4.8));
+      omtrek = 9;
+      break;
+    case 'wandlamp':
+      d.push(`<line x1="0" y1="${n(w)}" x2="0" y2="${n(w + 4)}" ${lijn}/><circle cy="${n(w + 13)}" r="9" fill="#fff" ${lijn}/>`, kruis(0, w + 13, 6));
+      break;
+    case 'stopcontact': {
+      // Halve cirkel met de bolle kant naar de muur, een streepje naar de muur en een dwarsstreep (aarding).
+      const cy = w + 14;
+      d.push(`<path d="M -9 ${n(cy)} A 9 9 0 0 1 9 ${n(cy)} Z" fill="#fff" ${lijn}/><line x1="0" y1="${n(cy - 9)}" x2="0" y2="${n(w)}" ${lijn}/><line x1="-5" y1="${n(w + 2.5)}" x2="5" y2="${n(w + 2.5)}" ${lijn}/>`);
+      if ((type.stuks ?? 1) > 1) d.push(tekst(14, cy - 2, String(type.stuks), 10));
+      break;
+    }
+    case 'schakelaar':
+      // Rondje met een schuin streepje en een haakje (enkelpolig).
+      d.push(`<circle cy="${n(w + 6)}" r="3.5" fill="#fff" ${lijn}/><path d="M 2.5 ${n(w + 8.5)} L 12 ${n(w + 18)} L 16 ${n(w + 14)}" fill="none" ${lijn}/>`);
+      break;
+    case 'datapunt':
+      d.push(`<path d="M -7 ${n(w + 1)} L 7 ${n(w + 1)} L 0 ${n(w + 13)} Z" fill="#fff" ${lijn}/>`);
+      break;
+    case 'thermostaat':
+      d.push(`<circle cy="${n(w + 9)}" r="7" fill="#fff" ${lijn}/>`, tekst(0, w + 9, 'T', 9));
+      break;
+    case 'verdeelbord': {
+      const h = Math.max(m.d, 12);
+      d.push(`<rect x="${n(-m.b / 2)}" y="${n(w)}" width="${n(m.b)}" height="${n(h)}" fill="#fff" ${lijn}/><path d="M ${n(-m.b / 2)} ${n(w)} L ${n(m.b / 2)} ${n(w + h)} L ${n(-m.b / 2)} ${n(w + h)} Z" fill="${kleur}"/>`);
+      omtrek = Math.max(m.b, h) / 2 + 4;
+      break;
+    }
+    case 'rond': {
+      const r = Math.min(m.b, m.d) / 2;
+      d.push(`<circle r="${n(r)}" fill="#fff" ${lijn}/>`);
+      if (type.afkorting) d.push(tekst(0, 0, type.afkorting, Math.max(8, Math.min(22, r * 0.9))));
+      omtrek = r + 4;
+      break;
+    }
+    case 'radiator': {
+      const h = Math.max(m.d, 8);
+      d.push(`<rect x="${n(-m.b / 2)}" y="${n(w)}" width="${n(m.b)}" height="${n(h)}" fill="#fff" ${lijn}/>`);
+      for (let x = -m.b / 2 + 6; x < m.b / 2 - 2; x += 6) d.push(`<line x1="${n(x)}" y1="${n(w)}" x2="${n(x)}" y2="${n(w + h)}" stroke="${kleur}" stroke-width="1"/>`);
+      omtrek = m.b / 2 + 4;
+      break;
+    }
+    case 'toevoermond':
+    case 'afvoermond': {
+      // Rond ventiel met een pijl: naar binnen (toevoer) of naar buiten (afvoer).
+      const r = Math.max(9, m.b / 2);
+      const pijl = type.teken === 'toevoermond' ? `M -5 -6 L 5 -6 L 0 3 Z` : `M -5 3 L 5 3 L 0 -6 Z`;
+      d.push(`<circle r="${n(r)}" fill="#fff" ${lijn}/><path d="${pijl}" fill="${kleur}"/>`);
+      omtrek = r + 4;
+      break;
+    }
+    case 'rooster': {
+      const h = Math.max(m.d, 7);
+      d.push(`<rect x="${n(-m.b / 2)}" y="${n(w)}" width="${n(m.b)}" height="${n(h)}" fill="#fff" ${lijn}/>`);
+      for (const f of [0.3, 0.5, 0.7]) d.push(`<line x1="${n(-m.b / 2 + 2)}" y1="${n(w + h * f)}" x2="${n(m.b / 2 - 2)}" y2="${n(w + h * f)}" stroke="${kleur}" stroke-width="1"/>`);
+      omtrek = m.b / 2 + 4;
+      break;
+    }
+    case 'doorvoer': {
+      const r = Math.max(9, m.b / 2);
+      d.push(`<circle r="${n(r)}" fill="#fff" ${lijn}/><circle r="${n(r * 0.6)}" fill="none" ${lijn}/>`, kruis(0, 0, r * 0.42));
+      omtrek = r + 4;
+      break;
+    }
+    case 'kraan':
+      d.push(`<line x1="0" y1="${n(w)}" x2="0" y2="${n(w + 6)}" ${lijn}/><circle cy="${n(w + 10)}" r="4" fill="#fff" ${lijn}/><line x1="-6" y1="${n(w + 10)}" x2="6" y2="${n(w + 10)}" ${lijn}/>`);
+      break;
+    case 'kader':
+    default: {
+      // Op ware grootte, met de afkorting; een plat toestel tegen de wand minstens 16 cm diep getekend.
+      const h = Math.max(m.d, 16), y = m.d >= 16 ? -m.d / 2 : w;
+      d.push(`<rect x="${n(-m.b / 2)}" y="${n(y)}" width="${n(m.b)}" height="${n(h)}" fill="#fff" ${lijn}/>`);
+      if (type.afkorting) d.push(tekst(0, y + h / 2, type.afkorting, Math.max(7, Math.min(22, Math.min(m.b / Math.max(2, type.afkorting.length) * 1.4, h * 0.55)))));
+      omtrek = Math.max(m.b, h) / 2 + 4;
+    }
+  }
+  if (gekozen || fout) d.push(`<circle r="${n(omtrek + 4)}" fill="none" stroke="${fout ? '#c0392b' : '#2f6fd0'}" stroke-width="2.5" stroke-dasharray="${fout ? '6 4' : '0'}"/>`);
+  return d.join('');
 }
 
 function meubelSvg(m: Meubel, t: MeubelType, gekozen: boolean): string {
