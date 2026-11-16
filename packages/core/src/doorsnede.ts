@@ -204,10 +204,34 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
     hellendGeraakt = true;
   };
 
+  let dakGeraakt = false;
   for (const d of c.delen) {
     if (d.muur) wandSnede(d);
     else if (d.dakvlak) dakSnede(d);
-    else if (d.vlak) vlakSnede(d);
+    else if (d.vlak) {
+      const voor = vormen.length;
+      vlakSnede(d);
+      if (d.plaats === 'platDak' && vormen.length > voor) dakGeraakt = true;
+    }
+  }
+  // Een vloer of dak van een vrije vorm (een effen plaat in de 3D, geen bouwdeel): een grijze band zonder lagen.
+  for (const st of c.stukken) {
+    if (st.soort === 'trap') continue;
+    for (const b of st.blokken) {
+      if (b.vorm !== 'prisma' || b.as !== 'y' || !b.doorsnede) continue;
+      // De snijpunten van de rand van het grondvlak met de lijn van de snede (een bolle vorm: één stuk).
+      const us: number[] = [];
+      b.doorsnede.forEach(([x0, z0], i) => {
+        const [x1, z1] = b.doorsnede![(i + 1) % b.doorsnede!.length]!;
+        const [a0, a1, v0, v1] = richting === 'langs' ? [z0, z1, x0, x1] : [x0, x1, z0, z1];
+        if ((a0 - plaats) * (a1 - plaats) > 0 || Math.abs(a1 - a0) < 1e-9) return;
+        us.push(v0 + ((plaats - a0) / (a1 - a0)) * (v1 - v0));
+      });
+      if (us.length < 2 || Math.max(...us) - Math.min(...us) < 1) continue;
+      vormen.push({ ...rechthoek(Math.min(...us), Math.max(...us), b.y, b.y + b.h, '#d8d5ce'), naam: 'Effen plaat (vrije vorm)' });
+      if (st.soort === 'dak') dakGeraakt = true;
+      noemOp(st.soort === 'dak' ? 'Dak' : st.niveau === 0 && b.y < 0 ? 'Vloer op de grond' : 'Vloer', (Math.min(...us) + Math.max(...us)) / 2, b.y + b.h / 2);
+    }
   }
 
   // ---------- tekening ----------
@@ -240,12 +264,13 @@ export function tekenDoorsnede(plan: Plattegrond, cat: PlanCatalogus, keuze: Doo
   }
   // Maten: de hoogtes links (vloerpeil per verdieping, de bovenkant van de muren, de nok of de bovenkant van het dak).
   const hoogtes = new Map<number, string>();
-  for (const [n, v] of verdiepingenVan(plan).entries()) if (niveauPlan(plan, n).ruimtes.length) hoogtes.set(r1(vloerHoogte(plan, n)), `vloer ${v.naam.toLowerCase()}`);
+  // Alleen de hoogtes die in de tekening liggen (een snede door een lage aanbouw toont de verdieping erboven niet).
+  for (const [n, v] of verdiepingenVan(plan).entries()) if (niveauPlan(plan, n).ruimtes.length && vloerHoogte(plan, n) <= hMax - 1) hoogtes.set(r1(vloerHoogte(plan, n)), `vloer ${v.naam.toLowerCase()}`);
   // De muurkop en de nok alleen als de snede het hellende dak raakt; anders de bovenkant van wat ze raakt.
   const metHellend = hellendGeraakt;
   const muurTop = metHellend ? c.hellend!.y : undefined;
   if (muurTop !== undefined && muurTop < hMax - 1) hoogtes.set(r1(muurTop), 'muurkop');
-  hoogtes.set(r1(hMax), metHellend ? (c.hellend!.dak.nokAs === 'x') === (richting === 'dwars') ? 'nok' : 'bovenkant dak' : 'bovenkant dak');
+  hoogtes.set(r1(hMax), metHellend ? (c.hellend!.dak.nokAs === 'x') === (richting === 'dwars') ? 'nok' : 'bovenkant dak' : dakGeraakt ? 'bovenkant dak' : 'bovenkant');
   const mx = X(uMin) - 40 / px;
   const lijst = [...hoogtes].sort((a, b) => a[0] - b[0]);
   uit.push(`<line x1="${r1(mx)}" y1="${Yv(lijst[0]![0])}" x2="${r1(mx)}" y2="${Yv(lijst[lijst.length - 1]![0])}" stroke="#34505f" stroke-width="${r1(lijn)}"/>`);

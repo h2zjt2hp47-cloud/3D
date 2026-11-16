@@ -118,6 +118,8 @@ const BOUWBEELDEN = [
   { naam: 'bouw-schuin-plan', schuin: 'plan' },
   { naam: 'bouw-schuin-3d', schuin: '3d', toetsen: 'L9U2Z3' },
   { naam: 'bouw-schuin-binnen', schuin: 'binnen', toetsen: 'R5U4Z1' },
+  // Constructie met schuine muren (ronde 6): de schuine wanden gedraaid mee, de vloer en het dak van een vrije vorm effen.
+  { naam: 'bouw-schuin-constructie', schuin: 'constructie', toetsen: 'L9U2Z3' },
   // Techniek voor de installateur (ronde 10, 16/11): de configurator toont ze nog niet, dus uit de motor (tsx) in de losse
   // kijker: de uitgeruste voorbeeldwoning in de uitgezette weergave, en de tekening van het gelijkvloers met de tekens.
   { naam: 'bouw-techniek', techniek: '3d', toetsen: 'O1' },
@@ -352,6 +354,7 @@ async function maakBeelden() {
         beelden.set(b.naam, PNG.sync.read(await p.locator('#pl-canvas').screenshot()));
       } else {
         await p.click('[data-pl-weergave="3d"]');
+        if (b.schuin === 'constructie') await p.click('[data-3d-weergave="constructie"]');
         if (b.schuin === 'binnen') await p.check('#pl-laag'); else await p.uncheck('#pl-laag');
         await p.click('[data-pl-standpunt="voor"]');
         // Draaien, hoger en dichterbij met de pijltjes en + (zoals een gebruiker met het toetsenbord).

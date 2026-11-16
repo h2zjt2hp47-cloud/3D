@@ -37,7 +37,7 @@ import { totaleDikte, type Opbouw, type OpbouwPlaats, type WoningOpbouwCatalogus
 import {
   asVan, binnenVeelhoek, buitenKant, dakOpbouw, dakVan, delenVan, draaiBlokken, gevelAfwerking, gevelKeuzeVan, grondPrisma, meubelIn3D,
   meubelVoetafdruk, murenVan, muurVanOpening, muurVlak, niveauPlan, niveauVan, plattegrond3D, snijVeelhoek, standaardDak, trekAf,
-  verdiepingenVan, vlakSleutel, vloerHoogte, vormVanDeel, VLOERDIKTE,
+  veelhoekOppervlakte, verdiepingenVan, vlakSleutel, vloerHoogte, vormVanDeel, VLOERDIKTE,
   type Deel, type Muur, type PlanCatalogus, type Plattegrond, type Punt, type Rechthoek,
 } from './plattegrond.js';
 import { kaderVan, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
@@ -266,12 +266,15 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
     const vrijBoven = delen.some((q) => q.omtrek);
     for (const r of onder.ruimtes) for (const [i, q] of delenVan(r).entries()) {
       if (q.omtrek || vrijBoven) {
-        // Een vrije vorm (hier of erboven): een effen plaat waar ze elkaar overlappen.
+        // Een vrije vorm (hier of erboven): een effen plaat waar ze elkaar overlappen (en alleen dan een melding).
+        let platen = 0;
         for (const [j, u] of delen.entries()) {
           const v = snijVeelhoek(vormVanDeel(q), vormVanDeel(u));
-          if (v.length >= 3) vrijeVormPlaat(v, vloerHoogte(plan, n) - VLOERDIKTE, VLOERDIKTE, n, 'vloer', `vloer_${n}_${r.id}_${i}_${j}`);
+          if (v.length < 3 || veelhoekOppervlakte(v) < 100) continue;
+          vrijeVormPlaat(v, vloerHoogte(plan, n) - VLOERDIKTE, VLOERDIKTE, n, 'vloer', `vloer_${n}_${r.id}_${i}_${j}`);
+          platen++;
         }
-        uit.meldingen.push(`Vloer boven ${r.naam}: een vrije vorm staat er als effen plaat (niet in de meetstaat).`);
+        if (platen) uit.meldingen.push(`Vloer boven ${r.naam}: een vrije vorm staat er als effen plaat (niet in de meetstaat).`);
         continue;
       }
       const vrij = delen.reduce<Rechthoek[]>((st, u) => st.flatMap((s) => trekAf(s, u)), [q]);

@@ -175,6 +175,56 @@ describe('constructie van een woning: vloeren en daken', () => {
     expect(constructie3D(plan, cat, { dak: false }, c).blokken.some((b) => b.code.includes('topgevel_'))).toBe(false);
   });
 
+  it('topgevels in de vier richtingen, bij een zadeldak en een lessenaar: overal onder het dak', () => {
+    const { plan } = voorbeeldWoning();
+    for (const richting of ['onder', 'boven', 'links', 'rechts'] as const) {
+      for (const vorm of ['zadel', 'lessenaar'] as const) {
+        const p = kopie(plan);
+        p.dak = { ...standaardDak(), vorm, helling: 30, richting, oversteek: 40, bedekking: { materiaal: 'pannen', kleur: 'rood' } };
+        const c = woningConstructie(p, cat);
+        const { dak, y } = c.hellend!;
+        const gevels = c.delen.filter((d) => d.code.startsWith('topgevel_'));
+        // Zadel: twee driehoeken; lessenaar: twee schuine kanten en de hoge muur (elk muurvlak een eigen stuk: een gevel
+        // langs drie ruimtes geeft drie stukken).
+        expect(gevels.length, `${vorm} ${richting}`).toBeGreaterThanOrEqual(vorm === 'zadel' ? 2 : 3);
+        if (vorm === 'zadel') {
+          const m2 = gevels.reduce((t, g) => t + g.deel.lagen[0]!.oppervlakte, 0);
+          expect(m2, richting).toBeCloseTo(((dak.p1 - dak.p0) * dak.nok) / 10000, 0);
+        }
+        for (const b of gevels.flatMap((g) => constructieBlokken(g))) {
+          // De plaats dwars op de nok: z bij een nok langs x, x bij een nok langs z (een bereik: de laagste kant telt).
+          const langsZ = dak.nokAs === 'x';
+          for (const [q, h] of b.doorsnede!) {
+            const ps = (b.as === 'x') === langsZ ? [q] : langsZ ? [b.z, b.z + b.d] : [b.x, b.x + b.b];
+            expect(h, `${vorm} ${richting} ${b.code}`).toBeLessThanOrEqual(y + Math.min(...ps.map((x) => dakHoogte(dak, x))) + 0.5);
+          }
+        }
+      }
+    }
+  });
+
+  it('een lichtkoepel in een plat dak: een gat in de balklaag, raveelbalken en de koepel erop', () => {
+    const { plan } = voorbeeldWoning();
+    plan.dak = standaardDak();
+    plan.daklichten = [{ id: 'k1', type: 'koepel_100', x: 360, y: 590, b: 100, d: 100, niveau: 0 }];
+    const c = woningConstructie(plan, cat);
+    const dak = c.delen.find((d) => d.plaats === 'platDak' && d.vlak && d.vlak.x <= 360 && d.vlak.x + d.vlak.b >= 460 && d.vlak.y <= 590 && d.vlak.y + d.vlak.d >= 690)!;
+    expect(dak.deel.vlak!.openingen).toHaveLength(1);
+    const balken = constructieBlokken(dak, { lagen: false }).filter((b) => b.code.includes('.skelet.'));
+    expect(balken.filter((b) => b.x < 459 && b.x + b.b > 361 && b.z < 689 && b.z + b.d > 591).map((b) => b.code)).toEqual([]);
+    expect(c.stukken.some((s) => s.blokken.some((b) => b.code.includes('daklicht_k1_koepel')))).toBe(true);
+    expect(constructie3D(plan, cat, {}, c).blokken.some((b) => b.code.includes('daklicht_k1'))).toBe(true);
+  });
+
+  it('een vrije vorm zonder verdieping erboven geeft geen melding over een vloer', () => {
+    const plan = doos();
+    zetOmtrek(plan.ruimtes[0]!, [[0, 0], [600, 0], [700, 400], [0, 400]]);
+    const c = woningConstructie(plan, cat);
+    expect(c.meldingen.filter((m) => /Vloer boven/.test(m))).toEqual([]);
+    // De vloer op de grond van een vrije vorm is een effen plaat (en dat staat erbij).
+    expect(c.meldingen.some((m) => /Vloer van Kamer: een vrije vorm/.test(m))).toBe(true);
+  });
+
   it('de meetstaat telt alle bouwdelen; de 3D tekent elk stuk hout dat ze telt', () => {
     const { plan } = voorbeeldWoning();
     plan.dak = { ...standaardDak(), vorm: 'zadel', helling: 35, richting: 'onder', bedekking: { materiaal: 'pannen', kleur: 'rood' } };
