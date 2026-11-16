@@ -6,6 +6,7 @@ import { niveauVan, tekenSvg, vergelijkOfferte, verdiepingenVan, verwerkMeting, 
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
 import { $, el, eur, getal, num } from './hulp.js';
 import { klantKorting, nieuweId, openingVan, resultaat, toestand, wijzig, zonderPrijs, type Inmeting, type Positie } from './staat.js';
+import { samenvatting } from './positie-ui.js';
 
 let tab: 'inmeting' | 'meerwerk' = 'inmeting';
 let naarPositie: (id: string) => void = () => {};
@@ -19,7 +20,9 @@ export function momentopname(): Momentopname {
   return {
     posities: t.posities.map((p) => {
       const r = resultaat(p);
-      return { id: p.id, code: p.code, naam: p.naam, aantal: p.aantal, stukprijs: r.prijs.brutoprijsExcl, details: r.samenvatting };
+      // De regels van het overzicht (`samenvatting` in positie-ui.ts): een raam zonder de keuzes van ronde 11b geeft exact de
+      // regels van vroeger, dus een akkoord van toen toont geen schijnwijzigingen.
+      return { id: p.id, code: p.code, naam: p.naam, aantal: p.aantal, stukprijs: r.prijs.brutoprijsExcl, details: samenvatting(r) };
     }),
     regels: planNaarRegels(t.plan, t.meta.regels, planCatalogus).map((r) => ({ code: r.code, omschrijving: r.omschrijving, eenheid: r.eenheid, hoeveelheid: r.hoeveelheid, eenheidsprijs: r.eenheidsprijs })),
   };

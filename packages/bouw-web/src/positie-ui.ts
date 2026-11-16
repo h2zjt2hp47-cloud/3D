@@ -255,16 +255,19 @@ const PRIJSKENMERKEN = new Set(['btw_regime']);
 const BEELDKENMERKEN = new Set(['zon_stand']);
 
 /**
- * De samenvatting van een positie (kenmerk: keuze), zonder wat alleen over de prijs of het beeld gaat. Bij een raam staat
- * de ventilatie op één regel, zoals in het formulier: "Ventilatie op het raam: Zelfregelend rooster" (of Raamventilator, of
- * nee), en het aantal screens alleen als het er meer dan één zijn.
+ * De samenvatting van een positie (kenmerk: keuze), zonder wat alleen over de prijs of het beeld gaat. Een raam zonder de
+ * keuzes van ronde 11b heeft exact de regels van vroeger (ook het akkoord en het meerwerk van de werf vergelijken deze
+ * regels): de ventilatie heet "Ventilatierooster (zelfregelend): ja/nee" zoals toen, een raamventilator staat als
+ * "Ventilatie op het raam: Raamventilator …", en het aantal screens staat er alleen als het er meer dan één zijn.
  */
 export function samenvatting(r: ConfiguratieResultaat): string[] {
   const soort = r.kenmerken.find((k) => k.code === 'ventilatie_soort');
+  const raam = r.product === 'RAAM';
   return r.kenmerken.filter((k) => k.zichtbaar && (PRIJZEN || !PRIJSKENMERKEN.has(k.code)) && !BEELDKENMERKEN.has(k.code)).flatMap((k) => {
-    // Eén screen is het gewone geval (zoals vroeger): geen aparte regel; twee of drie wel.
-    if (r.product === 'RAAM' && (k.code === 'ventilatie_soort' || (k.code === 'screens' && k.waarde === 's1'))) return [];
-    if (r.product === 'RAAM' && k.code === 'rooster') return [`${k.label}: ${k.waarde === true ? (soort?.zichtbaar ? soort.weergave : 'ja') : 'nee'}`];
+    if (raam && (k.code === 'ventilatie_soort' || (k.code === 'screens' && k.waarde === 's1'))) return [];
+    if (raam && k.code === 'rooster') {
+      return r.afgeleid.vent_toestel === true ? [`${k.label}: ${soort?.weergave ?? 'Raamventilator'}`] : [`Ventilatierooster (zelfregelend): ${k.waarde === true ? 'ja' : 'nee'}`];
+    }
     return [`${k.label}: ${k.weergave}`];
   });
 }
