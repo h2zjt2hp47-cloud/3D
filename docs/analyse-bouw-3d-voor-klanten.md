@@ -323,7 +323,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 2b | 1 | *(loopt sinds 16/11; vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
 | 2c | 1 | **Klaar (16/11, hoofdstuk 21):** **Schuine muren in de motor en de 3D:** een ruimte met een vrije vorm, schuine muren met ramen en deuren, gevelaanzicht, plat dak, zon per gevel, tekening en controles; een rechthoekig plan blijft exact hetzelfde. Het scherm om ze in te geven komt met 2b | L |
 | 3 | 1 | **Klaar (16/11, hoofdstuk 18):** **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
-| 4 | 1 | *(loopt sinds 16/11)* **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
+| 4 | 1 | **Klaar (16/11, hoofdstuk 22):** **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
 | 5 | 2 | **Klaar (16/11), alleen de motor:** bouwdelen en opbouw als gegevens (hoofdstuk 3 en 16); de woning en de schermen gebruiken ze nog niet | – |
 | 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
@@ -825,4 +825,41 @@ de schuine muren.
 van een binnenmuur tegen een schuine gevel, schuine daklichten. Een fijne witte lijn naast ramen en deuren in de 3D bestaat ook bij
 rechte muren met donkere planken; niet opgelost. Waar de muur van de woning precies op het eindpunt van een schuine muur van dikte
 wisselt, overlappen de muren een klein stukje (± 190 cm²).
+
+---
+
+## 22. Gebouwd op 16/11: meegeven aan de klant (ronde 4), en waar fase 1 staat
+
+| Wat | Inhoud |
+|---|---|
+| **Bestand voor de klant** | Knop *Meegeven aan de klant* bovenaan het overzicht (en bij de varianten): één HTML-bestand (±1,9 MB, 2,3 MB met twee varianten) met de draaibare 3D, project, datum, klant en de naam van de aannemer (veld *Uw firma*). De klant kan draaien, per verdieping kijken, muren laag zetten, elk raam apart tonen, maten aanzetten en tussen varianten wisselen; hij kan niets wijzigen en er wordt niets van buiten geladen. Geen bedrag (geteld: 0). Een echte link vraagt een server; die is er niet. |
+| **Blad met beelden** | Knop *Blad met beelden (PDF)*: A4 staand, ±5 bladzijden: het ontwerp in gewone taal met een groot beeld, drie zichten met maten, de gevelaanzichten, elke verdieping van boven, elk raam of deur met maten en omschrijving. Bewaren als PDF via afdrukken. |
+| **Maten in de 3D** | *Maten tonen*: breedte, diepte en hoogte van het gebouw (de nok bij een hellend dak) en de maten van een raam; de tekst blijft leesbaar vanuit elk standpunt. Ook in de kijker en op het blad. |
+| **Varianten naast elkaar** | *Varianten naast elkaar*: twee of drie varianten die samen draaien en zoomen, met het verschil in gewone taal ("zadeldak met keramische pannen" tegenover "plat dak met grind, 2 lichtkoepels") en een vinkje *Mee in het bestand voor de klant*. |
+
+Gemeten (groot scherm en tablet): meegeven 2 tikken (1 vanuit het overzicht), variant maken met een andere stijl en naast elkaar
+tonen 3, maten tonen 1, blad 2.
+
+Bij het samenvoegen is één verbetering toegevoegd: een plan zonder dakkeuze (zoals de voorbeeldwoning) staat in het pakket en het
+bestand voor de klant met een gesloten plat dak; vroeger stond de bovenste verdieping open.
+
+**Niet getest:** een echt toestel (het bestand openen op een gsm of iPad, de download op een iPad, afdrukken in Safari). Een aanbouw als
+positie toont de maten van de raampartij, niet die van de aanbouw; in de kijker wisselt de klant tussen varianten maar ziet hij ze niet
+naast elkaar.
+
+### Fase 1: waar staan we
+
+Het doel: *snel een mooie 3D opmaken die een verkoper kan tonen na het eerste gesprek ter plaatse bij de klant.*
+
+| Toets | Stand |
+|---|---|
+| Eerste 3D om te tonen in hoogstens 5 tikken | **4** |
+| De uitbouw uit hoofdstuk 10 in hoogstens 25 tikken | **16** (21 met ook de zijmuren in hout) |
+| Een variant in 2 tikken | **2** |
+| Meegeven in 1 à 2 tikken | **1 à 2** |
+| Mooi genoeg om te tonen | omgeving, licht, materialen (hoofdstuk 18); **oordeel van Jonas** |
+| Zonder prijzen | 0 bedragen op alle schermen, in het bestand en op het blad |
+
+Wat er nog aan fase 1 hangt: de maten in cm muur per muur en de schuine muren op het scherm (ronde 2b, loopt), en een proef op een
+echte tablet.
 
