@@ -321,14 +321,14 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 1 | 1 | **Klaar (15/11):** dak (plat, lessenaar, zadel, met bedekking), lichtkoepels en lichtstraten, lichtinval (zon op een dag en uur, noordrichting, zon per gevel); 3D doorsturen als pakket en zending. Niet nagekeken op een toestel met WebGPU | – |
 | 2 | 1 | **Klaar (16/11, hoofdstuk 20):** **Snel resultaat** (hoofdstuk 13): snelstart in drie vragen, daarna vrij tekenen, stijlen, tik op het ding zelf; Overzicht in plaats van Offerte, Werf uit het menu, bedragen uit beeld; gemeten in tikken op tablet en groot scherm | M–L |
 | 2b | 1 | **Klaar (16/11, hoofdstuk 23)** *(vraag van Jonas, 16/11: "Er zou ook in cm moeten kunnen worden ingegeven. Bvb een bijbouw met ingave lengte van de 4 muren en tekenen daarin. Graag gebruiksvriendelijk."; start na ronde 2)* **Maten in cm:** een ruimte of bijgebouw meteen met de lengte van zijn muren maken, tegen de woning op een gemeten plaats of los; maten op de tekening aantikken en wijzigen; binnenwanden, ramen en deuren op een gemeten afstand. Ook schuine muren (Jonas, 16/11: "schuine muren ook"): ingeven als vier zijden en een diagonaal, zoals een inmeter meet | M |
-| 2d | 1 | *(vraag van Jonas, 16/11: "hoe teken [ik] gewoon een muur zonder dat dit meteen een aparte ruimte wordt?"; start na ronde 6)* **Losse wand:** een wand die geen ruimte opdeelt (een muur die halverwege stopt, een halfhoog muurtje, een tuinmuur of keermuur), getekend of met maten in cm, ook schuin; in plattegrond, gevels, 3D en meetstaat | M |
+| 2d | 1 | *(loopt sinds 16/11; vraag van Jonas: "hoe teken [ik] gewoon een muur zonder dat dit meteen een aparte ruimte wordt?")* **Losse wand:** een wand die geen ruimte opdeelt (een muur die halverwege stopt, een halfhoog muurtje, een tuinmuur of keermuur), getekend of met maten in cm, ook schuin; in plattegrond, gevels, 3D en meetstaat | M |
 | 2c | 1 | **Klaar (16/11, hoofdstuk 21):** **Schuine muren in de motor en de 3D:** een ruimte met een vrije vorm, schuine muren met ramen en deuren, gevelaanzicht, plat dak, zon per gevel, tekening en controles; een rechthoekig plan blijft exact hetzelfde. Het scherm om ze in te geven komt met 2b | L |
 | 3 | 1 | **Klaar (16/11, hoofdstuk 18):** **De 3D mooier:** een omgeving in plaats van een effen vlak (lucht, gras, terras), zachte schaduw, rijkere materialen, later een avondbeeld; echte beelden vóór en na | M |
 | 4 | 1 | **Klaar (16/11, hoofdstuk 22):** **Meegeven:** één bestand of een link met de draaibare 3D, een blad met beelden zonder prijzen, maten in de 3D, varianten naast elkaar | M |
 | – | | **Mijlpaal: bruikbaar na een eerste gesprek.** Toets: de uitbouw uit hoofdstuk 10 in hoogstens 25 tikken, mooi genoeg om te tonen | |
 | 5 | 2 | **Klaar (16/11), alleen de motor:** bouwdelen en opbouw als gegevens (hoofdstuk 3 en 16); de woning en de schermen gebruiken ze nog niet | – |
-| 6 | 2 | *(loopt sinds 16/11)* **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
-| 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
+| 6 | 2 | **Klaar (16/11, hoofdstuk 26):** **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
+| 6b | 2 | **Klaar (16/11, hoofdstukken 17 en 26), ook op het scherm:** **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
 | 8 | 2 | **Klaar (16/11, hoofdstukken 19 en 25)**, ook op de schermen; de aanbouw staat nog niet op bouwdelen **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Klaar (16/11, hoofdstukken 20 en 25)**, ook op de schermen: **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
@@ -938,4 +938,29 @@ gevel, en de trap vervangt de trap van de plattegrond niet); de snelstart maakt 
 bij de plattegrond; de klant ziet alleen de afgewerkte versie. Het zwarte tuinhuis is donker (deur en ramen vallen weg); een glazen
 of polycarbonaat dak blijft zwak in de 3D. **Te beslissen door Jonas:** raakt de verkoper in stap 2 geen maat aan, dan houdt elk
 vertrekpunt zijn eigen maat (de tegel toont welke) in plaats van de maat die stap 2 toonde.
+
+---
+
+## 26. Gebouwd op 16/11: constructieweergave, doorsnede en meetstaat in de woning (ronde 6)
+
+| Wat | Inhoud |
+|---|---|
+| **Opbouw per plaats** | Onderaan *Woning* een kop *Opbouw voor de constructie* (dicht): per plaats (buitenwand, binnenwand, vloer op de grond, verdiepingsvloer, plat dak, hellend dak) een keuze uit de opbouwen; de lagen een tik verder. De standaard van de buitenwand volgt het gevelmateriaal (steen → steenstrips, hout → houten bekleding, pleister → sierpleister). In de constructieweergave geeft een tik op een buitenmuur een eigen opbouw voor dat muurvlak. Een oud project krijgt de standaarden en opent zoals vroeger. |
+| **Afgewerkt / Constructie** | Een knop onder de 3D. *Constructie*: houtskeletwanden met hun openingen (stijlen, lateien; ook schuine muren), balklagen met het trapgat uitgespaard, plat dak met koepels, hellend dak met kepers en topgevels, de trap; één staal van de lagen per opbouw. Het voorbehoud "voorstelling, geen berekening" staat ernaast. *Afgewerkt* is ongewijzigd. |
+| **Doorsnede** | Een nieuwe tab: dwars of langs, met een schuif; de lagen van wanden, vloeren en daken in hun kleur, het doorgesneden hout, de peilen, de muurkop en de nok, een klein plan met de snede. |
+| **Overzicht** | Een kaart *Constructie* met drie koppen die pas rekenen als je ze openklapt: *Meetstaat* (met *Kopieer*, plakt als tabel in Excel), *Aanwijzing voor EPB* (U-waarde per opbouw en oppervlakte; het aandeel hout geteld uit de woning zelf) en *Schatting van de stabiliteit* (per vloer, dak en latei). Elke uitkomst toont het voorbehoud, de aannames een tik verder. |
+| **Snelheid** | Gelijke stukken worden samen getekend: 10 tot 16 keer minder tekenopdrachten; het eerste beeld ±25 % sneller (3 à 4 s in een browser zonder grafische kaart). Op een echt toestel niet gemeten. |
+
+Gemeten: van een open ontwerp tot de constructie in beeld 2 tikken, tot de meetstaat 2.
+
+**Voor de voorbeeldwoning** (standaardopbouwen; zonder dakkeuze rekent de constructie met een plat dak): bv. 272 stijlen en regels
+van 38 × 140 mm (586 m), 186 balken van 70 × 220 mm (547 m), 552 m² gipsplaat, 134 m² EPDM. U-waarden: houtskeletwand 0,28 à 0,29
+(voldoet niet aan 0,24), vloer op de grond 0,23, plat dak 0,16. Stabiliteit: vloeren en plat dak volstaan; de latei boven het
+schuifraam van 4 m is te licht (geen houten doorsnede volstaat, zoals de praktijk ook zegt).
+
+**Wat nog niet kan:** vloeren en daken van een vrije vorm staan er als effen plaat en tellen niet mee in de meetstaat; de hoeken van
+schuine muren sluiten in de constructie niet precies; geen dakrand, muurplaat, gordingen, nokbalk, funderingen, betonnen of stalen
+lateien in de constructie; de doorsnede toont geen ramen, trap of meubels; vijf van de zes plaatsen hebben vandaag maar één opbouw
+(alleen bij de buitenmuren is er echt keuze); het pakket en het bestand voor de klant dragen de constructie (nog) niet mee. De
+kleuren van de lagen zijn fel.
 
