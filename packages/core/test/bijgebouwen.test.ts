@@ -676,6 +676,15 @@ describe('tuinhuis en poolhouse', () => {
     const plat = tuin({ oversteek: 30 });
     expect(delen(plat, 'dak')[0]!.deel.vlak).toMatchObject({ ligging: 'liggend', lengte: 460, breedte: 360 });
     expect(delen(plat, 'dak')[0]!.y).toBe(12 + 220);
+    // Tussen de dakbalken loopt de gevelbekleding door tot onder het dakbeschot, rondom: het tuinhuis is onder de dakrand dicht.
+    const stroken = blokken(plat, 'strook.');
+    expect(stroken).toHaveLength(4);
+    expect(stroken.every((b) => b.soort === 'planken')).toBe(true);
+    expect(omvang(stroken)).toMatchObject({ x0: 0, x1: 400, z0: 0, z1: 300, y0: 232, y1: 247 });
+    expect(omvang(blokken(plat, 'dak.1.dek.')).y0).toBe(247);
+    expect(blokken(plat, 'strook.', 'constructie')).toEqual([]);
+    // Ze tellen mee in de meetstaat: 2 × 400 cm en 2 × 296 cm, 15 cm hoog.
+    expect(delen(plat, 'strook.').reduce((som, g) => som + g.deel.lagen[0]!.oppervlakte, 0)).toBeCloseTo(((2 * 400 + 2 * 296) * 15) / 10000, 1); // elk vlak op een honderdste m² afgerond
 
     // Lessenaar: laag achteraan, hoog vooraan; de voorwand is hoger en de zijwanden krijgen een gevelvulling.
     const les = tuin({ dakvorm: 'lessenaar', helling_lessenaar: 'h10', bedekking: 'zink' });
@@ -683,7 +692,12 @@ describe('tuinhuis en poolhouse', () => {
     expect(delen(les, 'wand.achter')[0]!.deel.maten.h).toBe(220);
     expect(delen(les, 'wand.voor')[0]!.deel.maten.h).toBeCloseTo(220 + 300 * tan, 1);
     expect(delen(les, 'dak')[0]!.draai).toBe(0);
+    // De wig boven een zijwand reikt van de wand tot onder het beschot, aan de lage en aan de hoge kant.
     expect(blokken(les, 'wig.')).toHaveLength(2);
+    expect(blokken(les, 'strook.')).toHaveLength(2);
+    const wig = omvang(blokken(les, 'wig.links'));
+    expect(wig).toMatchObject({ x0: 0, x1: 2, z0: 2, z1: 298, y0: 232 });
+    expect(wig.y1).toBeCloseTo(232 + 298 * tan + 15 / Math.cos((10 * Math.PI) / 180), 1);
     expect(blokken(les, 'dak.1.dek.').some((b) => b.soort === 'zink')).toBe(true);
 
     // Zadel: kepers van de zijwanden naar een nokbalk, die op makelaars op de voor- en de achterwand rust.
@@ -692,6 +706,9 @@ describe('tuinhuis en poolhouse', () => {
     expect(delen(zadel, 'nokbalk')).toHaveLength(1);
     expect(delen(zadel, 'makelaar')).toHaveLength(2);
     expect(blokken(zadel, 'topgevel.')).toHaveLength(2);
+    expect(blokken(zadel, 'strook.')).toHaveLength(2);
+    // De topgevel reikt tot onder het beschot in de nok.
+    expect(omvang(blokken(zadel, 'topgevel.voor')).y1).toBeCloseTo(232 + 200 * Math.tan((30 * Math.PI) / 180) + 15 / Math.cos((30 * Math.PI) / 180), 1);
     for (const g of delen(zadel, 'makelaar')) {
       expect(g.y).toBe(12 + 220);
       expect(plek(g).y1).toBeCloseTo(plek(delen(zadel, 'nokbalk')[0]!).y0, 1);

@@ -721,29 +721,44 @@ function bouwTuinhuis(r: ConfiguratieResultaat): BijgebouwSamenstelling {
 
   // ----- dak -----
   const dak: DakBasis = { X0: -ov, X1: B + ov, Z0: -ov, Z1: D + L + ov, bedekking, hout, geisoleerd };
-  if (vorm === 'plat') platDak(S, { ...dak, y: y0 + wh, richting: D <= B ? 'z' : 'x', randAchter: true });
-  else if (vorm === 'lessenaar') {
+  // De dakbalken liggen op de wanden en het dakbeschot ligt een balkhoogte hoger: de gevelbekleding loopt tussen de
+  // balken door tot onder het beschot (`vul`), anders is het tuinhuis onder de dakrand open. Alleen afwerking.
+  const hk = bijgebouwDak(bedekking, hout).lagen[0]!.dikte / 10 / cos, gp = HOEKPLANK, yW = y0 + wh;
+  const oppervlak = (punten: [number, number][]) => Math.abs(punten.reduce((som, [p, y], i) => { const [q, w] = punten[(i + 1) % punten.length]!; return som + p * w - q * y; }, 0)) / 2 / 10000;
+  /** Gevelvulling in het vlak van een gevel: een prisma langs `as` met de dikte van de gevelplanken, en haar oppervlakte in de meetstaat. */
+  const vul = (naam: string, as: 'x' | 'z', van: number, punten: [number, number][]) => {
+    S.afwerking.push(prisma(naam, gevelTeken.soort, gevelTeken.kleur, as, van, van + gp, punten));
+    const p0 = Math.min(...punten.map((q) => q[0])), y = Math.min(...punten.map((q) => q[1]));
+    S.zet(naam, bekledingsDeel(bekleding, oppervlak(punten)), as === 'x' ? van : p0, y, as === 'x' ? p0 : van);
+  };
+  const strook = (p0: number, p1: number, y: number): [number, number][] => [[p0, y], [p1, y], [p1, y + hk], [p0, y + hk]];
+  if (vorm === 'plat') {
+    platDak(S, { ...dak, y: yW, richting: D <= B ? 'z' : 'x', randAchter: true });
+    vul('strook.voor', 'z', D - gp, strook(0, B, yW));
+    vul('strook.achter', 'z', 0, strook(0, B, yW));
+    for (const [naam, x] of [['links', 0], ['rechts', B - gp]] as const) vul(`strook.${naam}`, 'x', x, strook(gp, D - gp, yW));
+  } else if (vorm === 'lessenaar') {
     lessenaarDak(S, { ...dak, onder, graden, tan, cos, laag: 'achter', randHoog: true });
-    // Gevelvulling boven de zijwanden, tot onder de kepers.
-    for (const [naam, x] of [['links', 0], ['rechts', B - 2]] as const) {
-      S.afwerking.push(prisma(`wig.${naam}`, gevelTeken.soort, gevelTeken.kleur, 'x', x, x + 2, [[t, y0 + wh], [D - t, y0 + wh], [D - t, onder(D - t)], [t, onder(t)]]));
-      S.zet(`wig.${naam}`, bekledingsDeel(bekleding, ((D - 2 * t) * (onder(t) + onder(D - t) - 2 * (y0 + wh))) / 2 / 10000), x, y0 + wh, t);
-    }
+    vul('strook.voor', 'z', D - gp, strook(0, B, y0 + hVoor));
+    vul('strook.achter', 'z', 0, strook(0, B, yW));
+    // Boven de zijwanden: een wig van de wand tot onder het beschot, om de kop van de hogere voorwand heen.
+    const wig: [number, number][] = [[gp, yW], [D - t, yW], [D - t, y0 + hVoor], [D - gp, y0 + hVoor], [D - gp, onder(D - gp) + hk], [gp, onder(gp) + hk]];
+    for (const [naam, x] of [['links', 0], ['rechts', B - gp]] as const) vul(`wig.${naam}`, 'x', x, wig);
   } else {
     // Zadeldak: de kepers rusten op de zijwanden en op een nokbalk; een makelaar op de voor- en de achterwand (en op de
     // ligger van de luifel) draagt de nokbalk.
-    const { b: nb, h: nh, makelaar: ms } = NOKBALK, yNok = y0 + wh + (B / 2 - nb / 2) * tan;
+    const { b: nb, h: nh, makelaar: ms } = NOKBALK, yNok = yW + (B / 2 - nb / 2) * tan;
     S.zet('nokbalk', balk(dak.Z1 - dak.Z0, nb, nh, hout), B / 2 - nb / 2, yNok - nh, dak.Z0, 90);
     const makelaar = (zc: number, voet: number) => { if (yNok - nh - voet > 3) S.zet('makelaar', stijl(yNok - nh - voet, ms, ms, hout), B / 2 - ms / 2, voet, zc - ms / 2); };
-    makelaar(t / 2, y0 + wh);
-    makelaar(D - t / 2, y0 + wh);
+    makelaar(t / 2, yW);
+    makelaar(D - t / 2, yW);
     if (L > 0) makelaar(zP, yLuifel);
-    zadelVlakken(S, { ...dak, yVoet: y0 + wh - ov * tan, graden, tan, cos });
-    // Gevelvulling boven de voor- en de achterwand, tot onder de kepers.
-    for (const [naam, z] of [['voor', D - 2], ['achter', 0]] as const) {
-      S.afwerking.push(prisma(`topgevel.${naam}`, gevelTeken.soort, gevelTeken.kleur, 'z', z, z + 2, [[0, y0 + wh], [B, y0 + wh], [B / 2, y0 + wh + (B / 2) * tan]]));
-      S.zet(`topgevel.${naam}`, bekledingsDeel(bekleding, (B * (B / 2) * tan) / 2 / 10000), 0, y0 + wh, z);
-    }
+    zadelVlakken(S, { ...dak, yVoet: yW - ov * tan, graden, tan, cos });
+    // Gevelvulling boven de voor- en de achterwand tot onder het beschot, en een strook boven elke zijwand.
+    const top: [number, number][] = [[0, yW], [B, yW], [B, yW + hk], [B / 2, yW + (B / 2) * tan + hk], [0, yW + hk]];
+    vul('topgevel.voor', 'z', D - gp, top);
+    vul('topgevel.achter', 'z', 0, top);
+    for (const [naam, x] of [['links', 0], ['rechts', B - gp]] as const) vul(`strook.${naam}`, 'x', x, strook(gp, D - gp, yW));
   }
   return S.klaar();
 }
