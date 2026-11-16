@@ -6,6 +6,7 @@
  * De stijlen hieronder zijn voorbeelden, door geen aannemer nagelezen.
  */
 import { dakOpbouw, verfGevel, type DakKeuze, type GevelKeuze, type Keuzes, type Plattegrond } from '../src/index.js';
+import { daklichtenOpDak, verdeelDaklichten } from './daklichten.js';
 import { berekenRaam } from './raam.js';
 
 export interface Stijl {
@@ -23,6 +24,8 @@ export interface Stijl {
   poort: string;
   /** Het dak: vorm, helling, bedekking (en de bedekking van platte delen naast een hellend dak). */
   dak: DakKeuze;
+  /** Lichtkoepels op het grootste platte dak, als er nog geen liggen (code uit `daklichtCatalogus`). */
+  koepels?: { aantal: number; type: string };
   /** Vloer en wandkleur van de droge ruimtes (codes uit `planCatalogus`); badkamer en wc houden hun tegels. */
   vloer: string;
   wand: string;
@@ -52,6 +55,7 @@ export const stijlCatalogus: Record<string, Stijl> = {
     schrijnwerk: { profiel: 'alu_hi', kleur_buiten: 'antraciet', kleur_binnen: 'wit' },
     poort: 'antraciet',
     dak: { vorm: 'plat', helling: 35, richting: 'onder', oversteek: 0, bedekking: { materiaal: 'grind', kleur: 'grijs' } },
+    koepels: { aantal: 2, type: 'koepel_100' },
     vloer: 'tegel_grijs',
     wand: 'wit',
     aanbouw: { kleur: 'ral7016', gevel: 'crepi_wit', bekleding: 'alu', dak: 'koepel' },
@@ -85,10 +89,11 @@ export const stijlCatalogus: Record<string, Stijl> = {
 /**
  * Zet een stijl op een plattegrond (een kopie; het origineel blijft ongewijzigd): de gevel van de hele woning (eigen
  * vlakken vervallen), het dak, en vloer en wandkleur van de droge ruimtes. Lichtkoepels die met het nieuwe dak niet meer
- * kunnen (bv. op een hellend dak), vallen weg; de rest blijft.
+ * kunnen (bv. op een hellend dak), vallen weg; de rest blijft. Heeft de stijl koepels en ligt er op het grootste platte
+ * dak nog geen, dan komen ze er gelijk verdeeld op.
  */
 export function pasStijlToe(plan: Plattegrond, stijl: Stijl): Plattegrond {
-  const p = structuredClone(plan);
+  let p = structuredClone(plan);
   p.gevelOntwerp = { standaard: { ...stijl.gevel }, ...(stijl.sokkel ? { sokkel: { ...stijl.sokkel } } : {}) };
   const niveaus = Math.max(1, p.verdiepingen?.length ?? 1);
   if (stijl.verdieping) for (let n = 1; n < niveaus; n++) verfGevel(p, stijl.verdieping, 'verdieping', { niveau: n });
@@ -96,6 +101,10 @@ export function pasStijlToe(plan: Plattegrond, stijl: Stijl): Plattegrond {
   const opbouw = dakOpbouw(p);
   const weg = new Set(opbouw?.daklichten.filter((l) => l.reden).map((l) => l.licht.id));
   if (p.daklichten) p.daklichten = p.daklichten.filter((l) => !weg.has(l.id));
+  if (stijl.koepels && p.ruimtes.length) {
+    const nu = daklichtenOpDak(p);
+    if (nu.plat && nu.aantal === 0) p = verdeelDaklichten(p, stijl.koepels.aantal, stijl.koepels.type);
+  }
   for (const r of p.ruimtes) {
     if (r.type === 'badkamer' || r.type === 'wc') continue;
     r.vloer = r.type === 'garage' || r.type === 'berging' ? r.vloer : stijl.vloer;

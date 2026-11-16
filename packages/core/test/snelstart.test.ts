@@ -81,6 +81,13 @@ describe('stijlen', () => {
     expect(daklichtenOpDak(met).aantal).toBe(2);
     expect(pasStijlToe(met, stijlCatalogus.klassiek!).daklichten ?? []).toEqual([]);
   });
+  it('een stijl met koepels legt ze op het grootste platte dak (één keer)', () => {
+    const { plan } = snelWoning({ breedte: 1000, diepte: 1000, verdiepingen: 1 }, stijlCatalogus.modern!);
+    expect(daklichtenOpDak(plan)).toEqual({ aantal: 2, type: 'koepel_100', plat: true });
+    expect(fouten(plan)).toEqual([]);
+    // Nog eens dezelfde stijl: er komen er geen bij.
+    expect(daklichtenOpDak(pasStijlToe(plan, stijlCatalogus.modern!)).aantal).toBe(2);
+  });
   it('een schuifraam blijft aluminium in een stijl met PVC', () => {
     const k = raamInStijl(raamKeuzes({ type: 'schuif', breedte: 3000, hoogte: 2300, glas: 'dubbel_gelaagd' }), stijlCatalogus.klassiek!);
     expect(k.profiel).toBe('alu_hi');
