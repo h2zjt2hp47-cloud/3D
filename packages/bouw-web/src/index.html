@@ -851,6 +851,8 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
   .positieraster > .resultaat > #p-voorkaart:has(#p-3d:not([hidden])) { position: sticky; top: 0; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
   #p-voorkaart:has(#p-3d:not([hidden])) .knoppenrij { margin-top: 6px; gap: 6px; }
 }
+/* B6: de knop van het standpunt waarin je kijkt (Buiten bij een raam, deur of poort; Schuin bij een vast model). */
+#p-3d-knoppen button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
 </style>
 </head>
 <body>

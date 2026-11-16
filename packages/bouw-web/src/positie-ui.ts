@@ -800,10 +800,30 @@ function toon3D(p: Positie, r: ConfiguratieResultaat) {
   const scene = gebouw || vast ? gebouwKader(s) : passendKader(s);
   const metMaten: Scene3DMetMaten = lijnen?.length ? { ...scene, maatlijnen: lijnen } : scene;
   viewer.toon(metMaten);
-  if (vast && in3D !== p.id) viewer.standpunt('schuin');
+  // Een andere positie: een vast model schuin van boven; een raam, deur of garagepoort van buiten (doorloop B6: daar zie je
+  // de buitenkleur, de cassettes en de screens; van binnen veranderde er bij die keuzes niets). De knop staat aangeduid.
+  if (in3D !== p.id) {
+    if (vast) zetStandpunt('schuin');
+    else if (!gebouw) zetStandpunt('achter');
+    else zetStandpunt(undefined, false);
+  }
   in3D = p.id;
   // Alleen een gewoon beeld (afgewerkt, zonder maten) gaat naar het overzicht.
   getekend = vast && bouwWeergave === 'afgewerkt' && !lijnen?.length ? `${p.id}:${JSON.stringify(p.keuzes)}` : '';
+}
+
+/**
+ * Het standpunt van de 3D (doorloop B6): de kijker erheen zetten en de knop ervan aanduiden, zodat je weet of je van binnen
+ * of van buiten kijkt. `draai: false` duidt alleen aan (of niets). Draait de verkoper zelf aan het beeld, dan staat er geen
+ * knop meer aangeduid.
+ */
+let standpuntNu: Standpunt | undefined;
+function zetStandpunt(s: Standpunt | undefined, draai = true) {
+  standpuntNu = s;
+  if (s && draai) viewer?.standpunt(s);
+  // Een raam heeft zijn eigen knoppen (Binnen, Buiten …), een gebouw de zijne (Schuin, Voor …): de verborgen tellen niet.
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.setAttribute('aria-pressed', String(b.dataset.pStandpunt === s));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-zicht]')) b.setAttribute('aria-pressed', String(b.dataset.pZicht === s));
 }
 
 /** Zet de weergave (vooraanzicht of 3D) zonder te tekenen; maakt de 3D bij de eerste keer. */
@@ -888,8 +908,18 @@ export function startPositie(nav: { naarPlan: (openingId: string) => void; naarO
   naarWoning3D = nav.naarWoning3D;
   $('#p-vrij').addEventListener('click', aanbouwVrijTekenen);
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.pWeergave as 'voor' | '3d'));
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pStandpunt as 'schuin'));
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-zicht]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pZicht as Standpunt));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.addEventListener('click', () => zetStandpunt(b.dataset.pStandpunt as Standpunt));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-zicht]')) b.addEventListener('click', () => zetStandpunt(b.dataset.pZicht as Standpunt));
+  // Zelf draaien (slepen of de pijltjes): dan kijk je niet meer vanuit een vast standpunt, en staat er geen knop meer aangeduid.
+  const vak3D = $('#p-3d');
+  let begin: [number, number] | undefined;
+  vak3D.addEventListener('pointerdown', (e) => { begin = [e.clientX, e.clientY]; });
+  vak3D.addEventListener('pointermove', (e) => {
+    if (!begin || !e.buttons || !standpuntNu) return;
+    if (Math.hypot(e.clientX - begin[0], e.clientY - begin[1]) > 12) zetStandpunt(undefined, false);
+  });
+  vak3D.addEventListener('pointerup', () => { begin = undefined; });
+  vak3D.addEventListener('keydown', (e) => { if (standpuntNu && /^Arrow/.test(e.key)) zetStandpunt(undefined, false); });
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-bouw]')) {
     b.addEventListener('click', () => {
       bouwWeergave = b.dataset.pBouw === 'constructie' ? 'constructie' : 'afgewerkt';
