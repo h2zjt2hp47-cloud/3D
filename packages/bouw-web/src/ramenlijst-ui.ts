@@ -5,8 +5,9 @@
  */
 import { tekenSvg, type Keuzes } from '../../core/src/index.js';
 import { leesMaatlijst } from '../../core/voorbeelden/maatlijst.js';
+import { leesLengte } from '../../core/voorbeelden/snelstart.js';
 import { raamdeur } from '../../core/voorbeelden/raam.js';
-import { $, btwLabel, el, eur, labelCellen, PRIJZEN, toonPrijs } from './hulp.js';
+import { $, btwLabel, el, eur, getal, labelCellen, PRIJZEN, toonPrijs } from './hulp.js';
 import { dupliceerPositie, MODELLEN, nieuwePositie, opWijziging, resultaat, toestand, wijzig, zonderPrijs, type Positie } from './staat.js';
 import { BRON_TERUG, toonTerug } from './terug-ui.js';
 
@@ -71,6 +72,36 @@ function zetIndeling(k: Keuzes, w: string) {
 }
 
 let melding = '';
+/** Een getypte maat die niet bewaard werd (leeg, geen getal, buiten de grenzen), boven de lijst (doorloop B16). */
+let maatMelding = '';
+
+/**
+ * Breedte of hoogte (mm) als tekst: "1,2" is 1,2 m, "120 cm" mag ook (`leesLengte`, zoals de configurator). Een leeg veld
+ * of een maat buiten de grenzen van de soort wordt niet bewaard; de melding boven de lijst zegt waarom.
+ */
+function maatVeld(p: Positie, code: 'breedte' | 'hoogte', r: ReturnType<typeof resultaat>): HTMLInputElement {
+  const label = code === 'breedte' ? 'Breedte' : 'Hoogte';
+  const i = el('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', class: 'maat', 'aria-label': `${label} ${p.code} in mm` }) as HTMLInputElement;
+  const oud = p.keuzes[code];
+  i.value = String(oud ?? '');
+  i.addEventListener('change', () => {
+    const getypt = i.value.trim();
+    const w = leesLengte(getypt, 'mm');
+    const s = r.kenmerken.find((x) => x.code === code);
+    const blijft = typeof oud === 'number' ? ` De maat blijft ${getal(oud)} mm.` : '';
+    const fout = !getypt ? `${label} van ${p.code} is leeg.${blijft}`
+      : w === undefined ? `${label} van ${p.code}: "${getypt}" is geen maat (typ bv. 1200 of 1,2 m).${blijft}`
+        : (s?.min !== undefined && w < s.min) || (s?.max !== undefined && w > s.max) ? `${label} van ${p.code}: ${getal(w)} mm kan niet (${getal(s?.min ?? 0)} tot ${getal(s?.max ?? 0)} mm).${blijft}` : '';
+    maatMelding = fout;
+    if (fout) {
+      i.value = String(oud ?? '');
+      $('#o-ramenlijst-melding').textContent = fout;
+      return;
+    }
+    zet(p.id, (kk) => { kk[code] = w!; });
+  });
+  return i;
+}
 
 /** Past keuzes van één positie aan (en blijft binnen de configurator). */
 function zet(id: string, f: (k: Keuzes, p: Positie) => void) {
@@ -127,8 +158,8 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
           if (w === 'raam') kk.glas = 'dubbel';
         }))),
         td(kies(INDELINGEN[soort] ?? [], indelingVan(k), `Indeling ${p.code}`, (w) => zet(p.id, (kk) => zetIndeling(kk, w)))),
-        td(invoer('number', String(k.breedte), `Breedte ${p.code} in mm`, (w) => zet(p.id, (kk) => { kk.breedte = Math.round(Number(w) || Number(kk.breedte)); }), { step: '1', class: 'maat' }), 'num'),
-        td(invoer('number', String(k.hoogte), `Hoogte ${p.code} in mm`, (w) => zet(p.id, (kk) => { kk.hoogte = Math.round(Number(w) || Number(kk.hoogte)); }), { step: '1', class: 'maat' }), 'num'),
+        td(maatVeld(p, 'breedte', r), 'num'),
+        td(maatVeld(p, 'hoogte', r), 'num'),
         td(kies(ruimtes(), String(k.ruimte ?? 'leefruimte'), `Ruimte ${p.code}`, (w) => zet(p.id, (kk) => {
           kk.ruimte = w;
           if ((w === 'badkamer' || w === 'wc') && kk.type === 'raam') kk.glas = 'mat_gelaagd';
@@ -166,11 +197,12 @@ export function toonRamenlijst(nav: { naarPositie: (id: string) => void }) {
   $('#o-situatie-renovatie').setAttribute('aria-pressed', String(reno));
   $('#o-situatie-nieuwbouw').setAttribute('aria-pressed', String(nieuw));
   $('#o-maatlijst-melding').textContent = melding;
+  $('#o-ramenlijst-melding').textContent = maatMelding;
 }
 
 export function startRamenlijst() {
   // Na Ongedaan maken klopt de melding van de maatlijst niet meer.
-  opWijziging((bron) => { if (bron === 'ongedaan') melding = ''; });
+  opWijziging((bron) => { if (bron === 'ongedaan') melding = ''; if (bron !== 'positie') maatMelding = ''; });
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-ramen-nieuw]')) {
     b.addEventListener('click', () => {
       const soort = b.dataset.ramenNieuw!;

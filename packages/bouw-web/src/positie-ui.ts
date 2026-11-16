@@ -15,7 +15,7 @@ import { gebouwKader, passendKader, tekenSvg, type BouwWeergave, type Configurat
 import { berekenRaam, ruitenVan } from '../../core/voorbeelden/raam.js';
 import { INDELINGEN, indelingVan, pasIndelingToe, type Indeling } from '../../core/voorbeelden/raamindelingen.js';
 import { raamKeuzes } from '../../core/voorbeelden/woning.js';
-import { aanbouwNaarPlan } from '../../core/voorbeelden/snelstart.js';
+import { aanbouwNaarPlan, leesLengte } from '../../core/voorbeelden/snelstart.js';
 import { herstelKeuzes, isVastModel, meetstaatGroep, meetstaatTekst, VASTE_MODELLEN, vastModelOpbouw, type Herstel, type VastModelCode } from '../../core/voorbeelden/vastemodellen.js';
 import { maak3D, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, alleenPrijs, el, eur, getal, kopieer, num, PRIJZEN } from './hulp.js';
@@ -444,19 +444,45 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
   if (k.type === 'getal') {
     const rij = el('div', { class: 'getalrij' });
     const schuif = el('input', { type: 'range', 'aria-label': `${k.label} (schuifbalk)`, step: String(k.stapgrootte ?? 1) }) as HTMLInputElement;
-    const invoer = el('input', { type: 'number', id, inputmode: 'numeric', step: String(k.stapgrootte ?? 1) }) as HTMLInputElement;
+    // Een lengte (mm of cm) als tekst, zodat "1,2" (meter) of "120 cm" te typen is (doorloop B16); een ander getal blijft
+    // een getalveld.
+    const lengte = k.eenheid === 'mm' || k.eenheid === 'cm' ? k.eenheid : undefined;
+    const invoer = el('input', lengte ? { type: 'text', id, inputmode: 'decimal', autocomplete: 'off' } : { type: 'number', id, inputmode: 'numeric', step: String(k.stapgrootte ?? 1) }) as HTMLInputElement;
     const bereik = el('span', { class: 'bereik' });
+    const melding = el('p', { class: 'veldfout veldmelding', role: 'alert' });
+    let grens: { min?: number; max?: number } = {};
     invoer.value = String(p.keuzes[k.code] ?? '');
-    invoer.addEventListener('change', () => zet(k.code, invoer.value === '' ? null : Number(invoer.value)));
-    schuif.addEventListener('input', () => { invoer.value = schuif.value; });
+    invoer.addEventListener('change', () => {
+      melding.textContent = '';
+      if (!lengte) { zet(k.code, invoer.value === '' ? null : Number(invoer.value)); return; }
+      // Een leeg veld of een maat die niet kan, wordt niet bewaard: de melding zegt waarom, het veld toont weer de maat.
+      const oud = huidig()?.keuzes[k.code];
+      const terug = (tekst: string) => { melding.textContent = tekst; invoer.value = typeof oud === 'number' ? String(oud) : ''; };
+      const getypt = invoer.value.trim();
+      const w = leesLengte(getypt, lengte);
+      const nu = typeof oud === 'number' ? ` De maat blijft ${getal(oud)} ${lengte}.` : '';
+      if (!getypt) return terug(`Vul een maat in (bv. 1200 of 1,2 m).${nu}`);
+      if (w === undefined) return terug(`"${getypt}" is geen maat: typ bv. 1200, 1,2 m of 120 cm.${nu}`);
+      // Een vast model zet een maat buiten zijn grenzen zelf op de dichtste die kan (met een melding, herstelKeuzes).
+      const vast = isVastModel(huidig()?.model ?? 'RAAM');
+      if (!vast && ((grens.min !== undefined && w < grens.min) || (grens.max !== undefined && w > grens.max))) {
+        return terug(`${getal(w)} ${lengte} kan niet: ${k.label.toLowerCase()} is ${getal(grens.min ?? 0)} tot ${getal(grens.max ?? 0)} ${lengte}.${nu}`);
+      }
+      invoer.value = String(w);
+      zet(k.code, w);
+    });
+    schuif.addEventListener('input', () => { invoer.value = schuif.value; melding.textContent = ''; });
     schuif.addEventListener('change', () => zet(k.code, Number(schuif.value)));
     rij.append(schuif, invoer, el('span', { class: 'eenheid' }, k.eenheid ?? ''));
-    veld.append(el('label', { for: id }, k.label), rij, bereik);
+    veld.append(el('label', { for: id }, k.label), rij, bereik, melding);
     if (k.helptekst) veld.append(el('p', { class: 'hulp' }, k.helptekst));
     update = (r) => {
       const s = r.kenmerken.find((x) => x.code === k.code)!;
-      if (s.min !== undefined) schuif.min = invoer.min = String(s.min);
-      if (s.max !== undefined) schuif.max = invoer.max = String(s.max);
+      grens = { min: s.min, max: s.max };
+      if (s.min !== undefined) schuif.min = String(s.min);
+      if (s.max !== undefined) schuif.max = String(s.max);
+      if (!lengte && s.min !== undefined) invoer.min = String(s.min);
+      if (!lengte && s.max !== undefined) invoer.max = String(s.max);
       const w = huidig()?.keuzes[k.code];
       if (typeof w === 'number') { schuif.value = String(w); if (document.activeElement !== invoer) invoer.value = String(w); }
       bereik.textContent = s.min !== undefined && s.max !== undefined ? `${getal(s.min)} – ${getal(s.max)} ${k.eenheid ?? ''}` : '';
