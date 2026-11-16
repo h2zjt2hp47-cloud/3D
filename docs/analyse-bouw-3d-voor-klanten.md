@@ -332,9 +332,10 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
 | 8 | 2 | **Klaar (16/11, hoofdstukken 19 en 25)**, ook op de schermen; de aanbouw staat nog niet op bouwdelen **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Klaar (16/11, hoofdstukken 20 en 25)**, ook op de schermen: **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
-| 10 | 2 | *(klaar in de motor, tekening en 3D op 16/11, hoofdstuk 24; het scherm om te plaatsen loopt sinds 16/11)* **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
-| 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
-| 12 | 2 | **Vloerafwerking** en de rest van de afwerkingen | M |
+| 10 | 2 | **Klaar (16/11, hoofdstukken 24 en 28), ook op het scherm; zonwering en avondbeeld nog niet:** **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
+| 11 | 2 | *(loopt sinds 16/11)* **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik; de bestaande woning neutraal en buiten de telling; tussen twee buren; werk zonder ding (afbraak, container) als regel; de uitbouw uit hoofdstuk 10 als voorbeeldproject | M |
+| 11b | 2 | *(loopt sinds 16/11, tegelijk met 11)* **Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering | M |
+| 12 | 2 | **Vloerafwerking** (legpatroon, formaat, voeg, plinten), het **plafond** en de rest van de afwerkingen | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
 
 Elke ronde eindigt met echte schermafdrukken, een testbestand en de gemeten tikken op tablet en groot scherm.
@@ -983,4 +984,35 @@ van 6 m op 1 m van de zijgevel in 5. Vroeger kon geen van beide.
 **Wat nog niet kan:** een losse wand schuift niet mee als je een muur verschuift of een ruimte groter maakt (de controle meldt het
 als ze dan door een muur loopt); geen ramen of deuren in een losse wand; geen verstek met een muur van de woning; niet in de schuine
 gevelaanzichten; varianten zien ze niet. Een bakstenen tuinmuur oogt in de gevel-editor (half doorzichtig) wat roze.
+
+---
+
+## 28. Gebouwd op 16/11: techniek plaatsen op het scherm (ronde 10b)
+
+| Wat | Inhoud |
+|---|---|
+| **Modus Techniek** | Een knop *Techniek (installateur)* onderaan het gereedschap van de plattegrond: het palet komt in de plaats van het gereedschap (*← Gereedschap* gaat terug). Geen vijfde tab: zonder de modus ziet een verkoper niets van de techniek. De modus wordt niet bewaard. |
+| **Palet per vak** | Elektriciteit, koeling en verwarming, ventilatie, sanitair: toestellen als tegels met hun teken, leidingen als een streep in hun kleur; per vak een schakelaar, het voorbehoud en een voorbeeldwoning met techniek. |
+| **Plaatsen en wijzigen** | Tegel, dan tik in het plan: een toestel aan de wand komt tegen de dichtste muur (ook schuin), een buitenunit buiten. Daarna de maatvraag (vanaf de dichtste hoek tot het midden, en de hoogte), die je mag negeren. Slepen langs de muur, draaien, hoogte, verwijderen, ongedaan maken. Een leiding: tik op het eerste toestel en het tweede (of een vrij punt); ze loopt langs de wanden op de hoogte van haar soort, punten zijn achteraf te verslepen. |
+| **In één tik** | *Technische ruimte*: de toestellen langs de wanden van de berging (de app zoekt de volgorde waarin alles past). *Vloerverwarming*: lussen van hoogstens 115 m, aangesloten op de verdeler van die verdieping. |
+| **3D** | *Techniek* naast Afgewerkt en Constructie, *Uitgezet* (standaard) of *In de woning*; een tik op een toestel of leiding opent het keuzepaneel. |
+| **Mee met een ruimte** | Versleep je een ruimte, dan gaan de toestellen erin mee, wat buiten tot 1,5 m van haar gevel staat, en de leidingpunten erin. |
+| **Overzicht** | Kaart *Techniek* (alleen als er techniek is): telling per vak, openklappen, kopiëren voor Excel; de meldingen staan bij de gewone controles. |
+| **Wat niet verandert** | Een plan zonder techniek: tekening, 3D en controles exact zoals vroeger (getest). Het bestand voor de klant, het blad en het 3D-pakket tonen geen techniek (nagekeken: geen toestellen of leidingen, geen prijswoorden). |
+
+Gemeten (groot scherm en tablet gelijk): airco binnen en buiten met de koelleiding ertussen in 9 tikken; vier stopcontacten en een
+lichtpunt in een slaapkamer in 8; technische ruimte in 3; vloerverwarming in de leefruimte in 2 (3 zonder verdeler, met een melding).
+Laden en eerste 3D-beeld niet trager; de configurator is 67 kB groter.
+
+**Wat nog niet kan:** een leiding naar een andere verdieping (de motor kan het, het scherm niet); een stuk leiding evenwijdig
+verschuiven of punten toevoegen; zonwering in het palet; de techniek in het bestand voor de klant, het blad, de doorsnede of de
+varianten; meeschuiven als je een wand verschuift of een ruimte groter maakt (de controle meldt het). De technische ruimte houdt geen
+rekening met toestellen die er al staan.
+
+**Open punten (na te vragen bij een installateur):**
+- De hoogte in de maatvraag is de onderkant van het toestel, zoals in de catalogus; een installateur meet een stopcontact misschien tot het midden.
+- "Tot 1,5 m buiten de gevel gaat mee met de ruimte" is een eigen keuze.
+- Na het verslepen van een leidingpunt kiest de app de kortste knik; een lus kan daardoor rechtgetrokken worden.
+- De zoektocht naar de beste volgorde in de technische ruimte is niet gemeten op een echte tablet.
+- Na de technische ruimte melden de controles natte ruimtes zonder afvoer: de collector telt als sanitair (regel van de motor, de melding zegt het).
 
