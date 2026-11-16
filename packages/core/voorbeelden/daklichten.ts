@@ -20,6 +20,9 @@ export function verdeelDaklichten(plan: Plattegrond, aantal: number, type = 'koe
   if (!stuk) return p;
   const op = (l: DakLicht) => l.x + l.b / 2 > stuk.x && l.x + l.b / 2 < stuk.x + stuk.b && l.y + l.d / 2 > stuk.y && l.y + l.d / 2 < stuk.y + stuk.d && (l.niveau ?? 0) === stuk.niveau;
   const rest = (p.daklichten ?? []).filter((l) => !op(l));
+  // Hadden de dakramen op dat stuk een screen (ronde 11b), dan krijgen de nieuwe het ook (in dezelfde stand).
+  const metZon = t.zonwering ? (p.daklichten ?? []).find((l) => op(l) && l.type === type && l.zonwering === 'screen') : undefined;
+  const zon = metZon ? { zonwering: 'screen' as const, ...(metZon.zonweringStand ? { zonweringStand: metZon.zonweringStand } : {}) } : {};
   const langs = stuk.b >= stuk.d;
   const lengte = langs ? stuk.b : stuk.d, maat = langs ? t.b : t.d;
   // Bruikbaar: 45 cm van de as van de muren (30 cm vanaf de binnenkant); tussen twee daklichten minstens 20 cm.
@@ -33,7 +36,7 @@ export function verdeelDaklichten(plan: Plattegrond, aantal: number, type = 'koe
     const c = (langs ? stuk.x : stuk.y) + lengte / 2 + (i - (n - 1) / 2) * tussen;
     const x = langs ? c - t.b / 2 : stuk.x + stuk.b / 2 - t.b / 2;
     const y = langs ? stuk.y + stuk.d / 2 - t.d / 2 : c - t.d / 2;
-    nieuw.push({ id: `k${Date.now().toString(36)}${i}`, type, x: r5(x), y: r5(y), b: t.b, d: t.d, ...(stuk.niveau ? { niveau: stuk.niveau } : {}) });
+    nieuw.push({ id: `k${Date.now().toString(36)}${i}`, type, x: r5(x), y: r5(y), b: t.b, d: t.d, ...(stuk.niveau ? { niveau: stuk.niveau } : {}), ...zon });
   }
   p.daklichten = [...rest, ...nieuw];
   return p;

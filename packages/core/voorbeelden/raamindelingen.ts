@@ -71,7 +71,7 @@ const veilig: Record<string, string> = { dubbel: 'dubbel_gelaagd', triple: 'trip
  * - de maat blijft als ze bij de nieuwe indeling past, anders de gangbare maat van de indeling;
  * - tot op de vloer wordt het glas gelaagd; een keuze die bij de nieuwe soort niet bestaat, valt terug op de standaard;
  * - haalt de tussenstijl de statiek niet, dan aluminium in plaats van PVC en zo nodig een versterkte stijl;
- * - wordt de partij breder dan 5 m, dan vervalt een screen (dat kan niet in één stuk).
+ * - wordt een screen breder dan 5 m, dan komt er een screen bij (tot drie naast elkaar); wordt het smaller dan 50 cm, een minder.
  * Kleur, glas, zonwering en plaatsing blijven verder wat ze waren.
  */
 export function pasIndelingToe(keuzes: Keuzes, indeling: Indeling): Keuzes {
@@ -104,8 +104,14 @@ export function pasIndelingToe(keuzes: Keuzes, indeling: Indeling): Keuzes {
       const def = kenmerk ? raamdeur.kenmerken.find((x) => x.code === kenmerk) : undefined;
       if (def && k[def.code] !== def.standaard) { k[def.code] = def.standaard; gewijzigd = true; }
       if ((m.code === 'veiligheidsglas' || m.code === 'rc2_glas') && typeof k.glas === 'string' && veilig[k.glas]) { k.glas = veilig[k.glas]!; gewijzigd = true; }
-      // Een screen breder dan 5 m bestaat niet in één stuk: de zonwering vervalt (later per deel opnieuw te kiezen).
-      if (m.code === 'screen_breed' && k.zonwering !== 'geen') { k.zonwering = 'geen'; gewijzigd = true; }
+      // Een screen breder dan 5 m bestaat niet in één stuk: een screen meer (tot drie naast elkaar, gelijk verdeeld); pas
+      // als ook drie te breed zijn, vervalt de zonwering. Een screen smaller dan 50 cm: een screen minder.
+      if (m.code === 'screen_breed' && k.zonwering !== 'geen') {
+        const nu = k.screens === 's2' ? 2 : k.screens === 's3' ? 3 : 1;
+        if (nu < 3) { k.screens = `s${nu + 1}`; k.screen_verdeling = 'gelijk'; } else k.zonwering = 'geen';
+        gewijzigd = true;
+      }
+      if (m.code === 'screen_smal' && (k.screens === 's2' || k.screens === 's3')) { k.screens = k.screens === 's3' ? 's2' : 's1'; gewijzigd = true; }
       if (m.code === 'statiek') {
         if (k.profiel === 'pvc') { k.profiel = 'alu'; gewijzigd = true; }
         else if (k.tussenstijl !== 'versterkt' && k.tussenstijl !== 'koppel') { k.tussenstijl = 'versterkt'; gewijzigd = true; }

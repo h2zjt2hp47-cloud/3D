@@ -114,7 +114,12 @@ function openingKeuzes(vak: HTMLElement, id: string, naarPositie: (id: string) =
   const huidig = RAL_KLEUREN.find((x) => x.code === p.keuzes[kleurCode]);
   vak.append(el('p', { class: 'klein' }, `Kleur${p.model === 'POORT' ? '' : ' buiten'}: ${huidig ? `${huidig.naam.toLowerCase()} (RAL ${huidig.ral})` : String(p.keuzes[kleurCode] ?? '')}`), rij);
   if (p.model === 'RAAM') {
-    vak.append(el('p', { class: 'klein' }, 'Zonwering'), tabs('Zonwering', ZONWERING, String(p.keuzes.zonwering ?? 'geen'), (w) => zet((x) => { x.zonwering = w; }), 'zonwering'));
+    vak.append(el('p', { class: 'klein' }, 'Zonwering'), tabs('Zonwering', ZONWERING, String(p.keuzes.zonwering ?? 'geen'), (w) => zet((x) => {
+      x.zonwering = w;
+      // Een screen is hoogstens 5 m breed: op een bredere partij meteen twee (of drie) screens naast elkaar (ronde 11b).
+      const b = Number(x.breedte) || 0;
+      if (w === 'screen' && b > 5000 && (x.screens ?? 's1') === 's1') x.screens = b > 10000 ? 's3' : 's2';
+    }), 'zonwering'));
   }
   const alles = el('button', { type: 'button', class: 'tweede' }, 'Alle keuzes: indeling, maat, glas …');
   alles.addEventListener('click', () => naarPositie(p.id));

@@ -79,7 +79,8 @@ export function gevelInfo(o: Opening) {
     label: p.code,
     kleur: String(a.kb ?? '#383e42'),
     vakken: openingenVan(r),
-    kast: (Number(a.zon_kast) || 0) / 10,
+    // De zonweringskast, of de opzetkast van een raamventilator (ronde 11b; van buiten een rooster over de breedte).
+    kast: Math.max(Number(a.zon_kast) || 0, Number(a.vent_h) || 0) / 10,
     paneel: p.keuzes.type === 'voordeur' && p.keuzes.paneel !== 'glasstrook',
     voordeur: p.keuzes.type === 'voordeur',
   };

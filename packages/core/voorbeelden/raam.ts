@@ -317,6 +317,25 @@ export const raamdeur: ProductModel = {
         { code: 'wit', label: 'Gebroken wit', eigenschappen: { kleur: '#e5e2da' } },
       ],
     },
+    // Twee of drie screens naast elkaar op één raam (ronde 11b). Zonder deze keuze: één screen over de hele breedte, zoals vroeger.
+    {
+      code: 'screens', label: 'Aantal screens', stap: 'opties', type: 'keuze', standaard: 's1', zichtbaarAls: 'zonwering = "screen"',
+      helptekst: 'Eén screen is hoogstens 5 m breed. Naast elkaar heeft elk screen zijn eigen kast, doek en motor; ertussen staat een middengeleider.',
+      keuzes: [
+        { code: 's1', label: 'Eén screen', eigenschappen: { n: 1 } },
+        { code: 's2', label: 'Twee screens naast elkaar', eigenschappen: { n: 2 } },
+        { code: 's3', label: 'Drie screens naast elkaar', eigenschappen: { n: 3 } },
+      ],
+    },
+    {
+      code: 'screen_verdeling', label: 'Verdeling van de screens', stap: 'opties', type: 'keuze', standaard: 'gelijk',
+      zichtbaarAls: 'zonwering = "screen" en screens_n >= 2',
+      helptekst: 'Op de stijlen: de middengeleider komt voor de stijl tussen twee vakken (bij schuifdelen: waar de delen elkaar raken), zodat hij het uitzicht niet onderbreekt.',
+      keuzes: [
+        { code: 'gelijk', label: 'Gelijk verdeeld over de breedte' },
+        { code: 'stijl', label: 'Op de stijlen tussen de vakken', beschikbaarAls: 'n >= screens_n', nietBeschikbaarReden: 'te weinig vakken of delen: elke middengeleider vraagt een stijl' },
+      ],
+    },
     {
       code: 'bediening', label: 'Bediening zonwering', stap: 'opties', type: 'keuze', standaard: 'motor', zichtbaarAls: 'zonwering <> "geen"',
       keuzes: [
@@ -326,6 +345,11 @@ export const raamdeur: ProductModel = {
       ],
     },
     {
+      code: 'zon_stand', label: 'Zonwering in de 3D', stap: 'opties', type: 'keuze', standaard: 'half', zichtbaarAls: 'zonwering <> "geen"',
+      helptekst: 'Alleen voor het beeld: toon de klant de zonwering half of helemaal neer.',
+      keuzes: [{ code: 'half', label: 'Half neer' }, { code: 'dicht', label: 'Helemaal neer' }],
+    },
+    {
       code: 'vliegenraam', label: 'Vliegenraam', stap: 'opties', type: 'keuze', standaard: 'geen', zichtbaarAls: 'niet in(type; "voordeur"; "glaswand")',
       keuzes: [
         { code: 'geen', label: 'Geen' },
@@ -333,7 +357,19 @@ export const raamdeur: ProductModel = {
         { code: 'plisse', label: 'Plissédeur (deur)', beschikbaarAls: 'type_deur', nietBeschikbaarReden: 'alleen bij deuren' },
       ],
     },
-    { code: 'rooster', label: 'Ventilatierooster (zelfregelend)', stap: 'opties', type: 'janee', standaard: false, zichtbaarAls: 'type <> "voordeur"' },
+    // Ventilatie op het raam (ronde 11b): `rooster` blijft zeggen óf er ventilatie op het raam staat (oude projecten met
+    // `rooster: true` blijven exact hetzelfde); `ventilatie_soort` zegt welke: het zelfregelende rooster van vroeger of een raamventilator.
+    {
+      code: 'rooster', label: 'Ventilatie op het raam', stap: 'opties', type: 'janee', standaard: false, zichtbaarAls: 'type <> "voordeur"',
+      helptekst: 'Luchttoevoer bovenaan het raam: een zelfregelend rooster, of een raamventilator (een toestel in een opzetkast bovenop het kader).',
+    },
+    {
+      code: 'ventilatie_soort', label: 'Soort ventilatie op het raam', stap: 'opties', type: 'keuze', standaard: 'rooster', zichtbaarAls: 'rooster en type <> "voordeur"',
+      keuzes: [
+        { code: 'rooster', label: 'Zelfregelend rooster' },
+        { code: 'ventilator', label: 'Raamventilator (toestel in een opzetkast bovenop het kader)' },
+      ],
+    },
     { code: 'rc2', label: 'Inbraakwerend beslag (RC2)', stap: 'opties', type: 'janee', standaard: false },
     {
       code: 'vensterbank', label: 'Vensterbank binnen', stap: 'opties', type: 'keuze', standaard: 'natuursteen', zichtbaarAls: 'niet type_deur',
@@ -506,10 +542,41 @@ export const raamdeur: ProductModel = {
     { code: 'vleugel_kg', label: 'Gewicht zwaarste vleugel (kg)', formule: 'afronden((wb - f) * gh / 1000000 * als(type = "voordeur"; 35; glas_kgm2) + 2 * (wb + vh) / 1000 * profiel_kgm; 0)' },
     { code: 'profiel_lm', formule: '2 * (breedte + hoogte) / 1000 + beweeg * 2 * (vb + vh) / 1000 + (n - 1 - n_stolp) * hoogte / 1000 + als(bl > 0; breedte / 1000; 0) + als(oh > 0; breedte / 1000; 0)' },
     { code: 'zon_kast', label: 'Hoogte zonweringskast (mm)', formule: 'zonwering_kast' },
+    // ---- Zonwering in stukken (ronde 11b): één stuk over de hele breedte, of twee of drie screens naast elkaar. ----
+    { code: 'zon_n', label: 'Aantal stuks zonwering', formule: 'als(zonwering = "geen"; 0; als(zonwering = "screen"; screens_n; 1))' },
+    // Grens tussen kolom i en i + 1 (mm vanaf links, zicht van binnen): het midden van de stijl, of bij schuif- en vouwdelen
+    // het midden van de overlapping (waar de delen elkaar raken). Bij vier schuifdelen sluiten de twee middelste tegen elkaar.
+    { code: 'kg1', formule: 'als(type_raster; f + kb1; f + stapx + overlap / 2)' },
+    { code: 'kg2', formule: 'als(type_raster; f + kb1 + kb2; f + 2 * stapx + overlap / 2 + als(type_schuif en n >= 4; overlap / 2; 0))' },
+    { code: 'kg3', formule: 'als(type_raster; f + kb1 + kb2 + kb3; f + 3 * stapx + overlap / 2 + als(type_schuif en n >= 4; overlap; 0))' },
+    // Op de stijlen: twee screens op de grens die het dichtst bij het midden ligt; drie screens op de grenzen die het dichtst
+    // bij een derde en bij twee derde liggen (bij drie kolommen gewoon de twee stijlen).
+    { code: 'zon_stijl', formule: 'zonwering = "screen" en zon_n >= 2 en screen_verdeling = "stijl" en n >= zon_n' },
+    { code: 'kd1', formule: 'max(kg1 - breedte / 2; breedte / 2 - kg1)' },
+    { code: 'kd2', formule: 'max(kg2 - breedte / 2; breedte / 2 - kg2)' },
+    { code: 'kd3', formule: 'max(kg3 - breedte / 2; breedte / 2 - kg3)' },
+    { code: 'kg_midden', formule: 'als(n >= 3 en kd2 < kd1 en (n < 4 of kd2 <= kd3); kg2; als(n >= 4 en kd3 < kd1; kg3; kg1))' },
+    { code: 'kg_derde1', formule: 'als(n >= 4 en max(kg2 - breedte / 3; breedte / 3 - kg2) < max(kg1 - breedte / 3; breedte / 3 - kg1); kg2; kg1)' },
+    { code: 'kg_derde2', formule: 'als(n < 4; kg2; als(kg_derde1 = kg2 of max(kg3 - 2 * breedte / 3; 2 * breedte / 3 - kg3) <= max(kg2 - 2 * breedte / 3; 2 * breedte / 3 - kg2); kg3; kg2))' },
+    // Grenzen tussen de screens (mm vanaf links, zicht van binnen) en de breedte per screen. Eén stuk = de hele breedte.
+    { code: 'zg1', formule: 'als(zon_n < 2; breedte; afronden(als(zon_stijl; als(zon_n = 2; kg_midden; kg_derde1); breedte / zon_n); 0))' },
+    { code: 'zg2', formule: 'als(zon_n < 3; breedte; afronden(als(zon_stijl; kg_derde2; 2 * breedte / zon_n); 0))' },
+    { code: 'zb1', label: 'Breedte screen 1 (mm)', formule: 'als(zon_n < 2; breedte; zg1)' },
+    { code: 'zb2', label: 'Breedte screen 2 (mm)', formule: 'als(zon_n < 2; 0; zg2 - zg1)' },
+    { code: 'zb3', label: 'Breedte screen 3 (mm)', formule: 'als(zon_n < 3; 0; breedte - zg2)' },
+    { code: 'zon_bmax', label: 'Breedste screen (mm)', formule: 'max(zb1; zb2; zb3)' },
+    { code: 'zon_bmin', label: 'Smalste screen (mm)', formule: 'als(zon_n < 2; zb1; min(zb1; zb2; als(zon_n >= 3; zb3; zb2)))' },
+    // ---- Ventilatie op het raam (ronde 11b): het rooster van vroeger, of een raamventilator in een opzetkast bovenop het
+    // kader (binnen, over de hele breedte, 10 cm hoog of zo hoog als de zonweringskast), met het rooster van de ventilator
+    // (`vent_b` breed) in het midden. Zonder zonwering wordt de opening in de muur zo 10 cm hoger.
+    { code: 'vent_rooster', formule: 'rooster = waar en ventilatie_soort <> "ventilator"' },
+    { code: 'vent_toestel', formule: 'rooster = waar en ventilatie_soort = "ventilator"' },
+    { code: 'vent_b', label: 'Breedte ventilator (mm)', formule: 'als(vent_toestel; min(500; breedte - 2 * f - 40); 0)' },
+    { code: 'vent_h', label: 'Hoogte opzetkast raamventilator (mm)', formule: 'als(vent_toestel; max(100; zon_kast); 0)' },
     { code: 'veilig_nodig', formule: 'type_deur of borst < 850' },
     { code: 'toeslag_pct', formule: 'kleur_buiten_toeslag + kleur_binnen_toeslag' },
     { code: 'levertermijn', label: 'Levertermijn (weken)', formule: 'profiel_weken + als(toeslag_pct > 0; 1; 0) + als(zonwering <> "geen"; 1; 0) + als(type = "voordeur"; 2; 0)' },
-    { code: 'montage_uren', formule: 'naarboven(1.5 + raam_m2 * 0.8 + als(type_schuif; 2; 0) + als(zonwering <> "geen"; 1.5; 0) + als(situatie = "renovatie"; 1; 0); 0.5)' },
+    { code: 'montage_uren', formule: 'naarboven(1.5 + raam_m2 * 0.8 + als(type_schuif; 2; 0) + als(zonwering <> "geen"; 1.5; 0) + als(zon_n > 1; zon_n - 1; 0) + als(vent_toestel; 0.5; 0) + als(situatie = "renovatie"; 1; 0); 0.5)' },
     // Voor tekening en 3D.
     { code: 'kb', formule: 'kleur_buiten_kleur' },
     { code: 'randkleur', formule: 'als(afstandhouder_kleur <> ""; afstandhouder_kleur; "#1d1d1d")' },
@@ -546,7 +613,8 @@ export const raamdeur: ProductModel = {
       melding: 'Glas in een deur of lager dan 85 cm boven de vloer: gelaagd veiligheidsglas nodig (NBN S 23-002, te bevestigen).',
     },
     { code: 'valgevaar', ernst: 'waarschuwing', als: 'verdieping > 0 en (type_deur of borst < 850) en (beweeg > 0 of type_deur)', melding: 'Op de verdieping met een lage borstwering of een deur: valbeveiliging nodig (balustrade of vast glas, te bevestigen).' },
-    { code: 'ventilatie', ernst: 'waarschuwing', als: 'ruimte_droog en type <> "voordeur" en niet rooster', melding: 'Droge ruimte zonder ventilatierooster: bij ventilatiesysteem C is luchttoevoer nodig (EPB, te bevestigen).' },
+    { code: 'ventilatie', ernst: 'waarschuwing', als: 'ruimte_droog en type <> "voordeur" en niet rooster', melding: 'Droge ruimte zonder ventilatierooster of raamventilator: bij ventilatiesysteem C is luchttoevoer nodig (EPB, te bevestigen).' },
+    { code: 'ventilator_smal', ernst: 'fout', als: 'vent_toestel en breedte - 2 * f < 400', melding: 'Te smal voor een raamventilator (de ventilator is minstens 36 cm breed): kies een zelfregelend rooster.' },
     { code: 'privacy', ernst: 'waarschuwing', als: 'in(ruimte; "badkamer"; "wc") en glas_m2 > 0 en niet glas_mat', melding: 'Badkamer of wc met helder glas: mat glas voor privacy?' },
     {
       code: 'statiek', ernst: 'fout', als: 'heeft_stijl en niet statiek_ok',
@@ -554,7 +622,8 @@ export const raamdeur: ProductModel = {
     },
     { code: 'rc2_glas', ernst: 'fout', als: 'rc2 en glas_m2 > 0 en niet glas_veilig', melding: 'Inbraakwerend (RC2) vraagt gelaagd glas.' },
     { code: 'uw', ernst: 'waarschuwing', als: 'uw > 1.5', melding: 'Uw hoger dan 1,5 W/m²K: controleer de EPB-eis (beter profiel of driedubbel glas).' },
-    { code: 'screen_breed', ernst: 'fout', als: 'zonwering = "screen" en breedte > 5000', melding: 'Een screen breder dan 5 m kan niet: verdeel in twee screens.' },
+    { code: 'screen_breed', ernst: 'fout', als: 'zonwering = "screen" en zon_bmax > 5000', melding: 'Een screen breder dan 5 m kan niet: kies twee of drie screens bij "Aantal screens".' },
+    { code: 'screen_smal', ernst: 'fout', als: 'zonwering = "screen" en zon_n >= 2 en zon_bmin < 500', melding: 'Een screen wordt smaller dan 50 cm: kies minder screens of verdeel ze gelijk.' },
     { code: 'bovenlicht_klein', ernst: 'fout', als: '(bl > 0 of oh > 0) en khmin < 400', melding: 'Na het bovenlicht of het vak onderaan blijft er te weinig hoogte over voor de vakken.' },
   ],
   stuklijst: [
@@ -579,12 +648,17 @@ export const raamdeur: ProductModel = {
     { code: 'drempel', omschrijving: 'Drempelloze dorpel', artikel: '"DORPEL-DREMPELLOOS"', eenheid: 'lm', aantal: '1', lengte: 'breedte', als: 'type_deur en drempel = "drempelloos"' },
     { code: 'lak', omschrijving: 'Meerprijs kleur', artikel: '"LAK-TOESLAG"', eenheid: 'm2', aantal: 'toeslag_pct / 10', lengte: 'breedte', breedte: 'hoogte', als: 'toeslag_pct > 0' },
     { code: 'roeden', omschrijving: 'Roeden', artikel: '"ROEDE"', eenheid: 'lm', aantal: 'n', lengte: '(rk - 1) * gh + (rr - 1) * gb', als: 'in(type; "raam"; "terrasdeur") en roeden <> "geen"' },
-    { code: 'zonwering', omschrijving: 'Zonwering', artikel: 'zonwering_artikel', eenheid: 'm2', aantal: '1', lengte: 'breedte', breedte: 'hoogte + zon_kast', als: 'zonwering <> "geen"' },
-    { code: 'motor', omschrijving: 'Motor zonwering', artikel: '"ZON-MOTOR"', eenheid: 'stuk', aantal: '1', als: 'zonwering <> "geen" en in(bediening; "motor"; "domotica")' },
+    // Per screen een regel (één screen: de hele breedte, zoals vroeger); naast elkaar ook een middengeleider en een motor per screen.
+    { code: 'zonwering', omschrijving: 'Zonwering', artikel: 'zonwering_artikel', eenheid: 'm2', aantal: '1', lengte: 'zb1', breedte: 'hoogte + zon_kast', als: 'zonwering <> "geen"' },
+    { code: 'zonwering2', omschrijving: 'Zonwering, tweede screen', artikel: 'zonwering_artikel', eenheid: 'm2', aantal: '1', lengte: 'zb2', breedte: 'hoogte + zon_kast', als: 'zonwering = "screen" en zon_n >= 2' },
+    { code: 'zonwering3', omschrijving: 'Zonwering, derde screen', artikel: 'zonwering_artikel', eenheid: 'm2', aantal: '1', lengte: 'zb3', breedte: 'hoogte + zon_kast', als: 'zonwering = "screen" en zon_n >= 3' },
+    { code: 'middengeleider', omschrijving: 'Middengeleider tussen twee screens', artikel: '"ZON-MIDDENGELEIDER"', eenheid: 'lm', aantal: 'zon_n - 1', lengte: 'hoogte', als: 'zonwering = "screen" en zon_n >= 2' },
+    { code: 'motor', omschrijving: 'Motor zonwering', artikel: '"ZON-MOTOR"', eenheid: 'stuk', aantal: 'zon_n', als: 'zonwering <> "geen" en in(bediening; "motor"; "domotica")' },
     { code: 'domotica', omschrijving: 'App-bediening en zonnesensor', artikel: '"ZON-DOMOTICA"', eenheid: 'stuk', aantal: '1', als: 'zonwering <> "geen" en bediening = "domotica"' },
     { code: 'hor', omschrijving: 'Inzethor', artikel: '"HOR-INZET"', eenheid: 'm2', aantal: 'n', lengte: 'gb', breedte: 'gh', als: 'vliegenraam = "inzet"' },
     { code: 'plisse', omschrijving: 'Plissé-vliegendeur', artikel: '"HOR-PLISSE"', eenheid: 'stuk', aantal: '1', als: 'vliegenraam = "plisse"' },
-    { code: 'rooster', omschrijving: 'Ventilatierooster', artikel: '"ROOSTER"', eenheid: 'lm', aantal: '1', lengte: 'breedte - 2 * f', als: 'rooster' },
+    { code: 'rooster', omschrijving: 'Ventilatierooster', artikel: '"ROOSTER"', eenheid: 'lm', aantal: '1', lengte: 'breedte - 2 * f', als: 'vent_rooster' },
+    { code: 'ventilator', omschrijving: 'Raamventilator in een opzetkast (binnen, bovenop het kader)', artikel: '"RAAM-VENTILATOR"', eenheid: 'stuk', aantal: '1', als: 'vent_toestel' },
     { code: 'rc2', omschrijving: 'Meerprijs inbraakwerend beslag', artikel: '"RC2-TOESLAG"', eenheid: 'stuk', aantal: 'max(1; beweeg)', als: 'rc2' },
     { code: 'vensterbank', omschrijving: 'Vensterbank binnen', artikel: 'vensterbank_artikel', eenheid: 'lm', aantal: '1', lengte: 'breedte + 100', als: 'niet type_deur en vensterbank <> "geen"' },
     { code: 'dorpel', omschrijving: 'Dorpel buiten', artikel: 'dorpel_artikel', eenheid: 'lm', aantal: '1', lengte: 'breedte + 60', als: 'niet type_deur en dorpel <> "geen"' },
@@ -610,7 +684,7 @@ export const raamdeur: ProductModel = {
       { code: 'greep', als: 'type = "voordeur"', x: 'als(deur_draai = "links"; f + vb - f - 90; f + 60)', y: 'f + bl + (vh - als(greep = "klink"; 200; 1200)) / 2', breedte: '30', hoogte: 'als(greep = "klink"; 200; 1200)', vulling: '"#9a9a96"' },
       { code: 'roede_v', als: 'in(type; "raam"; "terrasdeur") en roeden = "kruis"', herhaal: 'n', x: 'f + i * stapx + vb / 2 - 12', y: 'f + bl + f / 2', breedte: '24', hoogte: 'vh - f', vulling: 'ki' },
       { code: 'roede_h', als: 'in(type; "raam"; "terrasdeur") en in(roeden; "kruis"; "liggend")', herhaal: 'n', x: 'f + i * stapx + f / 2', y: 'f + bl + vh / 2 - 12', breedte: 'vb - f', hoogte: '24', vulling: 'ki' },
-      { code: 'rooster', als: 'rooster', x: 'f', y: 'f * 0.3', breedte: 'breedte - 2 * f', hoogte: 'f * 0.4', vulling: '"#77797a"' },
+      { code: 'rooster', als: 'vent_rooster', x: 'f', y: 'f * 0.3', breedte: 'breedte - 2 * f', hoogte: 'f * 0.4', vulling: '"#77797a"' },
       { code: 'vensterbank', als: 'niet type_deur en vensterbank <> "geen"', x: '-50', y: 'hoogte', breedte: 'breedte + 100', hoogte: '30', vulling: 'vb_kleur' },
     ],
     maatlijnen: [
@@ -664,6 +738,8 @@ export const raamPrijslijst: Prijslijst = Object.fromEntries(
       ['HOR-INZET', 'Inzethor', 'm2', 55, 0],
       ['HOR-PLISSE', 'Plissé-vliegendeur', 'stuk', 230, 0],
       ['ROOSTER', 'Ventilatierooster', 'lm', 62, 0],
+      ['RAAM-VENTILATOR', 'Raamventilator met opzetkast', 'stuk', 340, 0],
+      ['ZON-MIDDENGELEIDER', 'Middengeleider screens', 'lm', 38, 0],
       ['RC2-TOESLAG', 'Meerprijs RC2-beslag', 'stuk', 85, 0],
       ['VB-STEEN', 'Vensterbank blauwe hardsteen', 'lm', 85, 5],
       ['VB-COMPOSIET', 'Vensterbank composiet', 'lm', 70, 5],

@@ -121,7 +121,14 @@ function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
     });
   }
   if (eigenschap(p, 'ruimte', 'droog') === true && type !== 'voordeur') {
-    uit.push({ titel: 'Ventilatie droge ruimte', toestand: p.keuzes.rooster === true ? 'ok' : 'let-op', waarde: p.keuzes.rooster === true ? 'rooster' : 'geen rooster', uitleg: 'Systeem C: luchttoevoer via een rooster (EPB, te bevestigen).' });
+    const waarde = a.vent_toestel === true ? 'raamventilator' : a.vent_rooster === true ? 'rooster' : 'geen rooster';
+    uit.push({ titel: 'Ventilatie droge ruimte', toestand: p.keuzes.rooster === true ? 'ok' : 'let-op', waarde, uitleg: 'Systeem C: luchttoevoer via een rooster, of via een raamventilator (EPB, te bevestigen).' });
+  }
+  // Twee of drie screens naast elkaar (ronde 11b): elk hoogstens 5 m breed en minstens 50 cm.
+  if (p.keuzes.zonwering === 'screen' && num(a.zon_n) >= 2) {
+    const breed = [a.zb1, a.zb2, a.zb3].slice(0, num(a.zon_n)).map(num);
+    const ok = breed.every((b) => b <= 5000 && b >= 500);
+    uit.push({ titel: 'Screens: breedte per screen', toestand: ok ? 'ok' : 'fout', waarde: `${breed.map((b) => getal(b)).join(' + ')} mm / 50 tot 500 cm` });
   }
   if (p.keuzes.ruimte === 'badkamer' || p.keuzes.ruimte === 'wc') {
     const mat = eigenschap(p, 'glas', 'mat') === true;
@@ -207,6 +214,8 @@ export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string]
   ];
   if (a.heeft_stijl === true) t.push(['Statiek tussenstijl', `${getal(num(a.i_nodig), 1)} / ${getal(num(a.i_aanwezig), 1)} cm⁴ (nodig / aanwezig)`]);
   if (num(a.zon_kast) > 0) t.push(['Zonweringskast', `${getal(num(a.zon_kast))} mm boven het raam`]);
+  if (num(a.zon_n) >= 2) t.push(['Screens naast elkaar', `${[a.zb1, a.zb2, a.zb3].slice(0, num(a.zon_n)).map((b) => getal(num(b))).join(' + ')} mm, met ${num(a.zon_n) - 1} middengeleider${num(a.zon_n) > 2 ? 's' : ''}`]);
+  if (a.vent_toestel === true) t.push(['Raamventilator', `${getal(num(a.vent_b))} mm breed, in een opzetkast van ${getal(num(a.vent_h))} mm hoog bovenop het kader (binnen, over de hele breedte)`]);
   return t;
 }
 
@@ -230,7 +239,9 @@ export function inbegrepen(p: Positie, r: ConfiguratieResultaat): { wel: string[
   if (p.model === 'RAAM') {
     if (p.keuzes.situatie === 'renovatie' && p.keuzes.afwerking !== true) niet.push('Afwerking dagkanten binnen');
     if (p.keuzes.zonwering === 'geen') niet.push('Zonwering');
-    niet.push('Elektrische aansluiting zonwering (elektricien)', 'Schilderwerk en silicone binnen');
+    niet.push('Elektrische aansluiting zonwering (elektricien)');
+    if (r.afgeleid.vent_toestel === true) niet.push('Elektrische aansluiting raamventilator (elektricien)');
+    niet.push('Schilderwerk en silicone binnen');
   } else {
     if (p.keuzes.afbraak !== true) niet.push('Uitbraak en afvoer');
     niet.push('Architect, stabiliteit en EPB-verslag', 'Binnenafwerking, elektriciteit, verwarming');
@@ -240,10 +251,25 @@ export function inbegrepen(p: Positie, r: ConfiguratieResultaat): { wel: string[
 
 /** Kenmerken die alleen over de prijs gaan (het btw-tarief van de aanbouw): niet in het formulier en niet in een samenvatting, zolang er geen prijzen getoond worden. */
 const PRIJSKENMERKEN = new Set(['btw_regime']);
+/** Kenmerken die alleen het beeld zetten (de zonwering half of helemaal neer in de 3D, ronde 11b): nooit in een samenvatting. */
+const BEELDKENMERKEN = new Set(['zon_stand']);
 
-/** De samenvatting van een positie (kenmerk: keuze), zonder wat alleen over de prijs gaat. */
+/**
+ * De samenvatting van een positie (kenmerk: keuze), zonder wat alleen over de prijs of het beeld gaat. Een raam zonder de
+ * keuzes van ronde 11b heeft exact de regels van vroeger (ook het akkoord en het meerwerk van de werf vergelijken deze
+ * regels): de ventilatie heet "Ventilatierooster (zelfregelend): ja/nee" zoals toen, een raamventilator staat als
+ * "Ventilatie op het raam: Raamventilator …", en het aantal screens staat er alleen als het er meer dan één zijn.
+ */
 export function samenvatting(r: ConfiguratieResultaat): string[] {
-  return PRIJZEN ? r.samenvatting : r.kenmerken.filter((k) => k.zichtbaar && !PRIJSKENMERKEN.has(k.code)).map((k) => `${k.label}: ${k.weergave}`);
+  const soort = r.kenmerken.find((k) => k.code === 'ventilatie_soort');
+  const raam = r.product === 'RAAM';
+  return r.kenmerken.filter((k) => k.zichtbaar && (PRIJZEN || !PRIJSKENMERKEN.has(k.code)) && !BEELDKENMERKEN.has(k.code)).flatMap((k) => {
+    if (raam && (k.code === 'ventilatie_soort' || (k.code === 'screens' && k.waarde === 's1'))) return [];
+    if (raam && k.code === 'rooster') {
+      return r.afgeleid.vent_toestel === true ? [`${k.label}: ${soort?.weergave ?? 'Raamventilator'}`] : [`Ventilatierooster (zelfregelend): ${k.waarde === true ? 'ja' : 'nee'}`];
+    }
+    return [`${k.label}: ${k.weergave}`];
+  });
 }
 
 function offertetekst(p: Positie, r: ConfiguratieResultaat): string {
@@ -304,7 +330,8 @@ function bouwFormulier(p: Positie) {
         sectie.append(vak);
       }
     } else {
-      for (const k of kenmerken) sectie.append(bouwVeld(p, k));
+      // Raam: `rooster` en `ventilatie_soort` staan samen als één keuze *Ventilatie op het raam* (geen, rooster, raamventilator).
+      for (const k of kenmerken) if (!(p.model === 'RAAM' && k.code === 'ventilatie_soort')) sectie.append(p.model === 'RAAM' && k.code === 'rooster' ? ventilatieVeld() : bouwVeld(p, k));
     }
     form.append(sectie);
   });
@@ -493,6 +520,47 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
   }
   veld.append(fout, herstel);
   velden.set(k.code, { veld, fout, herstel, update });
+  return veld;
+}
+
+/**
+ * *Ventilatie op het raam* (ronde 11b): één keuze uit drie, gebouwd op twee kenmerken van het model. `rooster` zegt óf er
+ * ventilatie op het raam staat (zoals vroeger: oude projecten met `rooster: true` blijven een rooster), `ventilatie_soort`
+ * welke. Het veld staat onder de code `rooster`, zodat het verdwijnt waar het model het verbergt (een voordeur).
+ */
+function ventilatieVeld(): HTMLElement {
+  const veld = el('div', { class: 'veld veld-keuze', 'data-kenmerk': 'rooster' });
+  const fout = el('p', { class: 'veldfout', role: 'alert' });
+  const herstel = el('p', { class: 'veldherstel', role: 'status' });
+  const groep = el('fieldset', { class: 'keuzes' });
+  groep.append(el('legend', {}, 'Ventilatie op het raam'));
+  const OPTIES: [string, string][] = [['geen', 'Geen'], ['rooster', 'Zelfregelend rooster'], ['ventilator', 'Raamventilator']];
+  const knoppen = new Map<string, HTMLInputElement>();
+  for (const [w, label] of OPTIES) {
+    const kid = `pk-ventilatie-${w}`;
+    const tegel = el('label', { class: 'tegel', for: kid, title: label });
+    const knop = el('input', { type: 'radio', name: 'pk-ventilatie', id: kid, value: w }) as HTMLInputElement;
+    knop.addEventListener('change', () => {
+      hersteld = [];
+      wijzig('positie', (t) => {
+        const x = t.posities.find((y) => y.id === huidigId);
+        if (!x) return;
+        x.keuzes.rooster = w !== 'geen';
+        if (w === 'geen') delete x.keuzes.ventilatie_soort;
+        else x.keuzes.ventilatie_soort = w;
+      });
+    });
+    tegel.append(knop, el('span', {}, label));
+    groep.append(tegel);
+    knoppen.set(w, knop);
+  }
+  veld.append(groep, el('p', { class: 'hulp' }, 'Luchttoevoer bovenaan het raam. Een raamventilator is een toestel in een opzetkast bovenop het kader (binnen; buiten een rooster); het vraagt een elektrische aansluiting en, zonder zonweringskast, een opening die 10 cm hoger is.'), fout, herstel);
+  const update = () => {
+    const k = huidig()?.keuzes;
+    const nu = k?.rooster !== true ? 'geen' : k.ventilatie_soort === 'ventilator' ? 'ventilator' : 'rooster';
+    for (const [w, knop] of knoppen) knop.checked = w === nu;
+  };
+  velden.set('rooster', { veld, fout, herstel, update });
   return veld;
 }
 

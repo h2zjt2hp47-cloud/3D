@@ -113,6 +113,13 @@ const BOUWBEELDEN = [
   { naam: 'bouw-steellook', indeling: 'steel_deur', standpunt: 'achter' },
   // Sectionale garagepoort (eigen model), met cassettes en vensters.
   { naam: 'bouw-garagepoort', poort: true, standpunt: 'achter' },
+  // Detail van ramen en dakramen (ronde 11b), elk op een verse pagina (de voorbeeldwoning), zodat het beeld niet afhangt van
+  // wat ervoor liep (de raamtypes hierboven laten hun kleur en profiel achter): het schuifraam van 4 m als hef-schuifdeur van
+  // 4,00 × 2,35 m met twee screens naast elkaar (van buiten), een raam met een raamventilator (van binnen, dichterbij), en
+  // drie platte dakramen van 120 × 120 met een screen op het platte dak (de woning schuin, via de kaart Dak).
+  { naam: 'bouw-twee-screens', detail: 'raam', positie: /Schuifraam leefruimte/, tegel: 'hefschuif2', vul: [['#pk-hoogte', '2350']], klik: ['label[for="pk-screens-s2"]'], standpunt: 'achter' },
+  { naam: 'bouw-ventilator', detail: 'raam', positie: /Raam leefruimte zijgevel/, klik: ['label[for="pk-ventilatie-ventilator"]'], standpunt: 'schuin', toetsen: 'Z3' },
+  { naam: 'bouw-platte-dakramen', detail: 'dakramen', toetsen: 'Z2' },
   // Schuine muren (ronde 2c, 16/11), op een eigen pagina met een vers project: de voorbeeldwoning met een afgeschuinde
   // leefruimte (vijfhoek, schuifraam in de schuine muur) en een aanbouw met een schuine zijmuur (raam erin).
   { naam: 'bouw-schuin-plan', schuin: 'plan' },
@@ -357,6 +364,44 @@ async function maakBeelden() {
       console.log('klaar');
     }
     await p.close();
+  }
+  // Detail van ramen en dakramen (ronde 11b): elk beeld op een verse pagina, met een vers project (de voorbeeldwoning).
+  for (const b of bouw.filter((x) => x.detail)) {
+    process.stdout.write(`  ${b.naam} … `);
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    let canvas = '#p-3d canvas';
+    if (b.detail === 'dakramen') {
+      // De kaart Dak: plat dak, drie daklichten met de teller, de soort "plat dakraam 120 × 120" en een screen op alle.
+      await p.click('.nav [data-weergave="plan"]');
+      await p.click('[data-pl-weergave="plan"]');
+      await p.click('[data-dak-vorm="plat"]');
+      for (let i = 0; i < 3; i++) await p.click('#pl-dak [data-koepels="plus"]');
+      await p.selectOption('#dak-daklicht-soort', 'dakraam_120');
+      await p.click('#pl-dak [data-dakraam-zon="screen"]');
+      await p.click('[data-pl-weergave="3d"]');
+      await p.click('[data-pl-standpunt="schuin"]');
+      canvas = '#pl-3d canvas';
+    } else {
+      await p.click('.nav [data-weergave="positie"]');
+      const namen = await p.locator('#p-kies option').allTextContents();
+      await p.selectOption('#p-kies', { index: Math.max(0, namen.findIndex((t) => b.positie.test(t))) });
+      await p.click('[data-p-weergave="voor"]');
+      if (b.tegel) await p.click(`[data-indeling="${b.tegel}"]`);
+      for (const [veld, waarde] of b.vul ?? []) { await p.fill(veld, waarde); await p.press(veld, 'Enter'); }
+      for (const k of b.klik ?? []) await p.click(k);
+      await p.click('[data-p-weergave="3d"]');
+      await p.click(`[data-p-standpunt="${b.standpunt}"]`);
+    }
+    if (b.toetsen) {
+      await p.locator(canvas).focus();
+      const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
+      for (const [, k, n] of b.toetsen.matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+    }
+    beelden.set(b.naam, png(await wachtTotStil(p, canvas)));
+    await p.close();
+    console.log('klaar');
   }
   const schuin = bouw.filter((x) => x.schuin);
   if (schuin.length) {

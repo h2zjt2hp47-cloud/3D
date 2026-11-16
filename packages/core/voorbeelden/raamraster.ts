@@ -217,6 +217,27 @@ export function rasterVan(r: ConfiguratieResultaat): Raster {
   return { soort: 'raster', type, B, H, f, n, bl, oh, steellook, vakken, stijlen };
 }
 
+/** Eén stuk zonwering boven het raam: van x0 tot x1 (mm vanaf links, zicht van binnen). */
+export interface ZonDeel {
+  nr: number;
+  x0: number;
+  x1: number;
+}
+
+/**
+ * De zonwering boven het raam in stukken (ronde 11b): één stuk over de hele breedte (ook elk rolluik of buitenjaloezie), of
+ * twee of drie screens naast elkaar. De grenzen komen uit de formules van het model (`zg1`, `zg2`), zodat de regel *screen
+ * breder dan 5 m*, de stuklijst, de tekening en de 3D dezelfde breedtes gebruiken. Leeg zonder zonwering.
+ */
+export function zonweringVan(r: ConfiguratieResultaat): ZonDeel[] {
+  const a = r.afgeleid as Record<string, unknown>;
+  if (num(a.zon_kast) <= 0) return [];
+  const B = num(r.kenmerken.find((x) => x.code === 'breedte')?.waarde);
+  const n = Math.min(3, Math.max(1, Math.round(num(a.zon_n, 1))));
+  const grenzen = [0, ...(n >= 2 ? [num(a.zg1)] : []), ...(n >= 3 ? [num(a.zg2)] : []), B];
+  return Array.from({ length: n }, (_, i) => ({ nr: i + 1, x0: grenzen[i]!, x1: grenzen[i + 1]! }));
+}
+
 /** De opening per kolom van de hoofdrij (links → rechts gezien van binnen), voor plattegrond en gevelaanzicht. */
 export function openingenVan(r: ConfiguratieResultaat): string[] {
   return rasterVan(r).vakken.filter((v) => v.rol === 'vak' || v.rol === 'deur' || v.rol === 'deel').map((v) => v.opening);
@@ -239,7 +260,19 @@ export function raamTekening(r: ConfiguratieResultaat, raster: Raster = rasterVa
     if (breedte <= 0 || hoogte <= 0) return;
     vormen.push({ code, x: r2(x), y: r2(y), breedte: r2(breedte), hoogte: r2(hoogte), vulling, ...(symbool !== undefined ? { symbool } : {}) });
   };
-  if (kast > 0) vorm('zonwering', 0, -kast, B, kast, kbKleur);
+  // Zonweringskast boven het raam; twee of drie screens hebben elk hun eigen kast, naast elkaar.
+  const zon = zonweringVan(r);
+  if (zon.length > 1) for (const z of zon) vorm(`zonwering.${z.nr}`, z.x0, -kast, z.x1 - z.x0, kast, kbKleur);
+  else if (kast > 0) vorm('zonwering', 0, -kast, B, kast, kbKleur);
+  // Raamventilator (ronde 11b): de opzetkast bovenop het kader, binnen (dus vóór een zonweringskast in dit zicht van
+  // binnen), met de sleuven van de ventilator in het midden en de knop ernaast (zie raam3d.ts).
+  const vh = num(a.vent_h);
+  if (a.vent_toestel === true && vh > 0) {
+    const vb = num(a.vent_b), x0 = (B - vb) / 2;
+    vorm('ventilator', 0, -vh, B, vh, '#e8e7e2');
+    for (let i = 0; i < 3; i++) vorm(`ventilator.sleuf.${i + 1}`, x0, -vh * (0.75 - i * 0.2), vb, vh * 0.07, '#55585a');
+    vorm('ventilator.knop', x0 + vb + 30, -vh * 0.62, 24, vh * 0.24, '#55585a');
+  }
   vorm('kader', 0, 0, B, H, ki);
 
   const hoofd = raster.vakken.filter((v) => v.rol === 'vak' || v.rol === 'deur' || v.rol === 'deel');
@@ -277,7 +310,7 @@ export function raamTekening(r: ConfiguratieResultaat, raster: Raster = rasterVa
   for (const v of metRoeden) for (let j = 1; j < v.ruiten[0]; j++) vorm(roedeCode('roede_v', v, j, v.ruiten[0] - 1), v.vlak.x + (v.vlak.b * j) / v.ruiten[0] - dikte / 2, v.vlak.y, dikte, v.vlak.h, ki);
   for (const v of metRoeden) for (let j = 1; j < v.ruiten[1]; j++) vorm(roedeCode('roede_h', v, j, v.ruiten[1] - 1), v.vlak.x, v.vlak.y + (v.vlak.h * j) / v.ruiten[1] - dikte / 2, v.vlak.b, dikte, ki);
 
-  if (k.rooster === true) vorm('rooster', f, f * 0.3, B - 2 * f, f * 0.4, '#77797a');
+  if (a.vent_rooster === true) vorm('rooster', f, f * 0.3, B - 2 * f, f * 0.4, '#77797a');
   if (a.type_deur !== true && typeof k.vensterbank === 'string' && k.vensterbank !== 'geen') vorm('vensterbank', -50, H, B + 100, 30, tekst(a.vb_kleur));
 
   const maatlijnen: MaatlijnResultaat[] = [];
@@ -289,11 +322,17 @@ export function raamTekening(r: ConfiguratieResultaat, raster: Raster = rasterVa
   maat('hoogte', B, 0, B, H, 160);
   if (raster.bl > 0) maat('bovenlicht', 0, raster.bl, 0, 0, 160);
   if (raster.oh > 0) maat('onder', 0, H, 0, H - raster.oh, 160);
+  // Twee of drie screens: de breedte van elk screen vlak boven de kasten; de maat van de vakken komt er dan boven.
+  // (Boven een opzetkast van een raamventilator die hoger is dan de zonweringskast, komen de maten boven die kast.)
+  const boven = Math.max(kast, vh);
+  const metScreens = zon.length > 1;
+  if (metScreens) for (const z of zon) maat(`screen.${z.nr}`, z.x0, 0, z.x1, 0, boven + 120, String(Math.round(z.x1 - z.x0)));
+  const vakAfstand = boven + 120 + (metScreens ? Math.max(260, Math.max(B, H) / 14) : 0);
   if (n >= 2 && raster.soort !== 'schuif') {
     // Gelijke vakken: alleen het eerste; ongelijke vakken: elk vak.
     const ongelijk = hoofd.some((v) => Math.abs(v.b - hoofd[0]!.b) > 0.5);
     hoofd.forEach((v, i) => {
-      if (i === 0 || ongelijk) maat(i === 0 ? 'vak' : `vak.${i + 1}`, v.x, 0, v.x + v.b, 0, kast + 120, String(Math.round(v.b)));
+      if (i === 0 || ongelijk) maat(i === 0 ? 'vak' : `vak.${i + 1}`, v.x, 0, v.x + v.b, 0, vakAfstand, String(Math.round(v.b)));
     });
   }
   void type;
