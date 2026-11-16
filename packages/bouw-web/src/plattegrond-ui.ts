@@ -170,7 +170,7 @@ interface Sleep {
   /**
    * Een losse wand: waar het slepen begon, op het scherm en op het plan. Elke volgende plaats rekent vanaf daar met de
    * schaal van de tekening, niet met de ligging van de tekening op het scherm: die kan tijdens het slepen verschuiven
-   * (de kop van de pagina zegt na de eerste wijziging iets anders), en dan zou de wand een stuk mee springen.
+   * (in een proef 58 beeldpunten bij de eerste wijziging na het herladen), en dan zou de wand een stuk mee springen.
    */
   scherm?: { x: number; y: number; px: number; py: number };
   start: { x: number; y: number };
@@ -1173,6 +1173,12 @@ function naPointerMove(ev: PointerEvent) {
         if (!binnenR0(l0.x + l0.b / 2, l0.y + l0.d / 2)) continue;
         const l = pl.daklichten?.find((x) => x.id === l0.id);
         if (l) { l.x = l0.x + ddx; l.y = l0.y + ddy; }
+      }
+      // Losse wanden in de ruimte (het midden van hun as) ook; anders bleef een muurtje achter en werd het een tuinmuur.
+      for (const w0 of oud.losseWanden ?? []) {
+        if (!binnenR0((w0.van[0] + w0.tot[0]) / 2, (w0.van[1] + w0.tot[1]) / 2)) continue;
+        const w = pl.losseWanden?.find((x) => x.id === w0.id);
+        if (w) { w.van = [w0.van[0] + ddx, w0.van[1] + ddy]; w.tot = [w0.tot[0] + ddx, w0.tot[1] + ddy]; }
       }
       // Een vrije vorm: de ramen en deuren in haar muren (ook schuine) gaan mee.
       if (heeftVrijeVorm(r0)) verzetOpeningen(oud, pl, id);
