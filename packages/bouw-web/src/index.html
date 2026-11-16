@@ -181,6 +181,12 @@ select, input[type="text"], input[type="date"], .eig input, .maatveld input { fo
 .snel-onder button { min-height: 52px; padding: 0 22px; font-size: 1.05rem; border-radius: 10px; border: 1px solid var(--accent); cursor: pointer; }
 #ss-verder { background: var(--accent); color: var(--vlak); }
 @media (max-width: 560px) { .snel-maat { grid-template-columns: 56px minmax(0, 1fr) 56px; } .snel-maat-naam { grid-column: 1 / -1; } .snel-knop { width: 56px; height: 56px; } }
+/* Vaste modellen (16/11): bij staalwerk eerst wat (balustrade, luifel, trap), en de maat op de tegel van een vertrekpunt. */
+.snel-soorten { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; max-width: 640px; margin-bottom: 14px; }
+.snel-soort { display: grid; justify-items: center; gap: 4px; min-height: 120px; padding: 10px; border: 1px solid var(--lijn); border-radius: 12px; background: var(--vlak); color: inherit; font: inherit; cursor: pointer; }
+.snel-soort .snel-beeld svg { width: 80px; height: 72px; }
+.snel-soort[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-zacht); box-shadow: inset 0 0 0 1px var(--accent); }
+.snel-maatlabel { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent); }
 
 /* ---------- plattegrond ---------- */
 .planraster { display: grid; grid-template-columns: 230px minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
@@ -254,6 +260,8 @@ details.regelgroep .stalen svg, details.regelgroep .stalen .dak-staal { width: 3
 @media (max-width: 700px) { .positie { grid-template-columns: 90px minmax(0, 1fr); } .positieprijs { grid-column: 1 / -1; } }
 .positie .mini { background: var(--papier); border-radius: 6px; padding: 4px; display: grid; place-items: center; }
 .positie .mini svg { max-width: 100%; height: auto; max-height: 150px; }
+.positie .mini img { display: block; max-width: 100%; max-height: 150px; border-radius: 4px; }
+.positie .mini svg[viewBox="0 0 120 110"] { width: 110px; color: var(--accent); }
 .positiekop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .positiekop .code { font: 600 .8rem var(--tekst); background: var(--accent); color: var(--vlak); border-radius: 999px; padding: 1px 9px; }
 .positiekop .label { font-size: .75rem; color: var(--zacht); border: 1px solid var(--lijn); border-radius: 999px; padding: 0 8px; }
@@ -300,6 +308,13 @@ summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
 .indeling-beeld svg polyline[stroke-dasharray] { stroke-dasharray: 3 2; }
 .indeling-naam { font-size: .78rem; line-height: 1.2; text-align: center; text-wrap: balance; }
 .meer-opties { border: 1px solid var(--lijn); border-radius: 8px; padding: 0 12px; margin: 4px 0 14px; }
+/* Een keuze die de configurator vanzelf omzette (vaste modellen): kort, bij het veld zelf en onder de 3D. */
+.veldherstel { margin: 6px 0 0; font-size: .85rem; color: var(--inkt); background: color-mix(in srgb, var(--let-op) 14%, transparent); border-left: 3px solid var(--let-op); padding: 4px 8px; border-radius: 4px; }
+.veldherstel:empty { display: none; }
+#p-aangepast { margin: 10px 0 0; }
+.p-maten { margin-left: auto; }
+.meetstaat h4 { margin: 12px 0 4px; font-size: .85rem; text-transform: uppercase; letter-spacing: .04em; color: var(--zacht); font-family: var(--tekst); }
+.meetstaat ul { margin: 0; padding-left: 18px; font-size: .9rem; font-variant-numeric: tabular-nums; }
 .meer-opties > summary { min-height: 44px; display: flex; align-items: center; }
 .meer-opties[open] > summary { margin-bottom: 10px; border-bottom: 1px solid var(--lijn); }
 fieldset.waaier { gap: 6px; }
@@ -315,6 +330,9 @@ fieldset.waaier { gap: 6px; }
    een keuzerondje (36 px) won het hier van `.tegel`, waardoor de tegels 38 px bleven. */
 @media (pointer: coarse) {
   #p-formulier fieldset.keuzes label.tegel:has(> input), #p-formulier label.schakelaar:has(> input) { min-height: 44px; }
+  /* Knop Maten onder de 3D, en smalle keuzetegels (een helling van 6°) minstens 44 px breed. */
+  #p-3d-knoppen label.schakelaar:has(> input) { min-height: 44px; }
+  #p-formulier fieldset.keuzes label.tegel:has(> input) { min-width: 44px; justify-content: center; }
 }
 @media (max-width: 900px) {
   /* Smal scherm: de tekening staat eerst en blijft in beeld, zodat je bij elke tik het resultaat ziet. */
@@ -325,6 +343,12 @@ fieldset.waaier { gap: 6px; }
   .positieraster > .resultaat > .kaart:first-child:has(#p-3d[hidden]) { position: sticky; top: 0; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
   .positieraster > .resultaat > .kaart:first-child .tekening { min-height: 0; }
   .positieraster > .resultaat > .kaart:first-child .tekening svg { max-height: 250px; }
+}
+/* Tablet in staande stand: de 3D van een vast model blijft bovenaan staan, zodat je bij elke tik het resultaat ziet. Op een
+   lager scherm (een gsm) niet: dan bleef er geen plaats over voor de keuzes. */
+@media (max-width: 900px) and (min-height: 1000px) {
+  .positieraster > .resultaat > .kaart.vast3d { position: sticky; top: 0; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
+  .kaart.vast3d .knoppenrij { margin-top: 6px; gap: 6px; }
 }
 
 
@@ -908,12 +932,16 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
     <div class="positieraster">
       <form id="p-formulier" aria-label="Configuratie" onsubmit="return false" style="display:grid;gap:16px;align-content:start"></form>
       <aside class="resultaat" aria-label="Resultaat">
-        <section class="kaart">
+        <section class="kaart" id="p-voorkaart">
           <div class="kaartkop">
-            <h2>Vooraanzicht</h2>
-            <div class="tabs" role="group" aria-label="Weergave">
+            <h2 id="p-weergavekop">Vooraanzicht</h2>
+            <div class="tabs" role="group" aria-label="Weergave" id="p-weergave-tabs">
               <button type="button" data-p-weergave="voor" aria-pressed="true">Vooraanzicht</button>
               <button type="button" data-p-weergave="3d" aria-pressed="false">3D</button>
+            </div>
+            <div class="tabs" role="group" aria-label="Afgewerkt of constructie" id="p-bouwweergave" hidden>
+              <button type="button" data-p-bouw="afgewerkt" aria-pressed="true" title="Zoals het er afgewerkt uitziet">Afgewerkt</button>
+              <button type="button" data-p-bouw="constructie" aria-pressed="false" title="Wat erin zit: het skelet of het staal, met de lagen als staal">Constructie</button>
             </div>
           </div>
           <div class="tekening" id="p-tekening"></div>
@@ -923,7 +951,14 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
             <button type="button" data-p-standpunt="achter">Buiten</button>
             <button type="button" data-p-standpunt="voor">Recht</button>
             <button type="button" data-p-standpunt="boven">Boven</button>
+            <button type="button" data-p-zicht="schuin" hidden>Schuin</button>
+            <button type="button" data-p-zicht="voor" hidden>Voor</button>
+            <button type="button" data-p-zicht="zij" hidden>Zij</button>
+            <button type="button" data-p-zicht="boven" hidden>Boven</button>
+            <button type="button" data-p-zicht="ooghoogte" hidden title="Recht van voren, op ooghoogte, zoals een staande klant">Ooghoogte</button>
+            <label class="schakelaar p-maten" id="p-maten-label" hidden><input type="checkbox" id="p-maten" role="switch"><span class="schuifje" aria-hidden="true"></span><span>Maten</span></label>
           </div>
+          <p id="p-aangepast" class="melding" role="status" hidden></p>
         </section>
         <section class="kaart" aria-live="polite">
           <div class="kaartkop"><h2>Controles</h2><span id="p-controle-status" class="status ok"></span></div>
@@ -948,7 +983,11 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
           <div class="kaartkop"><h2>Glasbestelling</h2><span class="klein">glasmaat = falsmaat − glasspeling</span></div>
           <div class="tabelhouder"><table id="p-glas"><thead><tr><th>Ruit</th><th>Plaats</th><th class="num">Dagmaat</th><th class="num">Falsmaat</th><th class="num">Glasmaat</th><th>Samenstelling</th><th class="num">m²</th><th class="num">Gewicht</th></tr></thead><tbody></tbody></table></div>
         </section>
-        <section class="kaart intern">
+        <section class="kaart intern" id="p-meetstaat-kaart" hidden>
+          <div class="kaartkop"><h2>Meetstaat</h2><span class="klein">netto, zonder prijzen · na te lezen door een vakman</span></div>
+          <div id="p-meetstaat" class="meetstaat"></div>
+        </section>
+        <section class="kaart intern" id="p-stuklijst-kaart">
           <div class="kaartkop"><h2>Bestellijst</h2><span class="klein">maten in mm</span></div>
           <div class="tabelhouder"><table id="p-stuklijst"><thead><tr><th>Omschrijving</th><th>Artikel</th><th class="num">Aantal</th><th class="num">Maat</th><th class="num">Hoeveelheid</th><th class="num prijsdeel">Kost</th></tr></thead><tbody></tbody></table></div>
         </section>
@@ -1067,7 +1106,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         <dl id="o-intern" class="detail"></dl></div>
       </section>
       <section class="kaart alleen-woning">
-        <div class="kaartkop"><h2>Ramen, deuren en poorten</h2><span class="klein o-btwlabel prijsdeel"></span><span id="o-status" class="status ok"></span></div>
+        <div class="kaartkop"><h2 id="o-posities-kop">Ramen, deuren en poorten</h2><span class="klein o-btwlabel prijsdeel"></span><span id="o-status" class="status ok"></span></div>
         <p class="klein">Tik op een regel om de materialen en de opbouw te zien.</p>
         <div id="o-posities"></div>
         <p id="o-leeg" class="klein" hidden>Nog geen ramen of deuren. Plaats ze in de plattegrond of voeg ze hier toe.</p>
@@ -1085,7 +1124,7 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
         <div class="kaartkop"><h2>Afwerking uit de plattegrond</h2><span class="klein o-btwlabel prijsdeel"></span></div>
         <div id="o-regels"></div>
       </section>
-      <section class="kaart intern">
+      <section class="kaart intern" id="o-glas-kaart">
         <div class="kaartkop"><h2>Glasbestelling per ruit</h2><span id="o-glas-totaal" class="klein"></span></div>
         <details>
           <summary>Toon alle ruiten (glasmaat = falsmaat − glasspeling)</summary>

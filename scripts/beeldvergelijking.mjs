@@ -117,6 +117,14 @@ const BOUWBEELDEN = [
   { naam: 'bouw-schuin-plan', schuin: 'plan' },
   { naam: 'bouw-schuin-3d', schuin: '3d', toetsen: 'L9U2Z3' },
   { naam: 'bouw-schuin-binnen', schuin: 'binnen', toetsen: 'R5U4Z1' },
+  // Vaste modellen (ronde 8b, 16/11), elk via de snelstart in een nieuw project, op een eigen pagina: een carport met
+  // berging en zadeldak (de bedekking wordt vanzelf zink), het poolhouse, de hal van 15 × 30 m buiten (helemaal in beeld)
+  // en in de constructieweergave, en de rechte trap met haar maten. `klik` = wat er daarna in de configurator gebeurt.
+  { naam: 'bouw-model-carport', model: ['overkapping', null, 'carport'], klik: ['label[for="pk-berging-opzij"]', 'label[for="pk-dakvorm-zadel"]'] },
+  { naam: 'bouw-model-poolhouse', model: ['tuinhuis', null, 'poolhouse'], klik: [] },
+  { naam: 'bouw-model-loods', model: ['loods', null, 'hal'], klik: [] },
+  { naam: 'bouw-model-loods-constructie', model: ['loods', null, 'hal'], klik: ['[data-p-bouw="constructie"]'] },
+  { naam: 'bouw-model-trap', model: ['staalwerk', 'trap', 'staaltrap'], klik: ['#p-maten-label'] },
 ];
 
 /**
@@ -350,6 +358,29 @@ async function maakBeelden() {
         for (const [, k, n] of b.toetsen.matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
         beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  const modellen = bouw.filter((x) => x.model);
+  if (modellen.length) {
+    // Een verse pagina; elk model maakt via de snelstart zijn eigen project (de afgewerkte weergave blijft niet hangen:
+    // na de constructie gaat de knop terug naar afgewerkt).
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    for (const b of modellen) {
+      process.stdout.write(`  ${b.naam} … `);
+      const [tegel, soort, vertrekpunt] = b.model;
+      await p.click('.nav [data-weergave="start"]');
+      await p.click(`[data-snel="${tegel}"]`);
+      if (soort) await p.click(`[data-snel-soort="${soort}"]`);
+      await p.click('#ss-verder');
+      await p.click(`[data-vertrekpunt="${vertrekpunt}"]`);
+      for (const k of b.klik) { await p.click(k); await p.waitForTimeout(300); }
+      beelden.set(b.naam, png(await wachtTotStil(p, '#p-3d canvas')));
+      if (b.klik.includes('[data-p-bouw="constructie"]')) await p.click('[data-p-bouw="afgewerkt"]');
+      if (b.klik.includes('#p-maten-label')) await p.click('#p-maten-label');
       console.log('klaar');
     }
     await p.close();

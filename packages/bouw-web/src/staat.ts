@@ -24,14 +24,21 @@ import { garagepoort, poortPrijslijst } from '../../core/voorbeelden/garagepoort
 import type { PlanRegelOpties } from '../../core/voorbeelden/inrichting.js';
 import { berekenRaam, raamdeur, raamPrijslijst } from '../../core/voorbeelden/raam.js';
 import { nieuweIndeling } from '../../core/voorbeelden/raamraster.js';
+import { VASTE_MODELLEN, type VastModelCode } from '../../core/voorbeelden/vastemodellen.js';
 import { raamKeuzes, voorbeeldWoning } from '../../core/voorbeelden/woning.js';
 
-export type ModelCode = 'RAAM' | 'AANBOUW' | 'POORT';
+/**
+ * De modellen van een positie. Sinds 16/11 (ronde 8b) ook de vaste modellen van `vastemodellen.ts`: overkapping, tuinhuis,
+ * loods, balustrade, luifel en trap. Die hebben geen prijzen en staan los van de plattegrond.
+ */
+export type ModelCode = 'RAAM' | 'AANBOUW' | 'POORT' | VastModelCode;
+type ModelInfo = { model: ProductModel; prijslijst: Prijslijst; label: string; zonderPrijs?: boolean };
 /** `zonderPrijs`: het model dient alleen om te tonen (nog geen stuklijst); de schermen tonen dan geen bedrag. */
-export const MODELLEN: Record<ModelCode, { model: ProductModel; prijslijst: Prijslijst; label: string; zonderPrijs?: boolean }> = {
+export const MODELLEN: Record<ModelCode, ModelInfo> = {
   RAAM: { model: raamdeur, prijslijst: raamPrijslijst, label: 'Raam of deur' },
   AANBOUW: { model: aanbouw, prijslijst: aanbouwPrijslijst, label: 'Aanbouw met schuifraam' },
   POORT: { model: garagepoort, prijslijst: poortPrijslijst, label: 'Sectionale garagepoort', zonderPrijs: true },
+  ...(Object.fromEntries(Object.values(VASTE_MODELLEN).map((v) => [v.code, { model: v.model, prijslijst: v.prijslijst, label: v.model.naam, zonderPrijs: true }])) as Record<VastModelCode, ModelInfo>),
 };
 
 export interface Inmeting {

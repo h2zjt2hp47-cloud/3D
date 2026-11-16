@@ -4,15 +4,22 @@
  *
  * Ramen en deuren: bovenaan de indeling staan kant-en-klare indelingen als tegels met een tekening (één tik);
  * de instelling per vak zit eronder achter "Meer opties". Kleuren staan als een waaier van stalen.
+ *
+ * Vaste modellen (16/11: carport of overkapping, tuinhuis, loods, balustrade, luifel, trap; vastemodellen.ts): alleen in
+ * 3D (ze hebben geen vooraanzicht), met de knop *Afgewerkt / Constructie* en *Maten*; per stap de kenmerken voor een
+ * eerste gesprek, het detail achter *Meer opties*; de meldingen van het model als controles; een keuze die door een andere
+ * keuze niet meer kan, wordt vanzelf de eerste die wel kan, met een korte melding (`herstelKeuzes`); de meetstaat in
+ * plaats van de bestellijst. Geen bedrag.
  */
-import { passendKader, tekenSvg, type ConfiguratieResultaat, type Kenmerk } from '../../core/src/index.js';
+import { gebouwKader, passendKader, tekenSvg, type BouwWeergave, type ConfiguratieResultaat, type Kenmerk, type Scene3DMetMaten } from '../../core/src/index.js';
 import { berekenRaam, ruitenVan } from '../../core/voorbeelden/raam.js';
 import { INDELINGEN, indelingVan, pasIndelingToe, type Indeling } from '../../core/voorbeelden/raamindelingen.js';
 import { raamKeuzes } from '../../core/voorbeelden/woning.js';
 import { aanbouwNaarPlan } from '../../core/voorbeelden/snelstart.js';
-import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
+import { herstelKeuzes, isVastModel, meetstaatGroep, meetstaatTekst, VASTE_MODELLEN, vastModelOpbouw, type Herstel, type VastModelCode } from '../../core/voorbeelden/vastemodellen.js';
+import { maak3D, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, alleenPrijs, el, eur, getal, kopieer, num, PRIJZEN } from './hulp.js';
-import { positieScene } from './positie-3d.js';
+import { heeftConstructie, isGebouw, positieMaatlijnen, positieScene } from './positie-3d.js';
 import { bewaarInBibliotheek, klantKorting, MODELLEN, nieuweId, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
@@ -24,6 +31,16 @@ let viewer: Viewer3D | null | undefined;
 let naarPlan: (openingId: string) => void = () => {};
 let naarOfferte: () => void = () => {};
 let naarWoning3D: () => void = () => {};
+/** Afgewerkt of constructie (vaste modellen); blijft staan als je van positie wisselt. */
+let bouwWeergave: BouwWeergave = 'afgewerkt';
+/** Hoofdmaten in de 3D (vaste modellen en een aanbouw). */
+let matenAan = false;
+/** Wat de configurator bij de laatste keuze vanzelf omzette (een keuze die niet meer kon), voor de melding. */
+let hersteld: Herstel[] = [];
+/** De positie die de 3D laatst toonde: een andere positie begint schuin van boven. */
+let in3D = '';
+/** Wat de 3D laatst tekende (positie en keuzes), om een beeld ervan alleen te geven als het nog klopt. */
+let getekend = '';
 
 const huidig = (): Positie | undefined => toestand().posities.find((p) => p.id === huidigId) ?? toestand().posities[0];
 
@@ -40,7 +57,20 @@ function keuzeLabel(p: Positie, kenmerk: string): string {
 
 // ---------- controles per model ----------
 export function controles(p: Positie, r: ConfiguratieResultaat): Controle[] {
+  if (isVastModel(p.model)) return vastControles(r);
   return p.model === 'AANBOUW' ? aanbouwControles(p, r) : p.model === 'POORT' ? poortControles(r) : raamControles(p, r);
+}
+
+/**
+ * Een vast model: de meldingen van het model zelf (in gewone taal; een waarschuwing is een aandachtspunt), en het hoogste
+ * punt (voor de vergunning). Een fout bij een veld staat bij dat veld.
+ */
+function vastControles(r: ConfiguratieResultaat): Controle[] {
+  const uit: Controle[] = [];
+  const top = num(r.afgeleid.tophoogte);
+  if (top) uit.push({ titel: 'Hoogste punt', toestand: 'ok', waarde: `${getal(top / 100, 2)} m` });
+  for (const m of r.meldingen.filter((x) => !x.kenmerk)) uit.push({ titel: m.melding, toestand: m.ernst === 'fout' ? 'fout' : 'let-op' });
+  return uit;
 }
 
 function raamControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
@@ -134,6 +164,16 @@ function aanbouwControles(p: Positie, r: ConfiguratieResultaat): Controle[] {
 
 export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string][] {
   const a = r.afgeleid;
+  if (isVastModel(p.model)) {
+    // Alles wat het model uitrekent en een naam heeft: palen, overspanning, profielen (een voorstelling), oppervlaktes.
+    return VASTE_MODELLEN[p.model].model.afgeleid.flatMap((x): [string, string][] => {
+      const w = a[x.code];
+      if (!x.label || w === null || w === undefined || w === '') return [];
+      const eenheid = /\((cm|m²|graden)\)$/.exec(x.label)?.[1];
+      const label = x.label.replace(/ \((cm|m²|graden)\)$/, '');
+      return [[label, typeof w === 'number' ? `${getal(w, w % 1 ? 1 : 0)}${eenheid === 'graden' ? '°' : eenheid ? ` ${eenheid}` : ''}` : String(w)]];
+    });
+  }
   if (p.model === 'AANBOUW') {
     return [
       ['Raampartij (b × h)', `${getal(num(a.raam_b))} × ${getal(num(a.raam_h))} mm`],
@@ -169,7 +209,19 @@ export function techniek(p: Positie, r: ConfiguratieResultaat): [string, string]
   return t;
 }
 
+/** Wat niet in een vast model zit (de modellen zeggen het zelf in hun uitleg). */
+const NIET_IN_MODEL: Record<VastModelCode, string[]> = {
+  OVERKAPPING: ['Fundering en onderbouw: de vloer staat er alleen voor het beeld', 'Vergunning: na te kijken bij de gemeente', 'Nazicht door een houtbouwer of ingenieur: de maten zijn een voorstel', 'Plaatsing en levering: nog te bepalen'],
+  TUINHUIS: ['Fundering: alleen de vloerplaat staat erin', 'Elektriciteit, water en binnenafwerking', 'Vergunning: na te kijken bij de gemeente', 'Nazicht door een houtbouwer: de opbouw is een voorstel', 'Plaatsing en levering: nog te bepalen'],
+  LOODS: ['Fundering en vloerplaat: alleen voor het beeld', 'Berekening door een staalbouwer of ingenieur: de profielen zijn een voorstelling', 'Omgevingsvergunning', 'Plaatsing en levering: nog te bepalen'],
+  BALUSTRADE: ['Berekening en bevestiging door een staalbouwer', 'Het terras in de 3D: alleen voor het beeld', 'Plaatsing: nog te bepalen'],
+  LUIFEL: ['Berekening en bevestiging in de gevel door een staalbouwer', 'De gevel en de deur in de 3D: alleen voor het beeld', 'Plaatsing: nog te bepalen'],
+  STAALTRAP: ['Berekening en bevestiging aan de vloeren door een staalbouwer', 'Het trapgat, de vloer en de muur in de 3D: alleen voor het beeld', 'Plaatsing: nog te bepalen'],
+};
+
 export function inbegrepen(p: Positie, r: ConfiguratieResultaat): { wel: string[]; niet: string[] } {
+  // Een vast model: de opbouw van wand, dak en vloer; de hoeveelheden staan in de meetstaat.
+  if (isVastModel(p.model)) return { wel: [...vastModelOpbouw(p.model, r), 'De draagstructuur en alle hoeveelheden: zie de meetstaat'], niet: NIET_IN_MODEL[p.model] };
   const wel = r.stuklijst.filter((s) => !alleenPrijs(s.omschrijving)).map((s) => s.omschrijving);
   const niet: string[] = [];
   if (p.keuzes.montage !== true) niet.push('Plaatsing');
@@ -205,7 +257,7 @@ function offertetekst(p: Positie, r: ConfiguratieResultaat): string {
 }
 
 // ---------- formulier ----------
-const velden = new Map<string, { veld: HTMLElement; fout: HTMLElement; update: (r: ConfiguratieResultaat) => void }>();
+const velden = new Map<string, { veld: HTMLElement; fout: HTMLElement; herstel: HTMLElement; update: (r: ConfiguratieResultaat) => void }>();
 
 /** Kenmerken van de indeling die zichtbaar blijven; de rest (instelling per vak) zit achter "Meer opties". */
 const SNEL = new Set(['roeden']);
@@ -235,12 +287,30 @@ function bouwFormulier(p: Positie) {
       meer.addEventListener('toggle', () => { meerOpen = meer.hasAttribute('open'); });
       for (const k of kenmerken) (SNEL.has(k.code) ? sectie : meer).append(bouwVeld(p, k));
       sectie.append(meer);
+    } else if (isVastModel(p.model)) {
+      // Vast model: wat een eerste gesprek nodig heeft meteen, het detail van deze stap onder "Meer opties".
+      const detail = new Set(VASTE_MODELLEN[p.model].meer);
+      for (const k of kenmerken.filter((x) => !detail.has(x.code))) sectie.append(bouwVeld(p, k));
+      const meer = kenmerken.filter((x) => detail.has(x.code));
+      if (meer.length) {
+        const vak = el('details', { class: 'meer-opties', 'data-meer': stap.code });
+        // "Poort 1: breedte" en "Poort 2: breedte" zijn samen "breedte".
+        const namen = [...new Set(meer.map((x) => x.label.replace(/^Poort \d: /, '').toLowerCase()))];
+        vak.append(el('summary', {}, `Meer opties: ${namen.join(', ')}`));
+        if (meerOpenStap.has(stap.code)) vak.setAttribute('open', '');
+        vak.addEventListener('toggle', () => { if (vak.hasAttribute('open')) meerOpenStap.add(stap.code); else meerOpenStap.delete(stap.code); });
+        for (const k of meer) vak.append(bouwVeld(p, k));
+        sectie.append(vak);
+      }
     } else {
       for (const k of kenmerken) sectie.append(bouwVeld(p, k));
     }
     form.append(sectie);
   });
 }
+
+/** Welke "Meer opties" van een vast model open staan (per stap): ze blijven open als het formulier opnieuw opgebouwd wordt. */
+const meerOpenStap = new Set<string>();
 
 // ---------- kant-en-klare indelingen (tegels met een tekening) ----------
 const tegelSvg = new Map<string, string>();
@@ -322,9 +392,18 @@ function zet(code: string, w: unknown) {
   const p = huidig();
   const start = p?.model === 'RAAM' && code === 'type' && p.keuzes.type !== w ? INDELINGEN.find((i) => i.code === EERSTE_INDELING[String(w)]) : undefined;
   if (start) { kiesIndeling(start); return; }
+  hersteld = [];
   wijzig('positie', (t) => {
     const p = t.posities.find((x) => x.id === huidigId);
-    if (p) p.keuzes[code] = w as never;
+    if (!p) return;
+    p.keuzes[code] = w as never;
+    // Een vast model: wat door deze keuze niet meer kan (EPDM bij een zadeldak, een berging breder dan de carport), wordt
+    // vanzelf de eerste keuze die wel kan; de melding zegt wat er veranderde.
+    if (isVastModel(p.model)) {
+      const uit = herstelKeuzes(MODELLEN[p.model].model, p.keuzes, MODELLEN[p.model].prijslijst);
+      p.keuzes = uit.keuzes;
+      hersteld = uit.hersteld;
+    }
   });
 }
 
@@ -332,6 +411,7 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
   const veld = el('div', { class: `veld veld-${k.type}`, 'data-kenmerk': k.code });
   const id = `pk-${k.code}`;
   const fout = el('p', { class: 'veldfout', role: 'alert' });
+  const herstel = el('p', { class: 'veldherstel', role: 'status' });
   let update: (r: ConfiguratieResultaat) => void = () => {};
   if (k.type === 'getal') {
     const rij = el('div', { class: 'getalrij' });
@@ -410,8 +490,8 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
     if (k.helptekst) veld.append(el('p', { class: 'hulp' }, k.helptekst));
     update = () => { vink.checked = huidig()?.keuzes[k.code] === true; };
   }
-  veld.append(fout);
-  velden.set(k.code, { veld, fout, update });
+  veld.append(fout, herstel);
+  velden.set(k.code, { veld, fout, herstel, update });
   return veld;
 }
 
@@ -478,7 +558,16 @@ export function toonPositie(id?: string) {
   $<HTMLButtonElement>('#p-vrij').disabled = toestand().plan.ruimtes.length > 0;
   $('#p-vrij').title = toestand().plan.ruimtes.length ? 'Kan alleen in een project zonder plattegrond: hier staat er al een.' : 'Zet de aanbouw als ruimte tegen een bestaande woning in de plattegrond (met raampartij, dak, koepel en gevel).';
   $('#p-model').textContent = MODELLEN[p.model].label;
+  if (formulierVan !== `${p.id}:${p.model}`) hersteld = [];
   bouwFormulier(p);
+  // Een vast model heeft geen vooraanzicht: meteen in 3D, met Afgewerkt / Constructie in de plaats van de tabs.
+  const vast = isVastModel(p.model);
+  $('#p-weergave-tabs').hidden = vast;
+  $('#p-bouwweergave').hidden = !vast;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-bouw]')) b.setAttribute('aria-pressed', String(b.dataset.pBouw === bouwWeergave));
+  $('#p-voorkaart').classList.toggle('vast3d', vast);
+  if (vast) zetWeergave('3d');
+  else zetKnoppen();
   herbereken();
 }
 
@@ -496,10 +585,19 @@ export function herbereken() {
     const f = r.meldingen.filter((m) => m.kenmerk === s.code);
     v.fout.textContent = f.map((m) => m.melding).join(' ');
     v.veld.classList.toggle('heeft-fout', f.length > 0);
+    v.herstel.textContent = hersteld.filter((h) => h.kenmerk === s.code).map((h) => h.melding).join(' ');
   }
   for (const sectie of document.querySelectorAll<HTMLElement>('#p-formulier .stap')) {
     sectie.hidden = !sectie.querySelector('.indelingen') && ![...sectie.querySelectorAll<HTMLElement>('.veld')].some((v) => !v.hidden);
   }
+  // Meer opties van een vast model: weg als er niets in te kiezen valt; open als er een fout of een omzetting in staat.
+  for (const vak of document.querySelectorAll<HTMLElement>('#p-formulier .meer-opties[data-meer]')) {
+    vak.hidden = ![...vak.querySelectorAll<HTMLElement>('.veld')].some((v) => !v.hidden);
+    if (!vak.hasAttribute('open') && vak.querySelector('.veld.heeft-fout:not([hidden]), .veldherstel:not(:empty)')) vak.setAttribute('open', '');
+  }
+  const aangepast = $('#p-aangepast');
+  aangepast.hidden = !hersteld.length;
+  aangepast.textContent = hersteld.length ? `Vanzelf aangepast: ${hersteld.map((h) => h.melding).join(' ')}` : '';
   // De tegel van de huidige indeling aanduiden; een fout in een verborgen veld opent "Meer opties".
   const gekozen = p.model === 'RAAM' ? indelingVan(p.keuzes)?.code : undefined;
   for (const b of document.querySelectorAll<HTMLButtonElement>('#p-formulier [data-indeling]')) b.setAttribute('aria-pressed', String(b.dataset.indeling === gekozen));
@@ -555,7 +653,8 @@ export function herbereken() {
   ];
   if (korting) regels.push([`Korting aannemer op de offerte`, `${korting} %`]);
   $('#p-prijsdetail').replaceChildren(...(PRIJZEN ? regels : []).flatMap(([x, y]) => [el('dt', {}, x), el('dd', {}, y)]));
-  const alg = r.meldingen.filter((m) => !m.kenmerk);
+  // Een vast model toont zijn meldingen al als controles.
+  const alg = isVastModel(p.model) ? [] : r.meldingen.filter((m) => !m.kenmerk);
   $('#p-meldingen').replaceChildren(...alg.map((m) => el('li', { class: m.ernst }, m.melding)));
   $('#p-meldingen').hidden = !alg.length;
   $('#p-techniek').replaceChildren(...techniek(p, r).flatMap(([x, y]) => [el('dt', {}, x), el('dd', {}, y)]));
@@ -577,6 +676,11 @@ export function herbereken() {
     );
     return tr;
   }));
+  // Een vast model heeft geen bestellijst maar een meetstaat (hoeveelheden, zonder prijzen).
+  const vast = isVastModel(p.model);
+  $('#p-stuklijst-kaart').hidden = vast;
+  $('#p-meetstaat-kaart').hidden = !vast;
+  if (vast) $('#p-meetstaat').replaceChildren(...meetstaatLijst(p.model as VastModelCode, r));
   $('#p-stuklijst tbody').replaceChildren(...r.stuklijst.filter((s) => !alleenPrijs(s.omschrijving)).map((s) => {
     const tr = el('tr');
     const maat = s.lengte !== undefined ? `${getal(s.lengte)}${s.breedte !== undefined ? ` × ${getal(s.breedte)}` : ''}` : '';
@@ -586,6 +690,23 @@ export function herbereken() {
   }));
 }
 
+/** De meetstaat van een vast model per groep (hout, staal, bekleding …), elke regel in gewone taal. */
+export function meetstaatLijst(code: VastModelCode, r: ConfiguratieResultaat, aantal = 1): HTMLElement[] {
+  const regels = VASTE_MODELLEN[code].meetstaat(r);
+  const uit: HTMLElement[] = [];
+  for (const groep of [...new Set(regels.map((m) => m.groep))]) {
+    const ul = el('ul');
+    for (const m of regels.filter((x) => x.groep === groep)) ul.append(el('li', {}, meetstaatTekst(aantal === 1 ? m : vermenigvuldig(m, aantal))));
+    uit.push(el('h4', {}, meetstaatGroep(groep)), ul);
+  }
+  return uit;
+}
+/** Een regel van de meetstaat voor meer stuks van dezelfde positie. */
+const vermenigvuldig = <T extends { aantal?: number; lengte?: number; m2?: number; gewicht?: number }>(m: T, n: number): T => ({
+  ...m, ...(m.aantal !== undefined ? { aantal: m.aantal * n } : {}), ...(m.lengte !== undefined ? { lengte: m.lengte * n } : {}),
+  ...(m.m2 !== undefined ? { m2: m.m2 * n } : {}), ...(m.gewicht !== undefined ? { gewicht: m.gewicht * n } : {}),
+});
+
 export function controleLi(c: Controle): HTMLElement {
   const li = el('li', { class: c.toestand });
   li.append(el('span', { class: 'teken', 'aria-hidden': 'true' }, c.toestand === 'ok' ? '✓' : c.toestand === 'fout' ? '✕' : '!'), el('span', {}, c.titel), el('span', { class: 'waarde' }, c.waarde ?? ''));
@@ -593,40 +714,82 @@ export function controleLi(c: Controle): HTMLElement {
   return li;
 }
 
-function scene(p: Positie, r: ConfiguratieResultaat) {
-  return positieScene(p, r);
-}
-
 /**
  * Toont de 3D van de positie. Een raam, deur of poort komt helemaal in beeld, ook een deur van 2,5 m met een bovenlicht
- * (de kijker kadreert zelf alleen op breedte en diepte), op een rustige achtergrond. Een aanbouw is een gebouw: die
- * staat in de omgeving (lucht, gras), zoals de woning.
+ * (de kijker kadreert zelf alleen op breedte en diepte), op een rustige achtergrond. Een gebouw (aanbouw, carport,
+ * tuinhuis, loods) staat in de omgeving (lucht, gras), zoals de woning; een stuk staalwerk op de rustige achtergrond. Een
+ * vast model in de gekozen weergave (afgewerkt of constructie), met zijn hoofdmaten als *Maten* aan staat; een andere
+ * positie begint schuin van boven.
  */
 function toon3D(p: Positie, r: ConfiguratieResultaat) {
   if (!viewer) return;
-  const gebouw = p.model === 'AANBOUW';
+  const gebouw = isGebouw(p), vast = isVastModel(p.model);
   viewer.omgeving?.(gebouw ? 'buiten' : 'geen');
-  viewer.toon(gebouw ? scene(p, r) : passendKader(scene(p, r)));
+  const s = positieScene(p, r, heeftConstructie(p) ? bouwWeergave : 'afgewerkt');
+  const lijnen = matenAan ? positieMaatlijnen(p, r) : undefined;
+  // Een gebouw of stuk staalwerk met wat lucht rond (een hoog dak of een maat valt anders uit beeld), een raam helemaal in beeld.
+  const scene = gebouw || vast ? gebouwKader(s) : passendKader(s);
+  const metMaten: Scene3DMetMaten = lijnen?.length ? { ...scene, maatlijnen: lijnen } : scene;
+  viewer.toon(metMaten);
+  if (vast && in3D !== p.id) viewer.standpunt('schuin');
+  in3D = p.id;
+  // Alleen een gewoon beeld (afgewerkt, zonder maten) gaat naar het overzicht.
+  getekend = vast && bouwWeergave === 'afgewerkt' && !lijnen?.length ? `${p.id}:${JSON.stringify(p.keuzes)}` : '';
 }
 
-function toonWeergave(w: 'voor' | '3d') {
+/** Zet de weergave (vooraanzicht of 3D) zonder te tekenen; maakt de 3D bij de eerste keer. */
+function zetWeergave(w: 'voor' | '3d') {
   weergave = w;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-weergave]')) b.setAttribute('aria-pressed', String(b.dataset.pWeergave === w));
   $('#p-tekening').hidden = w !== 'voor';
   $('#p-3d').hidden = w !== '3d';
   $('#p-3d-knoppen').hidden = w !== '3d';
+  $('#p-weergavekop').textContent = w === '3d' ? '3D' : 'Vooraanzicht';
+  zetKnoppen();
   if (w === '3d') {
-    if (viewer === undefined) viewer = maak3D($('#p-3d'));
-    const p = huidig();
-    if (viewer && p) {
-      viewer.formaat();
-      toon3D(p, resultaat(p));
+    if (viewer === undefined) {
+      viewer = maak3D($('#p-3d'));
+      // Op een aanraakscherm (tablet) de snelle weergave, zoals de woning; op een computer blijft het zoals het was.
+      if (window.matchMedia?.('(pointer: coarse)').matches) viewer?.kwaliteit?.('snel');
+      // Voor geautomatiseerde tests en metingen: de kijker van de configurator bereikbaar.
+      (window as unknown as { __positie3d?: Viewer3D | null }).__positie3d = viewer;
     }
+    viewer?.formaat();
   }
+}
+
+/** De knoppen onder de 3D: de standpunten van een raam (binnen, buiten) of van een gebouw en staalwerk, en Maten. */
+function zetKnoppen() {
+  const p = huidig();
+  const gebouw = !!p && (isGebouw(p) || isVastModel(p.model));
+  for (const b of document.querySelectorAll<HTMLElement>('[data-p-standpunt]')) b.hidden = gebouw;
+  for (const b of document.querySelectorAll<HTMLElement>('[data-p-zicht]')) b.hidden = !gebouw;
+  $('#p-maten-label').hidden = !p || !positieMaatlijnen(p)?.length;
+  $<HTMLInputElement>('#p-maten').checked = matenAan;
+}
+
+function toonWeergave(w: 'voor' | '3d') {
+  zetWeergave(w);
+  const p = huidig();
+  if (w === '3d' && viewer && p) toon3D(p, resultaat(p));
+}
+
+/**
+ * Het beeld van de 3D van een vast model zoals het laatst in de configurator stond (JPEG als data-URL), voor het overzicht;
+ * null als de 3D niet open was, of als de positie sindsdien veranderde.
+ */
+export function positieBeeld(): { id: string; beeld: string } | null {
+  const p = huidig();
+  if (!viewer || !p || weergave !== '3d' || getekend !== `${p.id}:${JSON.stringify(p.keuzes)}`) return null;
+  const beeld = viewer.beeld?.('image/jpeg', 0.85);
+  return beeld ? { id: p.id, beeld } : null;
 }
 
 /** De configurator met de 3D in beeld (na de snelstart). */
 export function toonPositie3D() {
+  // Een vast model staat al in 3D (toonPositie): niet nog eens tekenen.
+  const p = huidig();
+  if (p && isVastModel(p.model) && weergave === '3d') return;
   toonWeergave('3d');
 }
 
@@ -656,6 +819,20 @@ export function startPositie(nav: { naarPlan: (openingId: string) => void; naarO
   $('#p-vrij').addEventListener('click', aanbouwVrijTekenen);
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.pWeergave as 'voor' | '3d'));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pStandpunt as 'schuin'));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-zicht]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pZicht as Standpunt));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-bouw]')) {
+    b.addEventListener('click', () => {
+      bouwWeergave = b.dataset.pBouw === 'constructie' ? 'constructie' : 'afgewerkt';
+      for (const x of document.querySelectorAll<HTMLButtonElement>('[data-p-bouw]')) x.setAttribute('aria-pressed', String(x === b));
+      const p = huidig();
+      if (p && weergave === '3d') toon3D(p, resultaat(p));
+    });
+  }
+  $<HTMLInputElement>('#p-maten').addEventListener('change', (e) => {
+    matenAan = (e.target as HTMLInputElement).checked;
+    const p = huidig();
+    if (p && weergave === '3d') toon3D(p, resultaat(p));
+  });
   $<HTMLSelectElement>('#p-kies').addEventListener('change', (e) => toonPositie((e.target as HTMLSelectElement).value));
   $<HTMLInputElement>('#p-naam').addEventListener('change', (e) => wijzig('naam', (t) => {
     const p = t.posities.find((x) => x.id === huidigId);

@@ -19,8 +19,12 @@
  * ander pakket openen, niets ophalen of ontvangen, met de naam van de aannemer, het project en de datum bovenaan, en met
  * de varianten om tussen te wisselen als er meer ontwerpen meegaan. Maten (de keuze *Maten*) rekent de kijker zelf uit
  * de scène (core/src/maten3d.ts), zodat ook een ouder pakket ze heeft.
+ *
+ * Een positie die een gebouw is (16/11: `gebouw` in het pakket; een aanbouw, carport, tuinhuis of loods) staat buiten,
+ * zoals de woning, schuin van boven en met haar eigen kader; een positie met `maatlijnen` (haar hoofdmaten) toont die als
+ * *Maten* aan staat.
  */
-import { gebouwMaatlijnen, leesPakket3D, passendKader, PAKKET3D_VERSIE, raamMaatlijnen, type Pakket3D, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
+import { gebouwKader, gebouwMaatlijnen, leesPakket3D, passendKader, PAKKET3D_VERSIE, raamMaatlijnen, type Pakket3D, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -54,8 +58,10 @@ function scene(): Scene3D | null {
     if (!n) return null;
     return $<HTMLInputElement>('#laag').checked ? n.laag : n.scene;
   }
-  const positie = pakket.posities.find((p) => p.code === keuze)?.scene;
-  return positie ? passendKader(positie) : null;
+  const positie = pakket.posities.find((p) => p.code === keuze);
+  if (!positie) return null;
+  // Een raam of deur helemaal in beeld (passendKader); een gebouw of stuk staalwerk (met eigen maten) met wat lucht rond.
+  return positie.gebouw || positie.maatlijnen ? gebouwKader(positie.scene) : passendKader(positie.scene);
 }
 
 /**
@@ -72,11 +78,14 @@ function pasMaatAan() {
   vak.style.width = `${Math.floor(Math.max(280, Math.min(breed, hoog / 0.62)))}px`;
 }
 
-/** De scène met de maatlijnen erbij als *Maten* aan staat: de hoofdmaten van de woning, of de maten van het raam. */
-function metMaten(s: Scene3D, woning: boolean): Scene3DMetMaten {
+/**
+ * De scène met de maatlijnen erbij als *Maten* aan staat: de hoofdmaten van de woning, de hoofdmaten die een positie zelf
+ * meebrengt (een carport, een loods, een balustrade …), of de maten van het raam.
+ */
+function metMaten(s: Scene3D, woning: boolean, eigen?: Scene3DMetMaten['maatlijnen']): Scene3DMetMaten {
   if (!$<HTMLInputElement>('#maten').checked) return s;
   const laag = woning && $<HTMLInputElement>('#laag').checked;
-  return { ...s, maatlijnen: woning ? gebouwMaatlijnen(s, { hoogtes: !laag }) : raamMaatlijnen(s.blokken) };
+  return { ...s, maatlijnen: woning ? gebouwMaatlijnen(s, { hoogtes: !laag }) : eigen ?? raamMaatlijnen(s.blokken) };
 }
 
 function teken() {
@@ -98,11 +107,14 @@ function teken() {
   if (!viewer) { fout('De 3D kan op dit toestel niet getoond worden.'); return; }
   pasMaatAan();
   viewer.formaat();
-  // De woning staat buiten (lucht, gras, horizon); een losse positie blijft een rustig beeld op een effen achtergrond.
-  viewer.omgeving?.(woning ? 'buiten' : 'geen');
-  viewer.toon(metMaten(s, woning));
-  // Een positie van voren (het hele raam in beeld), de woning schuin van boven; alleen bij een andere keuze, niet bij elke klik.
-  if (keuze !== getoond) viewer.standpunt(woning ? 'schuin' : 'voor');
+  // De woning en een gebouw staan buiten (lucht, gras, horizon); een raam, deur of stuk staalwerk blijft een rustig beeld
+  // op een effen achtergrond.
+  const buiten = woning || !!p?.gebouw;
+  viewer.omgeving?.(buiten ? 'buiten' : 'geen');
+  viewer.toon(metMaten(s, woning, p?.maatlijnen));
+  // Een raam van voren (het hele raam in beeld), de woning en een gebouw schuin van boven; alleen bij een andere keuze,
+  // niet bij elke klik.
+  if (keuze !== getoond) viewer.standpunt(buiten || p?.maatlijnen ? 'schuin' : 'voor');
   getoond = keuze;
 }
 

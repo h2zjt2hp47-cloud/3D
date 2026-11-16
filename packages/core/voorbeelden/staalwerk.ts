@@ -272,12 +272,17 @@ export const staaltrap: ProductModel = {
   prijs: { opslagProcent: 0, btwProcent: 0 },
 };
 
-/** De vertrekpunten: wat hier niet staat, heeft de standaardwaarde van het model. Zelf gekozen voor een mooi begin. */
+/**
+ * De vertrekpunten: wat hier niet staat, heeft de standaardwaarde van het model. Zelf gekozen voor een mooi begin. Van
+ * elk model minstens twee, zodat de snelstart (16/11) bij elk model een keuze heeft.
+ */
 export const staalwerkVertrekpunten: Record<string, { label: string; model: ProductModel; keuzes: Keuzes }> = {
   balustrade_spijlen: { label: 'Balustrade met spijlen', model: balustrade, keuzes: { lengte: 360, vulling: 'spijlen', leuning: 'plat', afwerking: 'ral9005' } },
   balustrade_glas: { label: 'Balustrade in glas', model: balustrade, keuzes: { lengte: 360, vulling: 'glas', leuning: 'rond', afwerking: 'inox' } },
   luifel: { label: 'Luifel met glas aan trekstangen', model: luifel, keuzes: {} },
+  luifel_plaat: { label: 'Luifel in volle plaat op consoles', model: luifel, keuzes: { vulling: 'plaat', ophanging: 'consoles', rand: 'r16', afwerking: 'ral9005' } },
   staaltrap: { label: 'Rechte trap met eiken treden', model: staaltrap, keuzes: {} },
+  staaltrap_staal: { label: 'Rechte trap met stalen treden op een middenboom', model: staaltrap, keuzes: { structuur: 'midden', treden: 'staal', afwerking: 'ral7016' } },
 };
 
 /** Alle modellen van het staalwerk, op hun code. */

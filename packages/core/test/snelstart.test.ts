@@ -3,7 +3,11 @@ import { berekenConfiguratie, controleerPlan, dakOpbouw, niveauPlan, plattegrond
 import { aanbouw, aanbouwPrijslijst } from '../voorbeelden/aanbouw.js';
 import { planCatalogus } from '../voorbeelden/inrichting.js';
 import { berekenRaam } from '../voorbeelden/raam.js';
-import { aanbouwKeuzes, aanbouwNaarPlan, daklichtenOpDak, leesMaat, SNELSTART_TEGELS, snelRaam, snelWoning, verdeelDaklichten } from '../voorbeelden/snelstart.js';
+import {
+  aanbouwKeuzes, aanbouwNaarPlan, begrensMaat, daklichtenOpDak, leesMaat, loodsIndeling, SNELSTART_TEGELS, snelModel, snelModelMaat, snelRaam, snelWoning, stapMaat,
+  verdeelDaklichten, type SnelMaat, type SnelSoort,
+} from '../voorbeelden/snelstart.js';
+import { berekenVastModel, VASTE_MODELLEN } from '../voorbeelden/vastemodellen.js';
 import { pasStijlToe, raamInStijl, stijlCatalogus } from '../voorbeelden/stijlen.js';
 import { raamKeuzes, voorbeeldWoning } from '../voorbeelden/woning.js';
 import { raamBlokken } from '../voorbeelden/raam3d.js';
@@ -14,11 +18,14 @@ const raamFouten = (posities: { naam: string; keuzes: Record<string, unknown> }[
 
 describe('snelstart: tegels als gegevens', () => {
   it('toont alleen wat werkt, elk met twee of drie maten binnen hun grenzen', () => {
-    expect(SNELSTART_TEGELS.map((t) => t.code)).toEqual(['woning', 'aanbouw', 'raam', 'garagepoort']);
+    expect(SNELSTART_TEGELS.map((t) => t.code)).toEqual(['woning', 'aanbouw', 'raam', 'garagepoort', 'overkapping', 'tuinhuis', 'loods', 'staalwerk']);
     for (const t of SNELSTART_TEGELS) {
-      expect(t.maten.length).toBeGreaterThanOrEqual(2);
-      expect(t.maten.length).toBeLessThanOrEqual(3);
-      for (const m of t.maten) expect(m.standaard >= m.min && m.standaard <= m.max, `${t.code}.${m.code}`).toBe(true);
+      // Staalwerk kiest eerst wat (balustrade, luifel, trap): de maten horen dan bij die soort.
+      for (const [naam, maten] of t.soorten ? t.soorten.map((s) => [`${t.code}.${s.code}`, s.maten] as const) : [[t.code, t.maten] as const]) {
+        expect(maten.length, naam).toBeGreaterThanOrEqual(2);
+        expect(maten.length, naam).toBeLessThanOrEqual(3);
+        for (const m of maten) expect((m.standaard >= m.min && m.standaard <= m.max) || (m.nul && m.standaard === 0), `${naam}.${m.code}`).toBe(true);
+      }
     }
   });
 });
@@ -205,6 +212,91 @@ describe('snelstart: maten intypen in cm', () => {
     expect(leesMaat('3x150', cm)).toBeUndefined();
   });
   it('alle lengtes in de snelstart staan in cm', () => {
-    for (const t of SNELSTART_TEGELS) for (const m of t.maten) expect(m.toon, `${t.code}.${m.code}`).toBe(m.eenheid === 'stuks' ? 'aantal' : 'cm');
+    for (const t of SNELSTART_TEGELS) for (const m of [...t.maten, ...(t.soorten ?? []).flatMap((s) => s.maten)]) expect(m.toon, `${t.code}.${m.code}`).toBe(m.eenheid === 'stuks' ? 'aantal' : 'cm');
+  });
+});
+
+describe('snelstart: vaste modellen (carport, tuinhuis, loods, staalwerk)', () => {
+  /** Elke soort van elke tegel van een vast model: de tegel zelf, of bij staalwerk de balustrade, de luifel en de trap. */
+  const soorten: SnelSoort[] = SNELSTART_TEGELS.filter((t) => t.soort === 'model').flatMap((t) => t.soorten ?? [{ code: t.code, label: t.label, model: t.model as SnelSoort['model'], maten: t.maten, vertrekpunten: t.vertrekpunten! }]);
+  const fouten = (s: SnelSoort, k: Record<string, unknown>) => berekenVastModel(s.model, k as never).meldingen.filter((m) => m.ernst === 'fout').map((m) => m.code);
+
+  it('elk vertrekpunt met elke combinatie van de kleinste, gangbare en grootste maten geeft een ontwerp zonder fouten', () => {
+    expect(soorten.map((s) => s.model)).toEqual(['OVERKAPPING', 'TUINHUIS', 'LOODS', 'BALUSTRADE', 'LUIFEL', 'STAALTRAP']);
+    let n = 0;
+    for (const s of soorten) {
+      expect(s.vertrekpunten.length, s.code).toBeGreaterThanOrEqual(2);
+      let gevallen: Record<string, number>[] = [{}];
+      for (const m of s.maten) gevallen = gevallen.flatMap((g) => [m.min, m.standaard, m.max, ...(m.nul ? [0] : [])].map((w) => ({ ...g, [m.code]: begrensMaat(m, w) })));
+      for (const v of s.vertrekpunten) {
+        for (const maten of [null, ...gevallen]) {
+          const k = snelModel(s.model, v, maten);
+          expect(fouten(s, k), `${v.code} ${JSON.stringify(maten)}`).toEqual([]);
+          n++;
+        }
+      }
+    }
+    expect(n).toBeGreaterThan(200);
+  });
+
+  it('zonder aangeraakte maat houdt elk vertrekpunt zijn eigen maten; met een maat krijgt elk vertrekpunt alle maten van de tweede vraag', () => {
+    const overk = soorten[0]!;
+    const pergola = overk.vertrekpunten.find((v) => v.code === 'pergola')!;
+    expect(snelModel('OVERKAPPING', pergola, null)).toMatchObject({ breedte: 400, diepte: 300 });
+    expect(snelModel('OVERKAPPING', pergola, { breedte: 450, diepte: 500 })).toMatchObject({ breedte: 450, diepte: 500 });
+    expect(snelModelMaat('OVERKAPPING', snelModel('OVERKAPPING', pergola, null))).toBe('4 × 3 m');
+    // De gangbare maten van de tweede vraag zijn die van het eerste vertrekpunt: de carport van 5 × 5 m, zonder paal in de inrit.
+    expect(overk.maten.map((m) => m.standaard)).toEqual([500, 500]);
+    const carport = berekenVastModel('OVERKAPPING', snelModel('OVERKAPPING', overk.vertrekpunten[0]!, null));
+    expect(carport.afgeleid).toMatchObject({ velden_b: 1, velden_d: 1, palen: 4 });
+  });
+
+  it('de lengte van een loods wordt traveeën maal de afstand tussen de portalen', () => {
+    expect(loodsIndeling(3000)).toEqual({ traveeen: 5, afstand: 600, lengte: 3000 });
+    expect(loodsIndeling(3000, 500)).toEqual({ traveeen: 6, afstand: 500, lengte: 3000 });
+    expect(loodsIndeling(1700).lengte).toBe(1650);
+    expect(loodsIndeling(99999)).toEqual({ traveeen: 20, afstand: 800, lengte: 16000 });
+    const loods = soorten[2]!, lengte = loods.maten.find((m) => m.code === 'lengte')!;
+    expect(lengte.standaard).toBe(3000);
+    // + is één travee van 6 m erbij; een getypte lengte wordt de dichtste die kan.
+    expect(stapMaat(lengte, 3000, 1)).toBe(3600);
+    expect(begrensMaat(lengte, 3100)).toBe(3000);
+    const k = snelModel('LOODS', loods.vertrekpunten[0]!, { breedte: 1500, lengte: 3600, zijhoogte: 450 });
+    expect(k).toMatchObject({ traveeen: 6, afstand: 600 });
+    expect(berekenVastModel('LOODS', k).afgeleid.lengte).toBe(3600);
+  });
+
+  it('een luifel is 0 (geen) of minstens 1 m; een getypte maat volgt de stap van het model', () => {
+    const luifel = soorten[1]!.maten.find((m) => m.code === 'luifel')! as SnelMaat;
+    expect(luifel.standaard).toBe(0);
+    expect(stapMaat(luifel, 0, 1)).toBe(100);
+    expect(stapMaat(luifel, 100, -1)).toBe(0);
+    expect(stapMaat(luifel, 100, 1)).toBe(150);
+    expect(begrensMaat(luifel, 30)).toBe(0);
+    expect(begrensMaat(luifel, 70)).toBe(100);
+    const breedte = soorten[0]!.maten[0]!;
+    expect(begrensMaat(breedte, 455)).toBe(460);
+    expect(begrensMaat(breedte, 2000)).toBe(900);
+  });
+
+  it('een te smal tuinhuis krijgt een smallere deur; poorten die niet passen worden kleiner', () => {
+    const tuin = soorten[1]!;
+    const pool = snelModel('TUINHUIS', tuin.vertrekpunten.find((v) => v.code === 'poolhouse')!, { breedte: 250, diepte: 300, luifel: 0 });
+    expect(pool.deur).toBe('dubbel');
+    expect(snelModel('TUINHUIS', tuin.vertrekpunten.find((v) => v.code === 'poolhouse')!, { breedte: 200, diepte: 300, luifel: 0 }).deur).toBe('enkel');
+    const werkplaats = snelModel('LOODS', soorten[2]!.vertrekpunten.find((v) => v.code === 'werkplaats')!, { breedte: 600, lengte: 1800, zijhoogte: 300 });
+    expect(Number(werkplaats.poort1_hoogte)).toBeLessThanOrEqual(270);
+    expect(berekenVastModel('LOODS', werkplaats).geldig).toBe(true);
+  });
+
+  it('elk vertrekpunt heeft een eigen label en een tekst in gewone taal, zonder prijzen', () => {
+    for (const s of soorten) {
+      expect(new Set(s.vertrekpunten.map((v) => v.label)).size, s.code).toBe(s.vertrekpunten.length);
+      for (const v of s.vertrekpunten) {
+        const r = berekenVastModel(s.model, snelModel(s.model, v, null));
+        expect(VASTE_MODELLEN[s.model].kort(r), v.code).not.toMatch(/€|prijs|NaN|undefined/);
+        expect(snelModelMaat(s.model, snelModel(s.model, v, null)), v.code).toMatch(/\d/);
+      }
+    }
   });
 });

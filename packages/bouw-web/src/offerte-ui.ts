@@ -8,17 +8,22 @@
 import { berekenOfferte, controleerPlan, niveauPlan, tekenPlattegrond, tekenSvg, verdiepingenVan, type Keuzes, type OfferteResultaat, type StuklijstResultaat } from '../../core/src/index.js';
 import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting.js';
 import { ruitenVan } from '../../core/voorbeelden/raam.js';
+import { isVastModel, VASTE_MODELLEN, vastModelOmschrijving, vastModelOpbouw } from '../../core/voorbeelden/vastemodellen.js';
 import { $, el, eur, getal, kopieer, num, toonPrijs, btwLabel, PRIJZEN, alleenPrijs } from './hulp.js';
 import { gevelSvgs, ontwerpBeeld } from './plattegrond-ui.js';
 import { gevelStaal } from './gevel-ui.js';
 import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
-import { controles, inbegrepen, samenvatting } from './positie-ui.js';
+import { controles, inbegrepen, meetstaatLijst, positieBeeld, samenvatting } from './positie-ui.js';
+import { tegelBeeld } from './snelstart-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zonderPrijs, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 import { maakPakket3D, maakZending } from './doorsturen.js';
 import { drukBlad } from './blad.js';
 import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
+
+/** Het pictogram (van de snelstart) van een vast model zonder 3D-beeld in het overzicht. */
+const MINI_BEELD: Record<string, string> = { OVERKAPPING: 'overkapping', TUINHUIS: 'tuinhuis', LOODS: 'loods', BALUSTRADE: 'balustrade', LUIFEL: 'luifel', STAALTRAP: 'trap' };
 
 /** Soorten regels uit de plattegrond (vinkjes in de offerte). */
 const REGELSOORTEN = ['vloeren', 'wanden', 'binnendeuren', 'ruwbouw', 'gevel', 'dak', 'inrichting'] as const;
@@ -89,6 +94,7 @@ export function omschrijving(p: Positie): string {
   const r = resultaat(p);
   const k = r.kenmerken;
   const lab = (code: string) => k.find((x) => x.code === code && x.zichtbaar)?.weergave;
+  if (isVastModel(p.model)) return vastModelOmschrijving(p.model, r);
   if (p.model === 'AANBOUW') return [lab('project'), `${getal(num(p.keuzes.breedte))} mm breed`, lab('raamtype'), lab('glas')].filter(Boolean).join(' · ');
   if (p.model === 'POORT') return ['Sectionale garagepoort', `${getal(num(p.keuzes.breedte))} × ${getal(num(p.keuzes.hoogte))} mm`, lab('belijning'), p.keuzes.vensters === true ? 'met vensters' : undefined, lab('kleur')].filter(Boolean).join(' · ');
   return [
@@ -103,6 +109,8 @@ export function kort(p: Positie): string {
   const r = resultaat(p);
   const lab = (code: string) => r.kenmerken.find((x) => x.code === code && x.zichtbaar)?.weergave;
   const maat = (a: unknown, b: unknown) => `${getal(num(a) / 10)} × ${getal(num(b) / 10)} cm`;
+  // Een vast model (carport, tuinhuis, loods, staalwerk) rekent in cm en zegt zelf wat het is en hoe groot.
+  if (isVastModel(p.model)) return VASTE_MODELLEN[p.model].kort(r);
   if (p.model === 'AANBOUW') return ['Aanbouw', maat(p.keuzes.breedte, p.keuzes.diepte)].join(' · ');
   if (p.model === 'POORT') return ['Garagepoort', maat(p.keuzes.breedte, p.keuzes.hoogte)].join(' · ');
   return [lab('type'), maat(p.keuzes.breedte, p.keuzes.hoogte)].filter(Boolean).join(' · ');
@@ -134,22 +142,55 @@ function regelDetail(p: Positie, r: ReturnType<typeof resultaat>): HTMLElement {
   };
   lijst('Keuzes', samenvatting(r));
   const eenheid = (e: string) => (e === 'm2' ? 'm²' : e);
-  lijst('Materialen en opbouw', r.stuklijst.filter((x) => !/^ARB-/.test(x.artikel) && !alleenPrijs(x.omschrijving)).map((x) => `${x.omschrijving}: ${getal(x.hoeveelheid * p.aantal, 2)} ${eenheid(x.eenheid)}`));
+  if (isVastModel(p.model)) {
+    // Een vast model: de opbouw van wand, dak en vloer, en de meetstaat (hoeveelheden voor alle stuks, zonder prijzen).
+    lijst('Opbouw', vastModelOpbouw(p.model, r));
+    const ms = el('div', { class: 'meetstaat' });
+    ms.append(...meetstaatLijst(p.model, r, p.aantal));
+    inhoud.append(el('h4', {}, `Meetstaat${p.aantal > 1 ? ` (${p.aantal} stuks)` : ''}, netto`), ms);
+  } else lijst('Materialen en opbouw', r.stuklijst.filter((x) => !/^ARB-/.test(x.artikel) && !alleenPrijs(x.omschrijving)).map((x) => `${x.omschrijving}: ${getal(x.hoeveelheid * p.aantal, 2)} ${eenheid(x.eenheid)}`));
   lijst('Niet inbegrepen', inbegrepen(p, r).niet);
   d.append(inhoud);
   return d;
+}
+
+/**
+ * Beelden van de 3D van de posities (vaste modellen), zoals ze laatst in de configurator stonden: per positie en per
+ * stand van haar keuzes, zodat een gewijzigde positie geen oud beeld toont.
+ */
+const positieBeelden = new Map<string, { sleutel: string; beeld: string }>();
+const beeldSleutel = (p: Positie) => JSON.stringify(p.keuzes);
+function beeldVan(p: Positie): string | undefined {
+  const b = positieBeelden.get(p.id);
+  return b && b.sleutel === beeldSleutel(p) ? b.beeld : undefined;
 }
 
 /** Beeld van het ontwerp bovenaan het overzicht: de 3D zoals ze laatst op het scherm stond, en de plattegrond per verdieping. */
 let laatsteBeeld: string | null = null;
 function toonOntwerp(nieuwBeeld: boolean) {
   const t = toestand();
-  if (nieuwBeeld) laatsteBeeld = ontwerpBeeld();
+  if (nieuwBeeld) {
+    laatsteBeeld = ontwerpBeeld();
+    // De 3D van de positie die laatst in de configurator stond (een carport, een loods …), als ze nog klopt.
+    const pb = positieBeeld();
+    const p = pb && t.posities.find((x) => x.id === pb.id);
+    if (pb && p) positieBeelden.set(p.id, { sleutel: beeldSleutel(p), beeld: pb.beeld });
+  }
   const beelden: HTMLElement[] = [];
   if (laatsteBeeld) {
     const f = el('figure');
     f.append(el('img', { src: laatsteBeeld, alt: 'De woning in 3D' }), el('figcaption', {}, '3D'));
     beelden.push(f);
+  }
+  // Geen woning, wel een carport, tuinhuis, loods of staalwerk: hun 3D-beeld (als het er is) is het ontwerp.
+  if (!t.plan.ruimtes.length) {
+    for (const p of t.posities.filter((x) => isVastModel(x.model) && x.aantal > 0)) {
+      const b = beeldVan(p);
+      if (!b) continue;
+      const f = el('figure');
+      f.append(el('img', { src: b, alt: `${p.naam} in 3D` }), el('figcaption', {}, `${p.code} · ${p.naam}`));
+      beelden.push(f);
+    }
   }
   for (const [n, v] of verdiepingenVan(t.plan).entries()) {
     const pl = niveauPlan(t.plan, n);
@@ -162,7 +203,8 @@ function toonOntwerp(nieuwBeeld: boolean) {
   $('#o-ontwerp-beelden').replaceChildren(...beelden);
   $('#o-ontwerp').hidden = !beelden.length;
   const n = t.plan.ruimtes.length, ramen = t.plan.openingen.filter((o) => o.positie).length;
-  $('#o-ontwerp-tekst').textContent = `${n} ruimte${n === 1 ? '' : 's'} · ${ramen} ramen, deuren en poorten`;
+  const vast = t.posities.filter((x) => isVastModel(x.model) && x.aantal > 0);
+  $('#o-ontwerp-tekst').textContent = !n && vast.length ? vast.map((x) => kort(x)).join(' · ') : `${n} ruimte${n === 1 ? '' : 's'} · ${ramen} ramen, deuren en poorten`;
 }
 
 const LEVERANCIERS: [RegExp, string][] = [
@@ -231,6 +273,12 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     const rij = el('article', { class: `positie ${r.geldig ? '' : 'ongeldig'}` });
     const tekening = el('div', { class: 'mini' });
     tekening.innerHTML = r.tekening ? tekenSvg(r.tekening, { breedtePx: 150, lijnkleur: '#2b2b28', maatkleur: '#34505f' }) : '';
+    // Een vast model heeft geen tekening: het 3D-beeld uit de configurator, anders het pictogram van de snelstart.
+    if (isVastModel(p.model)) {
+      const b = beeldVan(p);
+      if (b) tekening.replaceChildren(el('img', { src: b, alt: '' }));
+      else tekening.innerHTML = tegelBeeld(MINI_BEELD[p.model] ?? '');
+    }
     const info = el('div', { class: 'info' });
     const kop = el('div', { class: 'positiekop' });
     kop.append(el('span', { class: 'code' }, p.code), el('strong', {}, p.naam));
@@ -274,6 +322,8 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     return rij;
   }));
   $('#o-leeg').hidden = t.posities.length > 0;
+  // Met een carport, tuinhuis, loods of staalwerk erbij zijn het niet alleen ramen en deuren.
+  $('#o-posities-kop').textContent = t.posities.some((p) => isVastModel(p.model)) ? 'Onderdelen' : 'Ramen, deuren en poorten';
   const bib = bibliotheek();
   const kies = $<HTMLSelectElement>('#o-bibliotheek');
   kies.replaceChildren(el('option', { value: '' }, bib.length ? '+ Uit bibliotheek …' : 'Bibliotheek is leeg'), ...bib.map((b) => el('option', { value: b.id }, b.naam)));
@@ -325,8 +375,9 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
       ['Marge', o.margeProcent === null ? '—' : `${getal(o.margeProcent, 1)} %`],
       ['Voorschot 30 %', eur(o.incl * 0.3)],
     ] : []),
-    ['Levertermijn', `± ${pl.weken} weken na inmeting`],
-    ['Plaatsing', `${getal(pl.uren, 1)} uur · ± ${pl.dagen} ${pl.dagen === 1 ? 'dag' : 'dagen'} met 2 plaatsers`],
+    // Een vast model (carport, loods …) kent nog geen levertermijn of plaatsingstijd.
+    ['Levertermijn', pl.weken ? `± ${pl.weken} weken na inmeting` : 'nog te bepalen'],
+    ['Plaatsing', pl.uren ? `${getal(pl.uren, 1)} uur · ± ${pl.dagen} ${pl.dagen === 1 ? 'dag' : 'dagen'} met 2 plaatsers` : 'nog te bepalen'],
   ] as [string, string][]).flatMap(([a, b]) => [el('dt', {}, a), el('dd', {}, b)]));
   const status = $('#o-status');
   const nFout = o.posities.filter((p) => !p.geldig && p.aantal > 0).length;
@@ -383,6 +434,8 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     return tr;
   }));
   $('#o-glas-totaal').textContent = `${gl.reduce((t, g) => t + g.aantal, 0)} ruiten · ${getal(gl.reduce((t, g) => t + g.m2 * g.aantal, 0), 2)} m² · ${getal(gl.reduce((t, g) => t + g.kg * g.aantal, 0))} kg`;
+  // Een project met alleen een carport, loods of staalwerk heeft geen ruiten: dan geen lege glasbestelling.
+  $('#o-glas-kaart').hidden = !gl.length && t.posities.some((p) => isVastModel(p.model));
   const wd = $<HTMLInputElement>('#o-winddruk');
   if (document.activeElement !== wd) wd.value = String(m.winddruk ?? 800);
 
@@ -508,7 +561,8 @@ export function drukAf() {
     <div class="a-klant"><strong>${esc(t.meta.klant)}</strong><br>${esc(t.meta.adres)}<br>Project: ${esc(t.meta.project)}</div></header>`;
   if (!PRIJZEN) {
     // Zonder prijzen: wat er in het ontwerp zit en hoeveel, met de tekeningen; geen totalen, voorwaarden of handtekening.
-    blad.innerHTML = `${kop}${plan}${gevels}<h2>Ramen, deuren en poorten</h2>${posities}${regels}
+    const welke = t.posities.some((p) => isVastModel(p.model)) ? 'Onderdelen' : 'Ramen, deuren en poorten';
+    blad.innerHTML = `${kop}${plan}${gevels}<h2>${welke}</h2>${posities}${regels}
       <h2>Opmerkingen</h2><ul class="a-klein"><li>Maten onder voorbehoud van inmeting op de werf.</li><li>Demo: technische waarden zijn voorbeelden.</li></ul>`;
     window.print();
     return;

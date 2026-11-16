@@ -2,10 +2,10 @@
  * 3D doorsturen: maakt van het huidige project een 3D-pakket (zie core/src/pakket3d.ts), de 3D als gewone gegevens.
  * Een ander systeem (bv. Missing Link) toont het met de losse kijker (kijker.ts → dist/bouw-kijker.html).
  */
-import { passendKader, plattegrond3D, standaardDak, verdiepingenVan, PAKKET3D_SOORT, PAKKET3D_VERSIE, ZENDING_SOORT, ZENDING_VERSIE, type Pakket3D, type Scene3D, type Zending } from '../../core/src/index.js';
+import { gebouwKader, passendKader, plattegrond3D, standaardDak, verdiepingenVan, PAKKET3D_SOORT, PAKKET3D_VERSIE, ZENDING_SOORT, ZENDING_VERSIE, type Pakket3D, type Scene3D, type Zending } from '../../core/src/index.js';
 import { maak3D, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
-import { openingInhoudUit, positieScene } from './positie-3d.js';
+import { isGebouw, openingInhoudUit, positieMaatlijnen, positieScene } from './positie-3d.js';
 import { resultaat, toestand, type Positie, type Toestand } from './staat.js';
 
 /**
@@ -47,8 +47,13 @@ export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = to
       laag: woningScene(n, true, t),
     })),
     posities: t.posities.map((p) => {
-      const r = resultaat(p);
-      return { code: p.code, naam: p.naam, omschrijving: omschrijf(p), aantal: p.aantal, scene: positieScene(p, r) };
+      const r = resultaat(p), maatlijnen = positieMaatlijnen(p, r);
+      // Sinds 16/11: een gebouw (aanbouw, carport, tuinhuis, loods) staat in de kijker buiten, en een positie die geen raam
+      // is, draagt haar hoofdmaten mee (zie Pakket3DPositie). Beide velden zijn optioneel: de versie blijft dezelfde.
+      return {
+        code: p.code, naam: p.naam, omschrijving: omschrijf(p), aantal: p.aantal, scene: positieScene(p, r),
+        ...(isGebouw(p) ? { gebouw: true } : {}), ...(maatlijnen?.length ? { maatlijnen } : {}),
+      };
     }),
   };
 }
@@ -124,8 +129,9 @@ export async function maakBeelden(pakket: Pakket3D, opVoortgang?: (klaar: number
   const heleWoning = pakket.woning[pakket.woning.length - 1];
   if (heleWoning) beelden.woning = await teken(heleWoning.scene, 'schuin', true);
   for (const p of pakket.posities) {
-    // Een raam of deur van voren, met het hele kader in beeld.
-    const beeld = await teken(passendKader(p.scene), 'voor');
+    // Een raam of deur van voren, met het hele kader in beeld; een gebouw (carport, tuinhuis, loods) buiten en schuin, een
+    // stuk staalwerk schuin op de effen achtergrond.
+    const beeld = p.gebouw || p.maatlijnen ? await teken(gebouwKader(p.scene), 'schuin', !!p.gebouw) : await teken(passendKader(p.scene), 'voor');
     if (beeld) beelden.posities[p.code] = beeld;
   }
   return beelden;
