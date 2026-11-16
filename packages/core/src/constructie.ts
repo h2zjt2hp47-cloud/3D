@@ -461,10 +461,14 @@ function topgevel(w: ConstructieDeel, d: HellendDak, hout: { soort: BlokSoort; k
   };
 }
 
-/** De blokken van een geplaatst bouwdeel in de woning, in de gevraagde weergave. */
+/** De blokken van een geplaatst bouwdeel in de woning, in de constructieweergave (`lagen: false` = alleen het skelet). */
 export function constructieBlokken(c: ConstructieDeel, opties: { dingen?: boolean; lagen?: boolean } = {}): Blok[] {
   const voor = `${opties.dingen && c.ding ? `${c.ding}.` : 'constructie.'}${c.code}.`;
-  let blokken = bouwdeelBlokken(c.deel, 'constructie', { voorvoegsel: voor, ...(opties.lagen === false ? { lagen: false } : {}) });
+  // De vloer op de grond ligt onder het maaiveld: afgewerkt (met haar bovenste laag) zie je waar de muren op staan; haar
+  // lagen staan in de doorsnede en de meetstaat.
+  let blokken = c.plaats === 'grondvloer'
+    ? bouwdeelBlokken(c.deel, 'afgewerkt', { voorvoegsel: voor })
+    : bouwdeelBlokken(c.deel, 'constructie', { voorvoegsel: voor, ...(opties.lagen === false ? { lagen: false } : {}) });
   blokken = bouwdeelOpPlaats(blokken, c.deel.maten, c.zet);
   return c.zet.hoek ? draaiBlokken(blokken, c.zet.hoek) : blokken;
 }

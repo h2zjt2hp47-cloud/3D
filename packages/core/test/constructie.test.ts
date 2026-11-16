@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CONSTRUCTIE_VOORBEHOUD, constructie3D, constructieBlokken, meetstaat, snedeBereik, tekenDoorsnede, opAs, opbouwVoor, opMuur, plattegrond3D, standaardDak, vloervlak,
+  CONSTRUCTIE_VOORBEHOUD, constructie3D, constructieBlokken, dakHoogte, meetstaat, snedeBereik, tekenDoorsnede, opAs, opbouwVoor, opMuur, plattegrond3D, standaardDak, vloervlak,
   WARMTE_VOORBEHOUD, STABILITEIT_VOORBEHOUD, woningConstructie, woningMeetstaat, woningStabiliteit, woningWarmte, zetOmtrek, murenVan, meubelVoetafdruk,
   type Blok, type DakKeuze, type Opening, type Plattegrond,
 } from '../src/index.js';
@@ -153,6 +153,26 @@ describe('constructie van een woning: vloeren en daken', () => {
         expect(ymin).toBeLessThan(c.hellend!.y);
       }
     }
+  });
+
+  it('de topgevels van een zadeldak blijven onder het dak en tellen mee in de meetstaat', () => {
+    const { plan } = voorbeeldWoning();
+    plan.dak = { ...standaardDak(), vorm: 'zadel', helling: 35, richting: 'onder', bedekking: { materiaal: 'pannen', kleur: 'rood' } };
+    const c = woningConstructie(plan, cat);
+    const gevels = c.delen.filter((d) => d.code.startsWith('topgevel_'));
+    expect(gevels).toHaveLength(2);
+    const { dak, y } = c.hellend!;
+    for (const g of gevels) {
+      expect(g.deel.stukken.filter((s) => s.rol === 'stijl').length).toBeGreaterThan(4);
+      for (const b of constructieBlokken(g)) {
+        // De nok ligt langs x: de hoogte van het dak hangt af van z (y op het plan).
+        for (const [pz, h] of b.doorsnede!) expect(h).toBeLessThanOrEqual(y + dakHoogte(dak, pz) + 0.5);
+      }
+      // Een driehoek: de helft van breedte × hoogte van de nok.
+      expect(g.deel.lagen[0]!.oppervlakte).toBeCloseTo(((dak.p1 - dak.p0) * dak.nok) / 2 / 10000, 0);
+    }
+    // Zonder dak in beeld ook geen topgevel.
+    expect(constructie3D(plan, cat, { dak: false }, c).blokken.some((b) => b.code.includes('topgevel_'))).toBe(false);
   });
 
   it('de meetstaat telt alle bouwdelen; de 3D tekent elk stuk hout dat ze telt', () => {
