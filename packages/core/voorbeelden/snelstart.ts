@@ -8,6 +8,8 @@
  * - Aanbouw: het model AANBOUW (`aanbouw.ts`) op maat en in de stijl; `aanbouwNaarPlan` zet hetzelfde als ruimte tegen
  *   een bestaande woning in de plattegrond, om er vrij aan verder te tekenen.
  * - Raam of deur en garagepoort: één positie, zonder woning.
+ * - Carport of overkapping, tuinhuis of poolhouse, loods of hal, staalwerk (16/11): één vast model als positie
+ *   (vastemodellen.ts). De derde vraag is dan een vertrekpunt van dat model in plaats van een stijl (`snelModel`).
  */
 import {
   standaardKeuzes, verfGevel,
@@ -18,6 +20,10 @@ import { daklichtCatalogus } from './inrichting.js';
 import { INDELINGEN, pasIndelingToe } from './raamindelingen.js';
 import { berekenRaam } from './raam.js';
 import { raamInStijl, pasStijlToe, type Stijl } from './stijlen.js';
+import { overkappingVertrekpunten, tuinhuisVertrekpunten } from './bijgebouwen.js';
+import { loodsVertrekpunten } from './loods.js';
+import { staalwerkVertrekpunten } from './staalwerk.js';
+import { berekenVastModel, maakGeldig, meter, VASTE_MODELLEN, type VastModelCode } from './vastemodellen.js';
 import { raamKeuzes, type DemoPositie } from './woning.js';
 
 /** Een maat in de tweede vraag, met grote − en + knoppen. `waarde` in de eenheid van het model (cm, mm of stuks). */
@@ -32,17 +38,50 @@ export interface SnelMaat {
   /** Stap van één tik op − of +. */
   stap: number;
   standaard: number;
+  /** Een getypte maat wordt een veelvoud hiervan (de stap van het model, bv. 10 cm); zonder: een hele cm of mm. */
+  veelvoud?: number;
+  /** 0 mag ook (bv. geen luifel); anders ligt de maat tussen min en max. */
+  nul?: boolean;
+  /** Maakt van een maat een maat die kan (bv. de lengte van een loods: een aantal traveeën maal de afstand ertussen). */
+  rond?: (w: number) => number;
 }
 
-/** Een tegel in de eerste vraag. `soort` zegt wat de snelstart maakt: een woning, een aanbouw of één positie (model). */
+/** Een vertrekpunt van een vast model: de derde vraag, in plaats van een stijl (16/11). */
+export interface SnelVertrekpunt {
+  code: string;
+  label: string;
+  uitleg: string;
+  /** De naam van de positie die het maakt (bv. "Carport", "Hal", "Trap"). */
+  naam: string;
+  /** De keuzes van het vertrekpunt (zie de vertrekpunten in bijgebouwen.ts, loods.ts en staalwerk.ts). */
+  keuzes: Keuzes;
+}
+
+/** Bij staalwerk eerst kiezen wat (balustrade, luifel of trap): elk is een eigen model, met eigen maten en vertrekpunten. */
+export interface SnelSoort {
+  code: string;
+  label: string;
+  model: VastModelCode;
+  maten: SnelMaat[];
+  vertrekpunten: SnelVertrekpunt[];
+}
+
+/**
+ * Een tegel in de eerste vraag. `soort` zegt wat de snelstart maakt: een woning, een aanbouw, één positie (raam, deur,
+ * poort) of één vast model (carport, tuinhuis, loods, staalwerk; zie vastemodellen.ts).
+ */
 export interface SnelTegel {
   code: string;
   label: string;
   uitleg: string;
-  soort: 'woning' | 'aanbouw' | 'positie';
-  /** Bij een positie: het model (zie MODELLEN in de bouwdemo). */
-  model?: 'RAAM' | 'POORT';
+  soort: 'woning' | 'aanbouw' | 'positie' | 'model';
+  /** Bij een positie of een vast model: het model (zie MODELLEN in de bouwdemo). */
+  model?: 'RAAM' | 'POORT' | VastModelCode;
   maten: SnelMaat[];
+  /** Vast model: de vertrekpunten van de derde vraag. */
+  vertrekpunten?: SnelVertrekpunt[];
+  /** Staalwerk: eerst kiezen wat, in de tweede vraag boven de maten; elke soort heeft eigen maten en vertrekpunten. */
+  soorten?: SnelSoort[];
 }
 
 const AANBOUW_STANDAARD = standaardKeuzes(aanbouw);
@@ -50,6 +89,38 @@ const grens = (code: string) => {
   const k = aanbouw.kenmerken.find((x) => x.code === code);
   return k?.type === 'getal' ? { min: typeof k.min === 'number' ? k.min : 2500, max: typeof k.max === 'number' ? k.max : 9000 } : { min: 0, max: 0 };
 };
+
+/** Een maat van een vast model: grenzen, stap en standaard uit het model (cm), en een eigen stap voor − en +. */
+type MaatOpgave = [code: string, label: string, stap: number, extra?: Partial<SnelMaat>];
+function modelMaten(code: VastModelCode, opgaven: MaatOpgave[], eerste: Keuzes): SnelMaat[] {
+  const model = VASTE_MODELLEN[code].model, std = standaardKeuzes(model);
+  return opgaven.map(([c, label, stap, extra = {}]) => {
+    const k = model.kenmerken.find((x) => x.code === c);
+    const getal = k?.type === 'getal' ? k : undefined;
+    return {
+      code: c, label, eenheid: 'cm' as const, toon: 'cm' as const, stap,
+      min: typeof getal?.min === 'number' ? getal.min : 0, max: typeof getal?.max === 'number' ? getal.max : 0,
+      standaard: Number(eerste[c] ?? std[c] ?? 0), ...(getal?.stapgrootte && getal.stapgrootte > 1 ? { veelvoud: getal.stapgrootte } : {}),
+      ...extra,
+    };
+  });
+}
+/** De vertrekpunten van een model met hun uitleg en de naam van de positie (standaard het label van het vertrekpunt). */
+function vertrekpunten(bron: Record<string, { label: string; keuzes: Keuzes }>, info: Record<string, string | [uitleg: string, naam: string]>): SnelVertrekpunt[] {
+  return Object.entries(bron).map(([code, v]) => {
+    const i = info[code] ?? '', [uitleg, naam] = typeof i === 'string' ? [i, v.label] : i;
+    return { code, label: v.label, uitleg, naam, keuzes: v.keuzes };
+  });
+}
+/** De keuzes van een vertrekpunt van een loods met de lengte (traveeën × afstand) erbij, als standaard van die maat. */
+const metLengte = (k: Keuzes): Keuzes => (k.traveeen !== undefined ? { ...k, lengte: Number(k.traveeen) * Number(k.afstand ?? 600) } : k);
+function modelTegel(code: string, label: string, uitleg: string, model: VastModelCode, maten: MaatOpgave[], punten: SnelVertrekpunt[]): SnelTegel {
+  return { code, label, uitleg, soort: 'model', model, maten: modelMaten(model, maten, metLengte(punten[0]!.keuzes)), vertrekpunten: punten };
+}
+function modelSoort(code: string, label: string, model: VastModelCode, maten: MaatOpgave[], punten: string[]): SnelSoort {
+  const v = punten.map((p) => ({ code: p, label: staalwerkVertrekpunten[p]!.label, uitleg: '', naam: label, keuzes: staalwerkVertrekpunten[p]!.keuzes }));
+  return { code, label, model, maten: modelMaten(model, maten, v[0]!.keuzes), vertrekpunten: v };
+}
 
 /**
  * De tegels van de snelstart: alleen wat vandaag werkt. Een nieuwe soort (bv. een bijgebouw) is een nieuwe rij, met een
@@ -86,6 +157,36 @@ export const SNELSTART_TEGELS: SnelTegel[] = [
     maten: [
       { code: 'breedte', label: 'Breedte', eenheid: 'mm', toon: 'cm', min: 2000, max: 6000, stap: 100, standaard: 2500 },
       { code: 'hoogte', label: 'Hoogte', eenheid: 'mm', toon: 'cm', min: 1900, max: 3000, stap: 50, standaard: 2150 },
+    ],
+  },
+  modelTegel('overkapping', 'Carport of overkapping', 'Carport, terrasoverkapping of pergola in hout', 'OVERKAPPING', [
+    ['breedte', 'Breedte (voorkant)', 50], ['diepte', 'Diepte', 50],
+  ], vertrekpunten(overkappingVertrekpunten, {
+    carport: 'Vrijstaand, plat dak, palen van 15 cm: de inrit blijft vrij',
+    terras: 'Tegen de gevel, lessenaarsdak in glas',
+    pergola: 'Open dak: alleen de balken',
+  })),
+  modelTegel('tuinhuis', 'Tuinhuis of poolhouse', 'Tuinhuis of poolhouse in houtskelet', 'TUINHUIS', [
+    ['breedte', 'Breedte (voorkant)', 50], ['diepte', 'Diepte', 50], ['luifel', 'Luifel (overdekt terras)', 50, { nul: true, min: 100 }],
+  ], vertrekpunten(tuinhuisVertrekpunten, {
+    tuinhuis: 'Dubbele deur, plat dak',
+    poolhouse: 'Geïsoleerd, schuifraam, zwarte gevel',
+  })),
+  modelTegel('loods', 'Loods of hal', 'Hal in staal met poorten', 'LOODS', [
+    ['breedte', 'Breedte (overspanning)', 100],
+    ['lengte', 'Lengte', 600, { min: 1000, max: 16000, rond: (w) => loodsIndeling(w).lengte }],
+    ['zijhoogte', 'Zijhoogte', 50],
+  ], vertrekpunten(loodsVertrekpunten, {
+    hal: ['Zadeldak, lichtstraat, sectionale poort', 'Hal'],
+    landbouw: ['Lessenaarsdak, plaat, betonpanelen, roldeuren', 'Landbouwloods'],
+    werkplaats: ['Twee poorten met vensters', 'Werkplaats'],
+  })),
+  {
+    code: 'staalwerk', label: 'Staalwerk', uitleg: 'Balustrade, luifel of trap in staal', soort: 'model', maten: [],
+    soorten: [
+      modelSoort('balustrade', 'Balustrade', 'BALUSTRADE', [['lengte', 'Lengte', 50], ['hoogte', 'Hoogte', 5]], ['balustrade_spijlen', 'balustrade_glas']),
+      modelSoort('luifel', 'Luifel', 'LUIFEL', [['breedte', 'Breedte', 25], ['uitkraging', 'Uitkraging', 10]], ['luifel', 'luifel_plaat']),
+      modelSoort('trap', 'Trap', 'STAALTRAP', [['hoogte', 'Hoogte van vloer tot vloer', 5], ['breedte', 'Breedte', 5]], ['staaltrap', 'staaltrap_staal']),
     ],
   },
 ];
@@ -355,6 +456,75 @@ export function bestaandeWoning(k: Keuzes): { plan: Plattegrond; posities: DemoP
   if (vlakken) for (const s of Object.keys(vlakken)) if (s.startsWith('uitbouw:')) delete vlakken[s];
   const nodig = new Set(plan.openingen.map((o) => o.positie));
   return { plan, posities: posities.filter((p) => nodig.has(p.id)) };
+}
+
+// ---------- vaste modellen (16/11) ----------
+
+/**
+ * Een maat binnen min en max, op de stap van het model (of een hele cm of mm), en een maat die kan (`rond`). Met `nul`
+ * mag ook 0 (geen luifel): een maat onder de helft van het minimum wordt 0, daarboven het minimum.
+ */
+export function begrensMaat(m: SnelMaat, w: number): number {
+  if (m.nul && w < m.min) return w < m.min / 2 ? 0 : m.min;
+  const s = m.veelvoud ?? (m.eenheid === 'mm' ? 10 : 1);
+  const x = Math.min(m.max, Math.max(m.min, Math.round(w / s) * s));
+  return m.rond ? m.rond(x) : x;
+}
+/** Een tik op − of +: met `nul` gaat het van 0 naar het minimum en terug. */
+export function stapMaat(m: SnelMaat, w: number, richting: 1 | -1): number {
+  if (m.nul && richting < 0 && w <= m.min) return 0;
+  if (m.nul && richting > 0 && w < m.min) return m.min;
+  return begrensMaat(m, w + richting * m.stap);
+}
+
+/**
+ * De indeling van een loods van een gegeven lengte (cm): zoveel traveeën met zo'n afstand ertussen (500 tot 800 cm, per
+ * 50; 2 tot 20 traveeën) dat de lengte er het dichtst bij ligt; bij een gelijke lengte de afstand die het dichtst bij
+ * `voorkeur` ligt.
+ */
+export function loodsIndeling(lengte: number, voorkeur = 600): { traveeen: number; afstand: number; lengte: number } {
+  let beste = { traveeen: 5, afstand: 600, lengte: 3000 }, score = Infinity;
+  for (let afstand = 500; afstand <= 800; afstand += 50) {
+    for (let traveeen = 2; traveeen <= 20; traveeen++) {
+      const s = Math.abs(traveeen * afstand - lengte) * 1000 + Math.abs(afstand - voorkeur);
+      if (s < score) { score = s; beste = { traveeen, afstand, lengte: traveeen * afstand }; }
+    }
+  }
+  return beste;
+}
+
+/** De maten van de tweede vraag als keuzes van het model; de lengte van een loods wordt traveeën × afstand. */
+function matenNaarKeuzes(model: VastModelCode, maten: SnelMaten, vertrek: Keuzes): Keuzes {
+  const k: Keuzes = { ...maten };
+  if (model === 'LOODS' && typeof maten.lengte === 'number') {
+    const { traveeen, afstand } = loodsIndeling(maten.lengte, Number(vertrek.afstand ?? 600));
+    delete k.lengte;
+    k.traveeen = traveeen;
+    k.afstand = afstand;
+  }
+  return k;
+}
+
+/**
+ * Het ontwerp van een vast model uit de snelstart: het vertrekpunt, met de maten van de tweede vraag als de verkoper er
+ * een aanraakte (`maten`; null = niets aangeraakt: dan houdt elk vertrekpunt zijn eigen gangbare maten, zoals de tegel
+ * ze toont). Altijd geldig (`maakGeldig`): een te smal tuinhuis krijgt een smallere deur, poorten die niet passen worden
+ * kleiner.
+ */
+export function snelModel(model: VastModelCode, vertrekpunt: SnelVertrekpunt, maten: SnelMaten | null): Keuzes {
+  const basis = { ...standaardKeuzes(VASTE_MODELLEN[model].model), ...vertrekpunt.keuzes };
+  return maakGeldig(model, { ...basis, ...(maten ? matenNaarKeuzes(model, maten, basis) : {}) });
+}
+
+/** De maat van een ontwerp in een paar woorden, voor op de tegel van een vertrekpunt ("5 × 5 m", "3,60 m lang"). */
+export function snelModelMaat(model: VastModelCode, keuzes: Keuzes): string {
+  const r = berekenVastModel(model, keuzes), k = Object.fromEntries(r.kenmerken.map((x) => [x.code, x.waarde]));
+  const n = (v: unknown) => (typeof v === 'number' ? v : 0), kaal = (cm: number) => meter(cm).replace(/ m$/, '');
+  if (model === 'OVERKAPPING' || model === 'TUINHUIS') return `${kaal(n(k.breedte))} × ${meter(n(k.diepte))}${n(k.luifel) > 0 ? `, luifel ${meter(n(k.luifel))}` : ''}`;
+  if (model === 'LOODS') return `${kaal(n(k.breedte))} × ${meter(n(r.afgeleid.lengte))}, ${n(k.traveeen)} traveeën`;
+  if (model === 'BALUSTRADE') return `${meter(n(k.lengte))} lang`;
+  if (model === 'LUIFEL') return `${kaal(n(k.breedte))} × ${meter(n(k.uitkraging))}`;
+  return `${meter(n(k.hoogte))} hoog, ${n(r.afgeleid.optreden)} optreden`;
 }
 
 /** Daklichten verdelen en tellen: in `daklichten.ts` (ook gebruikt door de stijlen). */

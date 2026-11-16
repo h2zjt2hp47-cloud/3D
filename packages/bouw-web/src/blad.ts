@@ -8,8 +8,12 @@
  *   4. per raam of deur een beeld met de maten, een korte omschrijving en wat het is.
  * De beelden worden buiten beeld getekend (zoals de zending), het scherm verandert niet. Zonder woning (enkel ramen):
  * alleen het project en de ramen en deuren.
+ *
+ * Een gebouw of stuk staalwerk als positie (16/11: carport, tuinhuis, loods, balustrade, luifel, trap, en de aanbouw)
+ * krijgt een eigen deel: een groot beeld (een gebouw buiten, staalwerk op de effen achtergrond), een zicht van voren en
+ * van opzij met de hoofdmaten, en bij een vast model de constructie; met wat het is en de belangrijkste keuzes.
  */
-import { gebouwMaatlijnen, passendKader, raamMaatlijnen, verdiepingenVan, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
+import { gebouwKader, gebouwMaatlijnen, passendKader, raamMaatlijnen, verdiepingenVan, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
 import { planCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { ontwerpKenmerken } from '../../core/voorbeelden/varianten.js';
 import type { Standpunt } from '../../demo-web/src/drie-d.js';
@@ -17,7 +21,7 @@ import { tekenBeeld, woningScene } from './doorsturen.js';
 import { $ } from './hulp.js';
 import { aannemerNaam } from './meegeven.js';
 import { gevelSvgs } from './plattegrond-ui.js';
-import { positieScene } from './positie-3d.js';
+import { heeftConstructie, isGebouw, positieMaatlijnen, positieScene } from './positie-3d.js';
 import { openingVan, resultaat, toestand, type Positie } from './staat.js';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -37,7 +41,10 @@ export async function drukBlad(kort: (p: Positie) => string, omschrijf: (p: Posi
   const t = toestand();
   const woning = !t.meta.zonderWoning && t.plan.ruimtes.length > 0;
   const niveaus = woning ? verdiepingenVan(t.plan) : [];
-  const posities = t.posities.filter((p) => p.aantal > 0);
+  const alle = t.posities.filter((p) => p.aantal > 0);
+  // Een gebouw of stuk staalwerk (met eigen hoofdmaten) krijgt een eigen deel; ramen, deuren en poorten samen in een raster.
+  const onderdelen = alle.filter((p) => !!positieMaatlijnen(p)?.length);
+  const posities = alle.filter((p) => !onderdelen.includes(p));
   const heel = woning ? woningScene(undefined, false) : null;
   const met = (s: Scene3D, maatlijnen: Scene3DMetMaten['maatlijnen']): Scene3DMetMaten => ({ ...s, maatlijnen });
 
@@ -51,6 +58,13 @@ export async function drukBlad(kort: (p: Positie) => string, omschrijf: (p: Posi
       const laag = woningScene(n, true);
       opdrachten.push({ scene: met(laag, gebouwMaatlijnen(laag, { hoogtes: false })), standpunt: 'boven', buiten: true, breedte: 800 });
     }
+  }
+  for (const p of onderdelen) {
+    const r = resultaat(p), buiten = isGebouw(p), kader = gebouwKader;
+    const s = kader(positieScene(p, r)), maten = positieMaatlijnen(p, r);
+    opdrachten.push({ scene: s, standpunt: 'schuin', buiten, breedte: 1400 });
+    for (const standpunt of ['voor', 'zij'] as const) opdrachten.push({ scene: met(s, maten), standpunt, buiten, breedte: 480 });
+    if (heeftConstructie(p)) opdrachten.push({ scene: kader(positieScene(p, r, 'constructie')), standpunt: 'schuin', buiten, breedte: 480 });
   }
   for (const p of posities) {
     const s = passendKader(positieScene(p, resultaat(p)));
@@ -82,6 +96,14 @@ export async function drukBlad(kort: (p: Positie) => string, omschrijf: (p: Posi
     html += `<section class="b-blad b-nieuw"><h2>Per verdieping, van boven</h2><div class="b-boven">${niveaus.map((v) => figuur(volgend(), v.naam)).join('')}</div></section>`;
   } else {
     html += `<ul class="b-kort">${kenmerken.map((k) => `<li>${esc(k.tekst.charAt(0).toUpperCase() + k.tekst.slice(1))}</li>`).join('')}</ul>`;
+  }
+  // Elk gebouw of stuk staalwerk: groot, dan van voren en opzij met de maten, en de constructie.
+  for (const [n, p] of onderdelen.entries()) {
+    const groot = volgend(), voor = volgend(), zij = volgend(), constructie = heeftConstructie(p) ? volgend() : '';
+    html += `<section class="b-blad${heel || n > 0 ? ' b-nieuw' : ''}"><h2>${esc(p.code)} · ${esc(p.naam)}${p.aantal > 1 ? ` (${p.aantal} stuks)` : ''}</h2>
+      ${figuur(groot, kort(p), 'b-groot')}
+      <p class="b-klein">${esc(omschrijf(p))}</p>
+      <div class="b-zichten">${figuur(voor, 'Van voren, met de maten')}${figuur(zij, 'Van opzij, met de maten')}${constructie ? figuur(constructie, 'De constructie') : ''}</div></section>`;
   }
   if (posities.length) {
     html += `<section class="b-nieuw"><h2>Ramen en deuren</h2><div class="b-ramen">${posities.map((p) => {

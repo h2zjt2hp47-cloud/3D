@@ -421,9 +421,14 @@ export const overkapping: ProductModel = {
 /**
  * De drie vertrekpunten van de overkapping: de keuzes waarmee een verkoper begint. Alles wat hier niet staat, heeft de
  * standaardwaarde van het model. Standaardmaten uit het onderzoek (1.6); de rest is zelf gekozen voor een mooi begin.
+ *
+ * De carport is 5 × 5 m met palen van 15 × 15 cm (16/11; vroeger 6 m breed met palen van 12 cm). Palen van 12 of 14 cm
+ * staan hoogstens 3 m uit elkaar: een carport breder dan ± 3,10 m krijgt dan vanzelf een paal midden in de inrit. Palen
+ * van 15 cm mogen 5 m uit elkaar (onderzoek 1.6): tot ± 5,15 m breed en diep blijft de inrit vrij. Een carport van 6 m
+ * krijgt met elke paal een middenpaal (6 m min de paal is meer dan 5 m): dat zegt het model dan zelf.
  */
 export const overkappingVertrekpunten: Record<'carport' | 'terras' | 'pergola', { label: string; keuzes: Keuzes }> = {
-  carport: { label: 'Carport', keuzes: { type: 'carport', breedte: 600, diepte: 500, vloer: 'klinkers' } },
+  carport: { label: 'Carport', keuzes: { type: 'carport', breedte: 500, diepte: 500, paal: 'p15', vloer: 'klinkers' } },
   terras: {
     label: 'Terrasoverkapping',
     keuzes: { type: 'terras', plaatsing: 'gevel', breedte: 540, diepte: 350, dakvorm: 'lessenaar', helling_lessenaar: 'h7', bedekking: 'glas', oversteek: 10, vloer: 'tegels' },

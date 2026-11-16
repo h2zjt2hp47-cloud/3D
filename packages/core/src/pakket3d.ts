@@ -28,13 +28,24 @@ export interface Pakket3DNiveau {
   laag: Scene3D;
 }
 
-/** Eén positie van de offerte (raam, deur, aanbouw) met haar eigen 3D. */
+/**
+ * Eén positie van de offerte (raam, deur, aanbouw, en sinds 16/11 ook een carport, tuinhuis, loods of stuk staalwerk) met
+ * haar eigen 3D. Twee velden kwamen erbij op 16/11 (ronde 8b), allebei optioneel; een oudere kijker slaat ze over en
+ * toont de positie zoals vroeger (op de effen achtergrond, zonder maten):
+ *   - `gebouw`: de positie is een gebouw (aanbouw, overkapping, tuinhuis, loods). De kijker zet het buiten (lucht, gras,
+ *     horizon), schuin van boven en met het echte kader van de scène, zoals de woning;
+ *   - `maatlijnen`: de hoofdmaten van de positie (breedte, diepte, hoogte van een gebouw; lengte en hoogte van een
+ *     balustrade …), uitgerekend uit het model en niet uit de blokken. De kijker tekent ze als *Maten* aan staat; zonder
+ *     dit veld rekent hij de maten van een raam uit de scène, zoals vroeger.
+ */
 export interface Pakket3DPositie {
   code: string;
   naam: string;
   omschrijving: string;
   aantal: number;
   scene: Scene3D;
+  gebouw?: boolean;
+  maatlijnen?: Maatlijn3D[];
 }
 
 export interface Pakket3D {
@@ -126,6 +137,18 @@ export function passendKader(s: Scene3D): Scene3D {
   return { ...s, kader: { ...k, x: k.x - (b - k.b) / 2, b, h: k.h / 0.7 } };
 }
 
+/**
+ * Hetzelfde voor een gebouw of een stuk staalwerk als positie (16/11: een carport, tuinhuis, loods, aanbouw, balustrade,
+ * luifel of trap). De kijker zet zijn camera op
+ * anderhalve keer de grootste maat van het grondvlak: een hoog dak (een zadeldak op een carport van 5 m) viel dan boven
+ * uit beeld, en een gebouw vulde het beeld tot aan de rand. Het kader groeit rond hetzelfde midden tot minstens 1,1 keer
+ * de grootste maat en 1,8 keer de hoogte. Alleen om te tonen: het pakket zelf bewaart het echte kader.
+ */
+export function gebouwKader(s: Scene3D): Scene3D {
+  const k = s.kader, f = Math.max(1.1, (k.h * 1.8) / Math.max(k.b, k.d, 1));
+  return { ...s, kader: { ...k, x: k.x - (k.b * (f - 1)) / 2, z: k.z - (k.d * (f - 1)) / 2, b: k.b * f, d: k.d * f } };
+}
+
 function isScene(s: unknown): s is Scene3D {
   const x = s as Scene3D | null;
   return !!x && Array.isArray(x.blokken) && !!x.kader && typeof x.kader.b === 'number' && typeof x.kader.h === 'number';
@@ -163,7 +186,12 @@ export function leesPakket3D(bron: unknown): Pakket3D {
     gemaakt: typeof p.gemaakt === 'string' ? p.gemaakt : '',
     project: { nummer: String(p.project?.nummer ?? ''), naam: String(p.project?.naam ?? ''), klant: p.project?.klant, adres: p.project?.adres },
     woning: p.woning,
-    posities: p.posities,
+    // De velden van 16/11 op een positie (`gebouw`, `maatlijnen`) alleen als ze kloppen; de rest zoals vroeger.
+    posities: p.posities.map((x) => {
+      const { gebouw, maatlijnen, ...rest } = x;
+      const lijnen = Array.isArray(maatlijnen) ? maatlijnen.filter((l) => Array.isArray(l?.van) && Array.isArray(l?.tot) && typeof l.tekst === 'string') : [];
+      return { ...rest, ...(gebouw === true ? { gebouw: true } : {}), ...(lijnen.length ? { maatlijnen: lijnen } : {}) };
+    }),
   };
   // Velden van 16/11 (bestand voor de klant): alleen meenemen als ze er zijn, zodat een ouder pakket er net zo uitziet als vroeger.
   const aannemer = tekst(p.project?.aannemer), datum = tekst(p.project?.datum);

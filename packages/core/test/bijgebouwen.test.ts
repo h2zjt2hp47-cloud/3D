@@ -144,8 +144,14 @@ describe('bijgebouwen: de modellen', () => {
       expect(fouten(r), naam).toEqual([]);
       controleerScene(r, naam);
     }
-    // Carport: vrijstaand, plat dak met EPDM, 600 × 500.
-    expect(overk(OV.carport.keuzes).afgeleid).toMatchObject({ palen: 8, helling: 0, grondvlak_m2: 30 });
+    // Carport: vrijstaand, plat dak met EPDM, 500 × 500 op vier palen van 15 cm: geen paal in de inrit.
+    const carport = overk(OV.carport.keuzes);
+    expect(carport.afgeleid).toMatchObject({ palen: 4, velden_b: 1, velden_d: 1, helling: 0, grondvlak_m2: 25 });
+    expect(codes(carport)).not.toContain('extra_palen');
+    expect(delen(carport, 'paal')).toHaveLength(4);
+    // Met de palen van 12 cm van vroeger kreeg dezelfde carport een paal midden in de inrit; 6 m breed krijgt hem met elke paal.
+    expect(overk({ ...OV.carport.keuzes, paal: 'p12' }).afgeleid.velden_b).toBe(2);
+    for (const paal of ['p12', 'p14', 'p15', 'p20']) expect(codes(overk({ ...OV.carport.keuzes, breedte: 600, paal })), paal).toContain('extra_palen');
     // Terrasoverkapping: tegen een gevel, lessenaar met glas.
     const terras = overk(OV.terras.keuzes);
     expect(blokken(terras, 'gevel')).toHaveLength(1);

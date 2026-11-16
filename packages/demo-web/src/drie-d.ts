@@ -2453,9 +2453,19 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const beeld = d ? d.glasbeeld : null;
       if (m.envMap !== beeld) { m.envMap = beeld; m.needsUpdate = true; }
     }
+    // Een groot gebouw (16/11: een hal van 30 m als positie): het grondvlak, het gras en de zichtgrens groeien mee met het
+    // kader van de scène. Alleen een toevoeging: tot een kader van 10 m (alles van vóór 16/11) blijven ze zoals ze waren.
+    const groot = Math.max(kader.b, kader.d, 120), vloerSchaal = Math.max(1, groot / 1000);
+    vloer.scale.set(vloerSchaal, vloerSchaal, 1);
+    // Het gras reikt tot voorbij de mist, ook als je zo ver uitzoomt als mag (zie plaatsCamera en `verst`).
+    const grasSchaal = d ? Math.max(1, ((verst() + groot * 1.6 + 26000) * 1.1) / GRAS.straal) : 1;
+    if (buitenDelen && buitenDelen.gras.scale.x !== grasSchaal) {
+      buitenDelen.gras.scale.set(grasSchaal, grasSchaal, 1);
+      buitenDelen.gras.material.map.repeat.setScalar(((2 * GRAS.straal) / GRAS.tegel) * grasSchaal);
+    }
     // Buiten kijk je tot aan de horizon; de voorste grens gaat mee op, voor een fijnere diepte (minder flikkeren).
     camera.near = d ? 4 : 1;
-    camera.far = d ? GRAS.straal * 2 : 5000;
+    camera.far = d ? GRAS.straal * 2 * grasSchaal : Math.max(5000, groot * 5);
     camera.updateProjectionMatrix();
     zetSchaduwZachtheid();
     if (!d) { clearTimeout(luchtGepland); luchtSleutel = ''; }
@@ -2664,6 +2674,13 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   // ---------- camera (eenvoudige orbit) ----------
   let doel = new THREE.Vector3(115, 35, 50);
   let afstand = 420, hoekH = -0.6, hoekV = 0.42;
+  /**
+   * Zo ver mag je uitzoomen (cm): 25 m, of bij een groot gebouw drie keer zijn grootste maat (16/11: een hal van 30 m
+   * staat zelf al op 50 m; anders sprong de camera bij de eerste tik van het wiel naar 25 m). De zetels houden 25 m.
+   */
+  function verst() {
+    return opties.zetel ? 2500 : Math.max(2500, Math.max(kader.b, kader.d, 120) * 3);
+  }
   const plaatsCamera = () => {
     hoekV = Math.min(1.45, Math.max(0.05, hoekV));
     camera.position.set(
@@ -2700,7 +2717,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     if (aanwijzers.size === 2) {
       const [a, b] = [...aanwijzers.values()] as [{ x: number; y: number }, { x: number; y: number }];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (knijpAfstand) afstand = Math.min(2500, Math.max(120, afstand * (knijpAfstand / d)));
+      if (knijpAfstand) afstand = Math.min(verst(), Math.max(120, afstand * (knijpAfstand / d)));
       knijpAfstand = d;
       plaatsCamera();
       return;
@@ -2759,7 +2776,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     else if (ev.key === 'ArrowUp') hoekV += stap * 0.6;
     else if (ev.key === 'ArrowDown') hoekV -= stap * 0.6;
     else if (ev.key === '+' || ev.key === '=') afstand = Math.max(120, afstand * 0.9);
-    else if (ev.key === '-' || ev.key === '_') afstand = Math.min(2500, afstand * 1.1);
+    else if (ev.key === '-' || ev.key === '_') afstand = Math.min(verst(), afstand * 1.1);
     else if (ev.key === '0') { viewer.standpunt('schuin'); ev.preventDefault(); return; }
     else return;
     ev.preventDefault();
@@ -2847,7 +2864,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       return;
     }
     ev.preventDefault();
-    afstand = Math.min(2500, Math.max(120, afstand * (1 + Math.sign(ev.deltaY) * 0.1)));
+    afstand = Math.min(verst(), Math.max(120, afstand * (1 + Math.sign(ev.deltaY) * 0.1)));
     plaatsCamera();
   }, { passive: false });
 

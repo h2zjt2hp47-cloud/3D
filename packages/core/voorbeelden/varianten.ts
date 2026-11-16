@@ -8,6 +8,7 @@
  */
 import { delenVan, verdiepingenVan, type Keuzes, type PlanCatalogus, type Plattegrond } from '../src/index.js';
 import { RAL_KLEUREN, raamdeur } from './raam.js';
+import { berekenVastModel, isVastModel, vastModelZin, type VastModelCode } from './vastemodellen.js';
 
 export interface OntwerpKenmerk {
   /** Het onderwerp: maat, dak, daklicht, gevel, ramen, vloer of aantal. */
@@ -78,8 +79,17 @@ export function ontwerpKenmerken(plan: Plattegrond, posities: OntwerpPositie[], 
     const kleur = RAL_KLEUREN.find((k) => k.code === schrijnwerk[1])?.naam ?? String(schrijnwerk[1] ?? '');
     uit.push({ soort: 'ramen', tekst: `ramen in ${klein(raamLabel('profiel', schrijnwerk[0]))}, ${klein(kleur)}` });
   }
-  const n = posities.filter((p) => p.aantal > 0).reduce((s, p) => s + p.aantal, 0);
-  uit.push({ soort: 'aantal', tekst: `${n} ${n === 1 ? 'raam of deur' : 'ramen en deuren'}` });
+  // Vaste modellen (16/11: carport, tuinhuis, loods, staalwerk): elk wat het is, hoe groot, en de belangrijkste keuzes.
+  // Het tweede van hetzelfde model is een ander onderwerp, zodat varianten ze één voor één vergelijken.
+  const vast = posities.filter((p) => isVastModel(p.model) && p.aantal > 0);
+  const tel = new Map<string, number>();
+  for (const p of vast) {
+    const code = p.model as VastModelCode, i = (tel.get(code) ?? 0) + 1;
+    tel.set(code, i);
+    uit.push({ soort: `model:${code}:${i}`, tekst: `${p.aantal > 1 ? `${p.aantal} × ` : ''}${vastModelZin(code, berekenVastModel(code, p.keuzes))}` });
+  }
+  const n = posities.filter((p) => p.aantal > 0 && !isVastModel(p.model)).reduce((s, p) => s + p.aantal, 0);
+  if (n || !vast.length) uit.push({ soort: 'aantal', tekst: `${n} ${n === 1 ? 'raam of deur' : 'ramen en deuren'}` });
   return uit;
 }
 

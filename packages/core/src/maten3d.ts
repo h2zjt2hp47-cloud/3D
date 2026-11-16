@@ -131,3 +131,40 @@ export function raamMaatlijnen(blokken: Blok[], opties: { ding?: string } = {}):
     { van: [x, y0, z1], tot: [x, y1, z1], tekst: cm(hoog), uit: [0, 0, 1], afstand: naast, bovenop: true },
   ];
 }
+
+/** Een doos in de scène (cm): het grondvlak van x0 tot x1 en z0 tot z1, de hoogte van y0 tot y1. */
+export interface MaatDoos { x0: number; x1: number; z0: number; z1: number; y0: number; y1: number }
+
+/**
+ * De hoofdmaten van een gebouw zonder de muren van een plattegrond (een carport, een tuinhuis, een loods; 16/11):
+ * breedte (vóór en achter), diepte (links en rechts) en hoogte (op de vier hoeken), zoals `gebouwMaatlijnen` ze tekent.
+ * De doos komt van het model zelf (de buitenmaat van palen, wanden of kolommen, en het hoogste punt), niet uit de
+ * blokken: een dakoversteek, een luifel of de verharding eronder telt niet mee. `tekst` geeft de woorden voor elke maat
+ * (bv. "Lengte" in plaats van "Diepte"); een maat zonder woord valt weg.
+ */
+export function doosMaatlijnen(d: MaatDoos, tekst: { breedte?: string; diepte?: string; hoogte?: string } = { breedte: 'Breedte', diepte: 'Diepte', hoogte: 'Hoogte' }): Maatlijn3D[] {
+  const { x0, x1, z0, z1, y0, y1 } = d;
+  const naast = Math.min(220, Math.max(70, Math.max(x1 - x0, z1 - z0) * 0.08));
+  const lijnen: Maatlijn3D[] = [];
+  if (tekst.breedte) {
+    const t = `${tekst.breedte} ${meterTekst(x1 - x0)}`;
+    lijnen.push(
+      { van: [x0, GROND, z1], tot: [x1, GROND, z1], tekst: t, uit: [0, 0, 1], afstand: naast, groep: 'breedte', kant: [0, 0, 1] },
+      { van: [x0, GROND, z0], tot: [x1, GROND, z0], tekst: t, uit: [0, 0, -1], afstand: naast, groep: 'breedte', kant: [0, 0, -1] },
+    );
+  }
+  if (tekst.diepte) {
+    const t = `${tekst.diepte} ${meterTekst(z1 - z0)}`;
+    lijnen.push(
+      { van: [x1, GROND, z0], tot: [x1, GROND, z1], tekst: t, uit: [1, 0, 0], afstand: naast, groep: 'diepte', kant: [1, 0, 0] },
+      { van: [x0, GROND, z0], tot: [x0, GROND, z1], tekst: t, uit: [-1, 0, 0], afstand: naast, groep: 'diepte', kant: [-1, 0, 0] },
+    );
+  }
+  if (tekst.hoogte) {
+    const t = `${tekst.hoogte} ${meterTekst(y1 - y0)}`, hoek = naast * 0.9;
+    for (const [x, z, sx, sz] of [[x1, z1, 1, 1], [x0, z1, -1, 1], [x1, z0, 1, -1], [x0, z0, -1, -1]] as const) {
+      lijnen.push({ van: [x, y0, z], tot: [x, y1, z], tekst: t, uit: [sx * S, 0, sz * S], afstand: hoek, groep: 'hoogte', kant: [sx * S, 0, sz * S] });
+    }
+  }
+  return lijnen;
+}
