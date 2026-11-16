@@ -55,7 +55,7 @@ import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
 import { dakLijnen, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
-import { cmVeld, leesCm, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
+import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 
 export { gevelSvgs } from './gevel-ui.js';
@@ -102,6 +102,11 @@ let viewBox: { x: number; y: number; b: number; d: number } | undefined;
 let zoom: Zoom | undefined;
 /** Slepen op een leeg stuk verschuift het beeld (een klik zonder bewegen deselecteert). */
 let pannen: { bewogen: boolean; x: number; y: number } | undefined;
+/**
+ * Een tik die pas bij het loslaten telt (zoals in de gevel-editor): op een maat (Selecteren) of op een muur (Ruimte met
+ * maten). Schuift de vinger meer dan 8 beeldpunten, dan was het verschuiven van het beeld.
+ */
+let tikWacht: { soort: 'maat'; doel: string; el: Element } | { soort: 'gevel'; x: number; y: number } | undefined;
 let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeldOpening: Opening | undefined;
 let weergave: 'plan' | 'gevels' | '3d' = 'plan';
@@ -272,7 +277,7 @@ function toonNiveaus() {
   const vak = $('#pl-niveaus');
   vak.replaceChildren(...lijst.map((v, i) => {
     const b = el('button', { type: 'button', 'aria-pressed': String(i === niveau) }, v.naam);
-    b.addEventListener('click', () => { niveau = i; selectie = undefined; render(); toonEigenschappen(); });
+    b.addEventListener('click', () => { sluitMaatVraag(true); niveau = i; selectie = undefined; render(); toonEigenschappen(); });
     return b;
   }));
   const plus = el('button', { type: 'button', class: 'tweede' }, '+ Verdieping');
@@ -456,9 +461,9 @@ function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Openin
     id: nieuweId('o'), soort, ...opMuur(m, midden), breedte, hoogte: std.h, borstwering: std.borst,
     scharnier: 'begin', naarPlus: binnenPlus, deurtype: soort === 'binnendeur' ? 'schilder' : undefined,
   };
-  // Dicht bij het midden van de vrije muur (binnen 10 cm): precies in het midden.
+  // Een halve rasterstap van het midden van de vrije muur: precies in het midden (anders blijft wat je tikte).
   const af = openingAfstanden({ ...plan(), openingen: [...plan().openingen, opening] }, opening, muren);
-  if (af && Math.abs(opening.midden - (af.vlakBegin + af.vlakEinde) / 2) < 10) opening.midden = Math.round(((af.vlakBegin + af.vlakEinde) / 2) * 10) / 10;
+  if (af && Math.abs(opening.midden - (af.vlakBegin + af.vlakEinde) / 2) < fijn() / 2) opening.midden = Math.round(((af.vlakBegin + af.vlakEinde) / 2) * 10) / 10;
   let fout: string | undefined;
   if (buiten && m.soort !== 'buiten') fout = 'Ramen en buitendeuren horen in een buitenmuur.';
   if (!buiten && m.soort !== 'binnen') fout = 'Binnendeuren en doorgangen horen in een binnenmuur.';
@@ -817,22 +822,18 @@ function naPointerDown(ev: PointerEvent) {
   // Een maat aangetikt (met Selecteren): een veld om ze in cm te typen. Met een ander gereedschap telt de tik voor dat
   // gereedschap (een raam op de muur, ook waar een maat staat).
   const maat = doel.closest('[data-maat]') as SVGElement | null;
-  if (maat && gereedschap === 'kies') {
-    ev.preventDefault();
-    tikOpMaat(maat.dataset.maat!, maat.getBoundingClientRect());
-    return;
-  }
   // Een tik ernaast sluit de maatvraag (wat getypt is, blijft).
   if (maatVraagOpen()) sluitMaatVraag(true);
-  zoom?.vastzetten();
-  if (gereedschap === 'maten') {
-    // Ruimte met maten: een tik op een buitenmuur kiest de gevel (en de plaats); anders verschuift slepen het beeld.
-    if (matenTik(p.x, p.y)) { zoom?.losmaken(); return; }
+  if ((maat && gereedschap === 'kies') || gereedschap === 'maten') {
+    // Pas bij het loslaten (als de vinger niet schoof): de maat aantikken, of met Ruimte met maten de gevel kiezen.
+    // Slepen verschuift het beeld, zoals op een leeg stuk.
+    tikWacht = maat && gereedschap === 'kies' ? { soort: 'maat', doel: maat.dataset.maat!, el: maat } : { soort: 'gevel', x: p.x, y: p.y };
     pannen = { bewogen: false, x: ev.clientX, y: ev.clientY };
     zoom?.startPan(ev);
     houder.setPointerCapture(ev.pointerId);
     return;
   }
+  zoom?.vastzetten();
   if (gereedschap === 'ruimte') {
     sleep = { soort: 'teken', start: { x: kleef(p.x, 'x'), y: kleef(p.y, 'y') }, bewogen: false };
     houder.setPointerCapture(ev.pointerId);
@@ -1072,9 +1073,17 @@ function naPointerUp(ev: PointerEvent) {
   $('#pl-canvas').releasePointerCapture?.(ev.pointerId);
   zoom?.losmaken();
   if (pannen) {
-    const klik = !pannen.bewogen;
+    const klik = !pannen.bewogen || Math.hypot(ev.clientX - pannen.x, ev.clientY - pannen.y) < 8;
     pannen = undefined;
     zoom?.stopPan();
+    const t = tikWacht;
+    tikWacht = undefined;
+    if (t && klik) {
+      if (t.soort === 'maat') { if (t.el.isConnected) tikOpMaat(t.doel, t.el.getBoundingClientRect()); }
+      else matenTik(t.x, t.y);
+      return;
+    }
+    if (t) return;
     if (klik) { selectie = undefined; render(); toonEigenschappen(); }
     return;
   }
@@ -1435,6 +1444,7 @@ function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPane
 }
 
 function toonWeergave(w: 'plan' | 'gevels' | '3d') {
+  if (w !== weergave) sluitMaatVraag(true);
   weergave = w;
   // In 3D op een tablet: de 3D over de hele breedte, het gereedschap (voor de plattegrond) eronder.
   $('#view-plan').classList.toggle('driedmodus', w === '3d');
@@ -1556,6 +1566,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       if (sleep?.bewogen && sleep.soort !== 'teken' && sleep.soort !== 'wand') ongedaan();
       sleep = undefined;
       pannen = undefined;
+      tikWacht = undefined;
       voorbeeld = undefined;
       voorbeeldWand = undefined;
     },
@@ -1694,6 +1705,9 @@ export function openRuimteMetMaten(begin?: Parameters<typeof openMatenPaneel>[1]
 
 /** Wordt opgeroepen na elke wijziging in de toestand. */
 export function naWijziging() {
+  // Een wijziging die niet van de open maatvraag komt (een veld, een ander gereedschap, slepen): de vraag hoort bij de
+  // toestand van daarnet, dus dicht (wat er getypt was, blijft).
+  if (maatVraagOpen() && !maatVraagBezig()) sluitMaatVraag(true);
   render();
   if (!sleep || sleep.soort === 'meubel' || sleep.soort === 'opening' || sleep.soort === 'daklicht') toonEigenschappen();
   else toonOverzicht();

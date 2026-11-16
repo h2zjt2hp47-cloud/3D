@@ -131,8 +131,11 @@ export interface MaatVraag {
   meteenTypen?: boolean;
 }
 let vraag: { v: MaatVraag; doos: HTMLElement; toegepast: boolean; kant?: string } | undefined;
+/** Waar tijdens het toepassen van de maatvraag zelf (dan sluit een wijziging van het plan ze niet). */
+let bezig = false;
 
 export const maatVraagOpen = () => !!vraag;
+export const maatVraagBezig = () => bezig;
 
 /** Sluit de maatvraag: `bevestig` houdt wat getypt is, anders terug (Esc). */
 export function sluitMaatVraag(bevestig = true) {
@@ -253,7 +256,9 @@ export function vraagMaat(v: MaatVraag) {
     void bevestig;
     // Niets veranderd (Enter zonder te typen): niets toepassen, ook geen stap voor ongedaan maken.
     if (!vraag.toegepast && vraag.kant === v.kanten?.gekozen && velden.every(({ veld }) => Math.abs(waarden[veld.code]! - veld.waarde) < 0.05)) { melding.textContent = ''; return true; }
-    const fout = v.toepassen(waarden, vraag.kant, !vraag.toegepast);
+    let fout: string | undefined;
+    bezig = true;
+    try { fout = v.toepassen(waarden, vraag.kant, !vraag.toegepast); } finally { bezig = false; }
     if (fout) { melding.textContent = fout; return false; }
     vraag.toegepast = true;
     melding.textContent = '';
@@ -505,7 +510,7 @@ function bouwPaneel() {
     const afstand = el('div', { class: 'maatpaneel-afstand' });
     const lab = el('label', { class: 'maatveld-groot' });
     const inv = cmVeld(p.afstand, { 'data-maat-veld': 'afstand', 'aria-label': 'Afstand tot de linkerhoek in cm' });
-    inv.addEventListener('input', () => { const w = leesCm(inv.value, p.afstand); if (w !== undefined) { p.afstand = w; werkBij(false); } });
+    inv.addEventListener('input', () => { const w = leesCm(inv.value); if (w !== undefined) { p.afstand = w; werkBij(false); } });
     lab.append(el('span', {}, 'Afstand tot de linkerhoek'), inv, el('span', { class: 'eenheid' }, 'cm'));
     const uitlijn = el('div', { class: 'knoppenrij' });
     for (const [code, label] of [['links', 'Links'], ['midden', 'Midden'], ['rechts', 'Rechts']] as const) {
@@ -524,7 +529,7 @@ function bouwPaneel() {
     if (p.plaats === 'los') {
       const tl = el('label', { class: 'maatveld-groot' });
       const ti = cmVeld(p.tussenruimte, { 'data-maat-veld': 'tussenruimte', 'aria-label': 'Afstand van de gevel in cm' });
-      ti.addEventListener('input', () => { const w = leesCm(ti.value, p.tussenruimte); if (w !== undefined) { p.tussenruimte = w; werkBij(false); } });
+      ti.addEventListener('input', () => { const w = leesCm(ti.value); if (w !== undefined) { p.tussenruimte = w; werkBij(false); } });
       tl.append(el('span', {}, 'Afstand van de gevel'), ti, el('span', { class: 'eenheid' }, 'cm'));
       rechts.append(tl);
     }
@@ -539,8 +544,13 @@ function bouwPaneel() {
   const onder = el('div', { class: 'maatpaneel-rechts' });
   onder.append(nr, sr, el('div', { id: 'mp-meldingen', 'aria-live': 'polite' }));
   const plaats = el('button', { type: 'button', id: 'mp-plaatsen', class: 'maatpaneel-plaatsen' }, 'Plaatsen');
-  plaats.addEventListener('click', plaatsen);
-  onder.append(plaats);
+  plaats.addEventListener('click', () => plaatsen());
+  // Meteen in 3D (na het plaatsen); wie erin wil tekenen, blijft met Plaatsen in de plattegrond.
+  const met3D = el('button', { type: 'button', id: 'mp-plaatsen-3d', class: 'tweede' }, 'Plaatsen en in 3D bekijken');
+  met3D.addEventListener('click', () => plaatsen(true));
+  const knoppen = el('div', { class: 'knoppenrij maatpaneel-knoppen' });
+  knoppen.append(plaats, met3D);
+  onder.append(knoppen);
   raster.append(linkerkolom, rechts, onder);
   vak.append(raster);
   // Enter in een veld: naar het volgende veld; in het laatste: plaatsen (één keer aan het vak gehangen).
@@ -639,7 +649,7 @@ function werkBij(veldenOpnieuw = true) {
     const nu = dakOpbouw(toestand().plan)?.terugval, straks = dakOpbouw(proef)?.terugval;
     if (straks && !nu) vak.append(el('p', { class: 'kleinmelding waarschuwing' }, `Let op het dak: ${straks} (Een hellend dak kan nog alleen op één rechthoek.)`));
   }
-  $<HTMLButtonElement>('#mp-plaatsen').disabled = !uitkomst?.punten.length || !!uitkomst.fouten.length;
+  for (const k of document.querySelectorAll<HTMLButtonElement>('#mp-plaatsen, #mp-plaatsen-3d')) k.disabled = !uitkomst?.punten.length || !!uitkomst.fouten.length;
   omg.opnieuw();
 }
 
@@ -694,7 +704,7 @@ function tekenSchets(veldenOpnieuw: boolean) {
   for (const z of ZIJDEN) {
     const i = cmVeld(zijdeWaarde(z), { 'data-maat-veld': z, 'aria-label': `${naamVan[z]} in cm`, title: naamVan[z] });
     i.addEventListener('input', () => {
-      const w = leesCm(i.value, zijdeWaarde(z));
+      const w = leesCm(i.value);
       if (w === undefined) return;
       zijdeGetypt(z, w);
       if (p.vorm === 'rechthoek') {
@@ -707,7 +717,7 @@ function tekenSchets(veldenOpnieuw: boolean) {
   }
   if (p.vorm === 'vierhoek') {
     const i = cmVeld(p.maten.ac, { 'data-maat-veld': 'ac', 'aria-label': 'Diagonaal AC in cm', title: 'Diagonaal AC' });
-    i.addEventListener('input', () => { const w = leesCm(i.value, p.maten.ac); if (w !== undefined) zijdeGetypt('ac', w); });
+    i.addEventListener('input', () => { const w = leesCm(i.value); if (w !== undefined) zijdeGetypt('ac', w); });
     vak.append(i);
   }
   // Volgorde voor Enter: AB, BC, (CD, DA, AC bij een vrije vorm); bij een rechthoek volgen CD en DA vanzelf.
@@ -746,7 +756,7 @@ function zetVeldPlaatsen(v: Punt[]) {
 }
 
 /** Zet de ruimte (of maakt het nieuwe project). */
-function plaatsen() {
+function plaatsen(in3D = false) {
   const p = paneel;
   if (!p || !omg) return;
   const m = bereken();
@@ -772,6 +782,7 @@ function plaatsen() {
     nieuwProject(t, `${naam} ${maten}`);
     sluitMatenPaneel();
     omg.geplaatst(r.id, `Nieuw project "${naam} ${maten}" (${soortMaat}). Plaats nu een deur of ramen; het vorige project staat bij Projecten.`);
+    if (in3D) omg.naar3D();
     return;
   }
   wijzig('plan', (t) => {
@@ -781,4 +792,5 @@ function plaatsen() {
   sluitMatenPaneel();
   const waar = leeg ? '' : p.plaats === 'tegen' ? ' tegen de gevel' : ' als los gebouw';
   omg.geplaatst(r.id, `${naam} geplaatst${waar}: ${maten} (${soortMaat}).${p.plaats === 'tegen' && !leeg ? ' Voeg een deur of doorgang naar de woning toe.' : ' Plaats nu een deur of ramen.'}`);
+  if (in3D) omg.naar3D();
 }
