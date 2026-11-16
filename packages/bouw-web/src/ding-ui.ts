@@ -65,6 +65,11 @@ function gevelKeuzes(vak: HTMLElement, sleutel: string) {
   // Ronde 11: een muurvlak tegen de buren is een bestaande scheidingsmuur (niet gebouwd, neutraal, de buren erachter).
   const buren = plan.tegenBuren?.includes(sleutel) === true;
   const burenKnop = () => schakelaar('Tegen de buren (de scheidingsmuur bestaat al)', buren, (aan) => wijzig('plan', (t) => zetTegenBuren(t.plan, sleutel, aan)), { 'data-tegen-buren': sleutel });
+  if (plan.ruimtes.find((r) => r.id === ruimte)?.bestaand === true) {
+    // Een gevel van een bestaande ruimte blijft zoals ze is: geen materiaal kiezen (het zou niets veranderen).
+    vak.append(bestaandUitleg(ruimte), burenKnop());
+    return;
+  }
   if (buren) {
     vak.append(burenKnop(), el('p', { class: 'klein' }, 'Niet gebouwd: geen gevelmateriaal, niet in de meetstaat of de constructie. In de 3D neutraal, met de buren erachter.'));
     return;
@@ -131,9 +136,20 @@ function openingKeuzes(vak: HTMLElement, id: string, naarPositie: (id: string) =
   vak.lastElementChild!.append(alles);
 }
 
+/** Ronde 11: wat bestaat, blijft; een korte uitleg en de schakelaar om het toch als nieuw werk te tellen. */
+function bestaandUitleg(id: string): HTMLElement {
+  const blok = el('div');
+  blok.append(
+    el('p', { class: 'klein' }, 'Bestaat al en blijft: neutraal in de 3D, niet in de meetstaat, de constructie of het overzicht.'),
+    schakelaar('Bestaand (blijft)', true, (aan) => wijzig('plan', (t) => { const x = t.plan.ruimtes.find((y) => y.id === id); if (x) { if (aan) x.bestaand = true; else delete x.bestaand; } }), { 'data-ruimte-bestaand': id }),
+  );
+  return blok;
+}
+
 function ruimteKeuzes(vak: HTMLElement, id: string) {
   const r = toestand().plan.ruimtes.find((x) => x.id === id);
   if (!r) return;
+  if (r.bestaand === true) { vak.append(bestaandUitleg(id)); return; }
   const zet = (f: (x: NonNullable<typeof r>) => void) => wijzig('plan', (t) => { const x = t.plan.ruimtes.find((y) => y.id === id); if (x) f(x); });
   const vloer = el('div', { class: 'gv-rij', role: 'group', 'aria-label': 'Vloer' });
   for (const [code, v] of Object.entries(cat.vloeren)) vloer.append(staalKnop(v.kleur, v.label, r.vloer === code, () => zet((x) => { x.vloer = code; }), { 'data-vloer': code }));

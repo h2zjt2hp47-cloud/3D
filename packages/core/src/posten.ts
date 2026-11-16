@@ -217,7 +217,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       detail: [
         'Een funderingszool in beton onder elke nieuwe buitenmuur. Maat en diepte bepaalt de ingenieur, na een grondonderzoek.',
         ...(skelet ? ['Daarop een rij isolerende blokken (kimblokken) waar de houtskeletwand op staat.'] : []),
-        ...(oud ? ['Onder de bestaande gevel en de scheidingsmuren van de buren komt geen nieuwe fundering.'] : []),
+        ...(oud ? ['Onder de bestaande gevel en de scheidingsmuren van de buren is hier geen nieuwe fundering geteld; de ingenieur beslist of ze versterkt of onderschoerd moeten worden.'] : []),
         'Nog niet getekend in de 3D: een voorstel volgens de regels van goed vakmanschap.',
       ],
       intern: [], dingen: uniek(muren0.map((d) => d.ding).filter((x): x is string => !!x)),
@@ -325,9 +325,9 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
         id: 'dakrand', groep: 'winddicht', titel: 'Dakrand', hoeveelheid: r1(lengte(nieuw) / 100), eenheid: 'm',
         detail: [
           'Een opstand met een muurkap (dakrandprofiel) op de nieuwe buitenmuren onder het platte dak.',
-          ...(buren.length ? [`Tegen de scheidingsmuren van de buren (${komma(lengte(buren) / 100)} m) een aansluiting op hun muur in plaats van een dakrand.`] : []),
+          ...(buren.length ? ['Tegen de scheidingsmuren van de buren een aansluiting op hun muur in plaats van een dakrand.'] : []),
         ],
-        intern: [], dingen: ['dak'], markeer: uniek(nieuw.map((s) => `dak.dakrand_${s.muur.id}_`)),
+        intern: buren.length ? [`Aansluiting tegen de buren: ${komma(lengte(buren) / 100)} m`] : [], dingen: ['dak'], markeer: uniek(nieuw.map((s) => `dak.dakrand_${s.muur.id}_`)),
       });
     }
     // Afvoeren: één regenafvoer per begonnen 50 m² en één noodafvoer per plat dak (een voorstel; de dakdekker beslist).
