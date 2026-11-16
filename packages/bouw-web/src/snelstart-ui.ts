@@ -16,7 +16,7 @@ import { garagepoort } from '../../core/voorbeelden/garagepoort.js';
 import { dakCatalogus, gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
 import {
-  aanbouwKeuzes, begrensMaat, bestaandeWoning, leesMaat, SNELSTART_TEGELS, snelModel, snelModelMaat, snelRaam, snelWoning, stapMaat,
+  aanbouwKeuzes, begrensMaat, bestaandeWoning, leesMaat, raamNaam, SNELSTART_TEGELS, snelModel, snelModelMaat, snelRaam, snelWoning, stapMaat,
   type SnelMaat, type SnelSoort, type SnelTegel, type SnelVertrekpunt,
 } from '../../core/voorbeelden/snelstart.js';
 import type { VastModelCode } from '../../core/voorbeelden/vastemodellen.js';
@@ -357,11 +357,14 @@ function maak(s: Stijl) {
   }
   // Eén positie zonder woning: een raam of deur, of een garagepoort.
   const leeg = ramenToestand();
-  const p = tegel.model === 'POORT'
-    ? nieuwePositie('POORT', { ...standaardKeuzes(garagepoort), breedte: maten.breedte!, hoogte: maten.hoogte!, kleur: s.poort }, 'Garagepoort')
-    : nieuwePositie('RAAM', snelRaam(maten, s), 'Raam');
+  // De naam volgt de soort: een schuifraam van 250 × 230 cm heet "Schuifraam", niet "Raam" (doorloop B25).
+  const raam = tegel.model === 'POORT' ? undefined : snelRaam(maten, s);
+  const naam = raam ? raamNaam(raam) : 'Garagepoort';
+  const p = !raam
+    ? nieuwePositie('POORT', { ...standaardKeuzes(garagepoort), breedte: maten.breedte!, hoogte: maten.hoogte!, kleur: s.poort }, naam)
+    : nieuwePositie('RAAM', raam, naam);
   p.aantal = Math.max(1, Math.round(maten.aantal ?? 1));
-  nieuwProject({ ...leeg, posities: [p] }, `${tegel.label} ${getal(maten.breedte! / 10)} × ${getal(maten.hoogte! / 10)} cm`);
+  nieuwProject({ ...leeg, posities: [p] }, `${naam} ${getal(maten.breedte! / 10)} × ${getal(maten.hoogte! / 10)} cm`);
   nav.naarPositie3D(p.id);
 }
 

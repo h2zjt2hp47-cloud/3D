@@ -19,8 +19,9 @@ import { legAkkoordVast, meerwerk } from './werf-ui.js';
 import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zonderPrijs, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 import { maakPakket3D, maakZending } from './doorsturen.js';
-import { drukBlad } from './blad.js';
-import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, STANDAARD_AANNEMER, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
+import { datumTekst, drukBlad } from './blad.js';
+import { metFirma } from './firma-ui.js';
+import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
 import { toonConstructieOverzicht } from './constructie-ui.js';
 import { toonTechniekOverzicht } from './techniek-ui.js';
 import { toonWerkenOverzicht } from './werken-ui.js';
@@ -41,7 +42,22 @@ let naarVarianten: () => void = () => {};
  * zonder prijzen. Meteen klaar (er worden geen beelden getekend); de melding zegt hoe groot het is. `leden`: welke
  * ontwerpen mee gaan (van *Varianten naast elkaar*: wat daar staat en aangevinkt is); anders de keuze van `meeTeGeven`.
  */
-export async function geefMee(knop: HTMLButtonElement, melding: HTMLElement, leden: Variant[] = meeTeGeven()) {
+export function geefMee(knop: HTMLButtonElement, melding: HTMLElement, leden: Variant[] = meeTeGeven()) {
+  // Zonder firmanaam eerst de vraag ernaar, vlak onder de knop (doorloop B1, B29); een tweede tik doet dan niets.
+  metFirma(knop, knop.id === 'vr-meegeven' ? 'vr-firmavraag' : 'o-firmavraag', () => void maakBestand(knop, melding, leden), toonKlantVoorbeeld);
+}
+
+/**
+ * Twee keer snel tikken gaf twee bestanden (doorloop B18): de knop staat uit terwijl het bestand gemaakt wordt, maar het
+ * bestand is er in een halve seconde, sneller dan de tweede tik. Daarom telt een tik pas weer anderhalve seconde nadat het
+ * vorige bestand klaar was.
+ */
+const RUST = 1500;
+let bestandRustTot = 0, bladRustTot = 0;
+
+async function maakBestand(knop: HTMLButtonElement, melding: HTMLElement, leden: Variant[]) {
+  if (performance.now() < bestandRustTot) return;
+  bestandRustTot = Infinity;
   knop.disabled = true;
   melding.textContent = 'Bestand maken …';
   try {
@@ -54,7 +70,35 @@ export async function geefMee(knop: HTMLButtonElement, melding: HTMLElement, led
     melding.textContent = fout instanceof Error ? fout.message : String(fout);
   } finally {
     knop.disabled = false;
+    bestandRustTot = performance.now() + RUST;
   }
+}
+
+/** Klant en project als tekst: de klantweergave toont geen invulvelden (doorloop B10). */
+function toonKlantgegevens() {
+  const m = toestand().meta;
+  const rijen: [string, string][] = [['Klant', m.klant], ['Adres', m.adres], ['Project', m.project], ['Nummer', m.nummer], ['Datum', m.datum ? datumTekst(m.datum) : ''], ['Firma', aannemerNaam()]];
+  $('#o-klanttekst').replaceChildren(...rijen.filter(([, w]) => w?.trim()).flatMap(([a, w]) => [el('dt', {}, a), el('dd', {}, w)]));
+}
+
+/**
+ * Wat de klant bovenaan ziet, vóór het bestand of het blad gemaakt wordt (doorloop B29): de firmanaam (of dat er nog geen
+ * is), de titel van het ontwerp, datum, nummer en klant, en het laatste beeld uit de 3D. Naast de knop *Meegeven aan de
+ * klant*, zonder extra tik.
+ */
+function toonKlantVoorbeeld() {
+  const t = toestand(), firma = aannemerNaam();
+  const veld = $<HTMLInputElement>('#o-aannemer');
+  if (document.activeElement !== veld) veld.value = firma;
+  const vak = $('#o-klantvoorbeeld');
+  const vast = !t.plan.ruimtes.length ? t.posities.find((p) => isVastModel(p.model) && p.aantal > 0) : undefined;
+  const beeld = t.meta.zonderWoning ? undefined : (t.plan.ruimtes.length ? laatsteBeeld : vast && beeldVan(vast)) ?? undefined;
+  const tekst = el('div', { class: 'kv-tekst' });
+  const kop = el('div', { class: 'kv-kop' });
+  kop.append(el('strong', { class: 'kv-titel' }, t.meta.project || 'Ontwerp'), firma ? el('span', { class: 'kv-firma' }, firma) : el('span', { class: 'kv-firma kv-leeg' }, 'Nog geen firmanaam'));
+  tekst.append(kop, el('span', { class: 'klein' }, [t.meta.datum ? `Ontwerp van ${datumTekst(t.meta.datum)}` : '', t.meta.nummer, t.meta.klant].filter(Boolean).join(' · ')));
+  tekst.append(el('span', { class: 'klein kv-uitleg' }, beeld ? 'Zo staat het bovenaan het bestand en het blad, met de 3D eronder.' : 'Zo staat het bovenaan het bestand en het blad.'));
+  vak.replaceChildren(...(beeld ? [el('img', { src: beeld, alt: 'De 3D zoals laatst getoond' })] : []), tekst);
 }
 
 /** Welke varianten mee gaan in het bestand (alleen als er varianten zijn), met wat ze anders maakt. */
@@ -137,21 +181,22 @@ function regelDetail(p: Positie, r: ReturnType<typeof resultaat>): HTMLElement {
   d.append(el('summary', {}, kort(p)));
   const inhoud = el('div', { class: 'regelinhoud' });
   inhoud.append(el('p', { class: 'klein' }, omschrijving(p)));
-  const lijst = (titel: string, items: string[]) => {
+  // `intern`: hoeveelheden van materiaal, alleen voor de aannemer (niet in de klantweergave, doorloop B10).
+  const lijst = (titel: string, items: string[], intern = false) => {
     if (!items.length) return;
-    const ul = el('ul');
+    const ul = el('ul', intern ? { class: 'intern' } : {});
     for (const x of items) ul.append(el('li', {}, x));
-    inhoud.append(el('h4', {}, titel), ul);
+    inhoud.append(el('h4', intern ? { class: 'intern' } : {}, titel), ul);
   };
   lijst('Keuzes', samenvatting(r));
   const eenheid = (e: string) => (e === 'm2' ? 'm²' : e);
   if (isVastModel(p.model)) {
     // Een vast model: de opbouw van wand, dak en vloer, en de meetstaat (hoeveelheden voor alle stuks, zonder prijzen).
     lijst('Opbouw', vastModelOpbouw(p.model, r));
-    const ms = el('div', { class: 'meetstaat' });
+    const ms = el('div', { class: 'meetstaat intern' });
     ms.append(...meetstaatLijst(p.model, r, p.aantal));
-    inhoud.append(el('h4', {}, `Meetstaat${p.aantal > 1 ? ` (${p.aantal} stuks)` : ''}, netto`), ms);
-  } else lijst('Materialen en opbouw', r.stuklijst.filter((x) => !/^ARB-/.test(x.artikel) && !alleenPrijs(x.omschrijving)).map((x) => `${x.omschrijving}: ${getal(x.hoeveelheid * p.aantal, 2)} ${eenheid(x.eenheid)}`));
+    inhoud.append(el('h4', { class: 'intern' }, `Meetstaat${p.aantal > 1 ? ` (${p.aantal} stuks)` : ''}, netto`), ms);
+  } else lijst('Materialen en opbouw', r.stuklijst.filter((x) => !/^ARB-/.test(x.artikel) && !alleenPrijs(x.omschrijving)).map((x) => `${x.omschrijving}: ${getal(x.hoeveelheid * p.aantal, 2)} ${eenheid(x.eenheid)}`), true);
   lijst('Niet inbegrepen', inbegrepen(p, r).niet);
   d.append(inhoud);
   return d;
@@ -255,8 +300,8 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     const i = $<HTMLInputElement>(`#${id}`);
     if (document.activeElement !== i) i.value = w;
   }
-  const firma = $<HTMLInputElement>('#o-aannemer');
-  if (document.activeElement !== firma) firma.value = aannemerNaam() === STANDAARD_AANNEMER ? '' : aannemerNaam();
+  toonKlantVoorbeeld();
+  toonKlantgegevens();
   toonVariantenMee();
   $<HTMLInputElement>(`#o-btw-${m.btw}`).checked = true;
   $<HTMLInputElement>(`#o-klanttype-${m.klanttype}`).checked = true;
@@ -318,7 +363,9 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     const aantalRij = el('label', { class: 'aantal' });
     // Een model dat alleen toont (garagepoort) heeft nog geen prijs: geen bedrag van nul tonen. Zonder prijzen: alleen het aantal.
     const geenPrijs = !PRIJZEN || zonderPrijs(p);
-    aantalRij.append(aantal, el('span', {}, geenPrijs ? (p.aantal === 1 ? 'stuk' : 'stuks') : `× ${eur(toonPrijs(pos.stukprijs, o.btwProcent))}`));
+    // In de klantweergave het aantal als tekst, zonder veld (doorloop B10).
+    aantal.classList.add('intern');
+    aantalRij.append(aantal, el('span', { class: 'alleen-klantweergave' }, String(p.aantal)), el('span', {}, geenPrijs ? (p.aantal === 1 ? 'stuk' : 'stuks') : `× ${eur(toonPrijs(pos.stukprijs, o.btwProcent))}`));
     prijs.append(aantalRij);
     if (PRIJZEN) prijs.append(el('strong', {}, zonderPrijs(p) ? 'Nog geen prijs' : eur(toonPrijs(pos.totaal, o.btwProcent))));
     rij.append(tekening, info, prijs);
@@ -568,8 +615,9 @@ export function drukAf() {
   }).join('');
   const gevelLijst = gevelSvgs(560);
   const gevels = gevelLijst.length ? `<h2>Gevels</h2><div class="a-gevels">${gevelLijst.map((g) => `<figure><figcaption>${esc(g.naam)}</figcaption>${g.svg}</figure>`).join('')}</div>` : '';
-  const firma = aannemerNaam() === STANDAARD_AANNEMER ? 'Uw bedrijf · Ramen, deuren en renovatie' : aannemerNaam();
-  const kop = `<header class="a-kop"><div><div class="a-firma">${esc(firma)}</div><h1>${PRIJZEN ? 'Offerte' : 'Overzicht'} ${esc(t.meta.nummer)}</h1><p>${esc(t.meta.datum)}</p></div>
+  // Zonder firmanaam geen verzonnen naam (doorloop B1).
+  const firma = aannemerNaam();
+  const kop = `<header class="a-kop"><div>${firma ? `<div class="a-firma">${esc(firma)}</div>` : ''}<h1>${PRIJZEN ? 'Offerte' : 'Overzicht'} ${esc(t.meta.nummer)}</h1><p>${esc(t.meta.datum)}</p></div>
     <div class="a-klant"><strong>${esc(t.meta.klant)}</strong><br>${esc(t.meta.adres)}<br>Project: ${esc(t.meta.project)}</div></header>`;
   if (!PRIJZEN) {
     // Zonder prijzen: wat er in het ontwerp zit en hoeveel, met de tekeningen; geen totalen, voorwaarden of handtekening.
@@ -599,19 +647,24 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
   naarPlan = nav.naarPlan;
   naarWerf = nav.naarWerf;
   naarVarianten = nav.naarVarianten;
-  $<HTMLInputElement>('#o-aannemer').addEventListener('change', (e) => zetAannemerNaam((e.target as HTMLInputElement).value));
-  $('#o-klantbestand').addEventListener('click', () => void geefMee($<HTMLButtonElement>('#o-klantbestand'), $('#o-klantbestand-melding')));
+  $<HTMLInputElement>('#o-aannemer').addEventListener('change', (e) => { zetAannemerNaam((e.target as HTMLInputElement).value); toonKlantVoorbeeld(); });
+  $('#o-klantbestand').addEventListener('click', () => geefMee($<HTMLButtonElement>('#o-klantbestand'), $('#o-klantbestand-melding')));
   // Blad met beelden: de beelden worden buiten beeld getekend, daarna opent het afdrukvenster (bewaren als PDF kan daar).
-  $('#o-blad').addEventListener('click', async () => {
+  // Zonder firmanaam eerst de vraag ernaar; een tweede tik kort na het blad doet niets (doorloop B18).
+  const maakBlad = async () => {
     const knop = $<HTMLButtonElement>('#o-blad'), melding = $('#o-klantbestand-melding');
+    if (performance.now() < bladRustTot) return;
+    bladRustTot = Infinity;
     knop.disabled = true;
     try {
       const ok = await drukBlad(kort, omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
       melding.textContent = ok ? 'Blad klaar: kies in het afdrukvenster een printer of "Bewaren als PDF".' : 'Het blad kan niet gemaakt worden: de 3D werkt niet op dit toestel.';
     } finally {
       knop.disabled = false;
+      bladRustTot = performance.now() + RUST;
     }
-  });
+  };
+  $('#o-blad').addEventListener('click', () => metFirma($('#o-blad'), 'o-firmavraag', () => void maakBlad(), toonKlantVoorbeeld));
   startRamenlijst();
   for (const [id, veld] of [['o-klant', 'klant'], ['o-adres', 'adres'], ['o-project', 'project'], ['o-nummer', 'nummer'], ['o-datum', 'datum']] as const) {
     $<HTMLInputElement>(`#${id}`).addEventListener('change', (e) => wijzig('meta', (t) => { t.meta[veld] = (e.target as HTMLInputElement).value; }));

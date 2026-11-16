@@ -42,9 +42,9 @@ const S = Math.SQRT1_2;
 const GROND = 4;
 
 /**
- * De hoofdmaten van het gebouw in een scène: breedte (vóór en achter), diepte (links en rechts), hoogte (op de vier
- * hoeken) en, bij een hellend dak, de nok (aan beide uiteinden van de nok). Van elke maat toont de kijker er één: die aan
- * de kant van de camera. `hoogtes: false` laat hoogte en nok weg (bv. met lage muren: dan meet de hoogte niets).
+ * De hoofdmaten van het gebouw in een scène: breedte (vóór en achter), diepte (links en rechts), hoogte (op de hoeken,
+ * zie `HOOGTE_HOEKEN`) en, bij een hellend dak, de nok (aan beide uiteinden van de nok). Van elke maat toont de kijker er
+ * één: die aan de kant van de camera. `hoogtes: false` laat hoogte en nok weg (bv. met lage muren: dan meet de hoogte niets).
  * Geen muren in de scène: geen maten.
  */
 export function gebouwMaatlijnen(scene: Scene3D, opties: { hoogtes?: boolean } = {}): Maatlijn3D[] {
@@ -72,8 +72,10 @@ export function gebouwMaatlijnen(scene: Scene3D, opties: { hoogtes?: boolean } =
   // De hoogte op de hoeken van het hoogste deel (een verdieping die maar boven een deel van het gelijkvloers staat):
   // daar staat de maat tegen de muur die ze meet, niet in de lucht naast een lager stuk.
   const top = omvang(metRand.filter((b) => b.y + b.h >= hoogte - 1));
-  for (const [x, z, sx, sz] of [[top.x1, top.z1, 1, 1], [top.x0, top.z1, -1, 1], [top.x1, top.z0, 1, -1], [top.x0, top.z0, -1, -1]] as const) {
-    lijnen.push({ van: [x, 0, z], tot: [x, hoogte, z], tekst: `Hoogte ${meterTekst(hoogte)}`, uit: [sx * S, 0, sz * S], afstand: hoek, groep: 'hoogte', kant: [sx * S, 0, sz * S] });
+  // Op het verre uiteinde van de gevel die naar de camera kijkt, niet op de hoek bij de camera (doorloop B26, zie HOOGTE_HOEKEN).
+  for (const { hoek: [sx, sz], kant } of HOOGTE_HOEKEN) {
+    const x = sx > 0 ? top.x1 : top.x0, z = sz > 0 ? top.z1 : top.z0;
+    lijnen.push({ van: [x, 0, z], tot: [x, hoogte, z], tekst: `Hoogte ${meterTekst(hoogte)}`, uit: [sx * S, 0, sz * S], afstand: hoek, groep: 'hoogte', kant });
   }
   // Nok: het hoogste punt van een hellend dakvlak of een topgevel (prisma's), als dat duidelijk boven de muren uitkomt.
   let nok: { y: number; p: number; b: Blok } | undefined;
@@ -137,7 +139,7 @@ export interface MaatDoos { x0: number; x1: number; z0: number; z1: number; y0: 
 
 /**
  * De hoofdmaten van een gebouw zonder de muren van een plattegrond (een carport, een tuinhuis, een loods; 16/11):
- * breedte (vóór en achter), diepte (links en rechts) en hoogte (op de vier hoeken), zoals `gebouwMaatlijnen` ze tekent.
+ * breedte (vóór en achter), diepte (links en rechts) en hoogte (op de hoeken), zoals `gebouwMaatlijnen` ze tekent.
  * De doos komt van het model zelf (de buitenmaat van palen, wanden of kolommen, en het hoogste punt), niet uit de
  * blokken: een dakoversteek, een luifel of de verharding eronder telt niet mee. `tekst` geeft de woorden voor elke maat
  * (bv. "Lengte" in plaats van "Diepte"); een maat zonder woord valt weg.
@@ -162,9 +164,25 @@ export function doosMaatlijnen(d: MaatDoos, tekst: { breedte?: string; diepte?: 
   }
   if (tekst.hoogte) {
     const t = `${tekst.hoogte} ${meterTekst(y1 - y0)}`, hoek = naast * 0.9;
-    for (const [x, z, sx, sz] of [[x1, z1, 1, 1], [x0, z1, -1, 1], [x1, z0, 1, -1], [x0, z0, -1, -1]] as const) {
-      lijnen.push({ van: [x, y0, z], tot: [x, y1, z], tekst: t, uit: [sx * S, 0, sz * S], afstand: hoek, groep: 'hoogte', kant: [sx * S, 0, sz * S] });
+    for (const { hoek: [sx, sz], kant } of HOOGTE_HOEKEN) {
+      const x = sx > 0 ? x1 : x0, z = sz > 0 ? z1 : z0;
+      lijnen.push({ van: [x, y0, z], tot: [x, y1, z], tekst: t, uit: [sx * S, 0, sz * S], afstand: hoek, groep: 'hoogte', kant });
     }
   }
   return lijnen;
 }
+
+/**
+ * Waar de hoogte staat (16/11, doorloop B26). Vroeger op de hoek het dichtst bij de camera: daar komen ook de breedte en
+ * de diepte samen, en van schuin gezien (een loods van 15 × 30 m, een carport) liep "Hoogte" over "Breedte" of "Diepte".
+ * Nu op het verre uiteinde van de gevel die het meest naar de camera kijkt: zo staat ze een halve gevel van de tekst van
+ * die gevel (die in het midden staat) en ver van de andere. De kijker toont van een `groep` de maat waarvan `kant` het
+ * meest naar de camera wijst; vandaar acht kandidaten, twee per hoek, met hun `kant` in het midden van een vak van 45°
+ * rond het gebouw (θ = 22,5° + k · 45°, x = cos θ, z = sin θ).
+ */
+const HOOGTE_HOEKEN: { hoek: [number, number]; kant: [number, number, number] }[] = ([
+  [1, -1], [-1, 1], [1, 1], [-1, -1], [-1, 1], [1, -1], [-1, -1], [1, 1],
+] as [number, number][]).map((hoek, k) => {
+  const a = ((22.5 + 45 * k) * Math.PI) / 180;
+  return { hoek, kant: [Math.round(Math.cos(a) * 1e6) / 1e6, 0, Math.round(Math.sin(a) * 1e6) / 1e6] };
+});

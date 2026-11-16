@@ -837,6 +837,53 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
   details.opbouwkeuze > summary::before, details.opbouwlagen > summary::before, details.constructiedeel > summary::before, details.aannames > summary::before { content: '▸'; margin-right: 8px; }
   details.opbouwkeuze[open] > summary::before, details.opbouwlagen[open] > summary::before, details.constructiedeel[open] > summary::before, details.aannames[open] > summary::before { content: '▾'; }
 }
+
+/* ---------- herstel uit de doorloop, deel B (16/11): wat de klant te zien krijgt ---------- */
+/* B29: wat de klant bovenaan ziet, naast de knop Meegeven aan de klant (titel, firma, het laatste 3D-beeld). */
+.klantvoorbeeld { display: flex; gap: 12px; align-items: center; background: var(--papier); border: 1px solid var(--lijn); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+.klantvoorbeeld:empty { display: none; }
+.klantvoorbeeld img { width: 112px; height: 70px; object-fit: cover; border-radius: 4px; flex: none; }
+.klantvoorbeeld .kv-tekst { display: grid; gap: 1px; min-width: 0; flex: 1; color: #22262a; }
+.klantvoorbeeld .kv-kop { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; align-items: baseline; }
+.klantvoorbeeld .kv-titel { font-weight: 600; overflow-wrap: anywhere; }
+.klantvoorbeeld .kv-firma { font-weight: 600; font-size: .85rem; color: #34505f; }
+.klantvoorbeeld .kv-leeg { font-weight: 400; font-style: italic; color: #8a5d12; }
+.klantvoorbeeld .klein { color: #5f676d; }
+/* B1: de vraag naar de firmanaam, vlak onder de knop. */
+.firmavraag { display: grid; gap: 6px; margin-top: 8px; padding: 10px 12px; border: 2px solid var(--accent); border-radius: 8px; background: var(--accent-zacht); }
+.firmavraag label { font-weight: 600; }
+.firmavraag input { font: inherit; min-height: 44px; padding: 8px 10px; border: 1px solid var(--lijn); border-radius: 6px; }
+.firmavraag .acties { margin: 0; }
+.firmavraag p.klein { margin: 0; }
+/*
+ * B10, B27: de klantweergave is om te kijken, zoals het bestand voor de klant: geen technische details, geen invulvelden,
+ * geen knoppen die iets wijzigen, geen andere klanten. Het overzicht toont alleen de kaarten `voor-klant` (ook een kaart die
+ * later bijkomt, blijft weg tot ze dat zegt); wat `intern` is verdwijnt (regel hoger), `alleen-klantweergave` komt erbij.
+ */
+body:not(.klantmodus) .alleen-klantweergave { display: none !important; }
+body.klantmodus #view-offerte .kaart:not(.voor-klant) { display: none !important; }
+body.klantmodus.zonder-woning #o-posities-kaart { display: block !important; }
+body.klantmodus #view-offerte .velden, body.klantmodus #o-posities-kaart .nieuw, body.klantmodus #o-posities-kaart .positieacties,
+body.klantmodus #o-posities-kaart .status, body.klantmodus #o-posities-kaart .positiekop .label, body.klantmodus #o-kopieer,
+body.klantmodus #o-klantvoorbeeld { display: none !important; }
+body.klantmodus #o-klanttekst { display: grid; margin: 6px 0 0; }
+/* Projecten: alleen het open project, zonder knoppen; geen lijst met andere klanten, sjablonen of bibliotheek. */
+body.klantmodus #view-projecten .kaart { display: none !important; }
+body.klantmodus #view-projecten .projectraster > .links:first-child > .kaart:first-child { display: block !important; }
+body.klantmodus #view-projecten .positieacties, body.klantmodus #view-projecten .kaart p.klein { display: none !important; }
+/* Plattegrond: geen gereedschap, eigenschappen, dak of gevelpalet, Plattegrond wissen of + Verdieping; de tekening en de
+   gevels vangen geen tik (zoomen met de knoppen −, + en Passend blijft); geen doorsnede (de lagen zijn technisch). */
+body.klantmodus #view-plan .alleen-plan, body.klantmodus #view-plan .alleen-gevel, body.klantmodus #pl-hint, body.klantmodus #gv-hint,
+body.klantmodus #pl-niveaus button.tweede, body.klantmodus #pl-niveaus button.gevaar, body.klantmodus [data-pl-weergave="doorsnede"] { display: none !important; }
+body.klantmodus #pl-canvas, body.klantmodus #gv-canvas { pointer-events: none; }
+body.klantmodus #pl-zoomhint, body.klantmodus #view-plan .planraster > aside.links { display: none !important; }
+body.klantmodus #view-plan:not(.groot-scherm) .planraster { grid-template-columns: minmax(0, 1fr) 340px; }
+@media (max-width: 1200px) { body.klantmodus #view-plan:not(.groot-scherm) .planraster { grid-template-columns: minmax(0, 1fr); } }
+/* 3D: geen stijlen of Variant maken, geen uitleg "om te wijzigen"; een tik in de 3D toont alleen de posten van dat ding. */
+body.klantmodus #pl-3d-knoppen .tikhint, body.klantmodus .stijlbalk > :not(#pl-naast) { display: none !important; }
+body.klantmodus #pl-3d-keuze > :not(.kaartkop):not(.dingposten) { display: none !important; }
+/* Configurator: wat voor de verkoper is. */
+body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !important; }
 </style>
 </head>
 <body>
@@ -1005,7 +1052,7 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
       <section class="kaart alleen-plan" id="pl-eigenschappen" aria-live="polite"></section>
       <section class="kaart alleen-plan" id="pl-dak" aria-label="Dak"></section>
       <section class="kaart alleen-gevel" id="gv-eigenschappen" aria-live="polite"></section>
-      <section class="kaart">
+      <section class="kaart intern">
         <div class="kaartkop"><h2>Controles</h2><span id="pl-controle-status" class="status ok"></span></div>
         <ul id="pl-meldingen" class="meldingen scroll"></ul>
         <p id="pl-meldingen-leeg" class="klein">Geen opmerkingen.</p>
@@ -1129,21 +1176,22 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
       </div>
     </div>
   </section>
-  <section class="kaart alleen-woning" id="o-ontwerp" aria-label="Het ontwerp">
+  <section class="kaart alleen-woning voor-klant" id="o-ontwerp" aria-label="Het ontwerp">
     <div class="kaartkop"><h2>Het ontwerp</h2><span id="o-ontwerp-tekst" class="klein"></span></div>
     <div class="ontwerpbeelden" id="o-ontwerp-beelden"></div>
   </section>
   <div class="offerteraster">
     <aside class="links">
-      <section class="kaart">
+      <section class="kaart voor-klant">
         <h3>Klant en project</h3>
+        <dl id="o-klanttekst" class="detail alleen-klantweergave"></dl>
         <div class="velden">
           <label>Klant <input type="text" id="o-klant"></label>
           <label>Adres <input type="text" id="o-adres"></label>
           <label>Project <input type="text" id="o-project"></label>
           <label>Nummer <input type="text" id="o-nummer"></label>
           <label>Datum <input type="date" id="o-datum"></label>
-          <label title="Staat op het bestand en het blad voor de klant; bewaard in deze browser, voor alle projecten">Uw firma <input type="text" id="o-aannemer" placeholder="Uw bedrijf" autocomplete="organization"></label>
+          <label title="Staat op het bestand en het blad voor de klant; bewaard in deze browser, voor alle projecten">Uw firma <input type="text" id="o-aannemer" placeholder="naam van uw firma" autocomplete="organization"></label>
         </div>
       </section>
       <section class="kaart prijsdeel">
@@ -1185,10 +1233,11 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
       </section>
     </aside>
     <div class="links">
-      <section class="kaart" id="o-meegeven">
+      <section class="kaart voor-klant" id="o-meegeven">
         <div class="kaartkop"><h2 id="o-meegeven-kop">Meegeven en doorsturen</h2></div>
         <dl id="o-totalen" class="totaal prijsdeel"></dl>
         <div class="meegeefblok">
+          <div id="o-klantvoorbeeld" class="klantvoorbeeld" aria-label="Wat de klant bovenaan ziet"></div>
           <div class="acties" style="margin-top:4px">
             <button type="button" id="o-klantbestand" class="hoofdknop">Meegeven aan de klant</button>
             <button type="button" id="o-blad" class="tweede">Blad met beelden (PDF)</button>
@@ -1208,7 +1257,7 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
         <div class="intern"><h3 style="margin-top:16px">Intern</h3>
         <dl id="o-intern" class="detail"></dl></div>
       </section>
-      <section class="kaart alleen-woning">
+      <section class="kaart alleen-woning voor-klant" id="o-posities-kaart">
         <div class="kaartkop"><h2 id="o-posities-kop">Ramen, deuren en poorten</h2><span class="klein o-btwlabel prijsdeel"></span><span id="o-status" class="status ok"></span></div>
         <p class="klein">Tik op een regel om de materialen en de opbouw te zien.</p>
         <div id="o-posities"></div>

@@ -25,11 +25,15 @@ import { woningConstructie, type ConstructieDeel, type WoningConstructie } from 
 import type { BouwdeelLaag } from './bouwdelen.js';
 import type { OpbouwPlaats } from './opbouw.js';
 
-/** De groepen van een offerte, in de volgorde van het bouwen. */
-export type PostGroep = 'voorbereiding' | 'ruwbouw' | 'winddicht' | 'binnen' | 'techniek' | 'supplementen';
-export const POST_GROEPEN: PostGroep[] = ['voorbereiding', 'ruwbouw', 'winddicht', 'binnen', 'techniek', 'supplementen'];
+/**
+ * De groepen van een offerte, in de volgorde van het bouwen. `buitenwerk` (16/11, doorloop B25): een carport, tuinhuis,
+ * loods of staalwerk stond vroeger onder "Supplementen", ook als het het hele project was.
+ */
+export type PostGroep = 'voorbereiding' | 'ruwbouw' | 'winddicht' | 'binnen' | 'techniek' | 'buitenwerk' | 'supplementen';
+export const POST_GROEPEN: PostGroep[] = ['voorbereiding', 'ruwbouw', 'winddicht', 'binnen', 'techniek', 'buitenwerk', 'supplementen'];
 export const POST_GROEP_NAAM: Record<PostGroep, string> = {
-  voorbereiding: 'Voorbereiding', ruwbouw: 'Ruwbouw', winddicht: 'Wind- en waterdicht', binnen: 'Binnenafwerking', techniek: 'Techniek', supplementen: 'Supplementen',
+  voorbereiding: 'Voorbereiding', ruwbouw: 'Ruwbouw', winddicht: 'Wind- en waterdicht', binnen: 'Binnenafwerking', techniek: 'Techniek',
+  buitenwerk: 'Bijgebouwen en buitenwerk', supplementen: 'Supplementen',
 };
 
 /** Eén post van het werk. */
@@ -68,7 +72,8 @@ export interface HandmatigePost {
 
 /** Voorstellen voor werk zonder ding, als tegels bij *+ Werk toevoegen*. */
 export const WERK_VOORSTELLEN: (Omit<HandmatigePost, 'id'> & { code: string })[] = [
-  { code: 'afbraak_terras', titel: 'Afbraak van het terras', groep: 'voorbereiding', eenheid: 'm²', uitleg: 'Het bestaande terras opbreken waar de uitbouw komt, en het puin afvoeren.' },
+  // Algemeen: ook bij een nieuwe woning, een carport of een tuinhuis (vroeger "waar de uitbouw komt", doorloop B22).
+  { code: 'afbraak_terras', titel: 'Afbraak van het terras', groep: 'voorbereiding', eenheid: 'm²', uitleg: 'Het bestaande terras of de verharding opbreken waar gebouwd wordt, en het puin afvoeren.' },
   { code: 'grondwerken', titel: 'Grondwerken', groep: 'voorbereiding', eenheid: 'm³', uitleg: 'Uitgraven voor de fundering en de vloerplaat, de grond afvoeren of verwerken op het terrein.' },
   { code: 'container', titel: 'Container voor het afval', groep: 'voorbereiding', eenheid: 'stuks', uitleg: 'Een container plaatsen en ophalen, het afval gesorteerd verwerken.' },
   { code: 'werfinrichting', titel: 'Werfinrichting', groep: 'voorbereiding', uitleg: 'De werf afbakenen en toegankelijk maken, stroom en water voor de werf.' },
@@ -86,6 +91,8 @@ export interface PostPositie {
   detail?: string[];
   /** Ramen, deuren en poorten (`schrijnwerk`, standaard) of een ander onderdeel (een carport, een loods …). */
   soort?: 'schrijnwerk' | 'ander';
+  /** De groep van een ander onderdeel (standaard: bijgebouwen en buitenwerk; een aanbouw hoort bij de ruwbouw). */
+  groep?: PostGroep;
 }
 
 export interface PostenOpties {
@@ -178,6 +185,31 @@ const uniek = <T>(x: T[]) => [...new Set(x)];
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
 /**
+ * De titel van elke post *Buitenwand* (per opbouw): "Buitenwand in houtskelet", het deel van de naam vóór de komma. Hebben
+ * twee opbouwen zo dezelfde titel (houtskelet achter gevelsteen en achter hout, doorloop B23), dan zegt de titel waarin ze
+ * verschillen: wat de klant buiten ziet ("… achter gevelsteen (handvorm)"), of anders de volledige naam van de opbouw.
+ */
+function buitenwandTitels(plan: Plattegrond, cat: PlanCatalogus, groepen: [string, ConstructieDeel[]][], opbouwNaam: (code: string) => string): Map<string, string> {
+  const kort = new Map(groepen.map(([code]) => [code, titelVan('Buitenwand', opbouwNaam(code).split(',')[0]!)]));
+  const dubbel = (t: string) => [...kort.values()].filter((x) => x === t).length > 1;
+  if (![...kort.values()].some(dubbel)) return kort;
+  const materiaal = new Map(gevelOppervlaktes(plan).filter((v) => v.keuze).map((v) => [`gevel:${v.sleutel}`, v.keuze!.materiaal]));
+  const achter = new Map(groepen.map(([code, lijst]) => {
+    const labels = uniek(lijst.map((d) => materiaal.get(d.ding ?? '')).filter((m): m is string => !!m).map((m) => kleinEerst(cat.gevels?.[m]?.label ?? m)));
+    return [code, labels.length ? `achter ${labels.length > 1 ? `${labels.slice(0, -1).join(', ')} en ${labels[labels.length - 1]}` : labels[0]}` : ''];
+  }));
+  const uit = new Map<string, string>();
+  for (const [code, t] of kort) {
+    if (!dubbel(t)) { uit.set(code, t); continue; }
+    const a = achter.get(code) ?? '';
+    // Het verschil in de gevel: alleen als geen andere opbouw met dezelfde titel hetzelfde zegt.
+    const uniekAchter = a && ![...kort].some(([c, x]) => c !== code && x === t && achter.get(c) === a);
+    uit.set(code, uniekAchter ? `${t} ${a}` : titelVan('Buitenwand', opbouwNaam(code)));
+  }
+  return uit;
+}
+
+/**
  * De posten van het werk, in de volgorde van het bouwen (zie bovenaan). `cat` heeft de opbouwen (`cat.opbouw`) voor de
  * wanden, vloeren en daken nodig; zonder opbouwen vallen die posten weg. Wat bestaat of van de buren is, staat er niet in.
  */
@@ -203,9 +235,16 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     id: `werk:${h.id}`, groep, titel: h.titel, ...(h.hoeveelheid !== undefined && Number.isFinite(h.hoeveelheid) ? { hoeveelheid: h.hoeveelheid } : {}),
     ...(h.eenheid ? { eenheid: h.eenheid } : {}), detail: h.uitleg ? [h.uitleg] : [], intern: [], dingen: [], handmatig: true,
   }));
+  const positieDingen = (id: string) => plan.openingen.filter((o) => o.positie === id).map((o) => `opening:${o.id}`);
+  /** Een ander onderdeel dan een raam of deur (een aanbouw, een carport, een loods …) in zijn groep. */
+  const anderIn = (groep: PostGroep) => (opties.posities ?? []).filter((x) => x.aantal > 0 && x.soort === 'ander' && (x.groep ?? 'buitenwerk') === groep).map((p): Post => ({
+    id: `positie:${p.id}`, groep, titel: p.kort ?? p.naam, hoeveelheid: p.aantal, eenheid: 'stuks', detail: p.detail ?? [], intern: [], dingen: positieDingen(p.id),
+  }));
+  /** Wat aan het einde van een groep komt: de andere onderdelen van die groep en het werk dat de verkoper zelf toevoegde. */
+  const extra = (groep: PostGroep) => [...anderIn(groep), ...handmatig(groep)];
 
   // ---------- voorbereiding ----------
-  uit.push(...handmatig('voorbereiding'));
+  uit.push(...extra('voorbereiding'));
 
   // ---------- ruwbouw ----------
   const muren0 = delen.filter((d) => d.plaats === 'buitenwand' && d.niveau === 0 && !d.onderDak);
@@ -260,15 +299,17 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       intern: hoeveelheden(lijst, v.structuur, mat), dingen: uniek(lijst.map((d) => d.ding).filter((x): x is string => !!x)),
     });
   }
-  uit.push(...handmatig('ruwbouw'));
+  uit.push(...extra('ruwbouw'));
 
   // ---------- wind- en waterdicht ----------
-  for (const [code, lijst] of opPlaats('buitenwand')) {
+  const buitenwanden = opPlaats('buitenwand');
+  const wandTitels = buitenwandTitels(plan, cat, buitenwanden, opbouwNaam);
+  for (const [code, lijst] of buitenwanden) {
     const v = verdeel(lijst[0]!);
     const lateien = lijst.some((d) => d.deel.stukken.some((s) => s.rol === 'latei'));
     const buren = oud && murenPer.some((ms) => ms.some((m) => m.soort === 'buiten' && muurStatus(plan, m) === 'buren'));
     uit.push({
-      id: `wand:buitenwand:${code}`, groep: 'winddicht', titel: titelVan('Buitenwand', opbouwNaam(code).split(',')[0]!), hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
+      id: `wand:buitenwand:${code}`, groep: 'winddicht', titel: wandTitels.get(code)!, hoeveelheid: r1(m2Van(lijst)), eenheid: 'm²',
       detail: [
         lagenZin('Van binnen naar buiten', lagenVan(lijst[0]!, v.structuur), mat) ?? '',
         ...(lateien ? ['Rond de ramen en deuren een latei en dubbele stijlen.'] : []),
@@ -361,7 +402,6 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     });
   }
   // Buitenschrijnwerk: elke positie met een aantal (wat blijft, staat er met aantal 0 en niet hier).
-  const positieDingen = (id: string) => plan.openingen.filter((o) => o.positie === id).map((o) => `opening:${o.id}`);
   for (const p of (opties.posities ?? []).filter((x) => x.aantal > 0 && x.soort !== 'ander')) {
     uit.push({
       id: `positie:${p.id}`, groep: 'winddicht', titel: p.kort ?? p.naam, hoeveelheid: p.aantal, eenheid: 'stuks',
@@ -409,7 +449,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       });
     }
   }
-  uit.push(...handmatig('winddicht'));
+  uit.push(...extra('winddicht'));
 
   // ---------- binnenafwerking ----------
   for (const [code, lijst] of opPlaats('binnenwand')) {
@@ -425,6 +465,11 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
   if (nieuweRuimtes.length) {
     // De wanden binnen: de afwerking (gipsplaat) uit de opbouw van de buitenwanden en de gekozen afwerking per ruimte.
     const binnenLaag = delen.filter((d) => d.plaats === 'buitenwand').flatMap((d) => lagenVan(d, verdeel(d).binnen))[0];
+    // "Ook op de bestaande muren" alleen als er naast een nieuwe ruimte een muur staat die blijft: de bestaande gevel of
+    // de scheidingsmuur van de buren (vroeger altijd, ook bij een nieuwe woning: doorloop B3).
+    const blijft = (status: string) => oud && murenPer.some((ms) => ms.some((m) => muurStatus(plan, m) === status && [m.plus, m.min].some((id) => nieuweRuimte(id))));
+    const ookBestaand = blijft('bestaand'), ookBuren = blijft('buren');
+    const ook = ookBestaand && ookBuren ? '; ook op de bestaande muren en de muren van de buren aan de binnenkant' : ookBestaand ? '; ook op de bestaande muren aan de binnenkant' : ookBuren ? '; ook op de muren van de buren aan de binnenkant' : '';
     const perWand = new Map<string, { m2: number; ruimtes: string[] }>();
     for (const r of nieuweRuimtes) {
       const m = ruimteMaten(plan, r, murenPer[niveauVan(r)]);
@@ -437,7 +482,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       uit.push({
         id: `binnenwanden:${wand}`, groep: 'binnen', titel: `Wanden binnen: ${kleinEerst(w?.label ?? wand)}`, hoeveelheid: r1(x.m2), eenheid: 'm²',
         detail: [
-          ...(binnenLaag ? [`${hoofd(laagTekst(binnenLaag, mat))} op de nieuwe buitenwanden (uit hun opbouw); ook op de bestaande muren aan de binnenkant.`] : []),
+          ...(binnenLaag ? [`${hoofd(laagTekst(binnenLaag, mat))} op de nieuwe buitenwanden (uit hun opbouw)${ook}.`] : []),
           `Afwerking: ${(w?.label ?? wand).toLowerCase()}, in ${x.ruimtes.map((id) => ruimteNaam.get(id) ?? '').join(', ').toLowerCase()}.`,
           'Netto, zonder ramen en deuren.',
         ],
@@ -497,7 +542,7 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       detail: [`${x.n} × ${(t?.label ?? type).toLowerCase()}, met kader en klink.`], intern: [], dingen: uniek(x.ruimtes).map((id) => `ruimte:${id}`),
     });
   }
-  uit.push(...handmatig('binnen'));
+  uit.push(...extra('binnen'));
 
   // ---------- techniek ----------
   const tc = cat.techniek;
@@ -533,13 +578,12 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       ],
     });
   }
-  uit.push(...handmatig('techniek'));
+  uit.push(...extra('techniek'));
 
-  // ---------- supplementen ----------
-  for (const p of (opties.posities ?? []).filter((x) => x.aantal > 0 && x.soort === 'ander')) {
-    uit.push({ id: `positie:${p.id}`, groep: 'supplementen', titel: p.kort ?? p.naam, hoeveelheid: p.aantal, eenheid: 'stuks', detail: p.detail ?? [], intern: [], dingen: positieDingen(p.id) });
-  }
-  uit.push(...handmatig('supplementen'));
+  // ---------- bijgebouwen en buitenwerk, supplementen ----------
+  // Een carport, tuinhuis, loods of staalwerk (vroeger bij de supplementen, ook als het het hele project was: doorloop B25).
+  uit.push(...extra('buitenwerk'));
+  uit.push(...extra('supplementen'));
   return uit;
 }
 

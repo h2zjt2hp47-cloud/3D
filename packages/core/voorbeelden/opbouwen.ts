@@ -37,6 +37,10 @@ export const bouwMaterialen: Record<string, BouwMateriaal> = {
   parket: { label: 'Parket', soort: 'parket', kleur: '#b08a5c' },
   epdm: { label: 'EPDM-dakbedekking', soort: 'dak', kleur: '#2c2d2f' },
   dakpannen: { label: 'Keramische dakpannen', soort: 'pannen', kleur: '#9a4a36' },
+  // Sinds 16/11 (doorloop B3): de opbouw van een hellend dak volgt de bedekking.
+  leien: { label: 'Leien', soort: 'leien', kleur: '#3b3f45' },
+  zink: { label: 'Zink', soort: 'zink', kleur: '#8a8f92' },
+  scheidingslaag: { label: 'Scheidingslaag onder metaal', soort: 'kunststof', kleur: '#6b7076' },
 };
 
 const ONDERZOEK = 'docs/onderzoek-bouw-constructies.md';
@@ -56,6 +60,19 @@ const HSB_HERKOMST = uitOnderzoek(
   + 'De diktes van gipsplaat, leidingspouw, latten en bekleding, en de latei: algemene kennis.',
 );
 const roostering: LaagHout = { breedte: 70, hoh: 400 };
+
+/**
+ * Het hellende dak tot en met de tengellatten (van binnen naar buiten), voor elke bedekking hetzelfde: gipsplaat, latten,
+ * dampscherm, kepers met isolatie, onderdak en tengellatten (de verluchting onder de bedekking).
+ */
+const kepersTotTengel = (): Opbouw['lagen'] => [
+  { naam: 'Gipsplaat', materiaal: 'gipsplaat', dikte: 12.5, rol: 'afwerking_binnen' },
+  { naam: 'Latten', materiaal: 'vuren', dikte: 22, rol: 'latten', hout: { breedte: 45, hoh: 400 } },
+  { naam: 'Dampscherm', materiaal: 'dampscherm', dikte: 0.2, rol: 'folie' },
+  { naam: 'Kepers met isolatie', materiaal: 'vuren', dikte: 180, rol: 'skelet', hout: { breedte: 50, hoh: 450, vulling: 'minerale_wol' } },
+  { naam: 'Onderdak', materiaal: 'onderdak', dikte: 0.5, rol: 'folie' },
+  { naam: 'Tengellatten', materiaal: 'vuren', dikte: 22, rol: 'latten', hout: { breedte: 38, hoh: 450, richting: 'mee' } },
+];
 
 export const opbouwen: Record<string, Opbouw> = {
   hsb_hout: {
@@ -151,6 +168,31 @@ export const opbouwen: Record<string, Opbouw> = {
       'hoofdstuk 2.3 en 2.6: de lagen van een hellend dak [H12], keper 50 mm breed [H19], kepers om de 45 cm (in het onderzoek zelf «eigen kennis, te bevestigen»). '
       + 'De hoogte van de keper, de latten, de latafstand en de pannen: algemene kennis.',
     ),
+  },
+  // Sinds 16/11 (doorloop B3): een hellend dak in leien of zink kreeg de opbouw met panlatten en pannen. Zelfde kepers,
+  // onderdak en tengellatten; erboven wat bij de bedekking hoort. Voorbeelden uit algemene kennis, door niemand nagelezen.
+  hellend_dak_leien: {
+    naam: 'Hellend dak met kepers en leien',
+    soort: 'dak',
+    uitleg: 'Kepers met isolatie ertussen, onderdak, tengellatten en leilatten; de leien in halfsteens verband, met haken of nagels.',
+    lagen: [
+      ...kepersTotTengel(),
+      { naam: 'Leilatten', materiaal: 'vuren', dikte: 25, rol: 'latten', hout: { breedte: 38, hoh: 170 } },
+      { naam: 'Leien', materiaal: 'leien', dikte: 10, rol: 'afwerking_buiten' },
+    ],
+    herkomst: algemeen,
+  },
+  hellend_dak_zink: {
+    naam: 'Hellend dak met kepers en zink',
+    soort: 'dak',
+    uitleg: 'Kepers met isolatie ertussen, onderdak en tengellatten (de verluchting), een dakbeschot in houten planken, een scheidingslaag en zinken banen met staande naad.',
+    lagen: [
+      ...kepersTotTengel(),
+      { naam: 'Dakbeschot in houten planken', materiaal: 'vuren', dikte: 23, rol: 'plaat' },
+      { naam: 'Scheidingslaag', materiaal: 'scheidingslaag', dikte: 1, rol: 'folie' },
+      { naam: 'Zink met staande naad', materiaal: 'zink', dikte: 1, rol: 'afwerking_buiten' },
+    ],
+    herkomst: algemeen,
   },
   vloer_volle_grond: {
     naam: 'Vloer op volle grond',

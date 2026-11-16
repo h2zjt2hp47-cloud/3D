@@ -9,6 +9,7 @@
  * De standaard van de buitenwand volgt de gevel (`volgensGevel`): een muurvlak in gevelsteen of steenstrips krijgt de
  * houtskeletwand met steenstrips, hout de houtskeletwand met houten bekleding, pleister die met sierpleister. Zo zegt
  * de meetstaat ongeveer wat de afgewerkte 3D toont. Een metselwerkgevel als massieve spouwmuur kies je zelf.
+ * Zo ook het hellende dak (16/11): de opbouw volgt de dakbedekking (`volgensDak`).
  */
 import type { WoningOpbouwCatalogus } from '../src/index.js';
 import { bouwMaterialen, opbouwen } from './opbouwen.js';
@@ -22,11 +23,13 @@ export const woningOpbouwCatalogus: WoningOpbouwCatalogus = {
     grondvloer: { label: 'Vloer op de grond', keuzes: ['vloer_volle_grond'], standaard: 'vloer_volle_grond' },
     verdiepingsvloer: { label: 'Vloer tussen verdiepingen', keuzes: ['verdiepingsvloer_hout'], standaard: 'verdiepingsvloer_hout' },
     platDak: { label: 'Plat dak', keuzes: ['plat_dak_warm'], standaard: 'plat_dak_warm' },
-    hellendDak: { label: 'Hellend dak', keuzes: ['hellend_dak_pannen'], standaard: 'hellend_dak_pannen' },
+    hellendDak: { label: 'Hellend dak', keuzes: ['hellend_dak_pannen', 'hellend_dak_leien', 'hellend_dak_zink'], standaard: 'hellend_dak_pannen' },
   },
   volgensGevel: {
     steen: 'hsb_steenstrips', natuursteen: 'hsb_steenstrips',
     planken: 'hsb_hout', planken_h: 'hsb_hout',
     pleister: 'hsb_pleister', gevel: 'hsb_pleister',
   },
+  // Het hellende dak volgt de bedekking uit de dakcatalogus (doorloop B3): zink en leien kregen vroeger panlatten en pannen.
+  volgensDak: { pannen: 'hellend_dak_pannen', leien: 'hellend_dak_leien', zink: 'hellend_dak_zink' },
 };

@@ -26,7 +26,7 @@ import { openingVan, resultaat, toestand, type Positie } from './staat.js';
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-function datumTekst(d: string): string {
+export function datumTekst(d: string): string {
   const x = new Date(`${d.slice(0, 10)}T12:00:00`);
   return Number.isNaN(x.getTime()) ? d : x.toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' });
 }
@@ -82,8 +82,10 @@ export async function drukBlad(kort: (p: Positie) => string, omschrijf: (p: Posi
   const volgend = () => beelden[i++] ?? '';
   const figuur = (src: string, onder: string, klasse = '') => `<figure class="${klasse}"><img src="${src}" alt="${esc(onder)}"><figcaption>${esc(onder)}</figcaption></figure>`;
   const kenmerken = ontwerpKenmerken(t.plan, t.posities, planCatalogus, { zonderWoning: !woning });
+  // Zonder firmanaam geen regel met een verzonnen naam (doorloop B1).
+  const firma = aannemerNaam();
   const kop = `<header class="b-kop">
-      <div><div class="b-aannemer">${esc(aannemerNaam())}</div><h1>${esc(t.meta.project || 'Uw ontwerp')}</h1>
+      <div>${firma ? `<div class="b-aannemer">${esc(firma)}</div>` : ''}<h1>${esc(t.meta.project || 'Uw ontwerp')}</h1>
       <p>${esc([t.meta.klant, t.meta.adres].filter(Boolean).join(' · '))}</p></div>
       <div class="b-datum">Ontwerp van ${esc(datumTekst(t.meta.datum))}<br>${esc(t.meta.nummer)}</div></header>`;
   let html = kop;

@@ -338,8 +338,21 @@ export function stijlRij(): HTMLElement {
   return rij;
 }
 
+/**
+ * Twee keer snel tikken op *Variant maken* gaf twee gelijke varianten (doorloop B18). Een tik binnen anderhalve seconde na
+ * de vorige variant, terwijl die nog openstaat, maakt er geen nieuwe: hij geeft de naam van de variant die er al is.
+ */
+let laatsteVariant: { tijd: number; id: string; naam: string } | undefined;
+
 /** Een variant: een kopie van het project om iets anders te proberen; het origineel blijft in Projecten. */
 export function maakVariant(): string {
+  if (laatsteVariant && performance.now() - laatsteVariant.tijd < 1500 && actiefProject() === laatsteVariant.id) return laatsteVariant.naam;
+  const naam = nieuweVariant();
+  laatsteVariant = { tijd: performance.now(), id: actiefProject(), naam };
+  return naam;
+}
+
+function nieuweVariant(): string {
   const t = toestand();
   const basis = (t.meta.project || 'Ontwerp').replace(/ \(variant \d+\)$/, '');
   // Het volgende nummer in de reeks (ook als je vanuit het origineel een tweede variant maakt), en één groep voor allemaal.

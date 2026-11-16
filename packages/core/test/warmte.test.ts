@@ -137,9 +137,9 @@ describe('warmte: met de hand nagerekend', () => {
   });
 });
 
-describe('warmte: de negen voorbeeldopbouwen', () => {
+describe('warmte: de voorbeeldopbouwen (negen, en sinds 16/11 elf: het hellende dak in leien en in zink)', () => {
   it('geeft voor elke opbouw een U-waarde met haar aannames, of een duidelijke reden waarom niet', () => {
-    expect(Object.keys(opbouwen)).toHaveLength(9);
+    expect(Object.keys(opbouwen)).toHaveLength(11);
     for (const [code, o] of Object.entries(opbouwen)) {
       const u = uWaarde(o, bouwMaterialen, warmtewaarden);
       if (u.uWaarde === null) {
@@ -183,6 +183,10 @@ describe('warmte: de negen voorbeeldopbouwen', () => {
     expect(hout.lagen[1]).toMatchObject({ naam: 'Leidingspouw (liggende latten)', wijze: 'hout met vulling' });
     // Onder de pannen: tengellatten, panlatten en pannen tellen niet mee.
     expect(voorbeeld('hellend_dak_pannen').lagen.slice(-3).map((l) => l.wijze)).toEqual(['geventileerde spouw', 'buiten de spouw', 'buiten de spouw']);
+    // Leien en zink (16/11): de spouw is die van de tengellatten, alles erbuiten telt niet mee; zelfde U-waarde als de pannen.
+    expect(voorbeeld('hellend_dak_leien').lagen.slice(-3).map((l) => l.wijze)).toEqual(['geventileerde spouw', 'buiten de spouw', 'buiten de spouw']);
+    expect(voorbeeld('hellend_dak_zink').lagen.slice(-4).map((l) => l.wijze)).toEqual(['geventileerde spouw', 'buiten de spouw', 'buiten de spouw', 'buiten de spouw']);
+    for (const code of ['hellend_dak_leien', 'hellend_dak_zink']) expect(voorbeeld(code).uWaarde, code).toBe(voorbeeld('hellend_dak_pannen').uWaarde);
     // Spouwmuur: de spouw en de gevelsteen; als stilstaande spouw gerekend is de wand iets beter.
     expect(voorbeeld('spouwmuur').lagen.slice(-2).map((l) => l.wijze)).toEqual(['geventileerde spouw', 'buiten de spouw']);
     expect(voorbeeld('spouwmuur', { buitenspouw: 'stilstaand' }).weerstand!).toBeGreaterThan(voorbeeld('spouwmuur').weerstand!);
@@ -197,6 +201,7 @@ describe('warmte: de negen voorbeeldopbouwen', () => {
     expect(Object.fromEntries(Object.entries(opbouwen).map(([code, o]) => [code, grensVan(o)]))).toEqual({
       hsb_hout: 'buitenlucht', hsb_steenstrips: 'buitenlucht', hsb_pleister: 'buitenlucht', spouwmuur: 'buitenlucht', binnenwand_hsb: 'verwarmde ruimte',
       plat_dak_warm: 'buitenlucht', hellend_dak_pannen: 'buitenlucht', vloer_volle_grond: 'grond', verdiepingsvloer_hout: 'verwarmde ruimte',
+      hellend_dak_leien: 'buitenlucht', hellend_dak_zink: 'buitenlucht',
     });
     // Binnenwand en verdiepingsvloer: wel een U-waarde (met aan beide kanten de overgangsweerstand van binnen), geen toets.
     for (const code of ['binnenwand_hsb', 'verdiepingsvloer_hout']) {

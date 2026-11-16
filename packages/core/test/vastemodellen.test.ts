@@ -69,7 +69,8 @@ describe('vaste modellen: één beschrijving voor de schermen', () => {
     const lijnen = doosMaatlijnen({ x0: 0, x1: 500, z0: 0, z1: 300, y0: 0, y1: 250 });
     expect(lijnen.filter((l) => l.groep === 'breedte')).toHaveLength(2);
     expect(lijnen.filter((l) => l.groep === 'diepte')).toHaveLength(2);
-    expect(lijnen.filter((l) => l.groep === 'hoogte')).toHaveLength(4);
+    // De hoogte: twee kandidaten per hoek (16/11, doorloop B26: niet meer op de hoek bij de camera, zie doorloop-b.test.ts).
+    expect(lijnen.filter((l) => l.groep === 'hoogte')).toHaveLength(8);
     expect(doosMaatlijnen({ x0: 0, x1: 500, z0: 0, z1: 300, y0: 0, y1: 250 }, { breedte: 'Breedte' }).map((l) => l.tekst)).toEqual(['Breedte 5,00 m', 'Breedte 5,00 m']);
   });
 
