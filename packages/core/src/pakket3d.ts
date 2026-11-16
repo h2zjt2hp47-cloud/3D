@@ -41,11 +41,57 @@ export interface Pakket3D {
   versie: number;
   /** Wanneer het pakket gemaakt is (ISO). */
   gemaakt: string;
-  project: { nummer: string; naam: string; klant?: string; adres?: string };
+  /**
+   * Het project. Sinds 16/11 (bestand voor de klant) ook, als ze er zijn: de naam van de aannemer die het ontwerp maakte
+   * en de datum van het ontwerp (JJJJ-MM-DD). Een oudere kijker slaat ze over.
+   */
+  project: { nummer: string; naam: string; klant?: string; adres?: string; aannemer?: string; datum?: string };
   /** Per verdieping, van onder naar boven; het laatste is de hele woning met dak. Leeg bij een project zonder woning. */
   woning: Pakket3DNiveau[];
   posities: Pakket3DPositie[];
+  /**
+   * Varianten (16/11): als er meer ontwerpen meegaan, de naam van dit ontwerp en wat het anders maakt dan de andere, in
+   * gewone taal (bv. ["zadeldak met keramische pannen", "geen lichtkoepels"]).
+   */
+  variant?: { naam: string; verschil: string[] };
+  /**
+   * De andere varianten, elk een volledig pakket (met zijn eigen `variant`, zonder eigen varianten), om er in de kijker
+   * tussen te wisselen. Een oudere kijker toont alleen het eerste ontwerp: hij tekent niets verkeerd, de versie blijft 3.
+   */
+  varianten?: Pakket3D[];
 }
+
+/**
+ * Maatlijn in de 3D (16/11): een maat tussen twee punten met haar tekst, zoals op een plan. Ze reist mee met een scène
+ * (`Scene3DMetMaten`); de kijker (demo-web/src/drie-d.ts) tekent ze bovenop alles, met de tekst altijd recht naar de
+ * camera. Wie de maten uitrekent: core/src/maten3d.ts. Ze zitten niet in het pakket zelf: de kijker rekent ze uit de
+ * scène, zodat ook een ouder pakket maten krijgt.
+ */
+export interface Maatlijn3D {
+  /** Begin en eind van wat gemeten wordt (cm, in de wereld van de scène: x, y = hoogte, z). */
+  van: [number, number, number];
+  tot: [number, number, number];
+  /** Wat er bij de maat staat, bv. "Breedte 9,30 m". */
+  tekst: string;
+  /** Richting waarin de maatlijn naast het gemeten stuk ligt (eenheidsvector) en hoe ver (cm); hulplijnen lopen tot daar. */
+  uit: [number, number, number];
+  afstand: number;
+  /**
+   * Dezelfde maat aan een andere kant (de breedte vóór en achter de woning) draagt dezelfde groep: de kijker toont van
+   * een groep alleen de maat waarvan `kant` het meest naar de camera wijst, en kiest opnieuw als je draait. Zonder groep
+   * is een maat altijd zichtbaar.
+   */
+  groep?: string;
+  kant?: [number, number, number];
+  /**
+   * Bovenop alles tekenen, ook waar een muur ervoor staat: voor de maten van een raam, die in het vlak van de muur liggen.
+   * Anders verdwijnt wat achter het gebouw ligt, zoals bij een echt ding (de tekst is altijd te lezen).
+   */
+  bovenop?: boolean;
+}
+
+/** Een scène met maatlijnen erbij (alleen om te tonen; een scène zonder `maatlijnen` tekent zoals altijd). */
+export type Scene3DMetMaten = Scene3D & { maatlijnen?: Maatlijn3D[] };
 
 export const ZENDING_SOORT = 'bouw-zending';
 export const ZENDING_VERSIE = 1;
@@ -108,7 +154,8 @@ export function leesPakket3D(bron: unknown): Pakket3D {
     throw new Error('Dit 3D-pakket is onvolledig: een van de 3D-beelden ontbreekt.');
   }
   if (!p.woning.length && !p.posities.length) throw new Error('Dit 3D-pakket is leeg: er is geen woning en geen positie om te tonen.');
-  return {
+  const tekst = (x: unknown) => (typeof x === 'string' && x.trim() ? x : undefined);
+  const uit: Pakket3D = {
     soort: PAKKET3D_SOORT,
     versie: p.versie,
     gemaakt: typeof p.gemaakt === 'string' ? p.gemaakt : '',
@@ -116,4 +163,23 @@ export function leesPakket3D(bron: unknown): Pakket3D {
     woning: p.woning,
     posities: p.posities,
   };
+  // Velden van 16/11 (bestand voor de klant): alleen meenemen als ze er zijn, zodat een ouder pakket er net zo uitziet als vroeger.
+  const aannemer = tekst(p.project?.aannemer), datum = tekst(p.project?.datum);
+  if (aannemer) uit.project.aannemer = aannemer;
+  if (datum) uit.project.datum = datum;
+  const v = p.variant as Partial<NonNullable<Pakket3D['variant']>> | undefined;
+  if (v && typeof v === 'object') uit.variant = { naam: String(v.naam ?? ''), verschil: Array.isArray(v.verschil) ? v.verschil.map(String) : [] };
+  if (Array.isArray(p.varianten) && p.varianten.length) {
+    // Elke variant volgt dezelfde regels (soort, versie, scènes); een variant draagt zelf geen varianten.
+    uit.varianten = p.varianten.map((x, i) => {
+      try {
+        const enkel = leesPakket3D(x);
+        delete enkel.varianten;
+        return enkel;
+      } catch (e) {
+        throw new Error(`Variant ${i + 2} in dit 3D-pakket: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    });
+  }
+  return uit;
 }
