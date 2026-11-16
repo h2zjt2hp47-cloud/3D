@@ -327,7 +327,7 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 6 | 2 | **Constructieweergave** en doorsnede: houtskelet, balklaag, dakconstructie, vloeropbouw; met de **meetstaat** van de nodige materialen (hoofdstuk 14) | L |
 | 6b | 2 | *(de rekenfuncties staan sinds 16/11 in de motor, hoofdstuk 17; het scherm volgt met ronde 6)* **Aanwijzing voor EPB** (U-waarde per deel) en **schatting van de stabiliteit** (balken, kepers, lateien in hout), elk met de aannames erbij (hoofdstuk 14) | M–L |
 | 7 | 2 | **Klaar (16/11, hoofdstuk 18; dakraam en hoekraam nog niet):** **Ramen:** raster van vakken, grote glaspartijen, bijzondere vormen, dakraam en garagepoort, kleurwaaier | L |
-| 8 | 2 | *(de bijgebouwen lopen sinds 16/11 in de motor)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
+| 8 | 2 | *(bijgebouwen klaar in de motor op 16/11, hoofdstuk 19; nog geen scherm, de aanbouw nog niet op bouwdelen)* **Aanbouw en bijgebouwen in hout** op bouwdelen; carport, tuinhuis, poolhouse, pergola | M–L |
 | 9 | 2 | **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
 | 10 | 2 | **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | **Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik | M |
@@ -710,4 +710,41 @@ daarna correct op WebGL2. In de kijker en de zending krijgt een aanbouw nog geen
 
 Gelakt schrijnwerk heeft eigen soorten (`lak_mat`, `lak_structuur`, `lak_glans`); een oudere kijker zou die als stof tekenen.
 Het pakket staat daarom op versie 3 en de kijker van 16/11 is nodig. De omgeving voegde geen velden toe.
+
+---
+
+## 19. Gebouwd op 16/11: bijgebouwen in hout als vaste modellen (ronde 8, alleen de motor)
+
+Twee vaste modellen met maten en opties, in het formaat van de motor (zoals de aanbouw), **zonder prijzen**, opgebouwd uit de
+bouwdelen van hoofdstuk 16. Elk in twee weergaven (*afgewerkt* en *constructie*) en met een meetstaat. **Nog in geen scherm**: het
+inbouwen (een tegel in de snelstart, de keuzes per stap, de knop *Afgewerkt / Constructie*) is een volgende stap.
+
+| Model | Keuzes |
+|---|---|
+| **Overkapping** (`OVERKAPPING`): carport, terrasoverkapping, pergola | Vrijstaand of tegen een gevel; breedte 2–9 m, diepte 2,5–8 m, doorloophoogte 2,10–2,60 m; plat, lessenaar of zadeldak met bedekking (EPDM, zink, pannen, leien, polycarbonaat, glas, open); oversteek; palen van 12 tot 20 cm die er vanzelf bijkomen bij een grotere overspanning; per zijde open, dicht met planken, halfhoog of glas; een berging achteraan of opzij bij een carport; schoren; houtsoort of kleur; vloer (klinkers, tegels, houten terras). |
+| **Tuinhuis** (`TUINHUIS`): tuinhuis, poolhouse | Breedte 2–10 m, diepte 2–5 m, wandhoogte 2,00–2,60 m; geïsoleerd of niet; plat, lessenaar of zadeldak; luifel tot 4 m; enkele of dubbele deur of schuifraam, links, midden of rechts; ramen per zijde; bekleding, plankrichting, kleur van het schrijnwerk. |
+
+Zeven waarschuwingen in gewone taal, bv. een extra paal midden in de inrit, dakbalken van meer dan 5 m, te weinig plaats voor
+de wagen, en de vergunning als "na te kijken" (40 m² en 3,5 m komen uit een zoekresultaat). In code: `core/voorbeelden/bijgebouwen.ts`,
+`bijgebouwen3d.ts`, tests in `core/test/bijgebouwen.test.ts`; 5000 willekeurige configuraties zijn zonder probleem doorgerekend.
+
+**Toonbaar** (echte beelden uit de losse kijker): de carports met berging of met lessenaarsdak, de terrasoverkapping met EPDM,
+de pergola's, de tuinhuizen en het poolhouse. **Minder**: een glazen dak is in de 3D bijna onzichtbaar (je ziet vooral de kepers),
+polycarbonaat oogt als een bruinige waas; het vertrekpunt *carport* (6 m breed, palen van 12 cm) krijgt meteen een paal midden in
+de inrit, wat klopt met de regel maar geen mooi eerste beeld is (voorstel: het vertrekpunt 5 m breed of met zwaardere palen).
+
+**Niet gebouwd:** de berging is bovenaan tussen de dakbalken open; een zadeldak tegen een gevel (de motor weigert het met uitleg);
+riet, piramidedak, blokhut, schuifwand, de indeling van een poolhouse. "Tegen een gevel" staat nu tegen een los stuk gevel, nog
+niet tegen de getekende woning.
+
+**Wat een aannemer moet nalezen** (alles is een voorstel): de grenzen, stappen en standaardmaten; welke paal licht of zwaar is
+en de liggers erbij; de opzet met palen langs de omtrek en een ringbalk; dakbalken 5 × 15 om de 48 cm zonder tussensteun; de
+hellingen per bedekking; spant per palenpaar en gordingen bij het zadeldak; nokbalk op makelaars bij het tuinhuis; schoren van
+60 cm; het regelwerk en de planken van een wand; de opbouw van een tuinhuiswand en van het dak; deur- en raammaten; de luifel;
+de vloer zonder fundering; de drempels van de waarschuwingen. De meetstaat is netto.
+
+**Wensen voor de bouwdelen** (gevonden bij het bouwen, met een omweg opgelost): een optie om het skelet zichtbaar te laten in de
+afgewerkte weergave, een instelbare kleur van de kern, een kleinste lengte voor korte stijlen, eigen rollen voor schoor, gording,
+windveer en boeiboord in de meetstaat, en een hulp om een bouwdeel op zijn plaats na de draaiing te zetten. **Voor de kijker**:
+een knop *Laag* (ooghoogte); glas en hout met nerf ogen nog vlak.
 
