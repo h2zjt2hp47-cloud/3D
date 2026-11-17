@@ -79,7 +79,14 @@ Elke stap eindigt met een bestand dat je kan openen en spelen.
 - **Stap 1 is gebouwd**: `dist/belgica.html`. Kaart met 250 vakken, klok met pauze en vijf snelheden, twaalf volken (Rome, Remi, tien Belgische stammen en de Treveri), legers met moraal, veldslagen met terrein en rivieren, bezetting en belegering van versterkingen, uitputting, computerspelers, onderwerping en opstand, opvolging, drie vaste gebeurtenissen (de bond van 57, de opstand van Ambiorix in 54, nieuwe legioenen in 53) en een score.
 - Zelfde start, verschillende afloop: in vier proefoorlogen won Rome twee keer veel terrein, één keer half en één keer bleven de Belgen overeind.
 - **Stap 2 is gebouwd** (economie en bestuur): schatkist in zilver (een spelmunt), belastingdruk laag/gewoon/hoog, soldij per maand, oproepen kost geld, bouwen per vak (akkers, markt, versterking, en voor Rome de Romeinse weg), bevolkingsgroei en plundering, tevredenheid per vak met opstanden in veroverd land, schatting van onderworpen volken aan hun heer, een kaart van de tevredenheid. De bedragen zijn spelverhoudingen, geen historische waarden.
-- Nog niet: diplomatie en vrede, huwelijken en erfenis, de tijd na 50 v.Chr.
+- **Stap 3 en 4 zijn gebouwd** (18/11/2026): de hele campagne van 57 v.Chr. tot 2026, in elf tijdperken.
+  - Diplomatie: mening tussen machten, oorlogsscore en oorlogsmoeheid, vrede (met of zonder schatting), bondgenootschap, oorlog verklaren (met of zonder goede reden), geschenken, huwelijken. Bij elk voorstel zie je vooraf of de ander aanvaardt, en waarom.
+  - Vorsten: leeftijd, erfgenaam, sterfte, verzonnen opvolgers (zo aangeduid), erfenis via huwelijk (personele unie, na 10 jaar in te lijven), een nieuw huis bij uitsterven. Leenmannen in de middeleeuwen blijven zelfstandig en betalen een tiende.
+  - Tijdperken: elk met eigen machten, grenzen, gebeurtenissen en keuzes. Bij een overgang kies je onder wie je verder speelt; je land blijft van jou, bevolking en gebouwen gaan mee. Je kan ook in elk tijdperk beginnen.
+  - Nieuwe gebouwen per tijdperk: haven, lakenweverij, spoorweg, fabrieken. Prijzen en legers groeien mee met de tijd.
+  - Schermen (uit het onderzoek in `docs/onderzoek-strategiespellen.md`): waarschuwingen onder de bovenbalk, uitleg met opbouw bij de getallen, diplomatievenster met redenen, overzicht van alle machten en je vakken, logboek, tijdlijn, instellingen voor het stilzetten van de klok, springen naar de volgende gebeurtenis, vijf kaartsoorten met legende, zoeken, drie opslagplaatsen en bewaren als bestand, voorspelling van een slag, dagen tot aankomst, "de computer speelt mijn land".
+  - Feiten: uit `docs/onderzoek-geschiedenis.md` (zoekresultaten, pagina's zelf niet geopend). Onzekere gebeurtenissen staan in het spel aangeduid als "nog na te kijken".
+- Nog te doen: de feiten nalezen in de bronnen zelf, het evenwicht per tijdperk verfijnen (vooral de wereldoorlogen), meer gebeurtenissen en keuzes per tijdperk, geluid en beeld.
 
 ## 5. Opgelet
 

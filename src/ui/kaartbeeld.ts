@@ -1,9 +1,20 @@
 // De kaart tekenen op een canvas: vakken, grenzen, rivieren, versterkingen, legers.
 import { TERREIN, type Kaart, type Punt, type Terrein } from '../kaart/kaart';
 import { kracht } from '../spel/regels';
-import { inOorlog, type Leger, type Toestand } from '../spel/toestand';
+import { bevriend, hoofd, inOorlog, paar, type Leger, type Toestand } from '../spel/toestand';
+import { inkomenVak } from '../spel/economie';
 
-export type Kaartsoort = 'politiek' | 'terrein' | 'tevredenheid';
+export type Kaartsoort = 'politiek' | 'terrein' | 'tevredenheid' | 'diplomatie' | 'welvaart';
+
+export const KAARTSOORTEN: { soort: Kaartsoort; naam: string; toets: string }[] = [
+  { soort: 'politiek', naam: 'Machten', toets: 'Q' },
+  { soort: 'terrein', naam: 'Terrein', toets: 'W' },
+  { soort: 'tevredenheid', naam: 'Tevredenheid', toets: 'E' },
+  { soort: 'diplomatie', naam: 'Vriend en vijand', toets: 'R' },
+  { soort: 'welvaart', naam: 'Welvaart', toets: 'T' },
+];
+
+const DIPLO = { eigen: '#d9b46a', vazal: '#ead7a4', heer: '#b392d6', bond: '#6fae6a', vijand: '#c0533f', bestand: '#9bb4c9', neutraal: '#b8b2a0' };
 
 const TERREINKLEUR: Record<Terrein, string> = {
   vlakte: '#cdd29a', heide: '#d6c493', heuvels: '#b9b07e', bos: '#7f9e68', ardennen: '#6f845a', moeras: '#93b5a6',
@@ -95,6 +106,9 @@ export class Kaartbeeld {
     return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
   }
 
+  /** dagen tot aankomst (ingevuld door het scherm) */
+  aankomst: ((l: Leger) => number) | null = null;
+
   /** schermposities van de legerfiches, om erop te klikken */
   fiches: { leger: number; x: number; y: number; b: number; h: number }[] = [];
 
@@ -119,7 +133,11 @@ export class Kaartbeeld {
     k.vakken.forEach((v, i) => {
       const e = t.vakken[i].eigenaar;
       const f = t.facties[e];
-      let kleur = this.soort === 'terrein' ? TERREINKLEUR[v.terrein] : this.soort === 'tevredenheid' ? tevredenheidKleur(t.vakken[i].tevredenheid) : f.kleur;
+      let kleur = this.soort === 'terrein' ? TERREINKLEUR[v.terrein]
+        : this.soort === 'tevredenheid' ? tevredenheidKleur(t.vakken[i].tevredenheid)
+          : this.soort === 'diplomatie' ? diploKleur(t, e)
+            : this.soort === 'welvaart' ? welvaartKleur(inkomenVak(t, k, i) / Math.max(1, v.oppervlakte) * 100)
+              : f.kleur;
       if (this.soort === 'politiek' && f.heer) kleur = meng(f.kleur, t.facties[f.heer].kleur, 0.35);
       ctx.fillStyle = kleur;
       for (const p of this.vakPaden[i]) ctx.fill(p);
@@ -189,6 +207,17 @@ export class Kaartbeeld {
       ctx.arc(eind[0], eind[1], 4 * px, 0, Math.PI * 2);
       ctx.fillStyle = ctx.strokeStyle;
       ctx.fill();
+      if (geselecteerd && this.aankomst) {
+        const d = this.aankomst(l);
+        ctx.font = `600 ${12 * px}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.lineWidth = 3 * px;
+        ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+        ctx.strokeText(`${d} d`, eind[0], eind[1] - 6 * px);
+        ctx.fillStyle = '#f4d58d';
+        ctx.fillText(`${d} d`, eind[0], eind[1] - 6 * px);
+      }
     }
     ctx.restore();
 
@@ -361,6 +390,34 @@ function spatieer(s: string) {
 function hex(k: string): [number, number, number] {
   const n = parseInt(k.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function diploKleur(t: Toestand, e: string): string {
+  const s = t.speler;
+  if (e === s) return DIPLO.eigen;
+  if (t.facties[e]?.heer === s) return DIPLO.vazal;
+  if (t.facties[s]?.heer === e) return DIPLO.heer;
+  if (inOorlog(t, e, s)) return DIPLO.vijand;
+  if (bevriend(t, e, s)) return DIPLO.bond;
+  if ((t.bestand[paar(hoofd(t, e), hoofd(t, s))] ?? 0) > t.dag) return DIPLO.bestand;
+  return DIPLO.neutraal;
+}
+
+/** opbrengst per 100 km²: licht (arm) naar donker (rijk) */
+function welvaartKleur(x: number): string {
+  const f = Math.max(0, Math.min(1, Math.log10(1 + x) / 1.6));
+  return meng('#efe6c4', '#2f6b3a', f);
+}
+
+/** de legende bij de huidige kaartsoort */
+export function legende(soort: Kaartsoort): [string, string][] {
+  switch (soort) {
+    case 'terrein': return Object.entries(TERREINKLEUR).map(([t, k]) => [k, TERREIN[t as Terrein].naam]);
+    case 'tevredenheid': return [[tevredenheidKleur(10), 'Opstandig (onder 25)'], [tevredenheidKleur(45), 'Morrend'], [tevredenheidKleur(80), 'Tevreden']];
+    case 'diplomatie': return [[DIPLO.eigen, 'Jij'], [DIPLO.vazal, 'Onder jou'], [DIPLO.heer, 'Jouw heer'], [DIPLO.bond, 'Bondgenoot'], [DIPLO.vijand, 'Vijand'], [DIPLO.bestand, 'Bestand'], [DIPLO.neutraal, 'Neutraal']];
+    case 'welvaart': return [[welvaartKleur(0.5), 'Arm'], [welvaartKleur(4), 'Gewoon'], [welvaartKleur(30), 'Rijk']];
+    default: return [];
+  }
 }
 
 /** rood (ontevreden) over geel naar groen (tevreden) */

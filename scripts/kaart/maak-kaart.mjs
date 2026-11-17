@@ -207,7 +207,9 @@ async function main() {
       // enkel Zeeuws-Vlaanderen: het deel ten zuiden van de Westerschelde
       polys = polys.filter((poly) => terug(zwaartepunt(poly[0]))[1] < 51.4);
     }
-    const naam = p.adm0_a3 === 'NLD' && p.name === 'Limburg' ? 'Nederlands-Limburg' : NAAM_NL[p.name] ?? p.name;
+    const naam = p.adm0_a3 === 'LUX' ? 'Groothertogdom Luxemburg'
+      : p.adm0_a3 === 'NLD' && p.name === 'Limburg' ? 'Nederlands-Limburg'
+        : p.name === 'Brussels' ? 'Brussel' : NAAM_NL[p.name] ?? p.name;
     gebieden.push({ naam, land: p.adm0_a3, polys });
   }
   const land = pc.union(...gebieden.map((g) => g.polys));

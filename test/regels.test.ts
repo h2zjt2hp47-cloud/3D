@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { kaart, vakBij } from '../src/kaart/kaart';
 import { dagStap, geefBevel, roepOp, splits, voegSamen, zoekPad } from '../src/spel/regels';
-import { nieuwLeger, nieuwSpel } from '../src/spel/romeinen';
+import { nieuwSpel } from '../src/spel/verloop';
+import { nieuwLeger } from '../src/spel/tijdperk';
 import { inOorlog, vakkenVan } from '../src/spel/toestand';
 import { kies, volgendeDag } from '../src/spel/verloop';
 
@@ -12,7 +13,7 @@ describe('startsituatie', () => {
     expect(inOorlog(t, 'remi', 'eburonen')).toBe(true);
     expect(inOorlog(t, 'rome', 'treveri')).toBe(false);
     expect(inOorlog(t, 'nerviers', 'eburonen')).toBe(false);
-    for (const id of Object.keys(t.facties)) if (id !== 'rome') expect(vakkenVan(t, id).length).toBeGreaterThan(3);
+    for (const id of Object.keys(t.facties)) if (id !== 'rome' && id !== 'franken') expect(vakkenVan(t, id).length).toBeGreaterThan(3);
   });
 });
 
@@ -64,7 +65,7 @@ describe('verloop', () => {
       while (t.wachtend.length) kies(t, kaart, t.wachtend[0].id, 0);
       volgendeDag(t, kaart);
     }
-    expect(t.gedaan).toContain('ambiorix54');
+    expect(t.gedaan).toContain('ambiorix');
     expect(inOorlog(t, 'treveri', 'rome') || t.facties.treveri.heer === 'rome' || !t.facties.treveri.bestaat).toBe(true);
   });
   it('verdwijnt je volk, dan speel je verder als de opvolger', () => {

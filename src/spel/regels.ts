@@ -2,12 +2,17 @@
 import { kaart as standaardKaart, afstand, TERREIN, type Kaart } from '../kaart/kaart';
 import { seizoenVan } from './kalender';
 import { OPROEPKOST, werkBouwAf } from './economie';
+import { prijsfactor, rang } from './volgorde';
 import {
   bevriend, inOorlog, kans, legersIn, meld, vakkenVan, verklaarOorlog, wie,
-  type Leger, type Toestand,
+  hoofd, paar, wijzigOpinie, type Leger, type Soort, type Toestand,
 } from './toestand';
 
-export const SNELHEID_KM_PER_DAG = { rijk: 20, stam: 16 };
+export const SNELHEID_KM_PER_DAG: Record<Soort, number> = { rijk: 20, staat: 18, stam: 16 };
+/** legers worden sneller door de eeuwen (wegen, paarden, treinen, motoren) */
+const TIJDSNELHEID = [1, 1, 1, 1.05, 1.1, 1.15, 1.2, 1.3, 1.6, 2.2, 3];
+/** hoeveel troepen een vak kan voeden groeit met landbouw, wegen en later treinen */
+const VOORRAAD = [2, 1.5, 1.5, 1.5, 1.8, 2.2, 2.6, 3.5, 6, 20, 30];
 const TERUGTREKKEN_ONDER = 0.3;
 
 // ---------- toegang en paden ----------
@@ -21,7 +26,7 @@ export function toegang(t: Toestand, f: string, vak: number): boolean {
 /** dagen om van vak a naar buurvak b te trekken */
 export function reisdagen(t: Toestand, k: Kaart, f: string, a: number, b: number): number {
   const soort = t.facties[f].soort;
-  let d = afstand(k, a, b) / (SNELHEID_KM_PER_DAG[soort] * TERREIN[k.vakken[b].terrein].snelheid);
+  let d = afstand(k, a, b) / (SNELHEID_KM_PER_DAG[soort] * TIJDSNELHEID[rang(t.tijdperk)] * TERREIN[k.vakken[b].terrein].snelheid);
   if (k.vakken[a].rivierBuren.includes(b)) d += 1.5;
   const wegen = t.vakken[a].weg + t.vakken[b].weg;
   if (wegen) d *= wegen === 2 ? 0.6 : 0.8;
@@ -112,6 +117,10 @@ function beweeg(t: Toestand, k: Kaart) {
       l.vak = volgend;
       l.pad.shift();
       l.voortgang = 0;
+      // in de moderne tijd valt een onverdedigd vak zonder vesting meteen bij een doortocht
+      const v = t.vakken[volgend];
+      if (rang(t.tijdperk) >= rang('belgie') && inOorlog(t, l.factie, v.eigenaar) && !(v.fort && v.garnizoen > 0)
+        && !legersIn(t, volgend).some((x) => inOorlog(t, x.factie, l.factie))) verover(t, k, volgend, l.factie);
     }
   }
 }
@@ -151,7 +160,14 @@ function vecht(t: Toestand, k: Kaart) {
       const verliezers = blijftA.length ? kantB : kantA;
       for (const l of winnaars) { l.moraal = Math.min(1, l.moraal + 0.08); l.inStrijd = false; }
       if (winnaars.length) {
-        meld(t, `Slag bij ${k.vakken[vak].naam}: overwinning voor ${wie(t, winnaars[0].factie)} tegen ${wie(t, verliezers[0].factie)}.`, 'slag', vak);
+        const w = hoofd(t, winnaars[0].factie), v = hoofd(t, verliezers[0].factie);
+        const o = t.oorlogen[paar(w, v)];
+        if (o) o.slagen[w] = (o.slagen[w] ?? 0) + 1;
+        const gewicht = Math.min(1, verliezers.reduce((s, l) => s + l.sterkte, 0) / (8000 * prijsfactor(t.tijdperk)));
+        t.facties[v].moeheid = Math.min(100, t.facties[v].moeheid + (0.5 + 2 * gewicht) * (t.facties[v].soort === 'rijk' ? 0.5 : 1));
+        t.facties[w].moeheid = Math.min(100, t.facties[w].moeheid + 0.3 * gewicht);
+        wijzigOpinie(t, w, v, -2);
+        meld(t, `Slag bij ${k.vakken[vak].naam}: overwinning voor ${wie(t, winnaars[0].factie)} tegen ${wie(t, verliezers[0].factie)}.`, 'slag', vak, [...new Set([...winnaars, ...verliezers].map((l) => l.factie))]);
       }
     }
   }
@@ -202,7 +218,7 @@ function bezet(t: Toestand, k: Kaart) {
       l.sterkte *= 0.9995;
       if (v.garnizoen <= 0) verover(t, k, l.vak, l.factie);
     } else {
-      v.bezetting += (Math.min(1, l.sterkte / 2000) / 8) * TERREIN[k.vakken[l.vak].terrein].snelheid;
+      v.bezetting += (Math.min(1, l.sterkte / (2000 * prijsfactor(t.tijdperk))) / 8) * TERREIN[k.vakken[l.vak].terrein].snelheid * TIJDSNELHEID[rang(t.tijdperk)];
       if (v.bezetting >= 1) verover(t, k, l.vak, l.factie);
     }
   }
@@ -212,6 +228,9 @@ function bezet(t: Toestand, k: Kaart) {
 export function verover(t: Toestand, k: Kaart, vak: number, f: string) {
   const v = t.vakken[vak];
   const oud = v.eigenaar;
+  // bevrijding: land van een bondgenoot gaat terug naar die bondgenoot
+  const terug = v.oorsprong !== f && t.facties[v.oorsprong]?.bestaat && bevriend(t, f, v.oorsprong) && inOorlog(t, v.oorsprong, oud);
+  if (terug) f = v.oorsprong;
   v.eigenaar = f;
   v.bezetter = null;
   v.bezetting = 0;
@@ -222,10 +241,14 @@ export function verover(t: Toestand, k: Kaart, vak: number, f: string) {
   // buit
   const buit = Math.round(v.bevolking / 1000 * (v.fort ? 6 : 2));
   t.facties[f].schat += buit;
-  if (oud !== f) t.facties[oud].schat = Math.max(-50, t.facties[oud].schat - buit / 2);
-  if (v.fortNaam) meld(t, `${v.fortNaam} valt in handen van ${wie(t, f)}.`, 'verovering', vak);
-  else if (t.facties[oud].hoofdstad === vak) meld(t, `${k.vakken[vak].naam}, de hoofdplaats van ${wie(t, oud)}, valt in handen van ${wie(t, f)}.`, 'verovering', vak);
-  if (!vakkenVan(t, oud).length && !t.legers.some((l) => l.factie === oud && l.sterkte >= 50) && t.facties[oud].soort === 'stam') {
+  if (oud !== f) {
+    t.facties[oud].schat = Math.max(-50, t.facties[oud].schat - buit / 2);
+    t.facties[oud].moeheid = Math.min(100, t.facties[oud].moeheid + 1);
+  }
+  if (!v.fortNaam && t.facties[oud].hoofdstad !== vak && (oud === t.speler || f === t.speler)) meld(t, `${k.vakken[vak].naam} valt in handen van ${wie(t, f)}.`, 'verovering', vak, [f, oud]);
+  if (v.fortNaam) meld(t, `${v.fortNaam} valt in handen van ${wie(t, f)}.`, 'verovering', vak, [f, oud]);
+  else if (t.facties[oud].hoofdstad === vak) meld(t, `${k.vakken[vak].naam}, de hoofdplaats van ${wie(t, oud)}, valt in handen van ${wie(t, f)}.`, 'verovering', vak, [f, oud]);
+  if (!vakkenVan(t, oud).length && !t.legers.some((l) => l.factie === oud && l.sterkte >= 50) && t.facties[oud].soort !== 'rijk') {
     verdwijn(t, oud, f);
   }
 }
@@ -235,8 +258,11 @@ export function verdwijn(t: Toestand, f: string, door: string) {
   if (!fac.bestaat) return;
   fac.bestaat = false;
   t.legers = t.legers.filter((l) => l.factie !== f);
+  for (const p of t.oorlog.filter((x) => x.split('|').includes(f))) delete t.oorlogen[p];
   t.oorlog = t.oorlog.filter((p) => !p.split('|').includes(f));
-  meld(t, `De ${fac.naam} houden op te bestaan als vrij volk; hun land is in handen van ${wie(t, door)}.`, 'verovering');
+  t.bond = t.bond.filter((p) => !p.split('|').includes(f));
+  for (const ander of Object.values(t.facties)) if (ander.heer === f) ander.heer = null;
+  meld(t, `${fac.naam} verdwijnt als zelfstandige macht; het land is in handen van ${wie(t, door)}.`, 'verovering');
 }
 
 function onderhoud(t: Toestand, k: Kaart) {
@@ -247,8 +273,8 @@ function onderhoud(t: Toestand, k: Kaart) {
   for (const f of Object.values(t.facties)) {
     if (!f.bestaat) continue;
     f.mankracht += (aanwas[f.id] ?? 0) * (f.heer ? 0.3 : 1);
-    if (f.id === 'rome') f.mankracht += 8;
-    f.mankracht = Math.min(f.mankracht, 40000);
+    if (f.buiten && !f.heer) f.mankracht += f.buiten.doelSterkte / 4000;
+    f.mankracht = Math.min(f.mankracht, 40000 * prijsfactor(t.tijdperk));
   }
   // per vak: hoeveel troepen kan het land voeden?
   const inVak = new Map<number, number>();
@@ -259,7 +285,7 @@ function onderhoud(t: Toestand, k: Kaart) {
     // geen soldij: de moed zakt
     if (t.facties[l.factie].schat < 0) l.moraal = Math.max(0.2, l.moraal - 0.035);
     let uitputting = eigen ? 0 : winter ? 0.0015 : 0.0003;
-    const voorraad = TERREIN[k.vakken[l.vak].terrein].voorraad * (winter ? 0.6 : 1);
+    const voorraad = TERREIN[k.vakken[l.vak].terrein].voorraad * (winter ? 0.6 : 1) * VOORRAAD[rang(t.tijdperk)];
     const totaal = inVak.get(l.vak) ?? 0;
     if (totaal > voorraad) uitputting += 0.002 * (totaal / voorraad - 1);
     l.sterkte *= 1 - uitputting;
@@ -278,16 +304,16 @@ function onderhoud(t: Toestand, k: Kaart) {
   }
 }
 
-export const oproepKost = (sterkte: number) => Math.round((sterkte / 1000) * OPROEPKOST);
+export const oproepKost = (sterkte: number, t?: Toestand) => Math.round((sterkte / 1000) * OPROEPKOST * (t ? prijsfactor(t.tijdperk) : 1));
 
 /** een nieuw leger oproepen in een eigen vak */
 export function roepOp(t: Toestand, f: string, vak: number, sterkte: number): Leger | null {
   const fac = t.facties[f];
   if (t.vakken[vak].eigenaar !== f || fac.mankracht < sterkte || sterkte < 500 || fac.heer) return null;
-  if (fac.schat < oproepKost(sterkte)) return null;
+  if (fac.schat < oproepKost(sterkte, t)) return null;
   if (legersIn(t, vak).some((l) => inOorlog(t, l.factie, f))) return null;
   fac.mankracht -= sterkte;
-  fac.schat -= oproepKost(sterkte);
+  fac.schat -= oproepKost(sterkte, t);
   const id = t.volgendLeger++;
   const l: Leger = { id, naam: `${fac.naam}, leger ${id}`, factie: f, vak, sterkte, moraal: 0.6, pad: [], voortgang: 0, overgestoken: 0, inStrijd: false };
   t.legers.push(l);
@@ -318,3 +344,42 @@ export function splits(t: Toestand, l: Leger): Leger | null {
 }
 
 export { verklaarOorlog };
+
+/** dagen tot een leger op zijn bestemming is */
+export function dagenTotAankomst(t: Toestand, k: Kaart, l: Leger): number {
+  if (!l.pad.length) return 0;
+  let d = (1 - l.voortgang) * reisdagen(t, k, l.factie, l.vak, l.pad[0]);
+  for (let i = 1; i < l.pad.length; i++) d += reisdagen(t, k, l.factie, l.pad[i - 1], l.pad[i]);
+  return Math.ceil(d);
+}
+
+/** een ruwe voorspelling van een slag: onze legers tegen de vijanden in een vak */
+export function voorspelSlag(t: Toestand, k: Kaart, eigen: Leger[], vak: number): { oordeel: 'goed' | 'gelijk' | 'slecht'; verhouding: number; redenen: [string, string][] } | null {
+  if (!eigen.length) return null;
+  const f = eigen[0].factie;
+  const vijand = legersIn(t, vak).filter((l) => inOorlog(t, l.factie, f));
+  if (!vijand.length) return null;
+  const terrein = TERREIN[k.vakken[vak].terrein];
+  const verdedigt = bevriend(t, vijand[0].factie, t.vakken[vak].eigenaar);
+  const rivier = eigen.some((l) => {
+    const vorige = l.pad.length >= 2 ? l.pad[l.pad.length - 2] : l.vak;
+    return vorige !== vak && k.vakken[vorige].rivierBuren.includes(vak);
+  });
+  const mijn = eigen.reduce((s, l) => s + l.sterkte * t.facties[l.factie].kwaliteit * (0.4 + 0.6 * l.moraal), 0) * (rivier ? 0.7 : 1);
+  const hun = vijand.reduce((s, l) => s + kracht(t, l), 0) * (verdedigt ? terrein.verdediging : 1);
+  const verhouding = mijn / Math.max(1, hun);
+  const redenen: [string, string][] = [
+    ['Jouw mannen', `${Math.round(eigen.reduce((s, l) => s + l.sterkte, 0))}`],
+    ['Hun mannen', `${Math.round(vijand.reduce((s, l) => s + l.sterkte, 0))}`],
+    ['Jouw kwaliteit', `×${t.facties[f].kwaliteit.toFixed(2)}`],
+    ['Hun kwaliteit', `×${t.facties[vijand[0].factie].kwaliteit.toFixed(2)}`],
+  ];
+  if (verdedigt) redenen.push([`Zij verdedigen: ${terrein.naam.toLowerCase()}`, `×${terrein.verdediging.toFixed(2)}`]);
+  if (rivier) redenen.push(['Jij steekt een rivier over', '×0,70']);
+  return { oordeel: verhouding > 1.3 ? 'goed' : verhouding > 0.8 ? 'gelijk' : 'slecht', verhouding, redenen };
+}
+
+/** hoe groot een leger mag zijn voor het uitgeput raakt in een gewoon vak */
+export function legerMaat(t: Toestand): number {
+  return TERREIN.vlakte.voorraad * VOORRAAD[rang(t.tijdperk)];
+}

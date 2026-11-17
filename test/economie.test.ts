@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { kaart } from '../src/kaart/kaart';
 import { bouw, inkomenVak, kanBouwen, maandEconomie, rekening, tevredenheidDoel } from '../src/spel/economie';
 import { dagStap, roepOp, verover } from '../src/spel/regels';
-import { nieuwSpel } from '../src/spel/romeinen';
+import { nieuwSpel } from '../src/spel/verloop';
 import { migreer, vakkenVan } from '../src/spel/toestand';
 
 describe('economie', () => {
@@ -39,7 +39,7 @@ describe('economie', () => {
     expect(kanBouwen(t, 'nerviers', i, 'landbouw')).toMatch(/al gebouwd/);
     for (let d = 0; d < 181; d++) dagStap(t, kaart);
     expect(t.vakken[i].markt).toBe(1);
-    expect(kanBouwen(t, 'nerviers', i, 'weg')).toMatch(/rijk/);
+    expect(kanBouwen(t, 'nerviers', i, 'weg')).toMatch(/Rome/);
   });
   it('een veroverd vak onder vreemd bestuur kan in opstand komen', () => {
     const t = nieuwSpel('rome', 3);
@@ -58,7 +58,7 @@ describe('economie', () => {
     const oud = JSON.parse(JSON.stringify({ ...t, versie: 1 }));
     for (const f of Object.values(oud.facties as Record<string, Record<string, unknown>>)) { delete f.schat; delete f.belasting; }
     const nieuw = migreer(oud)!;
-    expect(nieuw.versie).toBe(2);
+    expect(nieuw.versie).toBe(3);
     expect(nieuw.facties.rome.schat).toBe(100);
   });
 });

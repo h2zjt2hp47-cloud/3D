@@ -1,6 +1,6 @@
 // De computerspelers: eenvoudige regels, om de paar dagen per factie.
 import { kaart as standaardKaart, type Kaart } from '../kaart/kaart';
-import { bereik, geefBevel, kracht, roepOp, voegSamen, zoekPad } from './regels';
+import { bereik, geefBevel, kracht, legerMaat, roepOp, splits, voegSamen, zoekPad } from './regels';
 import { OPROEPKOST, rekening, SOLDIJ } from './economie';
 import { bevriend, inOorlog, legersIn, vakkenVan, type Leger, type Toestand } from './toestand';
 
@@ -26,7 +26,18 @@ export function kiBeurt(t: Toestand, f: string, k: Kaart = standaardKaart) {
   const stil = t.legers.filter((l) => l.factie === f && !l.pad.length && !l.inStrijd);
   const perVak = new Map<number, Leger[]>();
   for (const l of stil) { if (!perVak.has(l.vak)) perVak.set(l.vak, []); perVak.get(l.vak)!.push(l); }
-  for (const groep of perVak.values()) if (groep.length > 1) voegSamen(t, groep);
+  const maat = legerMaat(t);
+  for (const groep of perVak.values()) {
+    if (groep.length < 2) continue;
+    // samenvoegen zolang het leger niet te groot wordt om te voeden
+    groep.sort((a, b) => b.sterkte - a.sterkte);
+    let kern = groep[0];
+    for (const l of groep.slice(1)) {
+      if (kern.sterkte + l.sterkte <= maat) kern = voegSamen(t, [kern, l]) ?? kern;
+    }
+  }
+  // te grote legers splitsen, zodat ze meer vakken tegelijk kunnen innemen
+  for (const l of t.legers.filter((x) => x.factie === f && !x.pad.length && !x.inStrijd && x.sterkte > maat * 1.2)) splits(t, l);
 
   const doelen = new Map<number, number>();
   for (const l of t.legers.filter((x) => x.factie === f && !x.inStrijd)) {
@@ -52,6 +63,7 @@ function kiesDoel(t: Toestand, k: Kaart, l: Leger, doelen: Map<number, number>):
   const f = l.factie;
   const mijn = kracht(t, l);
   const bereikt = bereik(t, k, f, l.vak, 40);
+  const gemiddeld = t.vakken.reduce((s, v) => s + v.bevolking, 0) / t.vakken.length;
   let beste: number | null = null, besteScore = 0;
   for (const [vak, dagen] of bereikt) {
     const v = t.vakken[vak];
@@ -65,11 +77,12 @@ function kiesDoel(t: Toestand, k: Kaart, l: Leger, doelen: Map<number, number>):
     if (dreiging * terrein > mijn * 0.9) continue;
     let waarde = 0;
     if (vijandsLand) {
-      waarde += 1 + v.bevolking / 6000;
+      waarde += 1 + v.bevolking / gemiddeld;
       if (v.fort) waarde += 2.5 * Math.max(0.2, 1 - v.garnizoen / (mijn * 0.5 + 1));
       if (t.facties[v.eigenaar].hoofdstad === vak) waarde += 3;
     }
-    if (vijandHier > 0) waarde += 4;
+    // een groot leger jaagt niet op kleine benden
+    if (vijandHier > 0) waarde += 4 * Math.min(1, vijandHier / (mijn * 0.3));
     if (doelen.has(vak)) waarde *= 0.4;
     const score = waarde / (dagen + 4);
     if (score > besteScore) { besteScore = score; beste = vak; }
