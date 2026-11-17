@@ -12,8 +12,9 @@ import {
 } from './dak.js';
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
 import type { WoningOpbouw, WoningOpbouwCatalogus } from './opbouw.js';
-import { controleerLosseWanden, losseWandBlokken, type LosseWand } from './lossewand.js';
+import { controleerLosseWanden, losseWandBlokken, losseWandRuimte, type LosseWand } from './lossewand.js';
 import { strokenVan, strookBlokken, type GevelStrook } from './gevelstroken.js';
+import { binnenKant, draaiKwart, isAccent, meubelIn, plafondBlokken, plintBlokken } from './binnenafwerking.js';
 import {
   toestelMaten, leidingVerloop, techniekBlokken, toestelBlokken, toestelVoetafdruk, voorRichting,
   type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
@@ -68,7 +69,22 @@ export interface Ruimte {
    * bestaande gevel: niet gebouwd (een opening erin wel). Alleen `true` telt; ontbreekt = nieuw, zoals altijd.
    */
   bestaand?: boolean;
+  /**
+   * Binnenafwerking (ronde 12), alle drie optioneel; ontbreekt = zoals vroeger (geen plint, geen eigen plafond, geen
+   * accentmuur). `plafond` en `plint`: codes uit `PlanCatalogus.plafonds` en `.plinten`.
+   */
+  plafond?: string;
+  plint?: string;
+  /** Eén kant van de ruimte in een andere wandafwerking (een accentmuur), zie `RuimteAccent`. */
+  accent?: RuimteAccent;
 }
+
+/**
+ * Accentmuur (ronde 12): de muren aan één kant van de ruimte (`kant` zoals op het plan: boven, onder, links of rechts;
+ * een schuine muur telt bij de dichtste kant, zoals `buitenKant`) krijgen aan de binnenkant de afwerking `wand` (een code
+ * uit `PlanCatalogus.wanden`). Zie `binnenKant`.
+ */
+export interface RuimteAccent { kant: GevelKant; wand: string }
 
 export interface Rechthoek { x: number; y: number; b: number; d: number }
 /** Een punt op het plan [x, y] (cm). */
@@ -394,7 +410,23 @@ export interface PlanCatalogus {
   techniek?: TechniekCatalogus;
   /** Opbouwen van wanden, vloeren en daken (constructie.ts); zonder deze catalogus is er geen constructieweergave. */
   opbouw?: WoningOpbouwCatalogus;
+  /** Plafonds en plinten (ronde 12, binnenafwerking); zonder deze lijsten tellen `Ruimte.plafond` en `.plint` niet. */
+  plafonds?: Record<string, PlafondType>;
+  plinten?: Record<string, PlintType>;
 }
+
+/**
+ * Een plafond (ronde 12): soort en kleur zoals een wand. `verlaagd` = zoveel cm onder de muurhoogte (een verlaagd plafond,
+ * de ruimte erboven blijft leeg); `spots` = inbouwspots in een raster (alleen in de 3D van binnen).
+ */
+export interface PlafondType { label: string; soort: BlokSoort; kleur: string; verlaagd?: number; spots?: boolean }
+
+/**
+ * Een plint (ronde 12): een lijst onderaan de binnenkant van de muren, `hoogte` in cm. `zoalsVloer`: in de soort en de
+ * kleur van de vloer als die vloer die soort heeft (een houten plint bij parket, een tegelplint bij een tegelvloer), anders
+ * in de eigen soort en kleur.
+ */
+export interface PlintType { label: string; soort: BlokSoort; kleur: string; hoogte: number; zoalsVloer?: boolean }
 
 export type MeubelVorm =
   | 'bank' | 'fauteuil' | 'tafel' | 'stoel' | 'bed' | 'nachtkast' | 'kast' | 'keuken' | 'eiland' | 'koelkast'
@@ -778,6 +810,20 @@ function zetDelen(r: Ruimte, delen: Deel[]) {
   if (rest.length) r.delen = rest; else delete r.delen;
 }
 
+/** Het omsluitende kader van de delen van een ruimte. */
+function delenKader(delen: Deel[]): Rechthoek {
+  const x = Math.min(...delen.map((p) => p.x)), y = Math.min(...delen.map((p) => p.y));
+  return { x, y, b: Math.max(...delen.map((p) => p.x + p.b)) - x, d: Math.max(...delen.map((p) => p.y + p.d)) - y };
+}
+
+/** Ligt kader `a` nog aan dezelfde kant als kader `oud` (dezelfde rand)? */
+function aanKant(a: Rechthoek, oud: Rechthoek, kant: GevelKant): boolean {
+  if (kant === 'boven') return gelijk(a.y, oud.y);
+  if (kant === 'onder') return gelijk(a.y + a.d, oud.y + oud.d);
+  if (kant === 'links') return gelijk(a.x, oud.x);
+  return gelijk(a.x + a.b, oud.x + oud.b);
+}
+
 /**
  * Tekent een nieuwe ruimte, ook bovenop bestaande ruimtes: wat overlapt, wordt uit die ruimtes
  * weggesneden ("ruimte in ruimte"). De rest van een ruimte kan zo een L- of U-vorm krijgen.
@@ -871,10 +917,14 @@ export function splitsRuimtes(
       else { blijft.push({ ...p, d: lijn - p.y }); gaat.push({ ...p, y: lijn, d: p.y + p.d - lijn }); }
     }
     if (!gaat.length) continue;
+    const oudKader = delenKader(delenVan(r));
     zetDelen(r, blijft);
     const b = nieuweRuimte(r);
     b.niveau = niveau;
     zetDelen(b, gaat);
+    // Ronde 12: een accentmuur blijft alleen bij het stuk dat nog aan die kant van de oude ruimte ligt (anders zou de
+    // nieuwe wand ze krijgen).
+    for (const x of [r, b]) if (x.accent && !aanKant(delenKader(delenVan(x)), oudKader, x.accent.kant)) delete x.accent;
     plan.ruimtes.push(b);
     erfGevel(plan, r.id, b.id);
     nieuw.push(b);
@@ -2337,6 +2387,49 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
   return { blokken, kader };
 }
 
+/** Opties voor één ruimte van binnen (ronde 12). */
+export interface BinnenOpties {
+  /** De kant die open blijft (daar kijkt de camera door naar binnen); standaard tegenover de accentmuur, anders onder. */
+  open?: GevelKant;
+  inhoud?: (o: Opening) => OpeningInhoud | undefined;
+  meubels?: boolean;
+  /** Aantikken: vloer, plafond en plint horen bij `ruimte:<id>`, een muur bij `ruimte:<id>:<kant>` (de kant van de ruimte). */
+  dingen?: boolean;
+}
+
+/** De kant die standaard open blijft: tegenover de accentmuur (zodat je ze ziet), anders de onderkant van het plan. */
+export function openKantVan(r: Ruimte): GevelKant {
+  const tegen: Record<GevelKant, GevelKant> = { boven: 'onder', onder: 'boven', links: 'rechts', rechts: 'links' };
+  return r.accent ? tegen[r.accent.kant] : 'onder';
+}
+
+/**
+ * Eén ruimte van binnen (ronde 12): haar vloer, haar muren in hun afwerking (ook de accentmuur), de ramen en deuren
+ * erin, de plint, de meubels, en het plafond met de plaat erboven; de muren aan één kant (`open`) weg, zoals een snede.
+ * De scène is gedraaid zodat die open kant naar de camera van *Ooghoogte* kijkt (de +z-kant): wie ze toont, zet daarna
+ * dat standpunt en ziet zo de vloer, de muren en het plafond van onder. Op de vloer gezet (een verdieping zakt), zonder de
+ * rand van de vloerplaat. Hetzelfde `niveau3D` als de woning, met een filter: er is geen tweede manier van tekenen.
+ * Een vereenvoudiging: onder een hellend dak een vlak plafond op de muurhoogte.
+ */
+export function ruimteVanBinnen(plan: Plattegrond, cat: PlanCatalogus, id: string, opties: BinnenOpties = {}): Scene3D | undefined {
+  const r = plan.ruimtes.find((x) => x.id === id);
+  if (!r) return undefined;
+  const n = niveauVan(r);
+  const p = niveauPlan(plan, n);
+  const open = opties.open ?? openKantVan(r);
+  const o3: Plan3DOpties = { meubels: opties.meubels, inhoud: opties.inhoud, dingen: opties.dingen };
+  const blokken = niveau3D(p, cat, o3, (x) => [x], n, false, (v) => [v], { ruimte: id, open: [open] });
+  // Een trap in de ruimte gaat door het plafond: daar een gat.
+  const gaten = p.meubels.filter((m) => m.type === 'trap' && meubelIn(r, m)).map(meubelVoetafdruk);
+  const muren = murenVan(p).filter((m) => binnenKant(m, id) && binnenKant(m, id) !== open);
+  const dikte = muren.length ? Math.max(...muren.map((m) => m.dikte)) : plan.buitenmuur;
+  blokken.push(...plafondBlokken(p, cat, r, { open: [open], gaten, dikte, code: (c) => metDing(o3, `ruimte:${id}`, c) }));
+  // Draaien: de open kant naar +z (onder op het plan), rond het midden van de ruimte.
+  const kwart: Record<GevelKant, number> = { onder: 0, rechts: 1, boven: 2, links: 3 };
+  const gedraaid = draaiKwart(blokken, kwart[open], [r.x + r.b / 2, r.y + r.d / 2]);
+  return { blokken: gedraaid, kader: kaderVan(gedraaid) };
+}
+
 /**
  * De toestellen die je buiten ziet (`Plan3DOpties.techniekBuiten`, `toestelBuiten`), op hun echte maat en zonder
  * merkteken. Wat niet getoond wordt: een verdieping boven `totNiveau`; op de bovenste getoonde verdieping met lage muren
@@ -2574,7 +2667,13 @@ function aanlegBlokken(plan: Plattegrond): Blok[] {
 }
 
 /** Eén verdieping (vloer op y = 0). */
-function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, zonderGaten: (r: Rechthoek) => Rechthoek[], n = 0, onderHellendDak = false, zonderGatenVorm: (v: Punt[]) => Punt[][] = (v) => [v]): Blok[] {
+/**
+ * Eén ruimte van binnen (ronde 12): alleen haar vloer, haar muren (niet die aan de kanten in `open`), de ramen en deuren
+ * erin, haar plint en haar meubels. Zie `ruimteVanBinnen`.
+ */
+interface BinnenFilter { ruimte: string; open: GevelKant[] }
+
+function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, zonderGaten: (r: Rechthoek) => Rechthoek[], n = 0, onderHellendDak = false, zonderGatenVorm: (v: Punt[]) => Punt[][] = (v) => [v], binnen?: BinnenFilter): Blok[] {
   const blokken: Blok[] = [];
   const muren = murenVan(plan);
   const H = plan.muurhoogte;
@@ -2583,11 +2682,12 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   const ruimte = new Map(plan.ruimtes.map((r) => [r.id, r]));
   // Bestaand en tegen de buren (ronde 11): neutraal. Zonder bestaande ruimte of buren is alles zoals vroeger.
   const oud = heeftBestaand(plan);
-  const wandVan = (id?: string): GevelAfwerking => {
+  const wandVan = (id?: string, m?: Muur): GevelAfwerking => {
     const r = id ? ruimte.get(id) : undefined;
     if (!r) return plan.gevel;
     if (r.bestaand === true) return { soort: 'gevel', kleur: NEUTRAAL.binnen };
-    const w = cat.wanden[r.wand];
+    // Ronde 12: de accentmuur van de ruimte (de muren aan één kant) in haar eigen afwerking. Zonder: zoals vroeger.
+    const w = cat.wanden[m && isAccent(r, m) ? r.accent!.wand : r.wand] ?? cat.wanden[r.wand];
     return w ? { soort: w.soort, kleur: w.kleur } : { soort: 'gevel' as BlokSoort, kleur: pleister };
   };
   const knip = (b: Blok): Blok | undefined => {
@@ -2601,6 +2701,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
 
   // Vloeren (met trapgat). Een vrije vorm is een prisma met haar grondvlak; de textuur volgt haar langste muur.
   for (const r of plan.ruimtes) {
+    if (binnen && r.id !== binnen.ruimte) continue;
     const v = r.bestaand === true ? { soort: 'gevel' as BlokSoort, kleur: NEUTRAAL.vloer } : cat.vloeren[r.vloer];
     for (const deel of delenVan(r)) {
       if (deel.omtrek) {
@@ -2626,13 +2727,16 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   // Muren met openingen.
   const muurAfw = new Map(muren.map((x) => [x.id, x]));
   for (const m of muren) {
+    // Eén ruimte van binnen: alleen haar muren, niet die aan een open kant.
+    const kantBinnen = binnen ? binnenKant(m, binnen.ruimte) : undefined;
+    if (binnen && (!kantBinnen || binnen.open.includes(kantBinnen))) continue;
     const vlak = muurVlak(m, muren);
-    const plusWand = wandVan(m.plus), minWand = wandVan(m.min);
+    const plusWand = wandVan(m.plus, m), minWand = wandVan(m.min, m);
     // Een schuine muur: begin en einde van haar grondvlak langs haar as.
     const langs = vlak.punten?.map((q) => opAs(m, q)[0]);
     const begin = langs ? Math.min(...langs) : m.as === 'h' ? vlak.x : vlak.y, einde = langs ? Math.max(...langs) : begin + (m.as === 'h' ? vlak.b : vlak.d);
     // Op een verdieping loopt de buitenmuur door voor de rand van de vloerplaat.
-    const onderkant = n > 0 && m.soort === 'buiten' ? -VLOERDIKTE : 0;
+    const onderkant = n > 0 && m.soort === 'buiten' && !binnen ? -VLOERDIKTE : 0;
     const stuk = (code: string, a: number, b: number, y0: number, y1: number) => {
       // Eerst verlengen (ook onder een deur op de verdieping komt de rand van de vloerplaat), dan pas de maat controleren.
       if (m.soort === 'buiten' && y0 === 0 && onderkant < 0) y0 = onderkant;
@@ -2660,11 +2764,11 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
           const R = muurAfw.get(r.muur);
           if (!R) return null;
           const ruimte = R[r.kant];
-          return ruimte ? wandVan(ruimte) : R.soort === 'buiten' ? buitenAfw(R, y0) : null;
+          return ruimte ? wandVan(ruimte, R) : R.soort === 'buiten' ? buitenAfw(R, y0) : null;
         };
         const top = onderHellendDak && buiten && y1 >= H - 0.1 ? { zijden: { 'y+': buiten } } : {};
         // Met `dingen`: een schuine buitenmuur hoort bij haar muurvlak, zoals een rechte (tik op de gevel in de 3D).
-        voeg(grondPrisma(metDing(opties, m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), 'gevel', pleister, pts, y0, y1 - y0, { randen: rnd.map(afw), ...top }));
+        voeg(grondPrisma(metDing(opties, binnen ? `ruimte:${binnen.ruimte}:${kantBinnen}` : m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), 'gevel', pleister, pts, y0, y1 - y0, { randen: rnd.map(afw), ...top }));
         return;
       }
       // Binnenmuur die tot in het gevelvlak loopt (zie `Plan3DOpties.gevelkoppen`): de buitenmuur aan haar begin en einde.
@@ -2705,7 +2809,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       // Onder een hellend dak staat op de muurkop nog een stuk gevel (topgevel): de kop krijgt dan ook gevelmateriaal,
       // anders schemert zijn witte bovenkant als een stippellijn door de naad.
       if (onderHellendDak && buiten && y1 >= H - 0.1) zijden['y+'] = buiten;
-      const base = { code: metDing(opties, m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), soort: 'gevel' as BlokSoort, vorm: 'blok' as const, kleur: pleister, zijden, y: y0, h: y1 - y0 };
+      const base = { code: metDing(opties, binnen ? `ruimte:${binnen.ruimte}:${kantBinnen}` : m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), soort: 'gevel' as BlokSoort, vorm: 'blok' as const, kleur: pleister, zijden, y: y0, h: y1 - y0 };
       voeg(m.as === 'h' ? { ...base, x: a, z: vlak.y, b: b - a, d: vlak.d } : { ...base, x: vlak.x, z: a, b: vlak.b, d: b - a });
     };
     const openingen = plan.openingen.filter((o) => muurVanOpening(o, [m]) === m).sort((a, b) => a.midden - b.midden);
@@ -2726,8 +2830,17 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     stuk(`muur_${m.id}_eind`, cursor, einde, 0, H);
   }
 
+  // Plinten (ronde 12): een lijst vóór de binnenkant van de muren, alleen in een ruimte met een plint.
+  if (cat.plinten) {
+    for (const r of plan.ruimtes) {
+      if (!r.plint || (binnen && r.id !== binnen.ruimte)) continue;
+      for (const b of plintBlokken(plan, cat, r, muren, { open: binnen?.open, code: (c) => metDing(opties, `ruimte:${r.id}`, c) })) voeg(b);
+    }
+  }
+
   // Losse wanden (ronde 2d): op hun eigen hoogte, in hun afwerking; ze delen niets op. Met `dingen`: het ding `wand:<id>`.
   for (const w of plan.losseWanden ?? []) {
+    if (binnen && losseWandRuimte(plan, w)?.id !== binnen.ruimte) continue;
     for (const b of losseWandBlokken(plan, cat, w, muren)) voeg({ ...b, code: metDing(opties, `wand:${w.id}`, b.code) });
   }
 
@@ -2736,6 +2849,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     for (const mb of plan.meubels) {
       const t = cat.meubels[mb.type];
       if (!t) continue;
+      if (binnen && !meubelIn(ruimte.get(binnen.ruimte)!, mb)) continue;
       // Een trap loopt altijd tot de vloer van de verdieping erboven.
       for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, code: metDing(opties, `meubel:${mb.id}`, b.code), y: b.y + 1.5 }, false);
     }

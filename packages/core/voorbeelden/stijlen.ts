@@ -5,7 +5,7 @@
  * (`planCatalogus`), profielen en RAL-kleuren van het raam (`raam.ts`), en de keuzes van het model AANBOUW.
  * De stijlen hieronder zijn voorbeelden, door geen aannemer nagelezen.
  */
-import { dakOpbouw, verfGevel, type DakKeuze, type GevelKeuze, type Keuzes, type Plattegrond } from '../src/index.js';
+import { binnenGekozen, dakOpbouw, verfGevel, type DakKeuze, type GevelKeuze, type Keuzes, type Plattegrond } from '../src/index.js';
 import { daklichtenOpDak, verdeelDaklichten } from './daklichten.js';
 import { berekenRaam } from './raam.js';
 
@@ -88,7 +88,8 @@ export const stijlCatalogus: Record<string, Stijl> = {
 
 /**
  * Zet een stijl op een plattegrond (een kopie; het origineel blijft ongewijzigd): de gevel van de hele woning (eigen
- * vlakken vervallen), het dak, en vloer en wandkleur van de droge ruimtes. Lichtkoepels die met het nieuwe dak niet meer
+ * vlakken vervallen), het dak, en vloer en wandkleur van de droge ruimtes (niet als de binnenafwerking van die ruimte
+ * gekozen is: een sfeer of een plafond of plint, ronde 12). Lichtkoepels die met het nieuwe dak niet meer
  * kunnen (bv. op een hellend dak), vallen weg; de rest blijft. Heeft de stijl koepels en ligt er op het grootste platte
  * dak nog geen, dan komen ze er gelijk verdeeld op.
  */
@@ -109,6 +110,8 @@ export function pasStijlToe(plan: Plattegrond, stijl: Stijl): Plattegrond {
   }
   for (const r of p.ruimtes) {
     if (r.type === 'badkamer' || r.type === 'wc') continue;
+    // Ronde 12: wie de binnenafwerking koos (een sfeer, of een plafond of plint per ruimte), houdt ze: de stijl is buiten.
+    if (binnenGekozen(r)) continue;
     r.vloer = r.type === 'garage' || r.type === 'berging' ? r.vloer : stijl.vloer;
     r.wand = stijl.wand;
   }

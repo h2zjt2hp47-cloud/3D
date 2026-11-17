@@ -72,6 +72,7 @@ export * from './zon.js';
 export * from './plattegrond.js';
 export * from './lossewand.js';
 export * from './gevelstroken.js';
+export * from './binnenafwerking.js';
 export * from './plattegrondsvg.js';
 export * from './maatinvoer.js';
 export * from './offerte.js';
