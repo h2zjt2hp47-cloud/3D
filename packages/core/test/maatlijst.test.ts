@@ -98,4 +98,11 @@ describe('maatlijst lezen (enkel ramen, zonder woning)', () => {
       expect(berekenConfiguratie(garagepoort, { ...standaardKeuzes(garagepoort), ...x.keuzes }, poortPrijslijst).geldig, x.naam).toBe(true);
     }
   });
+
+  it('"b x h" met kolommen zoals vroeger: naam vóór de maat, aantal in een eigen kolom, geen posnummer als aantal', () => {
+    const r = leesMaatlijst('Keuken 1200 x 1400\t2\nKeuken 1200 x 1400; draai-kip links\n3\tLiving 3000 x 2300\t1\n4\tBureau 1200 x 1400');
+    expect(r.regels.map((x) => [x.naam, x.aantal])).toEqual([['Keuken', 2], ['Keuken', 1], ['Living', 1], ['Bureau', 1]]);
+    expect(r.regels[1]!.keuzes).toMatchObject({ vakken: 'v1', vak1: 'draaikip_l' });
+    expect(r.regels[2]!.keuzes).toMatchObject({ type: 'raam', ruimte: 'leefruimte' });
+  });
 });

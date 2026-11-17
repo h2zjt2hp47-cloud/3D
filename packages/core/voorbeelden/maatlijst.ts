@@ -198,6 +198,15 @@ export function leesMaatlijst(tekst: string): MaatlijstResultaat {
       } else if (!kolommen) {
         const los = rest.split(/\s+/).find((c) => /^\d{1,2}$/.test(c));
         if (los) { aantal = Number(los); rest = rest.replace(new RegExp(`\\b${los}\\b`), ' '); }
+      } else if (xm) {
+        // "b x h" in een kolom ("Keuken 1200 x 1400 <tab> 2"): het aantal is het laatste kleine getal in een eigen kolom,
+        // niet een posnummer in de eerste kolom.
+        const c = ruweCellen.map((x) => x.replace(xm![0], ' ').trim()).filter(Boolean);
+        const pos = KLEIN.test(c[0] ?? '') && c.some((x, j) => j > 0 && /[a-z]/i.test(x)) ? 0 : -1;
+        const klein = c.map((x, j) => (j !== pos && KLEIN.test(x) ? j : -1)).filter((j) => j >= 0);
+        const iA = klein[klein.length - 1];
+        if (iA !== undefined) aantal = Number(c[iA]);
+        rest = c.filter((_, j) => j !== pos && j !== iA).join(' ');
       }
     }
     aantal = Math.max(1, aantal ?? 1);
@@ -206,7 +215,10 @@ export function leesMaatlijst(tekst: string): MaatlijstResultaat {
     const soort = soortVan(rest);
     // Naam: de tekst van de regel zonder maten en aantal, anders soort en maat.
     const naamTekst = (naamCel || (cellen.find((c) => /[a-zA-Z]/.test(c) && !/^\d/.test(c)) ?? '')).replace(/\s+/g, ' ').trim();
-    const naamRuw = (xm && !kolommen ? lijn.slice(0, lijn.indexOf(xm[0])).trim() : naamTekst) || `${SOORTNAAM[soort]} ${b} × ${h}`;
+    // Met "b x h": de tekst ervoor in dezelfde kolom (zoals vroeger), anders de eerste kolom met tekst.
+    const xmCel = xm ? ruweCellen.find((c) => c.includes(xm![0])) ?? lijn : '';
+    const voorMaat = xm ? xmCel.slice(0, xmCel.indexOf(xm[0])).trim() : '';
+    const naamRuw = (xm ? voorMaat || (cellen.find((c) => /[a-zA-Z]/.test(c) && !/^\d/.test(c) && !c.includes(xm![0])) ?? '').trim() : naamTekst) || `${SOORTNAAM[soort]} ${b} × ${h}`;
     const naam = naamRuw.length > 60 ? `${naamRuw.slice(0, 57)}…` : naamRuw;
 
     if (soort === 'poort') {

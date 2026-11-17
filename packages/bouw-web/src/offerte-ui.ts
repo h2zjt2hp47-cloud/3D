@@ -189,8 +189,9 @@ let laatsteBeeld: { sleutel: string; beeld: string } | null = null;
 const ontwerpSleutel = (t: ReturnType<typeof toestand>) => JSON.stringify([t.plan, t.posities.map((p) => [p.id, p.model, p.keuzes])]);
 /** Waarom er (nog) geen 3D-beeld staat, als er geen is. */
 let ontwerpZin = '';
-/** Het beeld dat nu getekend wordt (voor welke stand). */
+/** Het beeld dat nu getekend wordt (voor welke stand), en de stand waarvoor het niet lukte (niet blijven proberen). */
 let tekentVoor = '';
+let mislukt = '';
 
 /**
  * Eén verborgen kijker tekent de beelden voor het overzicht, het blad en de zending (doorsturen.ts): na elkaar, nooit
@@ -204,18 +205,26 @@ export function naElkaar<T>(f: () => Promise<T>): Promise<T> {
 }
 
 function maakOntwerpBeeld(sleutel: string) {
-  if (tekentVoor === sleutel) return;
+  if (tekentVoor === sleutel || mislukt === sleutel) return;
   tekentVoor = sleutel;
   ontwerpZin = '3D-beeld maken …';
   void naElkaar(async () => {
-    const t = toestand();
-    if (ontwerpSleutel(t) !== sleutel) return;
-    const beeld = await tekenBeeld(woningScene(undefined, false, t), { standpunt: 'schuin', buiten: true });
-    if (tekentVoor === sleutel) tekentVoor = '';
-    if (!beeld) { ontwerpZin = 'Geen 3D-beeld: de 3D werkt niet op dit toestel.'; }
-    else if (ontwerpSleutel(toestand()) === sleutel) { laatsteBeeld = { sleutel, beeld }; ontwerpZin = ''; }
-    // Het overzicht staat nog open: het beeld (of de reden) meteen tonen.
-    if (!$('#view-offerte').hidden && !toestand().meta.zonderWoning) toonOntwerp(false);
+    try {
+      const t = toestand();
+      if (ontwerpSleutel(t) !== sleutel) return;
+      const beeld = await tekenBeeld(woningScene(undefined, false, t), { standpunt: 'schuin', buiten: true });
+      if (!beeld) { ontwerpZin = 'Geen 3D-beeld: de 3D werkt niet op dit toestel.'; mislukt = sleutel; }
+      else if (ontwerpSleutel(toestand()) === sleutel) { laatsteBeeld = { sleutel, beeld }; ontwerpZin = ''; }
+    } catch (fout) {
+      // Geen rode foutmelding voor een beeld dat niet lukte: de reden staat in het vak.
+      console.warn('3D-beeld van het ontwerp', fout);
+      ontwerpZin = 'Het 3D-beeld kon niet getekend worden. Open de 3D in de plattegrond om het te maken.';
+      mislukt = sleutel;
+    } finally {
+      if (tekentVoor === sleutel) tekentVoor = '';
+      // Het overzicht staat nog open: het beeld (of de reden) meteen tonen.
+      if (!$('#view-offerte').hidden && !toestand().meta.zonderWoning) toonOntwerp(false);
+    }
   });
 }
 

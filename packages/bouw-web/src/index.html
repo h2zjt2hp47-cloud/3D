@@ -886,6 +886,12 @@ body:not(.met-prijzen) .positieprijs { display: flex; align-items: center; justi
 body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 .regelacties { margin: 2px 0 10px; }
 @media (max-width: 700px) { body:not(.met-prijzen) .positie { grid-template-columns: 64px minmax(0, 1fr); } body:not(.met-prijzen) .positieprijs { justify-content: flex-start; } }
+/* B17: Het ontwerp op een tablet: de 3D groot links, de plattegronden kleiner ernaast, zodat Meegeven hoger staat. */
+@media (min-width: 701px) and (max-width: 1000px) {
+  .ontwerpbeelden { grid-template-columns: 3fr 2fr; }
+  .ontwerpbeelden figure:first-child:not(:has(svg)) { grid-row: span 2; }
+  .ontwerpbeelden figure svg { max-height: 200px; }
+}
 /* B24: de vinkjes van "Uit de plattegrond" minstens 44 px hoog op een aanraakscherm (de algemene regel gaf 36 px). */
 @media (pointer: coarse) { #o-uitplan-kaart .schakelaars label { min-height: 44px; display: flex; align-items: center; gap: 8px; } }
 /* B19: hernoemen in Projecten (het naamveld in de lijst). */
