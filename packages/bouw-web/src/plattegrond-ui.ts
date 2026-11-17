@@ -803,8 +803,11 @@ function plaatsDaklicht(x: number, y: number) {
   kiesGereedschap('kies');
 }
 
-/** Deelt alle ruimtes die een wand kruist; minstens 60 cm aan elke kant. */
-function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number): boolean {
+/**
+ * Deelt alle ruimtes die een wand kruist; minstens 60 cm aan elke kant. `getekend` = de wand werd getrokken (gereedschap
+ * *Wand tekenen*), van `van` tot `tot`; anders een tik met *Indelen* (de hele ruimte).
+ */
+function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number, getekend = false): boolean {
   // Eerst op een kopie: komt de nieuwe wand uit op een raam, deur of poort, dan staat die niet meer op één muur
   // (16/11, doorloop A21: de garagepoort werd ongeldig zonder uitleg). Dan niet indelen, met de reden.
   const proef = structuredClone(toestand().plan);
@@ -814,7 +817,21 @@ function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number): boo
   const geraakt = proef.openingen.find((o) => niveauVan(o) === niveau && muurVanOpening(o, voor) && !muurVanOpening(o, na));
   if (geraakt) {
     const naam = ({ raam: 'een raam', buitendeur: 'een buitendeur', schuifraam: 'een schuifraam', binnendeur: 'een binnendeur', doorgang: 'een doorgang', garagepoort: 'een garagepoort' } as Record<OpeningSoort, string>)[geraakt.soort];
-    weiger(`Hier komt de nieuwe wand uit op ${naam}: schuif de wand een stukje op, of verschuif eerst de opening.`, as === 'v' ? [lijn, (van + tot) / 2] : [(van + tot) / 2, lijn]);
+    const bij: Punt = as === 'v' ? [lijn, (van + tot) / 2] : [(van + tot) / 2, lijn];
+    // Een wand die indeelt, loopt door de hele ruimte tot tegen de overkant. Stopte de getrokken wand ver vóór de opening
+    // (17/11, melding van Jonas: "het schuifraam was aan de andere kant van de kamer"), dan wilde de verkoper een muur
+    // die halverwege stopt: dan een losse wand zoals hij ze trok (de ruimte blijft één ruimte).
+    const a0 = Math.min(van, tot), a1 = Math.max(van, tot);
+    const afstand = geraakt.lijn < a0 ? a0 - geraakt.lijn : geraakt.lijn > a1 ? geraakt.lijn - a1 : 0;
+    if (getekend && geraakt.as !== as && afstand >= 30) {
+      const w = nieuweLosseWand(as === 'v' ? [lijn, a0] : [a0, lijn], as === 'v' ? [lijn, a1] : [a1, lijn], nieuweId('w'));
+      plaatsLosseWand(w);
+      melding = `Dit is een losse wand geworden: een wand die indeelt, loopt door tot tegen de overkant en zou daar uitkomen op ${naam}. De ruimte blijft één ruimte; schuif de wand op als je toch twee ruimtes wilt.`;
+      toonEigenschappen();
+      tikMelding(melding, bij, 'info');
+      return true;
+    }
+    weiger(`Een wand die indeelt, loopt door de hele ruimte en komt hier uit op ${naam}: schuif de wand een stukje op, verschuif eerst de opening, of kies *Losse wand* voor een muur die halverwege stopt.`.replace(/\*/g, ''), bij);
     return false;
   }
   let nieuw: Ruimte[] = [];
@@ -1534,7 +1551,7 @@ function naPointerUp(ev: PointerEvent) {
     voorbeeldWand = undefined;
     if (w && Math.hypot(w.x2 - w.x1, w.y2 - w.y1) >= 30) {
       const staand = w.x1 === w.x2;
-      deelMetWand(staand ? 'v' : 'h', staand ? w.x1 : w.y1, staand ? w.y1 : w.x1, staand ? w.y2 : w.x2);
+      deelMetWand(staand ? 'v' : 'h', staand ? w.x1 : w.y1, staand ? w.y1 : w.x1, staand ? w.y2 : w.x2, true);
       return;
     }
     render();
