@@ -14,6 +14,7 @@ import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from
 import type { WoningOpbouw, WoningOpbouwCatalogus } from './opbouw.js';
 import { controleerLosseWanden, losseWandBlokken, type LosseWand } from './lossewand.js';
 import { strokenVan, strookBlokken, type GevelStrook } from './gevelstroken.js';
+import { daklichtLicht, ledstripBlokken, raamLicht, toestelLicht } from './nacht.js';
 import {
   toestelMaten, leidingVerloop, techniekBlokken, toestelBlokken, toestelVoetafdruk, voorRichting,
   type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
@@ -1582,7 +1583,8 @@ function controleerTechniek(plan: Plattegrond, cat: PlanCatalogus | undefined, u
       if (!soort) { uit.push({ ernst: 'fout', leiding: l.id, melding: `${pre}Techniek: een leiding van een onbekende soort (${l.soort}).` }); continue; }
       const naam = `${soort.label}${l.kring ? ` (${l.kring})` : ''}`;
       if (l.punten.length < 2) { uit.push({ ernst: 'fout', leiding: l.id, melding: `${pre}${naam} heeft geen lengte: geef minstens twee punten.` }); continue; }
-      for (const [kant, id, q] of [['begin', l.van, l.punten[0]!], ['einde', l.naar, l.punten[l.punten.length - 1]!]] as const) {
+      // Een ledstrip (ronde 15) begint en eindigt waar je wil: geen los einde.
+      for (const [kant, id, q] of soort.ledstrip ? [] : [['begin', l.van, l.punten[0]!], ['einde', l.naar, l.punten[l.punten.length - 1]!]] as const) {
         if (id) {
           if (!alle.some((x) => x.id === id)) uit.push({ ernst: 'fout', leiding: l.id, melding: `${pre}${naam}: het toestel aan het ${kant} bestaat niet meer.` });
           continue;
@@ -2160,6 +2162,12 @@ export interface Plan3DOpties {
    * al). Uit = de blokken van vroeger; een plan zonder toestellen verandert nooit.
    */
   techniekBuiten?: boolean;
+  /**
+   * De verlichting (ronde 15, zie nacht.ts): de ledstrips als dun profiel in de afgewerkte woning (na het kader), en wat
+   * 's nachts licht geeft krijgt `licht`: het glas van de ramen, buitendeuren en daklichten, de lampen die buiten hangen
+   * of staan. De kijker toont dat alleen in de nachtweergave. Uit = de blokken van vroeger.
+   */
+  verlichting?: boolean;
 }
 
 /**
@@ -2292,7 +2300,10 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
         blokken.push({ code: metDing(opties, 'dak', `dak_bestaand_${n}`), soort: oudAfw.soort, vorm: 'blok', x: s.x - 0.5, y: y0 + H + VLOERDIKTE - DAK_LAAG, z: s.y - 0.5, b: s.b + 1, h: DAK_LAAG, d: s.d + 1, kleur: oudAfw.kleur });
       }
       for (const v of oudBedektVorm) blokken.push(grondPrisma(metDing(opties, 'dak', `dak_bestaand_${n}`), oudAfw.soort, oudAfw.kleur, verschuifZijden(v, 0.5), y0 + H + VLOERDIKTE - DAK_LAAG, DAK_LAAG));
-      for (const l of lichten) blokken.push(...daklichtBlokken(l, cat.daklichten?.[l.type]?.vorm ?? 'koepel', y0 + H + VLOERDIKTE, VLOERDIKTE).map((b) => ({ ...b, code: metDing(opties, 'dak', b.code) })));
+      for (const l of lichten) {
+        const lb = daklichtBlokken(l, cat.daklichten?.[l.type]?.vorm ?? 'koepel', y0 + H + VLOERDIKTE, VLOERDIKTE);
+        blokken.push(...(opties.verlichting ? daklichtLicht(lb) : lb).map((b) => ({ ...b, code: metDing(opties, 'dak', b.code) })));
+      }
     }
     if (hellendHier) {
       // Het hellende dak van een bestaande woning (ronde 11): neutraal, zoals haar muren.
@@ -2323,6 +2334,7 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     blokken.push(...buren);
     blokken.push(...techniek3D(plan, cat, opties));
     blokken.push(...techniekBuiten3D(plan, cat, opties, laatste, opbouw, topDak));
+    blokken.push(...ledstrips3D(plan, cat, opties, laatste));
     return { blokken, kader };
   }
   // Het kader is dat van de woning zelf: met terras en pad erbij zou de camera verder weg gaan staan.
@@ -2334,6 +2346,8 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
   blokken.push(...techniek3D(plan, cat, opties));
   // Wat je van de techniek buiten ziet, in de afgewerkte woning (ronde 10c): ook na het kader.
   blokken.push(...techniekBuiten3D(plan, cat, opties, laatste, opbouw, topDak));
+  // De ledstrips (ronde 15): een dun profiel, ook na het kader.
+  blokken.push(...ledstrips3D(plan, cat, opties, laatste));
   return { blokken, kader };
 }
 
@@ -2355,9 +2369,16 @@ function techniekBuiten3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DO
     if (t.aan === 'wand' && n === laatste && opties.laag !== undefined && t.hoogte + toestelMaten(type, t.aan).h > opties.laag) continue;
     const code = `toestel_${t.id}`;
     const blokken = toestelBlokken(t, type, vloerHoogte(plan, n), plan.muurhoogte, code, false);
-    uit.push(...blokken.map((b) => ({ ...b, code: metDing(opties, `toestel:${t.id}`, b.code) })));
+    // Een lamp (ronde 15) licht 's nachts op en verlicht de gevel errond.
+    uit.push(...(opties.verlichting ? toestelLicht(blokken, type, t) : blokken).map((b) => ({ ...b, code: metDing(opties, `toestel:${t.id}`, b.code) })));
   }
   return uit;
+}
+
+/** De ledstrips in de afgewerkte woning (ronde 15, `Plan3DOpties.verlichting`); niet als de techniek getoond wordt (dan staan ze er al). */
+function ledstrips3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, laatste: number): Blok[] {
+  if (!opties.verlichting || opties.techniek || !plan.leidingen?.length) return [];
+  return ledstripBlokken(plan, cat.techniek, { laag: opties.laag, totNiveau: laatste, laatste, dingen: opties.dingen });
 }
 
 /** De toestellen en leidingen voor de 3D (zie `Plan3DOpties.techniek`); leeg zonder de optie of zonder catalogus. */
@@ -2720,7 +2741,9 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
       stuk(`onder_${o.id}`, a, b, 0, o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0));
       stuk(`boven_${o.id}`, a, b, Math.min(H, o.borstwering + hoogte), H);
-      for (const blok of openingBlokken(o, m, inhoud, cat)) voeg(o.positie ? { ...blok, code: metDing(opties, `opening:${o.id}`, blok.code) } : blok);
+      const raam = openingBlokken(o, m, inhoud, cat);
+      // Ronde 15: het glas licht 's avonds op (`verlichting`).
+      for (const blok of opties.verlichting ? raamLicht(raam, plan, m, o) : raam) voeg(o.positie ? { ...blok, code: metDing(opties, `opening:${o.id}`, blok.code) } : blok);
       cursor = b;
     }
     stuk(`muur_${m.id}_eind`, cursor, einde, 0, H);

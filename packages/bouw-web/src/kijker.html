@@ -57,6 +57,11 @@ header .aannemer { font-weight: 600; font-size: 14px; color: var(--accent); }
 .tabs button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
 .tabs button:last-child { border-radius: 0 6px 6px 0; }
 .tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--op-accent); position: relative; }
+/* Ronde 15: Dag / Nacht (alleen bij de woning, als het bestand licht voor de nacht heeft). */
+.dagnacht button { display: inline-flex; align-items: center; gap: 6px; min-width: 64px; justify-content: center; }
+.dagnacht button[data-nacht="dag"][aria-pressed="true"] { background: #f4d27a; border-color: #d9b45a; color: #3a2d06; }
+.dagnacht button[data-nacht="nacht"][aria-pressed="true"] { background: #1c2a4a; border-color: #1c2a4a; color: #f3e6c4; }
+.dagnacht .maan { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset -4px -1px 0 0 currentColor; transform: rotate(-20deg); }
 #techniek { display: grid; gap: 6px; }
 #techniek-vakken { display: flex; flex-wrap: wrap; gap: 8px; }
 .tvak { display: inline-flex; align-items: center; gap: 8px; text-align: left; }
@@ -95,6 +100,10 @@ body.klantbestand #ander, body.klantbestand #leeg { display: none !important; }
   <div id="weergave" class="tabs" role="group" aria-label="De woning of de techniek" hidden>
     <button type="button" data-weergave="ontwerp" aria-pressed="true">De woning</button>
     <button type="button" data-weergave="techniek" aria-pressed="false" title="Elektriciteit, verwarming en koeling, ventilatie, water en afvoer, per verdieping">Techniek</button>
+  </div>
+  <div id="dagnacht" class="tabs dagnacht" role="group" aria-label="Dag of nacht" hidden>
+    <button type="button" data-nacht="dag" aria-pressed="true" title="De woning overdag">Dag</button>
+    <button type="button" data-nacht="nacht" aria-pressed="false" title="De woning bij avond: de ramen lichten op, de buitenlampen en de ledstrips branden"><span class="maan" aria-hidden="true"></span>Nacht</button>
   </div>
   <label id="keuze-wrap">Toon <select id="keuze" aria-label="Wat tonen"></select></label>
   <div id="techniek-niveaus" class="tabs" role="group" aria-label="Verdieping" hidden></div>

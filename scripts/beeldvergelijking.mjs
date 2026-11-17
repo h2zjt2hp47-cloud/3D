@@ -170,7 +170,24 @@ const BOUWBEELDEN = [
   // hoek (`STROKEN`). De 3D recht op die gevel (standpunt Voorgevel) en het aanzicht in de gevel-editor.
   { naam: 'bouw-stroken-3d', stroken: '3d' },
   { naam: 'bouw-stroken-gevel', stroken: 'gevel' },
+  // Ronde 15 (17/11): de nachtweergave. De voorbeeldwoning met twee buitenlampen naast het schuifraam en de terrasdeur, twee
+  // tuinlampen bij het terras en een ledstrip onder de dakrand van de tuingevel (`NACHT_TECHNIEK`), met *Nacht* (rechtsboven
+  // op de 3D): de lucht van een late avond, de ramen die oplichten, de lampen en de strip met hun licht. Van voren en schuin.
+  // Op een eigen pagina met een vers project.
+  { naam: 'bouw-nacht-voor', nacht: 'voor' },
+  { naam: 'bouw-nacht-schuin', nacht: 'schuin' },
 ];
+
+/** De techniek van de nachtbeelden (ronde 15): buitenlampen, tuinlampen en een ledstrip in de voorbeeldwoning. */
+const NACHT_TECHNIEK = {
+  toestellen: [
+    { id: 'bl1', type: 'buitenlamp', x: 120, y: 921, hoogte: 190, draai: 0, aan: 'wand' },
+    { id: 'bl2', type: 'buitenlamp', x: 720, y: 921, hoogte: 190, draai: 0, aan: 'wand' },
+    { id: 'tl1', type: 'tuinlamp', x: 60, y: 1180, hoogte: 0, draai: 0, aan: 'buiten' },
+    { id: 'tl2', type: 'tuinlamp', x: 760, y: 1180, hoogte: 0, draai: 0, aan: 'buiten' },
+  ],
+  leidingen: [{ id: 'ls1', soort: 'ledstrip', punten: [[840, 916], [1400, 916]], hoogte: 'plafond' }],
+};
 
 /**
  * Het plan van de beelden `bouw-schuin-…` (gemaakt met de motor: `zetOmtrek` en openingen op een schuine muur). De
@@ -695,6 +712,33 @@ async function maakBeelden() {
       process.stdout.write(`  ${b.naam} … `);
       await p.waitForTimeout(1500);
       await p.click(`[data-pl-standpunt="${b.hoog}"]`);
+      beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  // Ronde 15: de nachtweergave. Eigen pagina, vers project (de voorbeeldwoning), de techniek rechtstreeks in het bewaarde project.
+  const nacht = BOUWBEELDEN.filter((b) => b.nacht && nodig(b));
+  if (nacht.length) {
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.evaluate((techniek) => {
+      const index = JSON.parse(localStorage.getItem('bouw-demo.projecten.v1'));
+      const sleutel = `bouw-demo.project.${index.actief}`;
+      const t = JSON.parse(localStorage.getItem(sleutel));
+      Object.assign(t.plan, techniek);
+      localStorage.setItem(sleutel, JSON.stringify(t));
+    }, NACHT_TECHNIEK);
+    await p.reload();
+    await p.waitForTimeout(1500);
+    await p.click('.nav [data-weergave="plan"]');
+    await p.click('[data-pl-weergave="3d"]');
+    await p.waitForTimeout(1500);
+    await p.click('[data-pl-nacht="nacht"]');
+    for (const b of nacht) {
+      process.stdout.write(`  ${b.naam} … `);
+      await p.click(`[data-pl-standpunt="${b.nacht}"]`);
       beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       console.log('klaar');
     }

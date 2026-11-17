@@ -54,6 +54,10 @@ let techniekNiveau = 0;
 let alleenVak: string | null = null;
 /** Het aangetikte toestel of de leiding (`toestel:<id>`, `leiding:<id>`) waarvan de uitleg openstaat. */
 let gekozen: string | null = null;
+/** De woning bij nacht (ronde 15): de keuze *Dag / Nacht*, zolang de pagina open is. */
+let nacht = false;
+/** Heeft dit ontwerp licht voor de nacht (`licht` op de blokken van de woning; een bestand van vóór ronde 15 niet)? */
+const heeftNachtLicht = (p: Pakket3D) => p.woning.some((n) => n.scene.blokken.some((b) => !!b.licht));
 
 const techniekNu = () => modus === 'techniek' && !!pakket?.techniek;
 /** De woning zelf in beeld (niet de techniek, niet een positie). */
@@ -150,6 +154,10 @@ function teken() {
   // rustig beeld op een effen achtergrond.
   const buiten = woning || techniek || !!p?.gebouw;
   viewer.omgeving?.(buiten ? 'buiten' : 'geen');
+  // Ronde 15: dag of nacht, alleen bij de woning (niet bij de techniek of een raam).
+  const kanNacht = woning && heeftNachtLicht(pakket);
+  $('#dagnacht').hidden = !kanNacht;
+  viewer.nacht?.(nacht && kanNacht);
   viewer.toon(techniek ? s : metMaten(s, woning, p?.maatlijnen));
   // Een raam van voren (het hele raam in beeld), de woning, de techniek en een gebouw schuin van boven; alleen bij een
   // andere keuze, niet bij elke klik.
@@ -477,6 +485,12 @@ window.addEventListener('message', (e) => {
 });
 
 $('#keuze').addEventListener('change', teken);
+// Ronde 15: Dag / Nacht. Alleen de kijker wisselt; de scène blijft dezelfde.
+for (const b of document.querySelectorAll<HTMLButtonElement>('#dagnacht button')) b.addEventListener('click', () => {
+  nacht = b.dataset.nacht === 'nacht';
+  for (const k of document.querySelectorAll<HTMLButtonElement>('#dagnacht button')) k.setAttribute('aria-pressed', String((k.dataset.nacht === 'nacht') === nacht));
+  viewer?.nacht?.(nacht && woningNu() && !!pakket && heeftNachtLicht(pakket));
+});
 for (const b of document.querySelectorAll<HTMLButtonElement>('#weergave button')) b.addEventListener('click', () => kiesModus(b.dataset.weergave === 'techniek' ? 'techniek' : 'ontwerp'));
 $('#niveau').addEventListener('change', teken);
 $('#laag').addEventListener('change', teken);

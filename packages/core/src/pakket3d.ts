@@ -18,6 +18,9 @@ export const PAKKET3D_SOORT = 'bouw-3d-pakket';
  *      oudere kijker zou die als stof tekenen;
  *   4  schuine muren en vrije vormen (16/11): een `prisma` die verticaal doorgetrokken is (`as: 'y'`), materiaal per staand
  *      zijvlak (`randen`), de richting van de textuur op een vloer (`vlakRichting`) en blokken van de woning met een `draai`.
+ * Sinds ronde 15 (17/11) kan een blok `licht` dragen (wat 's nachts licht geeft: het glas van een raam, een lamp, de strook
+ * van een ledstrip). Dat blijft versie 4: het veld is optioneel, en een oudere kijker tekent het blok zoals altijd (het
+ * profiel van een ledstrip ook, overdag); alleen de nachtweergave ontbreekt daar.
  */
 export const PAKKET3D_VERSIE = 4;
 

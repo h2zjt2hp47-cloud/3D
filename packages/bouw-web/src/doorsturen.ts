@@ -29,6 +29,8 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
     ...(opties.dingen ? { dingen: true } : {}),
     // Ronde 10c: wat je van de techniek buiten ziet (buitenunit, laadpaal, dakdoorvoer …), zoals in de 3D van de app.
     techniekBuiten: true,
+    // Ronde 15: de ledstrips, en wat 's nachts licht geeft (de kijker toont de nacht; een oudere kijker negeert het).
+    verlichting: true,
   });
 }
 
