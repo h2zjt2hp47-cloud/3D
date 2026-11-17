@@ -224,6 +224,27 @@ describe('techniek van binnen (ruimteVanBinnen, optie techniek)', () => {
     }
   });
 
+  it('elke open kant (een kwartslag gedraaid): het kommetje van een stopcontact zit op de voorkant van zijn plaatje', () => {
+    const { plan } = uitgerusteWoning();
+    for (const open of ['onder', 'links', 'boven', 'rechts'] as const) {
+      const bl = binnen(ruimteVanBinnen(plan, cat, 'keuken', { dingen: true, techniek: true, open })!.blokken);
+      const platen = bl.filter((b) => b.code.endsWith('_plaat'));
+      expect(platen.length, open).toBeGreaterThan(0);
+      for (const plaat of platen) {
+        const kom = bl.find((b) => b.code === plaat.code.replace(/_plaat$/, '_kom'));
+        if (!kom) continue;
+        const as = kom.as === 'x' ? 'x' : 'z', dwars = as === 'x' ? 'z' : 'x';
+        const [p0, p1] = as === 'x' ? [plaat.x, plaat.x + plaat.b] : [plaat.z, plaat.z + plaat.d];
+        const [k0, k1] = as === 'x' ? [kom.x, kom.x + kom.b] : [kom.z, kom.z + kom.d];
+        // Het kommetje raakt het plaatje aan één kant (de voorkant), en ligt er dwars binnen.
+        expect(Math.min(Math.abs(k0 - p1), Math.abs(k1 - p0)), `${open} ${plaat.code}`).toBeLessThan(0.02);
+        const [q0, q1] = dwars === 'x' ? [plaat.x, plaat.x + plaat.b] : [plaat.z, plaat.z + plaat.d];
+        const [r0, r1] = dwars === 'x' ? [kom.x, kom.x + kom.b] : [kom.z, kom.z + kom.d];
+        expect(r0 >= q0 - 0.01 && r1 <= q1 + 0.01, `${open} ${plaat.code}`).toBe(true);
+      }
+    }
+  });
+
   it('een verlaagd plafond: de spots hangen eronder', () => {
     const { plan } = uitgerusteWoning();
     const verlaagd = Object.entries(cat.plafonds ?? {}).find(([, p]) => p.verlaagd)!;
