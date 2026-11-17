@@ -4,7 +4,7 @@
  * De motor levert de blokken (bouw3D); hier worden ze omgezet naar meshes.
  * Bediening: slepen = draaien, scrollen/knijpen = zoomen, knoppen = vaste standpunten.
  */
-import type { Blok, BlokLicht, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
+import type { Blok, BlokLicht, BlokVlak, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
 import { smeltMee, zachteVorm, type ZachteVorm } from '../../core/src/zachtevorm.js';
 import { wandDoorsnede } from '../../core/src/kuip.js';
 import { wielFactor, wielHint } from './zoom.js';
@@ -1318,6 +1318,68 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     return m;
   };
 
+  /**
+   * Ronde 17 (17/11, woning): een vlak dat in de diepte wijkt (`Blok.wijkt`): het ligt binnen in de woning of tegen een
+   * ander stuk. Gemeten zonder grafische kaart (Chromium met swiftshader, de WebGL2-weg, vier monsters per beeldpunt): zulke
+   * vlakken kwamen langs hun rand als fijne lichte streepjes door de gevel ervoor (waar een binnenmuur de gevel raakt,
+   * boven en onder elk raam, op de sokkelhoogte, in de dakrand). Zonder die vier monsters was er geen enkel streepje; een
+   * verdere voorste grens van de camera of alle balken in wereldmaat veranderden niets. Waarom swiftshader dat doet, is
+   * niet uitgezocht; op een echte grafische kaart (de M5) is het niet nagekeken.
+   * Wat hielp: zo'n vlak tekenen met een diepteverschuiving naar zijn helling (polygonOffset, 1 en 1): hoe schuiner je het
+   * ziet, hoe verder het wijkt; een vlak dat je recht ziet, verschuift nagenoeg niet. Hetzelfde materiaal (een kopie);
+   * glas wijkt nooit. Wat niet hielp: de verschuiving op alle vlakken (dan kwamen de binnenmuren juist langs de rand van
+   * een gevel die je schuin ziet naar voren) en een sterkere verschuiving (4: dan door de ramen naar binnen). Wat dan nog
+   * bleef (op een hoek, in een gevel die je schuin ziet), lost `bedekt` op.
+   */
+  const WIJKEN = { helling: 1, eenheden: 1 };
+  const wijktVlak = (b: Blok, v: BlokVlak) => b.wijkt === true || (Array.isArray(b.wijkt) && b.wijkt.includes(v));
+  /**
+   * Een vlak van een balk dat helemaal tegen een ander stuk ligt (`Blok.bedekt`): niet tekenen, wel in de schaduwkaart
+   * laten (het materiaal van een blok dat alleen schaduw werpt). Dat haalde de laatste streepjes weg, in een gevel die je
+   * schuin ziet: op een hoek, naast de kop van een binnenmuur, boven en onder een raam. Eerst helemaal weggelaten (ook uit
+   * de schaduw): dan kreeg de vloer die tot in de muur loopt daar zon, en zag je ze van boven als een lichte lijn langs de
+   * muur (beeld `bouw-zon`).
+   */
+  /**
+   * Eén tekenopdracht per materiaal in plaats van per vlak (ronde 17, bouw): three tekent elke groep van een vorm apart,
+   * ook als twee groepen hetzelfde materiaal hebben. Een muur heeft zes groepen (een vlak per zijde), en met wat wijkt of
+   * bedekt is (`Blok.wijkt`, `Blok.bedekt`) kregen ook de meubels er zes: bijna twee derde meer opdrachten, voor het beeld
+   * en nog eens voor de schaduwkaart. Hier komen de driehoeken met hetzelfde materiaal achter elkaar, in één groep: dezelfde
+   * driehoeken, dezelfde materialen, alleen minder groepen. De zetels niet (daar verandert niets).
+   */
+  function eenGroepPerMateriaal(geo: any, mats: any[]): any[] {
+    if (opties.zetel || !geo.groups?.length) return mats;
+    const uniek = [...new Set(geo.groups.map((g: any) => mats[g.materialIndex]))];
+    if (uniek.length >= geo.groups.length) return mats;
+    const index = geo.index?.array, nieuw: number[] = [];
+    const groepen: [number, number, number][] = [];
+    uniek.forEach((m, k) => {
+      const begin = nieuw.length;
+      for (const g of geo.groups) {
+        if (mats[g.materialIndex] !== m) continue;
+        for (let i = g.start; i < g.start + g.count; i++) nieuw.push(index ? index[i] : i);
+      }
+      groepen.push([begin, nieuw.length - begin, k]);
+    });
+    geo.setIndex(nieuw);
+    geo.clearGroups();
+    for (const [begin, aantal, k] of groepen) geo.addGroup(begin, aantal, k);
+    return uniek;
+  }
+  function wijkend(m: any): any {
+    if (!m || m.transmission || m.polygonOffset) return m;
+    const sleutel = `wijkt:${m.uuid}`;
+    let w = materialen.get(sleutel);
+    if (!w) {
+      w = m.clone();
+      w.polygonOffset = true;
+      w.polygonOffsetFactor = WIJKEN.helling;
+      w.polygonOffsetUnits = WIJKEN.eenheden;
+      materialen.set(sleutel, w);
+    }
+    return w;
+  }
+
   /** Reliëfkaart per weefsel: hetzelfde patroon in middengrijs (bumpMap leest de helderheid). */
   const reliefs = new Map<Weefsel, any>();
   function reliefVan(w: Weefsel) {
@@ -1853,7 +1915,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   /**
    * Prisma (woning: dakvlak, topgevel, lichtstraat): een harde doorsnede in een verticaal vlak, recht doorgetrokken
    * langs x of z, in wereldmaat. Elk vlak heeft zijn eigen normaal. Groep 0 = de mantel, 1 = het kopse vlak aan de
-   * min-kant, 2 = dat aan de plus-kant (elk met een eigen materiaal, zie `zijden`).
+   * min-kant, 2 = dat aan de plus-kant (elk met een eigen materiaal, zie `zijden`), en 3 = de zijden van de mantel die in
+   * de diepte wijken (`Blok.wijkt`, ronde 17; alleen als er zijn).
    * Textuur in wereldmaat: op een staand vlak zoals bij een muur (u langs het vlak, v = hoogte), op een schuin vlak
    * u langs de as en v langs de helling in ware lengte, van onder naar boven, zodat pannen en leien hun maat houden.
    */
@@ -1875,7 +1938,12 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     for (let i = 0; i < pts.length; i++) { const a = pts[i]!, c = pts[(i + 1) % pts.length]!; opp += a[0] * c[1] - c[0] * a[1]; }
     const zin = opp < 0 ? -1 : 1;
     const mantel = maten[0];
-    for (let i = 0; i < pts.length; i++) {
+    // Eerst de zijden die vooraan blijven, dan die die wijken (een eigen groep).
+    const wijktZijde = (i: number) => wijktVlak(b, i);
+    const volgorde = [...pts.keys()].sort((i, j) => Number(wijktZijde(i)) - Number(wijktZijde(j)));
+    let wijkBegin = -1;
+    for (const i of volgorde) {
+      if (wijkBegin < 0 && wijktZijde(i)) wijkBegin = pos.length / 3;
       const [p0, y0] = pts[i]!, [p1, y1] = pts[(i + 1) % pts.length]!;
       const dp = p1 - p0, dy = y1 - y0, len = Math.hypot(dp, dy);
       if (len < 0.01) continue;
@@ -1887,22 +1955,23 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       driehoek(punt(a0, p0, y0), punt(a1, p0, y0), punt(a1, p1, y1), n, [UV(a0, p0, y0), UV(a1, p0, y0), UV(a1, p1, y1)]);
       driehoek(punt(a0, p0, y0), punt(a1, p1, y1), punt(a0, p1, y1), n, [UV(a0, p0, y0), UV(a1, p1, y1), UV(a0, p1, y1)]);
     }
-    const groepen: [number, number][] = [[0, pos.length / 3]];
+    const eindMantel = pos.length / 3;
+    const groepen: [number, number, number][] = wijkBegin < 0 ? [[0, eindMantel, 0]] : [[0, wijkBegin, 0], [wijkBegin, eindMantel - wijkBegin, 3]];
     const driehoeken: number[][] = THREE.ShapeUtils.triangulateShape(pts.map(([p, y]) => new THREE.Vector2(p, y)), []);
-    for (const [kant, a, maat] of [[-1, a0, maten[1]], [1, a1, maten[2]]] as const) {
+    for (const [kant, a, maat, groep] of [[-1, a0, maten[1], 1], [1, a1, maten[2], 2]] as const) {
       const begin = pos.length / 3;
       const n: P3 = langsX ? [kant, 0, 0] : [0, 0, kant];
       for (const d of driehoeken) {
         const h = d.map((i) => pts[i]!);
         driehoek(punt(a, h[0]![0], h[0]![1]), punt(a, h[1]![0], h[1]![1]), punt(a, h[2]![0], h[2]![1]), n, h.map(([p, y]): [number, number] => (maat ? [p / maat.b, y / maat.h] : [0, 0])));
       }
-      groepen.push([begin, pos.length / 3 - begin]);
+      groepen.push([begin, pos.length / 3 - begin, groep]);
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    groepen.forEach(([start, aantal], i) => geo.addGroup(start, aantal, i));
+    for (const [start, aantal, groep] of groepen) geo.addGroup(start, aantal, groep);
     return geo;
   }
 
@@ -1913,7 +1982,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
    * (u = de plaats langs de zijde, altijd in dezelfde zin, zodat twee stukken van dezelfde muur op elkaar aansluiten; v =
    * de hoogte), op het boven- en ondervlak zoals bij een balk (x en z), gedraaid over `vlakRichting`.
    */
-  function grondPrismaGeometrie(b: Blok, boven: number, randen: number[], maten: ({ b: number; h: number } | undefined)[]) {
+  function grondPrismaGeometrie(b: Blok, boven: number, randen: number[], maten: ({ b: number; h: number } | undefined)[], onder = 0) {
     const pts = b.doorsnede!, y0 = b.y, y1 = b.y + b.h;
     const pos: number[] = [], nor: number[] = [], uv: number[] = [];
     type P3 = [number, number, number];
@@ -1931,7 +2000,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     const hoek = ((b.vlakRichting ?? 0) * Math.PI) / 180, co = Math.cos(hoek), si = Math.sin(hoek);
     const plat = (x: number, z: number, maat?: { b: number; h: number }): [number, number] => (maat ? [(x * co + z * si) / maat.b, (-x * si + z * co) / maat.h] : [0, 0]);
     const driehoeken: number[][] = THREE.ShapeUtils.triangulateShape(pts.map(([x, z]) => new THREE.Vector2(x, z)), []);
-    for (const [y, n, groep, maat] of [[y0, -1, 0, maten[0]], [y1, 1, boven, maten[1]]] as const) {
+    for (const [y, n, groep, maat] of [[y0, -1, onder, maten[0]], [y1, 1, boven, maten[1]]] as const) {
       const begin = pos.length / 3;
       for (const d of driehoeken) {
         const h = d.map((i) => pts[i]!);
@@ -1984,9 +2053,16 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
         const i = lijst.indexOf(m);
         return i >= 0 ? i : lijst.push(m) - 1;
       };
-      const boven = index(b.zijden?.['y+']), randen = b.doorsnede.map((_, i) => index(b.randen?.[i]));
+      // Ronde 17: een vlak dat wijkt, krijgt de wijkende versie van zijn materiaal (zie `wijkend`).
+      const wijk = (i: number, v: BlokVlak) => {
+        if (!wijktVlak(b, v)) return i;
+        const w = wijkend(lijst[i]), j = lijst.indexOf(w);
+        return j >= 0 ? j : lijst.push(w) - 1;
+      };
+      const boven = wijk(index(b.zijden?.['y+']), 'y+'), randen = b.doorsnede.map((_, i) => wijk(index(b.randen?.[i]), i)), onder = wijk(0, 'y-');
       const maten = [textuurMaat[b.soort], textuurMaat[b.zijden?.['y+']?.soort ?? b.soort], ...b.doorsnede.map((_, i) => textuurMaat[b.randen?.[i]?.soort ?? b.soort])];
-      const m = new THREE.Mesh(grondPrismaGeometrie(b, boven, randen, maten), lijst);
+      const g = grondPrismaGeometrie(b, boven, randen, maten, onder);
+      const m = new THREE.Mesh(g, eenGroepPerMateriaal(g, lijst));
       m.name = b.code;
       m.castShadow = b.soort !== 'glas' && b.soort !== 'matglas';
       m.receiveShadow = true;
@@ -1995,9 +2071,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     // Prisma (woning): harde doorsnede, in wereldmaat; de kopse vlakken kunnen een eigen materiaal hebben.
     if (b.vorm === 'prisma' && b.doorsnede && b.doorsnede.length >= 3) {
       const [kMin, kPlus] = b.as === 'z' ? (['z-', 'z+'] as const) : (['x-', 'x+'] as const);
-      const basis = materiaal(b), kop = (k: 'x-' | 'x+' | 'z-' | 'z+') => (b.zijden?.[k] ? materiaal(b.zijden[k]!) : basis);
+      const basis = materiaal(b), kop = (k: 'x-' | 'x+' | 'z-' | 'z+') => { const m = b.zijden?.[k] ? materiaal(b.zijden[k]!) : basis; return wijktVlak(b, k) ? wijkend(m) : m; };
       const maat = (k: 'x-' | 'x+' | 'z-' | 'z+') => textuurMaat[b.zijden?.[k]?.soort ?? b.soort];
-      const m = new THREE.Mesh(prismaGeometrie(b, [textuurMaat[b.soort], maat(kMin), maat(kPlus)]), [basis, kop(kMin), kop(kPlus)]);
+      const g = prismaGeometrie(b, [textuurMaat[b.soort], maat(kMin), maat(kPlus)]);
+      const m = new THREE.Mesh(g, eenGroepPerMateriaal(g, [basis, kop(kMin), kop(kPlus), wijkend(basis)]));
       m.name = b.code;
       m.castShadow = b.soort !== 'glas' && b.soort !== 'matglas';
       m.receiveShadow = true;
@@ -2127,12 +2204,17 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     if (b.textuur) { const tegel = { b: b.textuurCm ?? 15, h: b.textuurCm ?? 15 }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     else if (b.weefsel && b.weefsel in WEEFSEL_CM) { const cm = WEEFSEL_CM[b.weefsel as Weefsel]; const tegel = { b: cm, h: cm }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     let mat: any = materiaal(b);
-    if (b.zijden && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
-      // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z.
-      const z = b.zijden;
-      const kies = (k: keyof NonNullable<Blok['zijden']> | null) => (k && z[k] ? materiaal(z[k]!) : mat);
-      mat = [kies('x+'), kies('x-'), kies('y+'), mat, kies('z+'), kies('z-')];
-    }
+    if ((b.zijden || Array.isArray(b.wijkt) || b.bedekt) && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
+      // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z. Ronde 17: een vlak dat wijkt, de wijkende versie;
+      // een vlak dat bedekt is, niet.
+      const z = b.zijden ?? {};
+      const kies = (k: keyof NonNullable<Blok['zijden']> | 'y-') => {
+        if (b.bedekt?.includes(k)) return schaduwMateriaal;
+        const m = k !== 'y-' && z[k] ? materiaal(z[k]!) : mat;
+        return wijktVlak(b, k) ? wijkend(m) : m;
+      };
+      mat = [kies('x+'), kies('x-'), kies('y+'), kies('y-'), kies('z+'), kies('z-')];
+    } else if (b.wijkt === true) mat = wijkend(mat);
     if (kussen && !Array.isArray(mat)) {
       // Schaduw onderaan het kussen via de hoekpuntkleuren (apart materiaal, zelfde stof).
       const sleutel = `vc:${mat.uuid}`;
@@ -2140,6 +2222,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       if (!vc) { vc = mat.clone(); vc.vertexColors = true; materialen.set(sleutel, vc); }
       mat = vc;
     }
+    if (Array.isArray(mat)) mat = eenGroepPerMateriaal(geo, mat);
     const m = new THREE.Mesh(geo, mat);
     m.name = b.code;
     if (kussen) for (const n of naden(b, kussen)) m.add(n);

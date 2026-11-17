@@ -10,7 +10,7 @@ import {
   dakBlokken, dakHoogte, daklichtBlokken, DAKLICHT_GLAS, gevelOnderDak, hellendDak, oppervlakOnderDak, prisma,
   type DakBedekking, type DakKeuze, type DakLicht, type DakLichtType, type DakMateriaal, type HellendDak,
 } from './dak.js';
-import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
+import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type BlokVlak, type Scene3D } from './ruimtelijk.js';
 import type { WoningOpbouw, WoningOpbouwCatalogus } from './opbouw.js';
 import { controleerLosseWanden, losseWandBlokken, losseWandRuimte, type LosseWand } from './lossewand.js';
 import { strokenVan, strookBlokken, type GevelStrook } from './gevelstroken.js';
@@ -2013,7 +2013,7 @@ export function nieuwPlatDak(plan: Plattegrond, dak: DakOpbouw): number {
 }
 
 /** Hellend dak in 3D: de dakvlakken, en de buitenmuren van de bovenste verdieping doorgetrokken tot onder het dak. */
-function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: HellendDak, yb: number, bedekking: { soort: BlokSoort; kleur: string }): Blok[] {
+function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: HellendDak, yb: number, bedekking: { soort: BlokSoort; kleur: string }, wijken = false): Blok[] {
   const uit = dakBlokken(d, yb, bedekking);
   const muren = murenVan(p);
   const pleister: GevelAfwerking = { soort: 'gevel', kleur: '#efeee9' };
@@ -2054,11 +2054,18 @@ function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: 
     const buitenMin = !m.min;
     const [aMin, aPlus] = buitenMin ? [buiten, binnen] : [binnen, buiten];
     const zijden: Blok['zijden'] = m.as === 'h' ? { 'z-': aMin, 'z+': aPlus } : { 'x-': aMin, 'x+': aPlus };
+    // Ronde 17 (`Plan3DOpties.wijken`): alles behalve het buitenvlak wijkt in de diepte; ook de kopse kanten tussen twee
+    // stukken (niet die op een buitenhoek, dat is een stuk van de zijgevel).
+    const [vMin, vPlus] = m.as === 'h' ? (['z-', 'z+'] as const) : (['x-', 'x+'] as const);
+    const binnenVlak = buitenMin ? vPlus : vMin;
+    const [kMin, kPlus] = m.as === 'h' ? (['x-', 'x+'] as const) : (['z-', 'z+'] as const);
+    const koppenWijken: BlokVlak[] = [...(vlak.verlengdBegin ? [] : [kMin]), ...(vlak.verlengdEinde ? [] : [kPlus])];
+    const wijkt = (lijst: BlokVlak[]): Partial<Blok> => (wijken ? { wijkt: lijst } : {});
     if ((m.as === 'h') !== (d.nokAs === 'x')) {
       // Topgevel: de muur staat dwars op de nok, haar bovenrand volgt het dak.
       // Elk stuk grijpt 1 cm over de muurkop (anders schemert haar witte bovenkant door de naad).
       const punten = m.as === 's' ? gevelOnderDak(d, a0, a1) : gevelOnderDak(d, spleet(m, a0, -1), spleet(m, a1, 1));
-      if (punten.length) uit.push(prisma(`topgevel_${m.id}`, buiten.soort, buiten.kleur, m.as === 'h' ? 'z' : 'x', t0, t1, punten.map(([a, h]): [number, number] => [a, yb + (h === 0 ? -1 : h)]), { zijden, voeg: buiten.voeg }));
+      if (punten.length) uit.push(prisma(`topgevel_${m.id}`, buiten.soort, buiten.kleur, m.as === 'h' ? 'z' : 'x', t0, t1, punten.map(([a, h]): [number, number] => [a, yb + (h === 0 ? -1 : h)]), { zijden, voeg: buiten.voeg, ...wijkt([binnenVlak, ...punten.map((_, i) => i)]) }));
       continue;
     }
     // Muur evenwijdig met de nok: een recht stuk tot de laagste kant van het dak (de hoge gevel van een lessenaar),
@@ -2066,7 +2073,7 @@ function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: 
     const hA = Math.max(0, dakHoogte(d, t0)), hB = Math.max(0, dakHoogte(d, t1));
     const laag = Math.min(hA, hB), hoog = Math.max(hA, hB);
     if (laag > 0.1) {
-      const basis = { code: `dakmuur_${m.id}`, soort: buiten.soort, vorm: 'blok' as const, kleur: buiten.kleur, voeg: buiten.voeg, zijden, y: yb - 1, h: r2(laag + 1) };
+      const basis = { code: `dakmuur_${m.id}`, soort: buiten.soort, vorm: 'blok' as const, kleur: buiten.kleur, voeg: buiten.voeg, zijden, y: yb - 1, h: r2(laag + 1), ...wijkt([binnenVlak, 'y+', 'y-', ...koppenWijken]) };
       uit.push(m.as === 'h' ? { ...basis, x: a0, z: t0, b: a1 - a0, d: t1 - t0 } : { ...basis, x: t0, z: a0, b: t1 - t0, d: a1 - a0 });
     }
     if (hoog - laag > 0.1) {
@@ -2074,7 +2081,9 @@ function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: 
       const zichtbaar = (hA > hB) === buitenMin;
       const afw = zichtbaar ? buiten : pleister;
       const koppen: Blok['zijden'] = m.as === 'h' ? { 'x-': buiten, 'x+': buiten } : { 'z-': buiten, 'z+': buiten };
-      uit.push(prisma(`dakwig_${m.id}`, afw.soort, afw.kleur, m.as === 'h' ? 'x' : 'z', a0, a1, [[t0, yb + laag], [t1, yb + laag], [hA > hB ? t0 : t1, yb + hoog]], { zijden: koppen, voeg: afw.voeg }));
+      // De doorsnede: 0 = de onderkant, en de staande zijde is 2 (top aan t0) of 1 (top aan t1); die blijft vooraan als ze buiten ligt.
+      const staand = hA > hB ? 2 : 1;
+      uit.push(prisma(`dakwig_${m.id}`, afw.soort, afw.kleur, m.as === 'h' ? 'x' : 'z', a0, a1, [[t0, yb + laag], [t1, yb + laag], [hA > hB ? t0 : t1, yb + hoog]], { zijden: koppen, voeg: afw.voeg, ...wijkt([...[0, 1, 2].filter((i) => !(zichtbaar && i === staand)), ...koppenWijken]) }));
     }
   }
   return uit;
@@ -2226,6 +2235,22 @@ export interface Plan3DOpties {
    * of staan. De kijker toont dat alleen in de nachtweergave. Uit = de blokken van vroeger.
    */
   verlichting?: boolean;
+  /**
+   * Geen streepjes in de gevel (ronde 17, 17/11): wat binnen ligt of tegen een ander stuk, wijkt in de diepte
+   * (`Blok.wijkt`). Dat zijn de kopse kanten tussen de stukken van een muur (waar een binnenmuur tegen de gevel komt, op
+   * de sokkelhoogte, naast en boven en onder een raam), de dagkanten, de binnenkant en de bovenkant van de muren, de
+   * binnenmuren, de vloerplaten, de staande vlakken van de meubels, de naden van de dakrand (niet de vloeren en plinten: met wijken kreeg de
+   * bovenrand van een plint stipjes), en van de topgevel en de stukken
+   * onder een hellend dak alles behalve hun buitenvlak. Zonder grafische kaart schemerden die vlakken als fijne lichte
+   * streepjes door de gevel.
+   * Het buitenvlak van de gevel (ook de kop van een binnenmuur in de gevel en de kopse kant op een buitenhoek) wijkt nooit.
+   * Wat helemaal tegen een ander stuk ligt, staat ook in `Blok.bedekt` (de kijker tekent het niet). Daarvoor zijn een paar
+   * stukken anders geknipt, zodat elk vlak ofwel vooraan ligt ofwel helemaal bedekt is: de kop van een binnenmuur in de
+   * gevel is een eigen stuk (`…_gevelkop`), net als de hoek van een buitenmuur (`…_hoek`), en een buitenmuur naast een
+   * opening is in banden geknipt op de hoogtes van die opening (`…_1`, `…_2`). Dezelfde plaats in de ruimte, dezelfde
+   * dingen en hetzelfde kader. Uit = de blokken van vroeger.
+   */
+  wijken?: boolean;
 }
 
 /**
@@ -2254,6 +2279,8 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
   const opbouw = dakOpbouw(plan);
   const topDak = !!opbouw && opties.dak !== false && !opties.laag && opties.totNiveau === undefined;
   const platAfw = dakAfwerking(cat, opbouw?.platBedekking);
+  // Ronde 17 (`Plan3DOpties.wijken`): de vloerplaten liggen binnen en wijken in de diepte.
+  const wijkAlles: Partial<Blok> = opties.wijken ? { wijkt: true } : {};
   for (let n = 0; n <= laatste; n++) {
     const y0 = vloerHoogte(plan, n);
     const p = niveauPlan(plan, n);
@@ -2264,11 +2291,11 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     if (n > 0) {
       for (const r of p.ruimtes) for (const deel of delenVan(r)) {
         if (deel.omtrek) {
-          for (const v of zonderGatenVorm(vormVanDeel(deel))) blokken.push(grondPrisma(metDing(opties, `ruimte:${r.id}`, `plaat_${r.id}`), 'gevel', '#c9c6bf', v, y0 - VLOERDIKTE, VLOERDIKTE));
+          for (const v of zonderGatenVorm(vormVanDeel(deel))) blokken.push(grondPrisma(metDing(opties, `ruimte:${r.id}`, `plaat_${r.id}`), 'gevel', '#c9c6bf', v, y0 - VLOERDIKTE, VLOERDIKTE, wijkAlles));
           continue;
         }
         for (const s of zonderGaten(deel)) {
-          blokken.push({ code: metDing(opties, `ruimte:${r.id}`, `plaat_${r.id}`), soort: 'gevel', vorm: 'blok', x: s.x, y: y0 - VLOERDIKTE, z: s.y, b: s.b, h: VLOERDIKTE, d: s.d, kleur: '#c9c6bf' });
+          blokken.push({ code: metDing(opties, `ruimte:${r.id}`, `plaat_${r.id}`), soort: 'gevel', vorm: 'blok', x: s.x, y: y0 - VLOERDIKTE, z: s.y, b: s.b, h: VLOERDIKTE, d: s.d, kleur: '#c9c6bf', ...wijkAlles });
         }
       }
     }
@@ -2302,7 +2329,13 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
           continue;
         }
         const x = gelijk(van, vlak.y) && onderbroken(m, m.van) ? m.van : van, y = gelijk(tot, vlak.y + vlak.d) && onderbroken(m, m.tot) ? m.tot : tot;
-        const basis = { code: metDing(opties, 'dak', `dakrand_${m.id}_${van}`), soort: 'kunststof' as BlokSoort, vorm: 'blok' as const, kleur: '#2b2b2b', y: y0 + H, h: VLOERDIKTE + 2 };
+        // Ronde 17: de onderkant en de kopse kanten tussen twee stukken dakrand wijken; de kop op een buitenhoek niet.
+        const [ka, kb] = m.as === 'h' ? (['x-', 'x+'] as const) : (['z-', 'z+'] as const);
+        const a0 = m.as === 'h' ? vlak.x : vlak.y, a1 = a0 + (m.as === 'h' ? vlak.b : vlak.d);
+        const randWijkt: Partial<Blok> = opties.wijken
+          ? { wijkt: ['y-', ...(gelijk(x, a0) && vlak.verlengdBegin ? [] : [ka]), ...(gelijk(y, a1) && vlak.verlengdEinde ? [] : [kb])] }
+          : {};
+        const basis = { code: metDing(opties, 'dak', `dakrand_${m.id}_${van}`), soort: 'kunststof' as BlokSoort, vorm: 'blok' as const, kleur: '#2b2b2b', y: y0 + H, h: VLOERDIKTE + 2, ...randWijkt };
         if (!opbouw) {
           blokken.push(m.as === 'h' ? { ...basis, x, z: vlak.y, b: y - x, d: vlak.d } : { ...basis, x: vlak.x, z: x, b: vlak.b, d: y - x });
           continue;
@@ -2366,7 +2399,7 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     if (hellendHier) {
       // Het hellende dak van een bestaande woning (ronde 11): neutraal, zoals haar muren.
       const bedekking = alleBestaand(plan, n) ? { soort: 'gevel' as BlokSoort, kleur: NEUTRAAL.dak } : dakAfwerking(cat, opbouw.keuze.bedekking);
-      const dak = hellendDak3D(plan, cat, p, opbouw.hellend!, y0 + H, bedekking);
+      const dak = hellendDak3D(plan, cat, p, opbouw.hellend!, y0 + H, bedekking, opties.wijken);
       // De topgevel en de hoge gevel van een lessenaar horen bij het muurvlak eronder, de rest bij het dak.
       const muurVan = opties.dingen ? new Map(murenVan(p).map((m) => [m.id, m])) : undefined;
       const gevelVan = (code: string) => {
@@ -2379,7 +2412,7 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
   if (opties.lichtinval && plan.ruimtes.length) {
     // De hele woning, met dak (zonder dakkeuze een plat dak): alles wat daarvan niet getoond wordt, werpt alleen schaduw.
     // Glas laat het licht door. Het kader (voor de camera) blijft dat van wat je ziet.
-    const vol = plattegrond3D(plan.dak ? plan : { ...plan, dak: standaardDak() }, cat, { meubels: opties.meubels, inhoud: opties.inhoud, dingen: opties.dingen }).blokken;
+    const vol = plattegrond3D(plan.dak ? plan : { ...plan, dak: standaardDak() }, cat, { meubels: opties.meubels, inhoud: opties.inhoud, dingen: opties.dingen, wijken: opties.wijken }).blokken;
     // De buren (ronde 11) worden getoond (na het kader, hieronder): hun volume hoeft er niet nog eens als schaduw bij.
     const buren = burenBlokken(plan, opties, laatste, opbouw, topDak);
     const getoond = new Set([...blokken, ...buren].map((b) => JSON.stringify(b)));
@@ -2751,6 +2784,12 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     if (k && k.b > 0.05 && k.h > 0.05 && k.d > 0.05) blokken.push(k);
   };
 
+  // Ronde 17 (`Plan3DOpties.wijken`): wat binnen ligt of tegen een ander stuk, wijkt in de diepte. Zonder: niets erbij.
+  // Ronde 17 (`Plan3DOpties.wijken`): de staande vlakken van een meubel wijken in de diepte (een kast die je op haar kant
+  // ziet, kwam anders als een witte streep door de gevel). Niet de boven- en onderkant: een tapijt zakte dan weg in de vloer.
+  // De vloeren wijken niet: dan kreeg de bovenrand van een plint erop stipjes.
+  const wijkStaand: Partial<Blok> = opties.wijken ? { wijkt: ['x+', 'x-', 'z+', 'z-'] } : {};
+
   // Vloeren (met trapgat). Een vrije vorm is een prisma met haar grondvlak; de textuur volgt haar langste muur.
   for (const r of plan.ruimtes) {
     if (binnen && r.id !== binnen.ruimte) continue;
@@ -2778,6 +2817,20 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   // Kopse kant op een buitenhoek: het materiaal van de gevel ernaast (de loodrechte buitenmuur die daar eindigt).
   const hoekMuur = (m: Muur, p: number) => muren.find((v) => v.as !== m.as && v.as !== 's' && v.soort === 'buiten' && gelijk(v.lijn, p) && (gelijk(v.van, m.lijn) || gelijk(v.tot, m.lijn)));
 
+  // Ronde 17 (`Plan3DOpties.wijken`): ligt er tegen de strook [x0, x1] × [z0, z1] op het plan (net voorbij de kopse kant
+  // van een stuk muur) over haar hele maat een massief stuk van één andere rechte muur, over dezelfde hoogte? Dan ligt die
+  // kopse kant helemaal tegen dat stuk (`Blok.bedekt`). Massief = geen opening van die muur die in de strook valt. Op een
+  // verdieping begint een buitenmuur 30 cm lager dan een binnenmuur: die dekt ze dan niet helemaal.
+  const vlakVan = new Map(opties.wijken ? muren.map((x) => [x, muurVlak(x, muren)] as const) : []);
+  const openingenVan = new Map(opties.wijken ? muren.map((x) => [x, plan.openingen.filter((o) => muurVanOpening(o, [x]) === x)] as const) : []);
+  const dicht = (m: Muur, x0: number, x1: number, z0: number, z1: number) => muren.some((w) => {
+    if (w === m || w.as === 's' || (n > 0 && m.soort === 'buiten' && w.soort !== 'buiten')) return false;
+    const v = vlakVan.get(w)!;
+    if (v.x > x0 + 0.01 || v.x + v.b < x1 - 0.01 || v.y > z0 + 0.01 || v.y + v.d < z1 - 0.01) return false;
+    const [l0, l1] = w.as === 'h' ? [x0, x1] : [z0, z1];
+    return !openingenVan.get(w)!.some((o) => o.midden + o.breedte / 2 > l0 - 0.1 && o.midden - o.breedte / 2 < l1 + 0.1);
+  });
+
   // Muren met openingen.
   const muurAfw = new Map(muren.map((x) => [x.id, x]));
   for (const m of muren) {
@@ -2791,14 +2844,18 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     const begin = langs ? Math.min(...langs) : m.as === 'h' ? vlak.x : vlak.y, einde = langs ? Math.max(...langs) : begin + (m.as === 'h' ? vlak.b : vlak.d);
     // Op een verdieping loopt de buitenmuur door voor de rand van de vloerplaat.
     const onderkant = n > 0 && m.soort === 'buiten' && !binnen ? -VLOERDIKTE : 0;
-    const stuk = (code: string, a: number, b: number, y0: number, y1: number) => {
+    // `bedektIn` (ronde 17): vlakken waarvan de aanroeper weet dat ze helemaal tegen een ander stuk liggen.
+    const stuk = (code: string, a: number, b: number, y0: number, y1: number, bedektIn: BlokVlak[] = []) => {
       // Eerst verlengen (ook onder een deur op de verdieping komt de rand van de vloerplaat), dan pas de maat controleren.
       if (m.soort === 'buiten' && y0 === 0 && onderkant < 0) y0 = onderkant;
       if (b - a < 0.1 || y1 - y0 < 0.1) return;
+      // De naad op de sokkelhoogte: boven- en onderkant liggen op elkaar (als het stuk erboven niet weggeknipt is).
+      const opSokkel = (s: number): [BlokVlak[], BlokVlak[]] => [top > s + 0.1 ? [...bedektIn, 'y+'] : bedektIn, [...bedektIn, 'y-']];
       // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten.
       if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1 && !neutraal(m)) {
-        stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte);
-        stuk(code, a, b, sokkel.hoogte, y1);
+        const [onder, boven] = opSokkel(sokkel.hoogte);
+        stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte, onder);
+        stuk(code, a, b, sokkel.hoogte, y1, boven);
         return;
       }
       const buiten = m.soort === 'buiten' ? buitenAfw(m, y0) : undefined;
@@ -2821,17 +2878,50 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
           return ruimte ? wandVan(ruimte, R) : R.soort === 'buiten' ? buitenAfw(R, y0) : null;
         };
         const top = onderHellendDak && buiten && y1 >= H - 0.1 ? { zijden: { 'y+': buiten } } : {};
+        // Ronde 17: alles behalve de buitenkant wijkt (ook de voortzetting van een buitenkant op de hoek blijft vooraan).
+        const isBuitenkant = (r: MuurRand) => !!buiten && (r === 'min' ? !m.min : r === 'plus' ? !m.plus
+          : typeof r === 'object' && !muurAfw.get(r.muur)?.[r.kant] && muurAfw.get(r.muur)?.soort === 'buiten');
+        const wijkt: Partial<Blok> = opties.wijken ? { wijkt: ['y+', 'y-', ...rnd.flatMap((r, i) => (isBuitenkant(r) ? [] : [i]))] } : {};
         // Met `dingen`: een schuine buitenmuur hoort bij haar muurvlak, zoals een rechte (tik op de gevel in de 3D).
-        voeg(grondPrisma(metDing(opties, binnen ? `ruimte:${binnen.ruimte}:${kantBinnen}` : m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), 'gevel', pleister, pts, y0, y1 - y0, { randen: rnd.map(afw), ...top }));
+        voeg(grondPrisma(metDing(opties, binnen ? `ruimte:${binnen.ruimte}:${kantBinnen}` : m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), 'gevel', pleister, pts, y0, y1 - y0, { randen: rnd.map(afw), ...top, ...wijkt }));
         return;
       }
       // Binnenmuur die tot in het gevelvlak loopt (zie `Plan3DOpties.gevelkoppen`): de buitenmuur aan haar begin en einde.
       const kopIn = opties.gevelkoppen && m.soort === 'binnen' && m.as === 'h'
         ? [vlak.verlengdBegin && gelijk(a, begin) ? hoekMuur(m, m.van) : undefined, vlak.verlengdEinde && gelijk(b, einde) ? hoekMuur(m, m.tot) : undefined]
         : [];
+      // Ronde 17: de kop in de gevel (tot aan de binnenkant van de buitenmuur) als eigen stuk. Zo ligt elk vlak ervan ofwel
+      // vooraan (de kop in het gevelvlak), ofwel helemaal tegen een ander stuk (de stukken gevel opzij, de rest van de
+      // binnenmuur); anders kwam de binnenkant van de binnenmuur, die tot in de gevel loopt, er langs de naad door.
+      if (opties.wijken && kopIn[0] && b - a > kopIn[0].dikte + 0.1) {
+        stuk(`${code}_gevelkop`, a, a + kopIn[0].dikte, y0, y1, [...bedektIn, 'x+']);
+        stuk(code, a + kopIn[0].dikte, b, y0, y1, [...bedektIn, 'x-']);
+        return;
+      }
+      if (opties.wijken && kopIn[1] && b - a > kopIn[1].dikte + 0.1) {
+        stuk(code, a, b - kopIn[1].dikte, y0, y1, [...bedektIn, 'x+']);
+        stuk(`${code}_gevelkop`, b - kopIn[1].dikte, b, y0, y1, [...bedektIn, 'x-']);
+        return;
+      }
+      // Zo ook de hoek van een buitenmuur (het stuk dat over de muur op de hoek loopt, tot aan haar binnenkant): de binnenkant
+      // van dat stuk ligt dan helemaal tegen de kopse kant van de muur op de hoek. Anders kwam ze er op de zijgevel door.
+      const hoekIn = opties.wijken && m.soort === 'buiten' && m.as === 'h'
+        ? [vlak.verlengdBegin && gelijk(a, begin) ? hoekMuur(m, m.van) : undefined, vlak.verlengdEinde && gelijk(b, einde) ? hoekMuur(m, m.tot) : undefined]
+        : [];
+      if (hoekIn[0] && b - a > hoekIn[0].dikte + 0.1) {
+        stuk(`${code}_hoek`, a, a + hoekIn[0].dikte, y0, y1, [...bedektIn, 'x+']);
+        stuk(code, a + hoekIn[0].dikte, b, y0, y1, [...bedektIn, 'x-']);
+        return;
+      }
+      if (hoekIn[1] && b - a > hoekIn[1].dikte + 0.1) {
+        stuk(code, a, b - hoekIn[1].dikte, y0, y1, [...bedektIn, 'x+']);
+        stuk(`${code}_hoek`, b - hoekIn[1].dikte, b, y0, y1, [...bedektIn, 'x-']);
+        return;
+      }
       if (kopIn.some(Boolean) && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1) {
-        stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte);
-        stuk(code, a, b, sokkel.hoogte, y1);
+        const [onder, boven] = opSokkel(sokkel.hoogte);
+        stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte, onder);
+        stuk(code, a, b, sokkel.hoogte, y1, boven);
         return;
       }
       const zijden: Blok['zijden'] = m.as === 'h'
@@ -2860,38 +2950,105 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
         if (!gelijk(a, begin)) zijden[za] = eigen;
         if (!gelijk(b, einde)) zijden[zb] = eigen;
       }
+      // Ronde 17 (`Plan3DOpties.wijken`): alles wijkt behalve wat buiten vooraan ligt: het buitenvlak van een buitenmuur, de
+      // kopse kant op een buitenhoek (een stuk van de zijgevel) en de kop van een binnenmuur in de gevel.
+      const vooraan = new Set<BlokVlak>();
+      if (buiten) vooraan.add(m.as === 'h' ? (m.plus ? 'z-' : 'z+') : (m.plus ? 'x-' : 'x+'));
+      if (buiten && m.as === 'h' && vlak.verlengdBegin && gelijk(a, begin)) vooraan.add('x-');
+      if (buiten && m.as === 'h' && vlak.verlengdEinde && gelijk(b, einde)) vooraan.add('x+');
+      if (kopIn[0]) vooraan.add('x-');
+      if (kopIn[1]) vooraan.add('x+');
+      // Helemaal tegen een ander stuk (`Blok.bedekt`): wat de aanroeper meegaf, en de kopse kant aan het begin of einde van de
+      // muur als daar een massief stuk van een andere muur tegen ligt (de muur ernaast op dezelfde lijn, de kop van een
+      // binnenmuur, de muur op een hoek).
+      const bedekt = new Set<BlokVlak>(bedektIn);
+      if (opties.wijken) {
+        const [za, zb] = m.as === 'h' ? (['x-', 'x+'] as const) : (['z-', 'z+'] as const);
+        const voorbij = (e: number, kant: -1 | 1) => {
+          const [e0, e1] = kant < 0 ? [e - 0.5, e] : [e, e + 0.5];
+          return m.as === 'h' ? dicht(m, e0, e1, vlak.y, vlak.y + vlak.d) : dicht(m, vlak.x, vlak.x + vlak.b, e0, e1);
+        };
+        if (gelijk(a, begin) && !vlak.verlengdBegin && voorbij(begin, -1)) bedekt.add(za);
+        if (gelijk(b, einde) && !vlak.verlengdEinde && voorbij(einde, 1)) bedekt.add(zb);
+        // De kop van een binnenmuur in de gevel: opzij de stukken gevel. De hoek van een buitenmuur: binnen de muur op de hoek.
+        if (kopIn.some(Boolean) && dicht(m, a, b, vlak.y - 0.5, vlak.y)) bedekt.add('z-');
+        if (kopIn.some(Boolean) && dicht(m, a, b, vlak.y + vlak.d, vlak.y + vlak.d + 0.5)) bedekt.add('z+');
+        if (hoekIn.some(Boolean)) {
+          const binnenZ = m.plus ? 'z+' : 'z-';
+          if (binnenZ === 'z+' ? dicht(m, a, b, vlak.y + vlak.d, vlak.y + vlak.d + 0.5) : dicht(m, a, b, vlak.y - 0.5, vlak.y)) bedekt.add(binnenZ);
+        }
+      }
+      const wijkt: Partial<Blok> = opties.wijken
+        ? { wijkt: (['x+', 'x-', 'y+', 'y-', 'z+', 'z-'] as const).filter((v) => !vooraan.has(v)), ...(bedekt.size ? { bedekt: [...bedekt].filter((v) => !vooraan.has(v)) } : {}) }
+        : {};
       // Op een verdieping begint de buitenmuur lager, voor de rand van de vloerplaat: daar ook een stukje gevel onder de kop.
       if (n > 0 && y0 === 0) {
-        for (const [gevelMuur, x0] of [[kopIn[0], a], [kopIn[1], b - (kopIn[1]?.dikte ?? 0) / 2]] as const) {
+        for (const [gevelMuur, x0, kant] of [[kopIn[0], a, 'x-'], [kopIn[1], b - (kopIn[1]?.dikte ?? 0) / 2, 'x+']] as const) {
           if (!gevelMuur) continue;
           const afw = buitenAfw(gevelMuur, -VLOERDIKTE);
-          voeg({ code: `${code}_kop`, soort: afw.soort, vorm: 'blok', kleur: afw.kleur, voeg: afw.voeg, x: x0, y: -VLOERDIKTE, z: vlak.y, b: gevelMuur.dikte / 2, h: VLOERDIKTE, d: vlak.d });
+          const kopWijkt: Partial<Blok> = opties.wijken ? { wijkt: (['x+', 'x-', 'y+', 'y-', 'z+', 'z-'] as const).filter((v) => v !== kant) } : {};
+          voeg({ code: `${code}_kop`, soort: afw.soort, vorm: 'blok', kleur: afw.kleur, voeg: afw.voeg, x: x0, y: -VLOERDIKTE, z: vlak.y, b: gevelMuur.dikte / 2, h: VLOERDIKTE, d: vlak.d, ...kopWijkt });
         }
       }
       // Onder een hellend dak staat op de muurkop nog een stuk gevel (topgevel): de kop krijgt dan ook gevelmateriaal,
       // anders schemert zijn witte bovenkant als een stippellijn door de naad.
       if (onderHellendDak && buiten && y1 >= H - 0.1) zijden['y+'] = buiten;
-      const base = { code: metDing(opties, binnen ? `ruimte:${binnen.ruimte}:${kantBinnen}` : m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), soort: 'gevel' as BlokSoort, vorm: 'blok' as const, kleur: pleister, zijden, y: y0, h: y1 - y0 };
+      const base = { code: metDing(opties, binnen ? `ruimte:${binnen.ruimte}:${kantBinnen}` : m.soort === 'buiten' ? `gevel:${vlakSleutel(m)}` : undefined, code), soort: 'gevel' as BlokSoort, vorm: 'blok' as const, kleur: pleister, zijden, y: y0, h: y1 - y0, ...wijkt };
       voeg(m.as === 'h' ? { ...base, x: a, z: vlak.y, b: b - a, d: vlak.d } : { ...base, x: vlak.x, z: a, b: vlak.b, d: b - a });
     };
     const openingen = plan.openingen.filter((o) => muurVanOpening(o, [m]) === m).sort((a, b) => a.midden - b.midden);
     let cursor = begin;
-    for (const o of openingen) {
-      const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
-      stuk(`muur_${m.id}_${cursor}`, cursor, a, 0, H);
+    const [kantA, kantB] = m.as === 'h' ? (['x-', 'x+'] as const) : (['z-', 'z+'] as const);
+    // Per opening de hoogte die open is in de muur: van onder de dunste dorpel of vensterbank tot boven de opening (met kast).
+    const zones = openingen.map((o): [number, number] => {
       const inhoud = opties.inhoud?.(o);
       const hoogte = inhoud?.hoogte ?? (o.soort === 'doorgang' ? o.hoogte : o.hoogte + 4);
-      // Vensterbank of dorpel: de muur eronder stopt onder de dunste ervan. Anders vallen de bovenvlakken van
-      // muur en vensterbank samen en flikkert de vensterbank in witte en donkere strepen.
       const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
-      stuk(`onder_${o.id}`, a, b, 0, o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0));
-      stuk(`boven_${o.id}`, a, b, Math.min(H, o.borstwering + hoogte), H);
+      return [o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0), Math.min(H, o.borstwering + hoogte)];
+    });
+    /**
+     * Een stuk muur over de hele hoogte, tussen twee openingen of aan een einde. Ronde 17 (`wijken`), een buitenmuur: in
+     * banden, geknipt op de hoogtes waar de opening ernaast begint en eindigt. Zo is de dagkant van elke band ofwel helemaal
+     * te zien (naast de opening), ofwel helemaal bedekt (naast het stuk onder of boven de opening); anders kwam de dagkant
+     * die doorloopt achter die stukken, boven en onder elk raam als een lichte streep door een gevel die je schuin ziet.
+     * De banden liggen op elkaar (onder- en bovenkant bedekt): in de kijker is er geen naad.
+     */
+    const volStuk = (code: string, van: number, tot: number, links?: [number, number], rechts?: [number, number]) => {
+      if (!opties.wijken || m.soort !== 'buiten' || m.as === 's') { stuk(code, van, tot, 0, H); return; }
+      const hoogtes = [0, H, ...(links ?? []), ...(rechts ?? [])].filter((h) => h >= 0 && h <= H).sort((p, q) => p - q)
+        .filter((h, i, l) => !i || h - l[i - 1]! >= 0.1);
+      for (let k = 0; k + 1 < hoogtes.length; k++) {
+        const h0 = hoogtes[k]!, h1 = hoogtes[k + 1]!;
+        const bedekt: BlokVlak[] = [];
+        if (k > 0) bedekt.push('y-');
+        if (k + 2 < hoogtes.length && h1 < top - 0.1) bedekt.push('y+');
+        // Naast het stuk onder de opening (als dat er is) of boven de opening: bedekt.
+        const naast = (zone: [number, number] | undefined, kant: BlokVlak) => {
+          if (zone && ((h1 <= zone[0] + 0.05 && zone[0] >= 0.1) || (h0 >= zone[1] - 0.05 && H - zone[1] >= 0.1))) bedekt.push(kant);
+        };
+        naast(links, kantA);
+        naast(rechts, kantB);
+        stuk(k ? `${code}_${k}` : code, van, tot, h0, h1, bedekt);
+      }
+    };
+    for (const [i, o] of openingen.entries()) {
+      const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
+      volStuk(`muur_${m.id}_${cursor}`, cursor, a, zones[i - 1], zones[i]);
+      // Ronde 17: de zijkanten van het stuk onder en boven de opening liggen helemaal tegen het stuk muur ernaast (dat over
+      // de hele hoogte loopt), als dat er is.
+      const volgende = openingen[i + 1], tot = volgende ? volgende.midden - volgende.breedte / 2 : einde;
+      const zijkanten: BlokVlak[] = [...(a - cursor >= 0.1 ? [kantA] : []), ...(tot - b >= 0.1 ? [kantB] : [])];
+      // Vensterbank of dorpel: de muur eronder stopt onder de dunste ervan (zie `zones`). Anders vallen de bovenvlakken van
+      // muur en vensterbank samen en flikkert de vensterbank in witte en donkere strepen.
+      stuk(`onder_${o.id}`, a, b, 0, zones[i]![0], zijkanten);
+      stuk(`boven_${o.id}`, a, b, zones[i]![1], H, zijkanten);
+      const inhoud = opties.inhoud?.(o);
       const raam = openingBlokken(o, m, inhoud, cat);
       // Ronde 15: het glas licht 's avonds op (`verlichting`).
       for (const blok of opties.verlichting ? raamLicht(raam, plan, m, o) : raam) voeg(o.positie ? { ...blok, code: metDing(opties, `opening:${o.id}`, blok.code) } : blok);
       cursor = b;
     }
-    stuk(`muur_${m.id}_eind`, cursor, einde, 0, H);
+    volStuk(`muur_${m.id}_eind`, cursor, einde, zones[zones.length - 1], undefined);
   }
 
   // Plinten (ronde 12): een lijst vóór de binnenkant van de muren, alleen in een ruimte met een plint.
@@ -2915,7 +3072,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       if (!t) continue;
       if (binnen && !meubelIn(ruimte.get(binnen.ruimte)!, mb)) continue;
       // Een trap loopt altijd tot de vloer van de verdieping erboven.
-      for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, code: metDing(opties, `meubel:${mb.id}`, b.code), y: b.y + 1.5 }, false);
+      for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, code: metDing(opties, `meubel:${mb.id}`, b.code), y: b.y + 1.5, ...wijkStaand }, false);
     }
   }
   return blokken;

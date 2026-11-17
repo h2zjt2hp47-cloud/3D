@@ -20,7 +20,7 @@ export function techniekBeeldGegevens(): { pakket: Pakket3D; plan: string; klant
     posities: [],
   };
   // Sinds ronde 17 ook de techniek binnen in de woning, zoals het bestand voor de klant (`maakPakket3D` met `techniek`).
-  const o = { aanleg: true, gevelkoppen: true, meubels: true, dingen: true, techniekBuiten: true, techniekBinnen: true };
+  const o = { aanleg: true, gevelkoppen: true, wijken: true, meubels: true, dingen: true, techniekBuiten: true, techniekBinnen: true };
   const klant: Pakket3D = {
     soort: PAKKET3D_SOORT, versie: PAKKET3D_VERSIE, gemaakt: '2026-11-17T12:00:00.000Z',
     project: { nummer: 'beeldtest', naam: 'Voorbeeldwoning met techniek' },

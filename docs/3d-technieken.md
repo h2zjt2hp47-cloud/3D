@@ -429,6 +429,16 @@ Beeld van de proef: `docs/afbeeldingen/proef-sss-traa.jpg`.
   blijven horizontaal), geen kanteling. De schaduw op de vloer ligt bij de voet.
 - **Een grondvlak op de hoogte van iets anders flikkert.** Het terras en de vloer bij een los raam lagen precies op de
   vloer van de studio: strepen. De grond van de bouw wijkt nu in de diepte (`polygonOffset`), zonder iets te verschuiven.
+- **Fijne lichte streepjes in een gevel uit stukken** (ronde 17, 17/11, de woning). Zonder grafische kaart (swiftshader,
+  vier monsters per beeldpunt) kwam elk vlak dat achter de gevel ligt en dat je bijna op zijn kant ziet, langs zijn rand
+  door die gevel: de kopse kanten tussen de stukken muur, de dagkant die achter het stuk boven en onder een raam doorloopt,
+  de binnenmuren erachter. Zo gevonden: een bouw met de verborgen vlakken in felle kleuren, en dan één ding tegelijk
+  uitzetten (zonder de vier monsters: geen streepje; de blokken in wereldmaat of een verdere voorste grens van de camera:
+  niets veranderd). Herstel in de motor met hulp van de kijker: elk vlak ligt ofwel vooraan, ofwel wijkt het een fractie
+  naar achter (naar zijn helling), ofwel is het helemaal bedekt en wordt het niet getekend; de stukken zijn daarvoor iets
+  anders geknipt. Een verschuiving op álle vlakken maakte het erger (langs de rand van een gevel die je schuin ziet). Les:
+  eerst kleuren en meten, dan pas samenvoegen of de textuur verleggen (het voorstel vooraf, dat het niet was). Op een echte
+  grafische kaart niet nagekeken. Zie de skill `bouw-woning`, *Geen streepjes in de gevel*.
 - **Een schaduwkaart die van maat verandert, en een nabewerking die even niet tekent.** Bij de bouw (PCF-schaduw,
   1024 in *Snel*, 2048 in *Mooi*) gaf Snel → Mooi tijdens het kijken een stuk beeld: de pijplijn van de nabewerking
   gebruikte nog de gewiste schaduwkaart (`bindTexture: attempt to use a deleted object`). De pijplijn wordt nu opnieuw

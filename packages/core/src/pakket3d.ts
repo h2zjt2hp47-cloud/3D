@@ -21,6 +21,9 @@ export const PAKKET3D_SOORT = 'bouw-3d-pakket';
  * Sinds ronde 15 (17/11) kan een blok `licht` dragen (wat 's nachts licht geeft: het glas van een raam, een lamp, de strook
  * van een ledstrip). Dat blijft versie 4: het veld is optioneel, en een oudere kijker tekent het blok zoals altijd (het
  * profiel van een ledstrip ook, overdag); alleen de nachtweergave ontbreekt daar.
+ * Sinds ronde 17 (17/11) kan een blok `wijkt` en `bedekt` dragen (geen streepjes in de gevel). Ook dat blijft versie 4:
+ * een oudere kijker tekent alle vlakken zoals altijd. Zonder grafische kaart ziet hij dan wel liggende stippellijntjes op
+ * de hoogtes van de ramen, waar de muur nu in banden geknipt is (gemeten); een nieuwe kijker niet.
  */
 export const PAKKET3D_VERSIE = 4;
 

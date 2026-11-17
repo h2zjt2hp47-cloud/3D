@@ -197,6 +197,14 @@ const BOUWBEELDEN = [
   // bovenop de lage muren ligt. Op een eigen pagina met een vers project. Samen te vernieuwen met `--alleen bouw-verlichting`.
   { naam: 'bouw-verlichting-schuin', verlichting: 'schuin' },
   { naam: 'bouw-verlichting-ruimte', verlichting: 'ruimte' },
+  // Ronde 17 (17/11): geen lichte streepjes in de gevel waar een binnenmuur de gevel raakt (en boven en onder een raam, op
+  // de sokkelhoogte, in de dakrand, op een hoek). Close-ups uit de foto op hoge resolutie (`uitsnede`), op een eigen pagina
+  // met een vers project (de voorbeeldwoning): de zijgevel recht van opzij (standpunt Zij: de koppen van twee binnenmuren,
+  // drie ramen, sokkel en dakrand) en de linkergevel schuin (standpunt Schuin: een hoek, de kop van een binnenmuur en een
+  // raam in een gevel die je schuin ziet; daar bleven met alleen het wijken nog streepjes over). Samen te vernieuwen met
+  // `--alleen bouw-naden`.
+  { naam: 'bouw-naden-zij', naden: 'zij', uitsnede: [0.17, 0.5, 0.83, 0.86] },
+  { naam: 'bouw-naden-schuin', naden: 'schuin', uitsnede: [0.13, 0.25, 0.45, 0.96] },
 ];
 
 /**
@@ -807,6 +815,23 @@ async function maakBeelden() {
         await p.click('[data-pl-standpunt="schuin"]');
         beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  // Ronde 17: de naden in de gevel, close-ups uit de foto op hoge resolutie. Eigen pagina, vers project.
+  const naden = BOUWBEELDEN.filter((b) => b.naden && nodig(b));
+  if (naden.length) {
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.click('.nav [data-weergave="plan"]');
+    await p.click('[data-pl-weergave="3d"]');
+    for (const b of naden) {
+      process.stdout.write(`  ${b.naam} … `);
+      await p.click(`[data-pl-standpunt="${b.naden}"]`);
+      await wachtTotStil(p, '#pl-3d canvas');
+      beelden.set(b.naam, uitsnede(png(await p.evaluate(() => window.__bouw3d.foto())), b.uitsnede));
       console.log('klaar');
     }
     await p.close();

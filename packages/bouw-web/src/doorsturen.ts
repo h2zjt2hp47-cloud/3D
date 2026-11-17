@@ -24,6 +24,8 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
     // Terras en pad horen bij de woning: ze gaan mee in het pakket. Lucht en gras tekent de kijker zelf.
     aanleg: true,
     gevelkoppen: true,
+    // Ronde 17: geen streepjes in de gevel (`Blok.wijkt`; een oudere kijker kent het veld niet en tekent zoals vroeger).
+    wijken: true,
     totNiveau,
     inhoud: openingInhoudUit(t.posities),
     // Ronde 11 (bestand voor de klant): elk blok zegt bij welk ding het hoort, zodat een tik in de kijker de posten toont.
