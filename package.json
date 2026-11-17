@@ -1,0 +1,21 @@
+{
+  "name": "belgica",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "kaart": "node scripts/kaart/maak-kaart.mjs",
+    "build": "node scripts/bouw.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/d3-delaunay": "^6.0.4",
+    "@types/node": "^26.6.6",
+    "d3-delaunay": "^6.0.6",
+    "esbuild": "^0.28.2",
+    "polygon-clipping": "^0.15.7",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.0"
+  }
+}

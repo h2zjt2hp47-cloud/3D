@@ -8,8 +8,12 @@ Eigen strategiespel (doorlopende klok met pauze, kaart met vakken) over het gebi
 - Deze tak (`claude/brave-hopper-9hiwhj`) staat voorlopig in de repo van de configurator, maar heeft een eigen geschiedenis zonder configuratorbestanden. Later verhuist het spel naar een eigen repo.
 - De configurator zelf staat op `claude/vigilant-cray-yi2j33`: daar niets aan veranderen vanuit dit spel.
 
+## Stand
+- Stap 1 (de Romeinen, oorlog) is gebouwd; zie `LEESMIJ.md` voor de opbouw en `docs/ontwerp.md` (Stand) voor wat er nog niet is.
+
 ## Werkwijze
 - TypeScript, in de browser, gebundeld tot één HTML-bestand om te openen. Niets van een CDN laden.
+- Controles vóór elke commit: `npm test` en `npm run typecheck`; daarna `npm run build` en `dist/belgica.html` mee committen.
 - Code, namen en commentaar in het Nederlands.
 - Jaartallen en feiten pas in het spel na nakijken; wat niet nagekeken is, zo markeren.
 - Kaartgegevens enkel uit vrije bronnen, met vermelding van de bron.

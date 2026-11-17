@@ -75,6 +75,11 @@ Jaartallen en feiten hieronder komen uit algemene kennis en zijn **nog na te kij
 
 Elke stap eindigt met een bestand dat je kan openen en spelen.
 
+### Stand (17/11/2026)
+- **Stap 1 is gebouwd**: `dist/belgica.html`. Kaart met 250 vakken, klok met pauze en vijf snelheden, twaalf volken (Rome, Remi, tien Belgische stammen en de Treveri), legers met moraal, veldslagen met terrein en rivieren, bezetting en belegering van versterkingen, uitputting, computerspelers, onderwerping en opstand, opvolging, drie vaste gebeurtenissen (de bond van 57, de opstand van Ambiorix in 54, nieuwe legioenen in 53) en een score.
+- Zelfde start, verschillende afloop: in vier proefoorlogen won Rome twee keer veel terrein, één keer half en één keer bleven de Belgen overeind.
+- Nog niet: economie, diplomatie en vrede, huwelijken, de tijd na 50 v.Chr.
+
 ## 5. Opgelet
 
 - Met de Romeinen eerst testen we vooral oorlog; huwelijken, erven en handel komen later. Problemen met die regels zie je dus pas in latere tijdperken.

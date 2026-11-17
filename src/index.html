@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Belgica</title>
+<style>
+:root {
+  --achter: #1c1a16;
+  --balk: #26231d;
+  --paneel: rgba(34, 31, 26, 0.94);
+  --rand: #4a4335;
+  --tekst: #efe6cf;
+  --zacht: #b9ad8f;
+  --goud: #d9b46a;
+  --gevaar: #b8452f;
+  --knop: #3a342a;
+  --knop-hover: #4a4234;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--achter); color: var(--tekst); font: 14px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; overflow: hidden; }
+button { font: inherit; color: var(--tekst); background: var(--knop); border: 1px solid var(--rand); border-radius: 4px; padding: 5px 10px; cursor: pointer; }
+button:hover:not(:disabled) { background: var(--knop-hover); border-color: var(--goud); }
+button:disabled { opacity: 0.45; cursor: default; }
+button.hoofd { background: #6b5526; border-color: var(--goud); }
+button.gevaar { background: var(--gevaar); border-color: #e07a5f; }
+small { color: var(--zacht); }
+.kleur { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.6); margin-right: 8px; vertical-align: -2px; flex: none; }
+
+#kaart { position: fixed; inset: 48px 0 0 0; width: 100%; height: calc(100% - 48px); touch-action: none; cursor: grab; }
+#kaart:active { cursor: grabbing; }
+
+#balk { position: fixed; top: 0; left: 0; right: 0; height: 48px; background: var(--balk); border-bottom: 1px solid var(--rand); display: flex; align-items: center; gap: 16px; padding: 0 12px; z-index: 5; }
+#balk .wie { display: flex; align-items: center; min-width: 0; flex: 1 1 0; }
+#balk .wie small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#balk .wie b { font-family: Georgia, serif; font-size: 16px; }
+#balk .klok { display: flex; align-items: center; gap: 8px; }
+#balk .speel { width: 36px; height: 32px; padding: 0; font-size: 15px; }
+#balk .datum { min-width: 150px; text-align: center; line-height: 1.15; }
+#balk .datum small { display: block; }
+#balk .snelheden { display: flex; gap: 2px; }
+#balk .snelheden button { padding: 3px 6px; font-size: 12px; min-width: 26px; }
+#balk .snelheden button.aan { background: #6b5526; border-color: var(--goud); }
+#balk .cijfers { display: flex; gap: 12px; white-space: nowrap; }
+#balk .knoppen { display: flex; gap: 6px; }
+
+#paneel { position: fixed; top: 60px; right: 12px; width: 290px; max-height: calc(100% - 72px); overflow: auto; background: var(--paneel); border: 1px solid var(--rand); border-radius: 6px; padding: 12px 14px; z-index: 4; }
+#paneel h3 { margin: 0 0 4px; font-family: Georgia, serif; font-size: 17px; display: flex; align-items: center; }
+#paneel p { margin: 6px 0; }
+#paneel .klein, .klein { font-size: 12.5px; color: var(--zacht); }
+#paneel a { color: var(--goud); }
+#paneel table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0; }
+#paneel td { padding: 2px 0; vertical-align: top; }
+#paneel td:first-child { color: var(--zacht); width: 42%; }
+.rij { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.leger { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid rgba(255,255,255,0.07); font-size: 13px; }
+.moraal { width: 60px; height: 6px; background: #111; border-radius: 3px; overflow: hidden; flex: none; }
+.moraal i { display: block; height: 100%; background: #7bc96f; }
+
+#berichten { position: fixed; left: 12px; bottom: 12px; width: min(420px, calc(100% - 24px)); display: flex; flex-direction: column-reverse; gap: 4px; z-index: 3; pointer-events: none; }
+.bericht { background: var(--paneel); border: 1px solid var(--rand); border-left: 3px solid var(--zacht); border-radius: 4px; padding: 4px 8px; font-size: 12.5px; pointer-events: auto; cursor: pointer; }
+.bericht.slag { border-left-color: var(--gevaar); }
+.bericht.verovering { border-left-color: var(--goud); }
+.bericht.gebeurtenis { border-left-color: #7aa6d6; }
+.bericht:nth-child(n+4) { opacity: 0.7; }
+
+#melding { position: fixed; top: 60px; pointer-events: none; left: 50%; transform: translateX(-50%); background: #2b271f; border: 1px solid var(--goud); padding: 8px 14px; border-radius: 4px; z-index: 6; max-width: calc(100% - 32px); }
+
+#venster { position: fixed; inset: 0; background: rgba(10,8,5,0.55); display: flex; align-items: center; justify-content: center; z-index: 10; padding: 16px; }
+#venster[hidden], #start[hidden], #paneel[hidden], #melding[hidden] { display: none; }
+.venster-binnen { background: #2b271f; border: 1px solid var(--goud); border-radius: 8px; padding: 20px 24px; max-width: 520px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+.venster-binnen h2 { margin: 0 0 8px; font-family: Georgia, serif; color: var(--goud); font-weight: 600; }
+.venster-binnen ul { padding-left: 18px; }
+.venster-binnen li { margin: 4px 0; }
+
+#start { position: fixed; inset: 0; z-index: 20; overflow: auto; background: radial-gradient(ellipse at 30% 20%, #3a3123 0%, #1c1a16 70%); }
+.start-binnen { max-width: 860px; margin: 0 auto; padding: 40px 16px 60px; }
+#start h1 { font-family: Georgia, serif; font-size: 56px; margin: 0; color: var(--goud); letter-spacing: 0.06em; font-weight: 600; }
+#start .onder { font-size: 16px; margin-top: 4px; }
+#start h2 { font-family: Georgia, serif; font-weight: 600; font-size: 18px; margin: 22px 0 8px; color: var(--zacht); }
+#start .kies { margin-top: 26px; font-size: 16px; }
+.stammen { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.stam { display: flex; text-align: left; align-items: flex-start; padding: 10px 12px; background: rgba(58,52,42,0.75); }
+.stam .kleur { margin-top: 3px; }
+.stam .uitleg { font-size: 12.5px; color: var(--zacht); }
+#start .noot { margin-top: 28px; font-size: 12px; color: var(--zacht); }
+#verder { margin-top: 18px; padding: 10px 16px; font-size: 15px; }
+
+@media (max-width: 760px) {
+  #balk { gap: 8px; padding: 0 8px; }
+  #balk .cijfers, #balk .wie small, #balk .wie b { display: none; }
+  #balk .wie { flex: none; }
+  #balk .klok { flex: 1; justify-content: center; }
+  #balk .datum { min-width: 0; font-size: 12px; }
+  #balk .snelheden button:nth-child(n+4) { display: none; }
+  #paneel { top: auto; bottom: 12px; right: 12px; left: 12px; width: auto; max-height: 45%; }
+  #berichten { display: none; }
+  #start h1 { font-size: 40px; }
+}
+</style>
+</head>
+<body>
+<div id="balk"></div>
+<canvas id="kaart"></canvas>
+<aside id="paneel" hidden></aside>
+<div id="berichten"></div>
+<div id="melding" hidden></div>
+<div id="venster" hidden></div>
+<div id="start" hidden></div>
+<!--SCRIPT-->
+</body>
+</html>
