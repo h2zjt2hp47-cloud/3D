@@ -251,7 +251,7 @@ function kiesModus(m: 'ontwerp' | 'techniek') {
 }
 
 /**
- * De uitleg van een aangetikt toestel of een leiding, over de 3D (links onderaan): de naam met de kleur van het vak, wat
+ * De uitleg van een aangetikt toestel of een leiding, over de 3D (linksboven, waar meestal gras of lucht ligt): de naam met de kleur van het vak, wat
  * het is, waar het zit, en de post waar het bij hoort (met een knop naar die post in de lijst). Niets = dicht.
  */
 function toonInfo(ding: string | null) {
