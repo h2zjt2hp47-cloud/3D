@@ -142,6 +142,10 @@ function toonPosten(p: Pakket3D) {
   const lijst = $('#werklijst');
   const posten = p.posten ?? [];
   $('#werk').hidden = !posten.length;
+  // Tikken in de 3D opent alleen bij een woning de posten van dat onderdeel (doorloop B25: één raam zei "tik op het dak").
+  $('#werk .klein').textContent = p.woning.length
+    ? 'Tik op een onderdeel voor de uitleg, of tik in de 3D op het dak, een gevel of een raam.'
+    : 'Tik op een onderdeel voor de uitleg.';
   lijst.replaceChildren();
   let groep = '';
   for (const [i, x] of posten.entries()) {

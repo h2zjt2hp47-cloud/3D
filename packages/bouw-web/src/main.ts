@@ -12,6 +12,7 @@ import { startWerf, toonWerf } from './werf-ui.js';
 import { startProjecten, toonProjecten } from './projecten-ui.js';
 import { startVarianten, toonVarianten } from './varianten-ui.js';
 import { startWerken } from './werken-ui.js';
+import { startKlantweergave } from './klantweergave.js';
 import { laatstBewaard, opslagProbleem, opWijziging, toestand } from './staat.js';
 
 window.addEventListener('error', (e) => {
@@ -96,6 +97,7 @@ veilig('Projecten', () => startProjecten(nav));
 veilig('Snelstart', () => startSnelstart(nav));
 veilig('Varianten', () => startVarianten(nav));
 veilig('Werken', () => startWerken(nav));
+veilig('Klantweergave', () => startKlantweergave());
 
 opWijziging(() => veilig('Bijwerken', () => {
   if (actief === 'plan') naWijziging();

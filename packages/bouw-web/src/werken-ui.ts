@@ -18,9 +18,9 @@ import {
   hoeveelheidTekst, POST_GROEP_NAAM, POST_GROEPEN, postenTekst, postenVan, postenVanDing, WERK_VOORSTELLEN,
   type HandmatigePost, type Post, type PostGroep, type PostPositie, type WoningConstructie,
 } from '../../core/src/index.js';
-import type { Standpunt } from '../../demo-web/src/drie-d.js';
 import { constructieCatalogus, huidigeConstructie } from './constructie-ui.js';
 import { el, kopieer } from './hulp.js';
+import { raamNaam } from '../../core/voorbeelden/snelstart.js';
 import { isVastModel } from '../../core/voorbeelden/vastemodellen.js';
 import { kort, omschrijving } from './offerte-ui.js';
 import { toonDingenIn3D } from './plattegrond-ui.js';
@@ -36,10 +36,15 @@ export function startWerken(nav: { naarPlan: () => void }) {
 /** Een positie zoals de posten ze nodig hebben: soort en maat, en wat erin zit in een zin. */
 function postPositie(p: Positie): PostPositie {
   const zin = omschrijving(p).split(' · ').filter(Boolean).join(', ');
+  // "Hef-schuifdeur (2 tot 4 delen) · 400 × 235 cm" → "Hef-schuifdeur · 400 × 235 cm": de uitleg tussen haakjes is voor de keuze.
+  // Een raam of deur in gewone woorden: "Schuifraam · 300 × 230 cm", niet "Schuifraam of schuifdeur · …" (doorloop B25).
+  const titel = kort(p).replace(/\s*\([^)]*\)/g, '');
   return {
-    // "Hef-schuifdeur (2 tot 4 delen) · 400 × 235 cm" → "Hef-schuifdeur · 400 × 235 cm": de uitleg tussen haakjes is voor de keuze.
-    id: p.id, naam: p.naam, aantal: p.aantal, kort: kort(p).replace(/\s*\([^)]*\)/g, ''), detail: zin ? [`${zin.charAt(0).toUpperCase()}${zin.slice(1)}.`] : [],
+    id: p.id, naam: p.naam, aantal: p.aantal, kort: p.model === 'RAAM' ? titel.replace(/^[^·]*·/, `${raamNaam(p.keuzes)} ·`) : titel,
+    detail: zin ? [`${zin.charAt(0).toUpperCase()}${zin.slice(1)}.`] : [],
     soort: p.model === 'RAAM' || p.model === 'POORT' ? 'schrijnwerk' : 'ander',
+    // Een aanbouw is het bouwwerk zelf (ruwbouw); een carport, tuinhuis, loods of staalwerk: bijgebouwen en buitenwerk.
+    ...(p.model === 'AANBOUW' ? { groep: 'ruwbouw' as const } : {}),
   };
 }
 
@@ -63,19 +68,15 @@ export function huidigePosten(): Post[] {
 /** De posten waar een ding van de 3D bij hoort (voor het keuzepaneel). */
 export const postenVoorDing = (ding: string) => postenVanDing(huidigePosten(), ding);
 
-/** Waaruit de 3D best kijkt om de delen van een post te zien. */
-function standpuntVoor(p: Post): Standpunt {
-  if (p.dingen.some((d) => d.endsWith(':onder'))) return 'voor';
-  if (p.dingen.some((d) => d.endsWith(':boven'))) return 'achter';
-  if (p.dingen.some((d) => d.endsWith(':rechts'))) return 'zij';
-  return 'schuin';
-}
-
-/** De delen van een post in de 3D van de woning aanduiden. */
+/**
+ * De delen van een post in de 3D van de woning aanduiden, groot in beeld (doorloop B11): de kijker zet de camera zelf voor
+ * het aangeduide deel (`@kijk`, zie `markeer` in drie-d.ts), van de kant van de gevel waarin het zit of van boven voor het dak.
+ * Daarom geen vast standpunt meer (vroeger altijd hetzelfde schuine beeld van ver, of Voor bij een achtergevel).
+ */
 export function toonPostIn3D(p: Post) {
   naarPlan();
   const groepen = p.markeer?.length ? [p.markeer] : p.dingen.length > 6 ? [p.dingen.map((d) => `${d}.`)] : p.dingen.map((d) => [`${d}.`]);
-  toonDingenIn3D(groepen, standpuntVoor(p), { techniek: p.groep === 'techniek' && p.dingen.some((d) => /^(toestel|leiding):/.test(d)) });
+  toonDingenIn3D([['@kijk'], ...groepen], undefined, { techniek: p.groep === 'techniek' && p.dingen.some((d) => /^(toestel|leiding):/.test(d)) });
 }
 
 /** Een post als regel die openklapt (dicht tot je hem opent): de titel en de hoeveelheid, open het detail. */
@@ -83,7 +84,8 @@ export function postDetail(p: Post, opties: { open?: boolean; toon3D?: boolean; 
   const d = el('details', { class: 'post', 'data-post': p.id }) as HTMLDetailsElement;
   d.open = !!opties.open;
   const s = el('summary');
-  s.append(el('span', { class: 'posttitel' }, p.titel), el('span', { class: 'klein posthoeveel' }, hoeveelheidTekst(p)));
+  // Een aantal stuks is ook voor de klant; m², lopende meter en m³ alleen voor de aannemer (klantweergave, zoals het bestand voor de klant).
+  s.append(el('span', { class: 'posttitel' }, p.titel), el('span', { class: `klein posthoeveel${p.eenheid === 'stuks' ? '' : ' intern'}` }, hoeveelheidTekst(p)));
   d.append(s);
   const inhoud = el('div', { class: 'postinhoud' });
   const vul = () => {
@@ -94,7 +96,7 @@ export function postDetail(p: Post, opties: { open?: boolean; toon3D?: boolean; 
       inhoud.append(ul);
     } else inhoud.append(el('p', { class: 'klein' }, 'Geen verdere uitleg.'));
     if (p.intern.length) {
-      const a = el('details', { class: 'aannames' });
+      const a = el('details', { class: 'aannames intern' });
       a.append(el('summary', {}, 'Hoeveelheden voor de aannemer (netto)'));
       const ul = el('ul', { class: 'klein' });
       for (const x of p.intern) ul.append(el('li', {}, x));
@@ -150,12 +152,12 @@ function werkVelden(id: string): HTMLElement[] {
   for (const e of uniekeEenheden(w.eenheid)) eenheid.append(el('option', { value: e }, e || '—'));
   eenheid.value = w.eenheid ?? '';
   eenheid.addEventListener('change', () => zetWerk(id, (x) => { if (eenheid.value) x.eenheid = eenheid.value; else delete x.eenheid; }));
-  const weg = el('button', { type: 'button', class: 'gevaar', 'data-werk-weg': id }, 'Verwijderen');
+  const weg = el('button', { type: 'button', class: 'gevaar intern', 'data-werk-weg': id }, 'Verwijderen');
   weg.addEventListener('click', () => wijzig('meta', (t) => {
     t.meta.werken = t.meta.werken?.filter((x) => x.id !== id);
     if (!t.meta.werken?.length) delete t.meta.werken;
   }));
-  const rij = el('div', { class: 'werkvelden' });
+  const rij = el('div', { class: 'werkvelden intern' });
   rij.append(veld('Wat', titel), veld('Groep', groep), veld('Hoeveelheid', hoeveel), veld('Eenheid', eenheid));
   return [rij, weg];
 }
@@ -170,7 +172,7 @@ function voegWerkToe(w: Omit<HandmatigePost, 'id'>) {
 
 /** Het paneel *+ Werk toevoegen*: de voorstellen als tegels, en ander werk met een eigen omschrijving. */
 function toevoegPaneel(): HTMLElement {
-  const vak = el('div', { class: 'werktoevoegen', id: 'o-werk-tegels' });
+  const vak = el('div', { class: 'werktoevoegen intern', id: 'o-werk-tegels' });
   const tegels = el('div', { class: 'werktegels' });
   for (const v of WERK_VOORSTELLEN) {
     const b = el('button', { type: 'button', class: 'werktegel', 'data-werk-voorstel': v.code });
@@ -200,7 +202,8 @@ export function toonWerkenOverzicht() {
   let kaart = document.getElementById('o-werken');
   if (!kaart) {
     // Eén keer: de kaart vóór de afwerking uit de plattegrond (en de kaarten Constructie en Techniek).
-    kaart = el('section', { class: 'kaart alleen-woning', id: 'o-werken', 'aria-label': 'Werken' });
+    // `voor-klant`: de klantweergave toont deze kaart (zonder wat `intern` is), zoals het bestand voor de klant.
+    kaart = el('section', { class: 'kaart alleen-woning voor-klant', id: 'o-werken', 'aria-label': 'Werken' });
     document.getElementById('o-regels-kaart')?.before(kaart);
   }
   const t = toestand();
@@ -216,7 +219,7 @@ export function toonWerkenOverzicht() {
     lijst.append(el('h3', { class: 'postgroep' }, POST_GROEP_NAAM[g]));
     for (const p of deze) lijst.append(postDetail(p, { open: open.has(p.id), bijOpen: (o) => { if (o) open.add(p.id); else open.delete(p.id); } }));
   }
-  const acties = el('div', { class: 'acties' });
+  const acties = el('div', { class: 'acties intern' });
   const toevoegen = el('button', { type: 'button', class: 'tweede', id: 'o-werk-toevoegen', 'aria-expanded': String(toevoegenOpen) }, '+ Werk toevoegen');
   const melding = el('span', { class: 'klein', role: 'status' });
   const kopie = el('button', { type: 'button', class: 'tweede', id: 'o-posten-kopieer' }, 'Kopieer als tekst');
@@ -229,5 +232,6 @@ export function toonWerkenOverzicht() {
     paneel.hidden = !toevoegenOpen;
     toevoegen.setAttribute('aria-expanded', String(toevoegenOpen));
   });
-  kaart.replaceChildren(kop, el('p', { class: 'klein voorbehoud' }, 'Wat een aannemer op zijn offerte zet, zonder prijzen. Tik op een post voor het detail. Wat bestaat of van de buren is, staat er niet in; de opbouwen zijn voorbeelden.'), lijst, acties, paneel);
+  kaart.replaceChildren(kop, el('p', { class: 'klein voorbehoud intern' }, 'Wat een aannemer op zijn offerte zet, zonder prijzen. Tik op een post voor het detail. Wat bestaat of van de buren is, staat er niet in; de opbouwen zijn voorbeelden.'),
+    el('p', { class: 'klein alleen-klantweergave' }, 'Wat er gebeurt, stap voor stap. Tik op een onderdeel voor de uitleg.'), lijst, acties, paneel);
 }

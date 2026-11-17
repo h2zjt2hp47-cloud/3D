@@ -276,10 +276,14 @@ export interface OpbouwPlaatsKeuze {
  * De opbouwen die een woning kan krijgen (zoals de gevelcatalogus): de opbouwen zelf, hun materialen en per plaats de
  * keuzes en de standaard. `volgensGevel`: zonder keuze voor de buitenwand volgt de opbouw de soort van het gevelmateriaal
  * van dat muurvlak (gevelsteen → steenstrips, hout → houten bekleding, pleister → sierpleister); anders de standaard.
+ * `volgensDak` (16/11, doorloop B3): zonder keuze voor het hellende dak volgt de opbouw de gekozen dakbedekking (de code
+ * in de dakcatalogus: pannen → panlatten en pannen, leien → leilatten en leien, zink → een dakbeschot en zink); anders
+ * de standaard.
  */
 export interface WoningOpbouwCatalogus {
   opbouwen: Record<string, Opbouw>;
   materialen: Record<string, BouwMateriaal>;
   plaatsen: Record<OpbouwPlaats, OpbouwPlaatsKeuze>;
   volgensGevel?: Partial<Record<BlokSoort, string>>;
+  volgensDak?: Record<string, string>;
 }

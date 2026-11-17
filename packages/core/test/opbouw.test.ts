@@ -142,6 +142,7 @@ describe('opbouw: de catalogus met voorbeelden', () => {
     expect(Object.fromEntries(Object.entries(opbouwen).map(([k, o]) => [k, o.soort]))).toEqual({
       hsb_hout: 'wand', hsb_steenstrips: 'wand', hsb_pleister: 'wand', spouwmuur: 'wand', binnenwand_hsb: 'wand',
       plat_dak_warm: 'dak', hellend_dak_pannen: 'dak', vloer_volle_grond: 'vloer', verdiepingsvloer_hout: 'vloer',
+      hellend_dak_leien: 'dak', hellend_dak_zink: 'dak',
     });
   });
 

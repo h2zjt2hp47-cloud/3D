@@ -2870,8 +2870,9 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   }
   function zetMarkering() {
     if (markeerKader) { scene.remove(markeerKader); markeerKader.geometry?.dispose(); markeerKader = null; }
-    for (const k of markeerKaders) { scene.remove(k); k.geometry?.dispose(); }
+    for (const k of markeerKaders) { scene.remove(k); if (k.userData?.eigenVorm) k.geometry?.dispose(); }
     markeerKaders = [];
+    markeerUnie = null;
     if (!markeerId) return;
     if (markeerId.startsWith('~')) { zetMarkeringen(markeerId.slice(1)); return; }
     const box = new THREE.Box3();
@@ -2899,22 +2900,115 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
    * (gescheiden door `,`; een ding als `gevel:uitbouw:onder.`, of een blok als `dak.dakplaat_uitbouw`). Zonder `~` aan
    * het begin is alles zoals vroeger (één ding).
    */
+  /**
+   * Sinds 16/11 (doorloop B11: een dunne donkergroene lijn, op glas en donker hout onzichtbaar) is die aanduiding goed te
+   * zien: de delen zelf krijgen een doorschijnende oranje laag (alleen wat je ziet, niet door de muren heen) en het kader
+   * dikke oranje randen die altijd bovenop staan. Een voorvoegsel `@kijk` (een eigen groep, bv. `~@kijk|a,b`) zet de
+   * camera bovendien voor het aangeduide deel (zie `kijkNaarDeel`). Zonder `~` is alles zoals vroeger (één ding, dunne lijn).
+   */
   function zetMarkeringen(groepen: string) {
+    const unie = new THREE.Box3();
     for (const g of groepen.split('|')) {
-      const voor = g.split(',').filter(Boolean);
+      const voor = g.split(',').filter((v) => v && !v.startsWith('@'));
       if (!voor.length) continue;
       const box = new THREE.Box3();
-      for (const c of groep.children) if (voor.some((v) => c.name.startsWith(v))) box.expandByObject(c);
+      const delen: any[] = [];
+      for (const c of groep.children) {
+        if (!voor.some((v) => c.name.startsWith(v))) continue;
+        box.expandByObject(c);
+        c.updateWorldMatrix(true, true);
+        c.traverse((m: any) => { if (m.isMesh && m.geometry && m.visible !== false) delen.push(m); });
+      }
       if (box.isEmpty()) continue;
       box.expandByScalar(1.5);
-      const k = new THREE.Box3Helper(box, new THREE.Color('#3f5a52'));
-      k.material.depthTest = false;
-      k.material.transparent = true;
-      k.material.opacity = 0.85;
-      k.renderOrder = 9;
-      scene.add(k);
-      markeerKaders.push(k);
+      unie.union(box);
+      // De delen zelf: dezelfde vorm, een doorschijnende laag erover (iets naar de camera geschoven, tegen flikkeren).
+      for (const m of delen) {
+        const laag = new THREE.Mesh(m.geometry, markeerLaag);
+        laag.matrixAutoUpdate = false;
+        laag.matrix.copy(m.matrixWorld);
+        laag.renderOrder = 8;
+        laag.raycast = () => {};
+        scene.add(laag);
+        markeerKaders.push(laag);
+      }
+      // Het kader: twaalf staven, even dik als een paar beeldpunten op de afstand waarop je het deel bekijkt.
+      const maat = box.getSize(new THREE.Vector3());
+      const dik = Math.min(9, Math.max(2.5, maat.length() * 0.012));
+      for (const [as, a, b] of [['x', 'y', 'z'], ['y', 'x', 'z'], ['z', 'x', 'y']] as const) {
+        for (const pa of [box.min[a], box.max[a]]) for (const pb of [box.min[b], box.max[b]]) {
+          const lengte = maat[as] + dik;
+          const staaf = new THREE.Mesh(new THREE.BoxGeometry(as === 'x' ? lengte : dik, as === 'y' ? lengte : dik, as === 'z' ? lengte : dik), markeerRand);
+          staaf.position[as] = (box.min[as] + box.max[as]) / 2;
+          staaf.position[a] = pa;
+          staaf.position[b] = pb;
+          staaf.renderOrder = 9;
+          staaf.userData.eigenVorm = true;
+          staaf.raycast = () => {};
+          scene.add(staaf);
+          markeerKaders.push(staaf);
+        }
+      }
     }
+    if (!unie.isEmpty()) markeerUnie = unie;
+  }
+  /** Oranje: valt op tegen lucht, gras, witte en donkere gevels, glas en hout (de zachte groene lijn van vroeger niet). */
+  const MARKEER_KLEUR = '#ff8a1f';
+  const markeerLaag = new THREE.MeshBasicMaterial({ color: MARKEER_KLEUR, transparent: true, opacity: 0.42, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4, toneMapped: false, fog: false });
+  const markeerRand = new THREE.MeshBasicMaterial({ color: MARKEER_KLEUR, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, toneMapped: false, fog: false });
+  /** Het kader rond alles wat met `~` aangeduid is (of niets). */
+  let markeerUnie: any = null;
+  /**
+   * Gevraagd met `@kijk`: de camera voor het aangeduide deel zetten, nu en na de volgende `toon` (de scène komt vaak een
+   * beeld later, of de 3D gaat nu pas open), zolang die binnen enkele seconden komt.
+   */
+  let kijkGevraagd = false, kijkTot = 0;
+  /** Het midden van het aangeduide deel: daar rond draait de camera, tot je een vast standpunt kiest of een andere scène toont. */
+  let deelDoel: any = null;
+  /** Het midden van het gebouw (zoals `toon` het zet). */
+  const gebouwDoel = () => new THREE.Vector3(kader.x + kader.b / 2, Math.min(Math.max(40, kader.h * 0.35), kader.h / 2), kader.z + kader.d / 2);
+  /**
+   * De camera voor het aangeduide deel (doorloop B11: vroeger altijd hetzelfde schuine standpunt van ver). Uit de vorm en de
+   * plaats van het deel: ligt het plat en hoog (dakramen, dakrand, plat dak), dan schuin van boven, langs de kant waar het
+   * ligt; is het dun in één richting (een raam, een deur, een gevel), dan recht voor die gevel en iets schuin, van buiten; anders
+   * schuin van de kant waar het ligt. Dichtbij: het deel vult ongeveer de helft van het beeld, met de gevel errond.
+   */
+  function kijkNaarDeel() {
+    if (!markeerUnie) return false;
+    const box = markeerUnie, maat = box.getSize(new THREE.Vector3()), midden = box.getCenter(new THREE.Vector3());
+    const gebouw = gebouwDoel();
+    const dx = midden.x - gebouw.x, dz = midden.z - gebouw.z;
+    const opzij = Math.hypot(dx, dz) > Math.max(kader.b, kader.d) * 0.08;
+    const vlak = Math.max(maat.x, maat.z);
+    if (maat.y < vlak * 0.35 && box.max.y > 150) {
+      // Op het dak: schuin van boven, van de kant waar het ligt.
+      hoekH = opzij ? Math.atan2(dx, dz) + 0.35 : -0.6;
+      hoekV = 0.8;
+    } else if (Math.min(maat.x, maat.z) < 0.4 * vlak) {
+      // In een gevel: recht ervoor, van buiten (de kant van het gebouw waar het zit), iets schuin.
+      hoekH = maat.x < maat.z ? (dx >= 0 ? Math.PI / 2 : -Math.PI / 2) : (dz >= 0 ? 0 : Math.PI);
+      hoekH += 0.3;
+      hoekV = 0.2;
+    } else {
+      hoekH = opzij ? Math.atan2(dx, dz) : -0.6;
+      hoekV = 0.42;
+    }
+    deelDoel = midden;
+    doel = midden.clone();
+    // Zo ver dat het hele deel in beeld is met ruim plaats errond (het vult ongeveer de helft), maar niet verder dan het
+    // hele gebouw nodig heeft en niet zo dichtbij dat je niet meer ziet waar het zit.
+    const tanV = Math.tan((camera.fov * Math.PI) / 360) / 2, tanH = tanV * (camera.aspect || 1);
+    const terug = new THREE.Vector3(Math.cos(hoekV) * Math.sin(hoekH), Math.sin(hoekV), Math.cos(hoekV) * Math.cos(hoekH));
+    const rechts = new THREE.Vector3(0, 1, 0).cross(terug).normalize(), op = terug.clone().cross(rechts);
+    let nodig = 0;
+    const p = new THREE.Vector3();
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+      p.set(x - doel.x, y - doel.y, z - doel.z);
+      nodig = Math.max(nodig, p.dot(terug) + Math.max(Math.abs(p.dot(rechts)) / tanH, Math.abs(p.dot(op)) / tanV));
+    }
+    afstand = Math.min(verst(), Math.max(450, Math.min(nodig, standaardAfstand())));
+    plaatsCamera();
+    return true;
   }
   renderer.domElement.addEventListener('pointercancel', los);
   renderer.domElement.addEventListener('wheel', (ev: WheelEvent) => {
@@ -3415,6 +3509,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       zetZon();
       vul.position.set(doel.x + grootte, grootte * 0.6, doel.z - grootte);
       if (veranderd) afstand = standaardAfstand();
+      // Het aangeduide deel (markeer `~@kijk…`): de camera ervoor, of er blijven rond draaien tot je een standpunt kiest.
+      if (veranderd) deelDoel = null;
+      if (kijkGevraagd && performance.now() < kijkTot && markeerUnie) { kijkGevraagd = false; kijkNaarDeel(); }
+      else if (deelDoel) doel = deelDoel.clone();
       // De bouw heeft buiten ook mist (de horizon): daar altijd opnieuw zetten, zoals vroeger zonder mist.
       if (decorNaam !== 'studio' || !scene.fog || !opties.zetel) zetDecor(s);
       plaatsCamera();
@@ -3535,14 +3633,22 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       }
     },
     beeld(type = 'image/png', kwaliteit = 0.92) {
+      // De aanduiding van een post (`~`) hoort niet op een beeld (bv. Het ontwerp in het overzicht).
+      const aangeduid = markeerKaders.filter((k) => k.visible);
       try {
+        for (const k of aangeduid) k.visible = false;
         render(true);
         return renderer.domElement.toDataURL(type, kwaliteit);
       } catch {
         return null;
+      } finally {
+        if (aangeduid.length) { for (const k of aangeduid) k.visible = true; render(true); }
       }
     },
     standpunt(naam) {
+      // Een vast standpunt toont weer het hele gebouw: niet meer rond het aangeduide deel draaien.
+      kijkGevraagd = false;
+      if (deelDoel) { deelDoel = null; doel = gebouwDoel(); }
       if (naam === 'voor') { hoekH = 0; hoekV = 0.12; }
       if (naam === 'boven') { hoekH = 0; hoekV = 1.45; }
       if (naam === 'zij') { hoekH = Math.PI / 2; hoekV = 0.15; }
@@ -3603,7 +3709,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     },
     markeer(id) {
       markeerId = id;
+      kijkGevraagd = typeof id === 'string' && id.startsWith('~') && id.slice(1).split(/[|,]/).includes('@kijk');
+      kijkTot = performance.now() + 10000;
       zetMarkering();
+      if (kijkGevraagd) kijkNaarDeel();
       render(true);
     },
     formaat() {

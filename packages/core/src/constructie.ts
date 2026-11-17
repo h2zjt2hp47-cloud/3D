@@ -117,14 +117,16 @@ const geldig = (oc: WoningOpbouwCatalogus, plaats: OpbouwPlaats, code: string | 
 
 /**
  * De opbouw voor een plaats in de woning: een afwijking voor dit muurvlak of deze ruimte, anders de keuze voor de hele
- * woning, anders (buitenwand) die volgens de gevel, anders de standaard van de catalogus. Geeft de code.
+ * woning, anders (buitenwand) die volgens de gevel of (hellend dak) die volgens de dakbedekking, anders de standaard van
+ * de catalogus. Geeft de code. `bedekking`: de code van de dakbedekking in de dakcatalogus (zie `volgensDak`).
  */
-export function opbouwVoor(plan: Plattegrond, oc: WoningOpbouwCatalogus, plaats: OpbouwPlaats, waar: { vlak?: string; ruimte?: string; gevel?: BlokSoort } = {}): string {
+export function opbouwVoor(plan: Plattegrond, oc: WoningOpbouwCatalogus, plaats: OpbouwPlaats, waar: { vlak?: string; ruimte?: string; gevel?: BlokSoort; bedekking?: string } = {}): string {
   const o = plan.opbouw;
   if (plaats === 'buitenwand' && waar.vlak && geldig(oc, plaats, o?.vlakken?.[waar.vlak])) return o!.vlakken![waar.vlak]!;
   if ((plaats === 'grondvloer' || plaats === 'verdiepingsvloer') && waar.ruimte && geldig(oc, plaats, o?.vloeren?.[waar.ruimte])) return o!.vloeren![waar.ruimte]!;
   if (geldig(oc, plaats, o?.[plaats])) return o![plaats]!;
   if (plaats === 'buitenwand' && waar.gevel && geldig(oc, plaats, oc.volgensGevel?.[waar.gevel])) return oc.volgensGevel![waar.gevel]!;
+  if (plaats === 'hellendDak' && waar.bedekking && geldig(oc, plaats, oc.volgensDak?.[waar.bedekking])) return oc.volgensDak![waar.bedekking]!;
   return oc.plaatsen[plaats].standaard;
 }
 
@@ -437,7 +439,8 @@ export function woningConstructie(plan: Plattegrond, cat: PlanCatalogus): Woning
         }
         uit.stukken.push({ niveau: top, soort: 'dak', blokken });
       } else {
-        const code = opbouwVoor(plan, oc, 'hellendDak');
+        // De opbouw volgt de bedekking: pannen op panlatten, leien op leilatten, zink op een dakbeschot (doorloop B3).
+        const code = opbouwVoor(plan, oc, 'hellendDak', { bedekking: dak.keuze.bedekking.materiaal });
         const ov = d.oversteek, lengte = r2(d.q1 - d.q0 + 2 * ov), y = r2(yb - ov * d.tan);
         // Zadeldak: twee dakvlakken van de dakvoet tot de nok; lessenaar: één van de lage naar de hoge kant.
         const vlakken: { voet: number; naar: 1 | -1; diepte: number }[] = d.vorm === 'zadel'

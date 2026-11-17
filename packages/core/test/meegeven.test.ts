@@ -89,14 +89,17 @@ describe('maten in de 3D', () => {
     // Het kader van de camera is ruimer (oversteek, terras): de maat volgt de muren.
     expect(x0).toBeGreaterThan(scene.kader.x);
     expect(lijnen.filter((l) => l.groep === 'diepte')).toHaveLength(2);
-    expect(lijnen.filter((l) => l.groep === 'hoogte')).toHaveLength(4);
+    // De hoogte: twee kandidaten per hoek (16/11, doorloop B26: op het verre uiteinde van de gevel naar de camera).
+    expect(lijnen.filter((l) => l.groep === 'hoogte')).toHaveLength(8);
     // Zadeldak: de nok staat boven de goot, aan beide uiteinden.
     const nok = lijnen.filter((l) => l.groep === 'nok');
     expect(nok).toHaveLength(2);
     const hoogte = lijnen.find((l) => l.groep === 'hoogte')!.tot[1];
     expect(nok[0]!.tot[1]).toBeGreaterThan(hoogte + 100);
-    // Elke maat staat naast het gebouw, aan de kant waar ze bij hoort.
-    for (const l of lijnen) expect(l.kant).toEqual(l.uit);
+    // Elke maat staat naast het gebouw, aan de kant waar ze bij hoort. De hoogte staat op een hoek, buiten het gebouw; welke
+    // hoek de kijker toont, zegt `kant` (het vak van 45° waarin de camera staat).
+    for (const l of lijnen.filter((x) => x.groep !== 'hoogte')) expect(l.kant).toEqual(l.uit);
+    for (const l of lijnen.filter((x) => x.groep === 'hoogte')) expect(Math.hypot(...l.kant!)).toBeCloseTo(1, 5);
   });
 
   it('een plat dak heeft geen nok; lage muren geen hoogte', () => {

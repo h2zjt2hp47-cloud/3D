@@ -349,6 +349,22 @@ export function snelRaam(maten: SnelMaten, stijl: Stijl): Keuzes {
   return raamInStijl(k, stijl);
 }
 
+/**
+ * De naam van een raam of deur in gewone woorden, uit zijn soort: een schuifraam van 250 × 230 cm uit de snelstart heette
+ * vroeger "Raam" (doorloop B25). Ook de titel van zijn post in het overzicht en het bestand voor de klant.
+ */
+export function raamNaam(k: Keuzes): string {
+  switch (k.type) {
+    case 'terrasdeur': return k.vakken === 'v2' && k.vak2 !== 'vast' ? 'Dubbele terrasdeur' : 'Terrasdeur';
+    case 'voordeur': return 'Voordeur';
+    case 'schuif': return 'Schuifraam';
+    case 'hefschuif': return 'Hef-schuifdeur';
+    case 'vouwwand': return 'Vouwwand';
+    case 'glaswand': return 'Vaste glaswand';
+    default: return 'Raam';
+  }
+}
+
 /** De keuzes van het model AANBOUW uit de maten (mm) en de stijl. */
 export function aanbouwKeuzes(maten: SnelMaten, stijl: Stijl): Keuzes {
   return {

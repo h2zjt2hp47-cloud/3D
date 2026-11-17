@@ -23,9 +23,14 @@ const PAKKET_PLEK = '<!--PAKKET-->';
 
 // ---------- de naam van de aannemer (op het bestand en het blad; bewaard in deze browser, voor alle projecten) ----------
 const SLEUTEL_AANNEMER = 'bouw-demo.aannemer';
-export const STANDAARD_AANNEMER = 'Uw bedrijf';
+/** Wat vroeger op het bestand kwam als er niets ingevuld was (doorloop B1): telt als leeg, ook als het zo bewaard werd. */
+const OUDE_STANDAARD = 'Uw bedrijf';
+/** De firmanaam van de verkoper, of een lege tekst als ze niet ingevuld is: dan staat er geen firmanaam (geen verzonnen naam). */
 export function aannemerNaam(): string {
-  try { return localStorage.getItem(SLEUTEL_AANNEMER)?.trim() || STANDAARD_AANNEMER; } catch { return STANDAARD_AANNEMER; }
+  try {
+    const naam = localStorage.getItem(SLEUTEL_AANNEMER)?.trim() ?? '';
+    return naam === OUDE_STANDAARD ? '' : naam;
+  } catch { return ''; }
 }
 export function zetAannemerNaam(naam: string) {
   try { localStorage.setItem(SLEUTEL_AANNEMER, naam.trim()); } catch { /* geen opslag */ }
@@ -97,7 +102,9 @@ export function klantPakket(leden: Variant[], omschrijf: (p: Positie) => string)
     const p = maakPakket3D(omschrijf, v.t, { dingen: true });
     const posten = klantPosten(v.id === actiefProject() ? huidigePosten() : postenVanToestand(v.t));
     if (posten.length) p.posten = posten;
-    p.project.aannemer = aannemerNaam();
+    // Geen firmanaam ingevuld: dan staat er geen (vroeger "Uw bedrijf", doorloop B1).
+    const firma = aannemerNaam();
+    if (firma) p.project.aannemer = firma;
     if (v.t.meta.datum) p.project.datum = v.t.meta.datum;
     if (leden.length > 1) p.variant = { naam: v.naam, verschil: verschil[i] ?? [] };
     return p;

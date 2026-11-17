@@ -7,7 +7,7 @@
  * offerte lezen de opbouw niet. Elke uitkomst toont zichtbaar dat ze een voorstelling, aanwijzing of schatting is.
  */
 import {
-  CONSTRUCTIE_VOORBEHOUD, constructie3D, LAAG_ROLLEN, OPBOUW_PLAATSEN, STABILITEIT_BUITEN_BEREIK, STABILITEIT_VOORBEHOUD, WARMTE_NIET_NAGELEZEN,
+  CONSTRUCTIE_VOORBEHOUD, constructie3D, LAAG_ROLLEN, OPBOUW_PLAATSEN, opbouwVoor, STABILITEIT_BUITEN_BEREIK, STABILITEIT_VOORBEHOUD, WARMTE_NIET_NAGELEZEN,
   WARMTE_VOORBEHOUD, totaleDikte, woningConstructie, woningMeetstaat, woningStabiliteit, woningWarmte,
   type Constructie3DOpties, type MeetstaatRegel, type OpbouwPlaats, type PlanCatalogus, type Plattegrond, type Scene3D, type WoningConstructie,
 } from '../../core/src/index.js';
@@ -111,7 +111,9 @@ export function opbouwKeuze(): HTMLElement {
   for (const plaats of OPBOUW_PLAATSEN) {
     const p = oc.plaatsen[plaats];
     const gekozen = plan.opbouw?.[plaats];
-    const standaard = plaats === 'buitenwand' ? 'Volgens de gevel' : `Standaard: ${oc.opbouwen[p.standaard]?.naam ?? p.standaard}`;
+    // Het hellende dak volgt zonder keuze de dakbedekking (pannen, leien, zink), zoals de buitenmuren de gevel (doorloop B3).
+    const volgensDak = plaats === 'hellendDak' && !!oc.volgensDak;
+    const standaard = plaats === 'buitenwand' ? 'Volgens de gevel' : volgensDak ? 'Volgens de dakbedekking' : `Standaard: ${oc.opbouwen[p.standaard]?.naam ?? p.standaard}`;
     const s = el('select', { 'data-opbouw': plaats, 'aria-label': p.label }) as HTMLSelectElement;
     s.append(el('option', { value: '' }, standaard));
     for (const code of p.keuzes) s.append(el('option', { value: code }, oc.opbouwen[code]?.naam ?? code));
@@ -122,7 +124,7 @@ export function opbouwKeuze(): HTMLElement {
     rij.append(el('span', {}, p.label), s);
     inhoud.append(rij);
     // De lagen pas een tik verder (de standaard, of de keuze).
-    const code = s.value || (plaats === 'buitenwand' ? '' : p.standaard);
+    const code = s.value || (plaats === 'buitenwand' ? '' : volgensDak ? opbouwVoor(plan, oc, plaats, { bedekking: plan.dak?.bedekking.materiaal }) : p.standaard);
     const o = code ? oc.opbouwen[code] : undefined;
     if (o) {
       const lagen = el('details', { class: 'opbouwlagen' }) as HTMLDetailsElement;

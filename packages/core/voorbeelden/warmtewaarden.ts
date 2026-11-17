@@ -54,6 +54,9 @@ export const warmtewaarden: WarmteWaarden = {
     parket: lambda(0.18, 'loofhout'),
     epdm: lambda(0.25),
     dakpannen: lambda(1.0, 'gebakken klei'),
+    // Liggen buiten de geventileerde spouw en tellen dus niet mee; hier alleen voor wie ze anders gebruikt.
+    leien: lambda(2.2, 'natuurleien; vezelcementleien ongeveer 0,5'),
+    zink: lambda(110, 'metaal'),
   },
   overgang: {
     binnen: {
