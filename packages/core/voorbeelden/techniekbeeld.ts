@@ -2,8 +2,8 @@
  * De gegevens voor de beelden van de techniek in de beeldvergelijking (scripts/beeldvergelijking.mjs, ronde 10): het
  * 3D-pakket van de uitgeruste voorbeeldwoning in de uitgezette weergave, voor de losse kijker (de configurator toont
  * de techniek nog niet), en de tekening van het gelijkvloers met alle tekens en leidingen. Sinds ronde 10c ook het pakket
- * zoals het bestand voor de klant het meekrijgt (`klant`: de woning met wat buiten staat, en het veld `techniek`), voor
- * het beeld van de kijker met *Techniek*.
+ * zoals het bestand voor de klant het meekrijgt (`klant`: de woning met wat buiten staat, sinds ronde 17 ook met de techniek
+ * binnen, en het veld `techniek`), voor de beelden van de kijker met *Techniek* en met *De woning*, *Muren laag*.
  *
  * Gebruik: `tsx packages/core/voorbeelden/techniekbeeld.ts` schrijft { pakket, plan, klant } als JSON naar de uitvoer.
  */
@@ -19,7 +19,8 @@ export function techniekBeeldGegevens(): { pakket: Pakket3D; plan: string; klant
     woning: [{ naam: 'Techniek, uitgezet', scene, laag: scene }],
     posities: [],
   };
-  const o = { aanleg: true, gevelkoppen: true, meubels: true, dingen: true, techniekBuiten: true };
+  // Sinds ronde 17 ook de techniek binnen in de woning, zoals het bestand voor de klant (`maakPakket3D` met `techniek`).
+  const o = { aanleg: true, gevelkoppen: true, meubels: true, dingen: true, techniekBuiten: true, techniekBinnen: true };
   const klant: Pakket3D = {
     soort: PAKKET3D_SOORT, versie: PAKKET3D_VERSIE, gemaakt: '2026-11-17T12:00:00.000Z',
     project: { nummer: 'beeldtest', naam: 'Voorbeeldwoning met techniek' },
