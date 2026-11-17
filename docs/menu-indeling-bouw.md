@@ -210,7 +210,8 @@ van het gevelpalet en van het techniekpalet (de kop *Kasten en aansluitingen* op
 ## Voor Jonas om te beslissen
 
 - **De knop *Trap*** bij Inrichting is een tweede ingang naar hetzelfde (Meubel → Trappen). Houden?
-- **Binnenafwerking** staat in de 3D en de doorsnede niet meer rechts (de rij *Binnen* onder de 3D doet hetzelfde). Goed zo?
+- **Binnenafwerking** staat in de 3D en de doorsnede niet meer rechts (de rij *Binnen* onder de 3D doet hetzelfde; in de
+  doorsnede kies je dan geen sfeer meer, wel in de plattegrond en de 3D). Goed zo?
 - **Kortere namen bij *Tonen*** (*Maten*, *Meubels*, *Dak* in plaats van *… tonen*).
 - **Kasten en aansluitingen** (tellerkast, verdeelbord …) staan in het techniekpalet nu onderaan de elektriciteit, op een
   laptop onder de vouw. Liever bovenaan, met de verlichting lager?
@@ -229,9 +230,7 @@ van het gevelpalet en van het techniekpalet (de kop *Kasten en aansluitingen* op
 - In een smal venster met een muis (1100 × 800, het gereedschap in de smallere kolom van 210 px) stond de knop Techniek al
   onder de rand (vóór 856–893, na 884–920); op een tablet liggend loopt de tekst *Garagepoort* 3 beeldpunten buiten haar
   knop (vóór ook zo).
-- In het techniekpalet staan de *Kasten en aansluitingen* van de elektriciteit op een laptop onder de vouw (de kop net
-  erboven), en op een tablet staand de tellerkast en het verdeelbord net op de rand. Vroeger stonden ze bovenaan maar liep
-  de rest van de lijst onder de vouw.
+- Op een tablet liggend zijn alleen de plaatsen gemeten (de knop Techniek, de toestellen in beeld), geen taken getikt.
 - Op een tablet staand staat de rij *Zon* (lichtinval) onder de 3D net op de rand: de schakelaar is te zien, de onderkant
   van haar vak valt 9 beeldpunten eronder (vóór viel de hele rij onder de rand).
 - De groep *Dak* in het gereedschap heeft alleen *Daklicht*. De vorm en de bedekking van het dak kies je in de kaart *Dak*
