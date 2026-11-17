@@ -311,7 +311,7 @@ Doel (Jonas): wat de klant meekrijgt na het eerste gesprek: de draaibare 3D, bee
   - soort, indeling (`+` voor vakken), ruimte en verdieping.
   - Een kopregel en regels zonder maten worden overgeslagen, met de reden.
   - Sinds doorloop B9 (16/11): een kopregel (Pos, Omschrijving, Soort, Breedte, Hoogte, Aantal, Ruimte, Verdieping, in elke volgorde, ook met "(mm)" of "(cm)") wordt gelezen en de regels eronder per kolom (lege cellen houden hun plaats); zonder kopregel is een klein getal vóór de omschrijving een posnummer, het aantal het laatste kleine getal ná de maten. Soort ook: hef-schuifdeur, vouwwand, glaswand (delen volgens de breedte) en een garagepoort (`model: 'POORT'` op de regel, alleen breedte en hoogte; de ramenlijst maakt er een poort van).
-- **Klantweergave** (`body.klantmodus`): verbergt `.intern`, de stap statiek en de afstandhouder.
+- **Klantweergave** (`body.klantmodus`): verbergt `.intern`, de stap statiek en de afstandhouder. Bewaard per venster (`sessionStorage`, sleutel `bouw-demo.klantweergave`; sinds 17/11, vroeger `localStorage`, dat wordt bij het opstarten gewist): herladen bij de klant houdt ze aan, een nieuw venster of een nieuwe testversie begint met het gereedschap. Zolang ze aan staat, heet de knop **Terug naar ontwerpen** (Jonas opende een testversie die nog in de klantweergave stond en vond geen gereedschap meer).
   - Ruimte en verdieping alleen bij een project mét woning; zonder woning zijn ze de enige invoer voor de controles.
   - In de configurator staat de prijs incl. btw (zonder de korting, die op het totaal komt).
   - Sinds 16/11 (doorloop B10/B27) **om te kijken**, zoals het bestand voor de klant: zie *Herstel uit de doorloop, deel B*.

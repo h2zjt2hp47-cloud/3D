@@ -132,17 +132,33 @@ opWijziging(() => veilig('Bijwerken', () => {
 // Prijzen tonen of niet (hulp.ts): de delen met een bedrag dragen de klasse prijsdeel.
 document.body.classList.toggle('met-prijzen', PRIJZEN);
 
-// Klantweergave: scherm tonen aan de klant (bewaard in deze browser).
+/**
+ * Klantweergave: scherm tonen aan de klant. Bewaard voor dit venster (sessionStorage): een keer herladen bij de klant
+ * toont niets intern, maar wie de app (of een nieuwe testversie) opnieuw opent, begint met het gereedschap. Vroeger stond
+ * de keuze in localStorage; Jonas opende op 17/11 een nieuwe testversie die nog in de klantweergave stond, zonder
+ * gereedschap en zonder slepen, en dacht dat er van alles kapot was. Daarom ook: de knop zegt wat hij doet
+ * (*Terug naar ontwerpen*) zolang de klantweergave aan staat.
+ */
+const KLANT_SLEUTEL = 'bouw-demo.klantweergave';
+function toonKlantknop(aan: boolean) {
+  const knop = $('#klantweergave');
+  knop.setAttribute('aria-pressed', String(aan));
+  knop.textContent = aan ? 'Terug naar ontwerpen' : 'Klantweergave';
+  knop.title = aan
+    ? 'De klantweergave staat aan: geen gereedschap, niets te slepen. Tik om verder te ontwerpen.'
+    : 'Scherm tonen aan de klant: zonder technische details';
+}
 function zetKlantweergave(aan: boolean) {
   document.body.classList.toggle('klantmodus', aan);
-  $('#klantweergave').setAttribute('aria-pressed', String(aan));
-  try { localStorage.setItem('bouw-demo.klantweergave', aan ? '1' : '0'); } catch { /* niets */ }
+  toonKlantknop(aan);
+  try { sessionStorage.setItem(KLANT_SLEUTEL, aan ? '1' : '0'); } catch { /* niets */ }
   if (aan && actief === 'werf') toon('offerte');
   else toon(actief, {}, 'vervang');
 }
 $('#klantweergave').addEventListener('click', () => zetKlantweergave(!document.body.classList.contains('klantmodus')));
-try { if (localStorage.getItem('bouw-demo.klantweergave') === '1') document.body.classList.add('klantmodus'); } catch { /* niets */ }
-$('#klantweergave').setAttribute('aria-pressed', String(document.body.classList.contains('klantmodus')));
+try { localStorage.removeItem(KLANT_SLEUTEL); } catch { /* niets */ }
+try { if (sessionStorage.getItem(KLANT_SLEUTEL) === '1') document.body.classList.add('klantmodus'); } catch { /* niets */ }
+toonKlantknop(document.body.classList.contains('klantmodus'));
 
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-weergave]')) {
   b.addEventListener('click', () => veilig('Navigatie', () => toon(b.dataset.weergave as Weergave)));
