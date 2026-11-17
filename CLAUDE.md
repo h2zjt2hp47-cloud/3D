@@ -1,0 +1,15 @@
+# Belgica — context voor Claude
+
+Eigen strategiespel (doorlopende klok met pauze, kaart met vakken) over het gebied van België en de randen, van de Romeinen tot nu. Geen kopie van een bestaand spel: eigen regels, kaart en beeld. De gebruiker (Jonas) is geen programmeur: antwoord in het Nederlands, in gewone taal, kort, resultaat eerst.
+
+**Lees eerst `docs/ontwerp.md`**: alle keuzes van Jonas, de tijdperken en de volgorde van bouwen.
+
+## Plaats
+- Deze tak (`claude/brave-hopper-9hiwhj`) staat voorlopig in de repo van de configurator, maar heeft een eigen geschiedenis zonder configuratorbestanden. Later verhuist het spel naar een eigen repo.
+- De configurator zelf staat op `claude/vigilant-cray-yi2j33`: daar niets aan veranderen vanuit dit spel.
+
+## Werkwijze
+- TypeScript, in de browser, gebundeld tot één HTML-bestand om te openen. Niets van een CDN laden.
+- Code, namen en commentaar in het Nederlands.
+- Jaartallen en feiten pas in het spel na nakijken; wat niet nagekeken is, zo markeren.
+- Kaartgegevens enkel uit vrije bronnen, met vermelding van de bron.
