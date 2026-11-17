@@ -134,7 +134,7 @@ const GEREEDSCHAP: { code: Gereedschap; kort: string; label: string; toets: stri
  * Ronde 16 (17/11): het gereedschap in groepen, in de volgorde van het werk, elk met een korte kop (Jonas: *"alle
  * mogelijkheden mooi groeperen in de menu's"*). Selecteren staat bovenaan zonder kop. `paar`: twee knoppen naast elkaar
  * (met een muis staat het gereedschap in één kolom; zo blijft alles naast de tekening). Bij *Inrichting* komt de knop
- * *Trap* (het meubelpalet op Trappen, zie `trapKnop`), bij *Techniek* de knop van de installateur (`startTechniek`).
+ * *Trap* (het meubelpalet op Trappen, zie `trapKnop`); als laatste, zonder kop, *Techniek (installateur)* (`startTechniek`).
  * Alleen de schikking: de knoppen, hun `data-gereedschap` en de sneltoetsen zijn dezelfde (zie `docs/menu-indeling-bouw.md`).
  */
 type GereedschapKnop = Gereedschap | 'trap';
@@ -2422,7 +2422,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       delen.push(paar);
     }
   }
-  delen.push(el('p', { class: 'groepkop' }, 'Techniek'));
+  // De knop Techniek (installateur) komt erna, zonder kop: ze zegt zelf wat ze is (met de streepjesrand als eigen groep).
+  // Een kop erbij kostte op een tablet liggend de plaats van die knop naast de tekening (ze viel onder de rand).
   // Een groep van één knop over de hele breedte (op een tablet staat het gereedschap in twee kolommen).
   for (const code of ['kies', 'daklicht'] as Gereedschap[]) delen.find((x) => x.dataset?.gereedschap === code)?.classList.add('gbreed');
   lijst.replaceChildren(...delen);

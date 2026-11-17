@@ -1109,6 +1109,8 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 .knoprij { display: flex; align-items: center; gap: 6px 12px; margin: 8px 0 4px; }
 .knoprij > .knoppenrij, .knoprij > .schakelaars { margin: 0; flex: 1 1 auto; min-width: 0; }
 .constructiebalk > .beeldkeuze { margin-left: auto; gap: 4px 12px; }
+/* In de constructie: het voorbehoud onder de rij, over de hele breedte (niet tussen de knoppen en de kwaliteit). */
+.constructiebalk > .constructienoot { order: 3; flex: 1 1 100%; }
 .tikrij { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; margin: 8px 0 4px; }
 .tikrij > .tikhint { margin: 0; }
 #pl-zon > .schakelaars { align-items: center; }
@@ -1153,7 +1155,7 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 .gereedschap .gpaar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
 .gereedschap .gpaar button { padding-left: 8px; padding-right: 8px; }
 .groot-scherm .gereedschap .gpaar { display: contents; }
-#view-plan #pl-gereedschap .techniekknop { margin-top: 0; }
+#view-plan #pl-gereedschap .techniekknop { margin-top: 8px; }
 /* Met een muis: iets krapper, zodat ook de koppen naast de tekening passen (de laatste knop op een laptop vlak boven 900). */
 @media (pointer: fine) { #view-plan:not(.groot-scherm) #pl-gereedschap { gap: 3px; } #view-plan:not(.groot-scherm) #pl-gereedschap button { padding-top: 6px; padding-bottom: 6px; } }
 @media (max-width: 760px) { .gereedschap .gpaar { display: contents; } }
@@ -1162,7 +1164,9 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 .techniekpalet > .tsub { margin: -4px 0 0; }
 @media (pointer: coarse) and (min-width: 761px) {
   #view-plan:not(.groot-scherm) #pl-gereedschap .gpaar { display: contents; }
-  #view-plan:not(.groot-scherm) #pl-gereedschap .gbreed, #view-plan:not(.groot-scherm) #pl-gereedschap .techniekknop { grid-column: 1 / -1; margin-top: 0; }
+  #view-plan:not(.groot-scherm) #pl-gereedschap .gbreed, #view-plan:not(.groot-scherm) #pl-gereedschap .techniekknop { grid-column: 1 / -1; }
+  #view-plan:not(.groot-scherm) #pl-gereedschap .techniekknop { margin-top: 6px; }
+  #view-plan:not(.groot-scherm) #pl-gereedschap > .groepkop { margin-top: 3px; }
   /* Het gevelpalet op dezelfde manier: twee kolommen, ook wat je met één tik verft. */
   #view-plan:not(.groot-scherm) #gv-gereedschap, #view-plan:not(.groot-scherm) #gv-bereik:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
   #view-plan:not(.groot-scherm) #gv-gereedschap button { padding: 4px 8px; font-size: .84rem; line-height: 1.15; }

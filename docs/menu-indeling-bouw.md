@@ -45,7 +45,7 @@ Uit echte schermafdrukken op een tablet staand (820 × 1180, aanraking) en een l
 
 | Scherm / menu | Vóór | Na |
 |---|---|---|
-| Plattegrond, gereedschap | 16 knoppen en *Techniek (installateur)* in één lijst | Selecteren · **Ruimtes** (tekenen, met maten) · **Muren** (wand, losse wand, indelen │ en ─) · **Ramen en deuren** (raam, buitendeur, schuifraam, garagepoort, binnendeur, doorgang) · **Dak** (daklicht) · **Inrichting** (meubel, **trap**) · **Techniek** |
+| Plattegrond, gereedschap | 16 knoppen en *Techniek (installateur)* in één lijst | Selecteren · **Ruimtes** (tekenen, met maten) · **Muren** (wand, losse wand, indelen │ en ─) · **Ramen en deuren** (raam, buitendeur, schuifraam, garagepoort, binnendeur, doorgang) · **Dak** (daklicht) · **Inrichting** (meubel, **trap**) · *Techniek (installateur)* als laatste, zonder kop (de knop zegt het zelf) |
 | Techniekpalet | per vak een lange rij tegels zonder koppen (Elektriciteit: 2 leidingen en 16 toestellen door elkaar) | per vak groepen met een kop. Elektriciteit: **Stopcontacten** · **Verlichting** (ledstrip en zes lampen) · **Kasten en aansluitingen**. Koeling en verwarming: **Leidingen** · **Airco** · **Warmtepomp en ketel** · **In de ruimtes**. Ventilatie: **Kanalen** · **Toestellen**. Sanitair: **Leidingen** · **Toestellen**. Daarboven *In één tik, op een ruimte*, onderaan **Tonen** |
 | Gevelpalet | Verven, Pipet, Ramen verschuiven, Raam toevoegen, Strook; *Ongedaan maken*; bereik zonder kop | **Kleur en materiaal** (verven, pipet, strook) · **Ramen** (verschuiven, toevoegen) · *Ongedaan* · **Met één tik verf je** / **Soort strook** · **Materiaal en kleur** · **Sokkel** |
 | Knoppen bij de 3D | Afgewerkt / Constructie; Stijl; Binnen; vijf standpunten met Groot scherm; zeven schakelaars en de kwaliteit door elkaar; Lichtinval | rijen met een kop links: **Weergave** (Afgewerkt, Constructie, Techniek; rechts de kwaliteit) · **Stijl** · **Binnen** · **Bekijk** (standpunten, Groot scherm) · **Tonen** (Maten, Muren laag, Meubels, Alle verdiepingen, Dak) · **Zon**. Op de 3D zelf: Ongedaan (links), Dag / Nacht en Verlichting (rechts) |
@@ -59,15 +59,17 @@ Uit echte schermafdrukken op een tablet staand (820 × 1180, aanraking) en een l
 
 ### Bovenbalk
 *+ Nieuw ontwerp*, *Projecten*, *1 · Plattegrond*, *2 · Configurator*, *3 · Overzicht*, *Klantweergave*. **Niet veranderd**: de
-drie genummerde stappen zijn al de werkstanden in de volgorde van het werk (ontwerpen, uitwerken, bekijken en meegeven). Een
-bredere balk (een kop of een tussenruimte) zou op een laptop van 1400 beeldpunten naar een tweede rij lopen, en dan schuift
-de tekening (zie *Grenzen*).
+drie genummerde stappen zijn al de werkstanden in de volgorde van het werk (ontwerpen, uitwerken, bekijken en meegeven). Bij
+1400 beeldpunten breed (de breedte van de beeldvergelijking) is er tussen de titel en het menu nog 34 beeldpunten vrij
+(gemeten): een kop of een tussenruimte per groep loopt al snel naar een tweede rij, en dan schuift de tekening.
 
 ### Plattegrond
 - **Gereedschap** (links): de groepen hierboven. Selecteren staat bovenaan zonder kop (de kaart heet al *Gereedschap*). Met
   een muis in één kolom met de sneltoetsen; *Indelen │* en *Indelen ─* en *Meubel* en *Trap* staan per twee naast elkaar, en
-  de knoppen zijn 2 beeldpunten lager, zodat ook *Techniek* op een laptop naast de tekening blijft (onderkant 876 van 900;
-  vóór 835). Op een tablet in twee kolommen, zoals vroeger; een groep van één knop over de hele breedte.
+  de knoppen zijn 2 beeldpunten lager, zodat ook *Techniek* op een laptop naast de tekening blijft (onderkant 862 van 900;
+  vóór 835). Op een tablet in twee kolommen, zoals vroeger; een groep van één knop over de hele breedte. *Techniek
+  (installateur)* staat als laatste zonder kop: de knop zegt zelf wat ze is (met haar streepjesrand), en met een kop erbij
+  viel ze op een tablet liggend onder de rand.
 - **Trap** (nieuw bij *Inrichting*, `[data-gereedschap-trap]`): dezelfde weg als *Meubel → Trappen → trap* (het palet
   opent op Trappen met de trap klaar). Geen nieuwe functie: een trap is voor een verkoper geen meubel, en hij zocht ze.
   De melding na *+ Verdieping* zegt nu "Plaats beneden een trap (Inrichting → Trap)".
@@ -193,15 +195,40 @@ de plattegrond, de techniek, de gevels en de 3D kleiner dan 44 beeldpunten (vó�
 tekening, het gevelaanzicht, de 3D en de doorsnede staan bij 1400 × 950 op exact dezelfde plaats en maat als vóór deze
 ronde; de beeldvergelijking van de bouw (`--alleen bouw-`): alle 45 beelden 0,00 %, geen enkel beeld vernieuwd.
 
-Op de tablet staand in het eerste beeld (zonder scrollen): alle groepen van het gereedschap (tot 890 van 1180, vóór 706),
+Verder nagekeken in de browser (laptop, `controle.cjs`): de sneltoetsen R, D, V, M, K in de plattegrond en B, I, S, R in
+de gevels; *Trap* opent het palet op Trappen met de trap klaar; Dak dicht, een raam erbij (de kaart tekent opnieuw) en ze
+blijft dicht met haar knop, na herladen nog dicht, weer open met de knop en met een tik op de kop; Controles, Ruimtes en
+Binnenafwerking dicht en open; het keuzepaneel van een strook en van een leiding; de rij *Weergave* in de constructie (het
+voorbehoud eronder over de hele breedte) en de rij *Techniek*; de klantweergave in de 3D (alleen *Weergave*, *Bekijk*,
+*Tonen*, *Zon*, en rechts de ruimtes). Geen fout in de pagina.
+
+Op de tablet staand in het eerste beeld (zonder scrollen): alle groepen van het gereedschap (tot 863 van 1180, vóór 706),
 van het gevelpalet en van het techniekpalet (de kop *Kasten en aansluitingen* op 1009), en onder de 3D alle rijen tot en met
-*Zon* (vóór viel *Lichtinval* eronder). Op de laptop: het hele gereedschap (tot 876 van 900, vóór 835), en onder de 3D
+*Zon* (vóór viel *Lichtinval* eronder). Op de laptop: het hele gereedschap (tot 862 van 900, vóór 835), en onder de 3D
 *Stijl* en *Binnen* zoals vóór (tot 893).
+
+## Voor Jonas om te beslissen
+
+- **De knop *Trap*** bij Inrichting is een tweede ingang naar hetzelfde (Meubel → Trappen). Houden?
+- **Binnenafwerking** staat in de 3D en de doorsnede niet meer rechts (de rij *Binnen* onder de 3D doet hetzelfde). Goed zo?
+- **Kortere namen bij *Tonen*** (*Maten*, *Meubels*, *Dak* in plaats van *… tonen*).
+- **Kasten en aansluitingen** (tellerkast, verdeelbord …) staan in het techniekpalet nu onderaan de elektriciteit, op een
+  laptop onder de vouw. Liever bovenaan, met de verlichting lager?
+- De koppen in **hoofdletters** in de zachte kleur: duidelijk genoeg, of liever gewone letters?
 
 ## Grenzen en wat open blijft
 
-- **De kolommen bleven**: het gereedschap past op een laptop net naast de tekening (onderkant 876 van 900). Een groep of
-  een knop erbij past daar niet meer zonder de knoppen nog kleiner te maken.
+- **De kolommen bleven**: het gereedschap past op een laptop net naast de tekening (onderkant 862 van 900) en op een tablet
+  liggend net boven de rand (de knop *Techniek* op 769–813 van 820; vóór 612–656). Een groep of een knop erbij past daar
+  niet meer zonder de knoppen nog kleiner te maken.
+- **Het techniekpalet is langer geworden** door de koppen. Toestellen van de elektriciteit helemaal in beeld: tablet staand
+  15 van 16 (vóór 16), laptop 11 van 16 (vóór 14), tablet liggend 6 van 16 (vóór 8). Wat eronder valt, is de laatste
+  groep *Kasten en aansluitingen* (tellerkast, verdeelbord, laadpaal, omvormer, thuisbatterij): voor de installateur, niet
+  voor het eerste gesprek. De koppen van alle groepen staan op de tablet staand en de laptop wel in beeld. Een stopcontact,
+  een lamp en de ledstrip vragen geen scrollen (gemeten).
+- In een smal venster met een muis (1100 × 800, het gereedschap in de smallere kolom van 210 px) stond de knop Techniek al
+  onder de rand (vóór 856–893, na 884–920); op een tablet liggend loopt de tekst *Garagepoort* 3 beeldpunten buiten haar
+  knop (vóór ook zo).
 - In het techniekpalet staan de *Kasten en aansluitingen* van de elektriciteit op een laptop onder de vouw (de kop net
   erboven), en op een tablet staand de tellerkast en het verdeelbord net op de rand. Vroeger stonden ze bovenaan maar liep
   de rest van de lijst onder de vouw.
@@ -213,4 +240,5 @@ van het gevelpalet en van het techniekpalet (de kop *Kasten en aansluitingen* op
 - De bovenbalk, de configurator, de snelstart, Projecten en het bestand voor de klant zijn bekeken en niet veranderd (zie
   hierboven).
 - Een kaart dichtklappen geldt voor alle projecten in die browser.
-- Niet getest op een echte tablet, iPad of Safari.
+- Niet getest op een echte tablet, iPad of Safari, en niet in het groot scherm (het gereedschap staat daar in één kolom
+  zonder paren; de kolommen scrollen er zelf).
