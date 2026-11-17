@@ -1105,12 +1105,11 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 /* Binnenafwerking (ronde 12): sferen voor binnen, plafond, plint, accentmuur, de ruimte van binnen. */
 .sfeerknop .sfeerbeeld svg { width: 80px; height: 52px; display: block; border-radius: 5px; }
 #pl-3d-knoppen .stijlbalk > .klein:first-child { min-width: 3.4em; }
-/* Ronde 16: de rijen bij de 3D met een kop links, alle even breed (Weergave, Stijl, Binnen, Bekijk, Tonen, Beeld, Zon). */
+/* Ronde 16: de rijen bij de 3D met een kop links, alle even breed (Weergave, Techniek, Stijl, Binnen, Bekijk, Tonen, Zon). */
 .knoprij { display: flex; align-items: center; gap: 6px 12px; margin: 8px 0 4px; }
 .knoprij > .knoppenrij, .knoprij > .schakelaars { margin: 0; flex: 1 1 auto; min-width: 0; }
 .constructiebalk > .beeldkeuze { margin-left: auto; gap: 4px 12px; }
-.tikrij { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
-.tikrij { margin: 8px 0 4px; }
+.tikrij { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; margin: 8px 0 4px; }
 .tikrij > .tikhint { margin: 0; }
 #pl-zon > .schakelaars { align-items: center; }
 /* De kaarten naast de tekening: dezelfde kop (zoals Gereedschap en Woning), en een kaart klapt dicht tot haar kop
@@ -1546,6 +1545,7 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
       <section class="kaart voor-klant" id="o-meegeven">
         <div class="kaartkop"><h2 id="o-meegeven-kop">Meegeven en doorsturen</h2></div>
         <dl id="o-totalen" class="totaal prijsdeel"></dl>
+        <p class="groepkop">Voor de klant</p>
         <div class="meegeefblok">
           <div id="o-klantvoorbeeld" class="klantvoorbeeld" aria-label="Wat de klant bovenaan ziet"></div>
           <div class="acties" style="margin-top:4px">
@@ -1556,6 +1556,7 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
           <div id="o-varianten-mee" hidden></div>
           <p id="o-klantbestand-melding" class="klein" role="status"></p>
         </div>
+        <p class="groepkop">Afdrukken en doorsturen</p>
         <div class="acties">
           <button type="button" id="o-zending" class="intern" title="Alles voor Missing Link in één bestand: wat er is en hoeveel (zonder prijzen), een beeld per regel en de 3D">Doorsturen naar Missing Link</button>
           <button type="button" id="o-afdruk" class="tweede">Afdrukken / PDF</button>
