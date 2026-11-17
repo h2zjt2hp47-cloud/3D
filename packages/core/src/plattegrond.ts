@@ -2427,7 +2427,17 @@ export function ruimteVanBinnen(plan: Plattegrond, cat: PlanCatalogus, id: strin
   // Draaien: de open kant naar +z (onder op het plan), rond het midden van de ruimte.
   const kwart: Record<GevelKant, number> = { onder: 0, rechts: 1, boven: 2, links: 3 };
   const gedraaid = draaiKwart(blokken, kwart[open], [r.x + r.b / 2, r.y + r.d / 2]);
-  return { blokken: gedraaid, kader: kaderVan(gedraaid) };
+  // Het kader (de camera) iets kleiner en hoger dan de ruimte, rond hetzelfde midden: zo staat de camera van Ooghoogte
+  // dichterbij en kijkt ze bijna recht vooruit, met de vloer én het plafond in beeld (de kijker zet het doel op 35 % van
+  // de hoogte van het kader en de afstand op anderhalve keer zijn breedte).
+  // Het kader van de ruimte zelf (met haar muren), niet van alles wat uitsteekt (een open deur): anders staat ze scheef in beeld.
+  const rk = delenKader(delenVan(r)), cx = r.x + r.b / 2, cz = r.y + r.d / 2, k = kwart[open]!;
+  // Het midden van de ruimte, even veel kwartslagen gedraaid als de blokken (elke kwartslag: (x, z) → (−z, x)).
+  let [dx, dz] = [rk.x + rk.b / 2 - cx, rk.y + rk.d / 2 - cz];
+  for (let i = 0; i < k; i++) [dx, dz] = [-dz, dx];
+  const [b, d] = k % 2 ? [rk.d + dikte, rk.b + dikte] : [rk.b + dikte, rk.d + dikte];
+  const kader = { x: cx + dx - b * 0.46, z: cz + dz - d * 0.46, b: b * 0.92, d: d * 0.92, h: plan.muurhoogte * 1.5 };
+  return { blokken: gedraaid, kader };
 }
 
 /**
@@ -2741,8 +2751,9 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       // Eerst verlengen (ook onder een deur op de verdieping komt de rand van de vloerplaat), dan pas de maat controleren.
       if (m.soort === 'buiten' && y0 === 0 && onderkant < 0) y0 = onderkant;
       if (b - a < 0.1 || y1 - y0 < 0.1) return;
-      // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten.
-      if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1 && !neutraal(m)) {
+      // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten. Niet in één ruimte van binnen: daar
+      // zie je de buitenkant niet, en de naad op de sokkelhoogte liet tegen de achtergrond een lijn van stipjes door.
+      if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1 && !neutraal(m) && !binnen) {
         stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte);
         stuk(code, a, b, sokkel.hoogte, y1);
         return;
@@ -2758,7 +2769,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
         const afw = (r: MuurRand): GevelAfwerking | null => {
           if (r === 'min') return minAfw;
           if (r === 'plus') return plusAfw;
-          if (r === 'snede') return null;
+          if (r === 'snede') return binnen ? (binnen.ruimte === m.plus ? plusAfw : minAfw) : null;
           if (r === 'kop' || r === 'naad') return buiten ?? null;
           // De voortzetting van een zijde van de rechte muur op de hoek: het materiaal van die zijde.
           const R = muurAfw.get(r.muur);
@@ -2798,6 +2809,14 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       }
       if (kopIn[0]) zijden['x-'] = buitenAfw(kopIn[0], y0);
       if (kopIn[1]) zijden['x+'] = buitenAfw(kopIn[1], y0);
+      // Eén ruimte van binnen (ronde 12): de kopse kanten tussen de stukken (naast een raam of deur) in de afwerking van de
+      // ruimte; anders schemerde de lichte kop als een haarlijn door de naad tussen twee stukken (van boven tot onder).
+      if (binnen) {
+        const eigen = binnen.ruimte === m.plus ? plusWand : minWand;
+        const [za, zb] = m.as === 'h' ? (['x-', 'x+'] as const) : (['z-', 'z+'] as const);
+        if (!gelijk(a, begin)) zijden[za] = eigen;
+        if (!gelijk(b, einde)) zijden[zb] = eigen;
+      }
       // Op een verdieping begint de buitenmuur lager, voor de rand van de vloerplaat: daar ook een stukje gevel onder de kop.
       if (n > 0 && y0 === 0) {
         for (const [gevelMuur, x0] of [[kopIn[0], a], [kopIn[1], b - (kopIn[1]?.dikte ?? 0) / 2]] as const) {
@@ -2813,21 +2832,35 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       voeg(m.as === 'h' ? { ...base, x: a, z: vlak.y, b: b - a, d: vlak.d } : { ...base, x: vlak.x, z: a, b: vlak.b, d: b - a });
     };
     const openingen = plan.openingen.filter((o) => muurVanOpening(o, [m]) === m).sort((a, b) => a.midden - b.midden);
-    let cursor = begin;
-    for (const o of openingen) {
-      const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
-      stuk(`muur_${m.id}_${cursor}`, cursor, a, 0, H);
+    /** Waar de muur onder en boven een opening stopt (onder de dunste dorpel of vensterbank, boven de kast). */
+    const grenzen = (o: Opening): [number, number] => {
       const inhoud = opties.inhoud?.(o);
       const hoogte = inhoud?.hoogte ?? (o.soort === 'doorgang' ? o.hoogte : o.hoogte + 4);
       // Vensterbank of dorpel: de muur eronder stopt onder de dunste ervan. Anders vallen de bovenvlakken van
       // muur en vensterbank samen en flikkert de vensterbank in witte en donkere strepen.
       const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
-      stuk(`onder_${o.id}`, a, b, 0, o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0));
-      stuk(`boven_${o.id}`, a, b, Math.min(H, o.borstwering + hoogte), H);
+      return [o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0), Math.min(H, o.borstwering + hoogte)];
+    };
+    // Eén ruimte van binnen (ronde 12): de volle stukken muur ook op de hoogtes van de openingen geknipt, zodat de hoeken
+    // van de stukken ernaast samenvallen. Anders liet de naad naast een raam van dichtbij de achtergrond door (een lichte
+    // lijn van boven tot onder). In de woning blijft alles zoals vroeger.
+    const banden = binnen ? [...new Set(openingen.flatMap(grenzen))].filter((y) => y > 0.1 && y < H - 0.1).sort((a, b) => a - b) : [];
+    const vol = (code: string, a: number, b: number) => {
+      let y = 0;
+      [...banden, H].forEach((h, i) => { stuk(i ? `${code}_${i}` : code, a, b, y, h); y = h; });
+    };
+    let cursor = begin;
+    for (const o of openingen) {
+      const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
+      vol(`muur_${m.id}_${cursor}`, cursor, a);
+      const inhoud = opties.inhoud?.(o);
+      const [onder, boven] = grenzen(o);
+      stuk(`onder_${o.id}`, a, b, 0, onder);
+      stuk(`boven_${o.id}`, a, b, boven, H);
       for (const blok of openingBlokken(o, m, inhoud, cat)) voeg(o.positie ? { ...blok, code: metDing(opties, `opening:${o.id}`, blok.code) } : blok);
       cursor = b;
     }
-    stuk(`muur_${m.id}_eind`, cursor, einde, 0, H);
+    vol(`muur_${m.id}_eind`, cursor, einde);
   }
 
   // Plinten (ronde 12): een lijst vóór de binnenkant van de muren, alleen in een ruimte met een plint.

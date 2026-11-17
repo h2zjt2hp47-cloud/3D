@@ -10,6 +10,9 @@ import {
   dakOpbouw,
   kantVan,
   planMetDak,
+  openKantVan,
+  ruimteVanBinnen,
+  type GevelKant,
   zonderOndergrond,
   delenVan,
   meubelAfstanden,
@@ -79,6 +82,7 @@ import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { constructieAan, constructieScene, opbouwKeuze, startConstructie, toonOpbouwVanDing, zetWeergave as zetConstructieWeergave } from './constructie-ui.js';
 import { startDoorsnede, toonDoorsnede } from './doorsnede-ui.js';
+import { binnenKaart, binnenKeuzes, sfeerRij, toonSferen } from './binnen-ui.js';
 import {
   draaiToestel, maakZichtbaar, startTechniek, techniek3DOpties, techniekAan, techniekHint, techniekInWoning, techniekMetRuimte, techniekNaTekenen, techniekPlan, techniekPointerDown,
   techniekPointerMove, techniekPointerUp, techniekSelecteren, techniekTekenOpties, techniekUitgezet, techniekVoorbeeld, toonBalk3D, toonTechniekEigenschappen,
@@ -177,6 +181,14 @@ let gekozenDing: string | null = null;
 let volgendStandpunt: Standpunt | undefined;
 /** Ruimer kader voor de camera (na de snelstart), tot je zelf een standpunt kiest. */
 let ruimKader = false;
+/**
+ * Ronde 12: één ruimte van binnen in de 3D (met haar plafond), de kant `open` weg, of null (de woning). Zie
+ * `ruimteVanBinnen` in de motor; het blijft tot *Terug naar de woning*, een andere weergave, verdieping of project, de
+ * constructie, de techniek of *Toon in 3D*.
+ */
+let binnen: { ruimte: string; open: GevelKant } | null = null;
+/** Hoeveel stops lichter de ruimte van binnen getoond wordt (het plafond krijgt alleen licht van onder). */
+const BINNEN_HELDERHEID = 0.5;
 /**
  * Het kader van de woning breder gemaakt (zelfde midden): de kijker zet de camera op anderhalve keer de breedte of de
  * diepte, wat op ooghoogte de bovenkant van een woning met een hellend dak afsnijdt. Zo staat ze er helemaal op, met
@@ -361,7 +373,7 @@ function toonNiveaus() {
   const vak = $('#pl-niveaus');
   vak.replaceChildren(...lijst.map((v, i) => {
     const b = el('button', { type: 'button', 'aria-pressed': String(i === niveau) }, v.naam);
-    b.addEventListener('click', () => { sluitMaatVraag(true); niveau = i; selectie = undefined; render(); toonEigenschappen(); });
+    b.addEventListener('click', () => { sluitMaatVraag(true); stopBinnen(false); niveau = i; selectie = undefined; render(); toonEigenschappen(); });
     return b;
   }));
   const plus = el('button', { type: 'button', class: 'tweede' }, '+ Verdieping');
@@ -455,6 +467,8 @@ function plan3D() {
   wachtend3D = true;
   requestAnimationFrame(() => {
     wachtend3D = false;
+    // Ronde 12: één ruimte van binnen (het plafond, de plint, de accentmuur), van op ooghoogte door de open kant.
+    if (binnen && toonBinnen3D()) return;
     // Lichtinval: de zon uit de gekozen richting, en wat verborgen is werpt nog schaduw.
     viewer?.zon?.(zonVoorKijker());
     // Techniek in de woning: de verdieping waarop je werkt met lage muren en zonder dak, anders zie je niets (16/11).
@@ -497,6 +511,80 @@ function plan3D() {
   toonDingKeuzes();
 }
 
+/**
+ * Ronde 12: de ruimte van binnen tonen (zie `binnen`). Geeft false als dat niet meer kan (de ruimte is weg, de constructie
+ * of de techniek staat aan): dan terug naar de woning. Het beeld is niet dat van de woning (`beeldActueel` blijft uit).
+ */
+function toonBinnen3D(): boolean {
+  const r = binnen && toestand().plan.ruimtes.find((x) => x.id === binnen!.ruimte);
+  if (!binnen || !r || constructieAan() || techniekAan()) { stopBinnen(false); return false; }
+  const scene = ruimteVanBinnen(planMetDak(toestand().plan), cat, r.id, { open: binnen.open, inhoud: openingInhoud, meubels: toonMeubels, dingen: true });
+  if (!scene) { stopBinnen(false); return false; }
+  // Zonder lichtinval, en zonder lucht en gras: buiten kleurt het gras het plafond groen (het licht dat van onder komt) en
+  // lijkt een wit plafond olijfgrijs. Op de effen achtergrond, met het zachte licht van een bewolkte dag en een halve stop
+  // lichter, leest de ruimte als een maquette en is het plafond lichtgrijs in plaats van donker (de kijker kent geen licht
+  // dat via de vloer en de muren weerkaatst). Bij het verlaten gaat alles terug (`stopBinnen`).
+  viewer?.zon?.(null);
+  viewer?.omgeving?.('geen');
+  viewer?.licht?.('bewolkt');
+  viewer?.instellen?.({ helderheid: BINNEN_HELDERHEID });
+  viewer?.toon(scene);
+  beeldActueel = false;
+  if (volgendStandpunt) { viewer?.standpunt(volgendStandpunt); volgendStandpunt = undefined; }
+  toonBinnenBalk();
+  return true;
+}
+
+/** De balk boven de 3D van binnen: welke ruimte, de open kant draaien, terug naar de woning. */
+function toonBinnenBalk() {
+  const balk = $('#pl-binnenbalk');
+  const r = binnen && toestand().plan.ruimtes.find((x) => x.id === binnen!.ruimte);
+  balk.hidden = !r || weergave !== '3d';
+  if (!r || !binnen) { balk.replaceChildren(); return; }
+  const draai = el('button', { type: 'button', class: 'tweede', 'data-binnen-draai': '', title: 'Een andere muur open: zo kijk je naar een andere kant van de ruimte' }, '↻ Andere kant');
+  draai.addEventListener('click', () => {
+    if (!binnen) return;
+    const volgorde: GevelKant[] = ['onder', 'links', 'boven', 'rechts'];
+    binnen = { ...binnen, open: volgorde[(volgorde.indexOf(binnen.open) + 1) % 4]! };
+    volgendStandpunt = 'ooghoogte';
+    plan3D();
+  });
+  const terug = el('button', { type: 'button', 'data-binnen-terug': '' }, '← Terug naar de woning');
+  terug.addEventListener('click', () => stopBinnen(true));
+  balk.replaceChildren(el('span', {}, `Van binnen: ${r.naam}`), draai, terug);
+}
+
+/** Een ruimte van binnen bekijken (ronde 12): de 3D toont alleen die ruimte, met het plafond, op ooghoogte. */
+export function bekijkVanBinnen(id: string, open?: GevelKant) {
+  const r = toestand().plan.ruimtes.find((x) => x.id === id);
+  if (!r) return;
+  if (constructieAan()) zetConstructieWeergave('afgewerkt');
+  if (techniekAan()) zetTechniek(false, { stil: true });
+  binnen = { ruimte: id, open: open ?? openKantVan(r) };
+  niveau = niveauVan(r);
+  selectie = undefined;
+  toonEigenschappen();
+  volgendStandpunt = 'ooghoogte';
+  ruimKader = false;
+  if (weergave !== '3d') toonWeergave('3d');
+  // Het paneel van de ruimte blijft onder de 3D open: wat je kiest, zie je meteen van binnen.
+  gekozenDing = `ruimte:${id}`;
+  viewer?.markeer?.(null);
+  plan3D();
+}
+
+/** Terug van de ruimte van binnen naar de woning (`opnieuw`: de 3D meteen opnieuw tekenen, schuin). */
+function stopBinnen(opnieuw: boolean) {
+  if (!binnen) return;
+  binnen = null;
+  $('#pl-binnenbalk').hidden = true;
+  // De woning staat weer buiten (lucht, gras, horizon), met het licht en de helderheid van altijd.
+  viewer?.licht?.('studio');
+  viewer?.instellen?.({ helderheid: 0 });
+  viewer?.omgeving?.('buiten');
+  if (opnieuw) { gekozenDing = null; viewer?.markeer?.(null); volgendStandpunt = 'schuin'; plan3D(); }
+}
+
 /** Tik in de 3D: het ding aanduiden en alleen zijn keuzes tonen (een tik naast de woning sluit het paneel). */
 function tikIn3D(id: string | null) {
   const vorig = gekozenDing;
@@ -517,13 +605,18 @@ function toonDingKeuzes() {
     if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
     return;
   }
-  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); }, naarGevel: (strook) => { tikIn3D(null); kiesStrookInGevel(strook); toonWeergave('gevels'); } });
+  toonDing(vak, gekozenDing, {
+    sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); }, naarGevel: (strook) => { tikIn3D(null); kiesStrookInGevel(strook); toonWeergave('gevels'); },
+    // Ronde 12: het plafond zie je in de ruimte van binnen (in de ruimte van binnen zelf staat die knop er niet).
+    vanBinnen: binnen ? undefined : (id) => bekijkVanBinnen(id),
+  });
   // Bestaat het ding niet meer (verwijderd, ongedaan gemaakt): ook de aanduiding weg.
   if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
 }
 
 /** Na de snelstart: de woning in 3D, vanaf de eerste verdieping, met een beginbeeld waarop lucht en voorgevel te zien zijn. */
 export function toonWoning3D(standpunt: Standpunt = 'ooghoogte') {
+  stopBinnen(false);
   niveau = 0;
   selectie = undefined;
   gekozenDing = null;
@@ -540,6 +633,7 @@ export function toonWoning3D(standpunt: Standpunt = 'ooghoogte') {
  * 3D haalt de aanduiding weg.
  */
 export function toonDingenIn3D(groepen: string[][], standpunt?: Standpunt, opties: { techniek?: boolean } = {}) {
+  stopBinnen(false);
   selectie = undefined;
   gekozenDing = null;
   if (standpunt) volgendStandpunt = standpunt;
@@ -1721,6 +1815,10 @@ function toonEigenschappen() {
       }))),
       rij('Vloer', keuzelijst('pl-vloer', Object.entries(cat.vloeren).map(([k, v]) => [k, v.label]), r.vloer, (w) => zet((x) => { x.vloer = w; }))),
       rij('Wanden', keuzelijst('pl-wand', Object.entries(cat.wanden).map(([k, v]) => [k, v.label]), r.wand, (w) => zet((x) => { x.wand = w; }))),
+    );
+    // Ronde 12: plafond, plint en accentmuur, en de ruimte van binnen bekijken (daar zie je het plafond).
+    binnenKeuzes(vak, r.id, { vanBinnen: () => bekijkVanBinnen(r.id) });
+    vak.append(
       // Ronde 11: een bestaande ruimte blijft; ze staat neutraal en telt niet mee in het werk.
       schakelaar('Bestaand (blijft)', r.bestaand === true, (aan) => zet((x) => { if (aan) x.bestaand = true; else delete x.bestaand; }), { 'data-ruimte-bestaand': '' }),
     );
@@ -1972,6 +2070,7 @@ function toonLosseWand(vak: HTMLElement, pl: Plattegrond, id: string): boolean {
 
 function toonOverzicht() {
   toonDak();
+  toonSferen();
   toonZon();
   const pl = plan();
   const muren = murenVan(pl);
@@ -2157,7 +2256,7 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
   // De doorsnede (ronde 6): een tekening uit de constructie, onder de knoppen van de weergave.
   $('#pl-doorsnede').hidden = w !== 'doorsnede';
   if (w === 'doorsnede') toonDoorsnede();
-  if (w !== '3d') { gekozenDing = null; viewer?.markeer?.(null); }
+  if (w !== '3d') { gekozenDing = null; viewer?.markeer?.(null); stopBinnen(false); }
   toonDingKeuzes();
   $('#pl-hint').hidden = w !== 'plan';
   if (w === '3d') {
@@ -2292,6 +2391,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   });
   $<HTMLInputElement>('#pl-laag').addEventListener('change', (e) => {
     laag = (e.target as HTMLInputElement).checked;
+    stopBinnen(false);
     // Binnenkijken: van schuin boven en dichterbij, anders blijft het huis op ooghoogte een strook aan de horizon (doorloop A12).
     if (laag) { ruimKader = false; volgendStandpunt = 'schuin'; }
     plan3D();
@@ -2336,6 +2436,9 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
   // Stijlen (één tik zet het hele ontwerp in een stijl) en een variant (kopie om te vergelijken), onder de 3D.
   $('#pl-stijlen').replaceChildren(stijlRij());
+  // Ronde 12: de sferen voor binnen, onder de stijlen en in de kaart Binnenafwerking naast de plattegrond.
+  $('#pl-sferen').replaceChildren(sfeerRij());
+  binnenKaart($('#pl-binnen'));
   $('#pl-variant').addEventListener('click', () => {
     const naam = maakVariant();
     $('#pl-variant-melding').textContent = `Je werkt nu in "${naam}". Het origineel staat bij Projecten.`;
@@ -2360,6 +2463,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     }
     verbergTikMelding();
     if (weergave === '3d') toonNaastKnop();
+    stopBinnen(false);
     niveau = 0;
     selectie = undefined;
     gekozenDing = null;
