@@ -65,6 +65,7 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 | `bouw-nacht-voor`, `bouw-nacht-schuin` | de nachtweergave (ronde 15, 17/11): de voorbeeldwoning met twee buitenlampen aan de tuingevel, twee tuinlampen bij het terras en een ledstrip onder de dakrand (`NACHT_TECHNIEK` in het script, rechtstreeks in het bewaarde project), met *Nacht* rechtsboven op de 3D. De lucht van een late avond, de ramen die oplichten (de leefruimte feller dan een slaapkamer), het licht door het schuifraam op het terras, de lampen met hun licht op de gevel en het gras, de band licht onder de strip, en in *Mooi* de gloed. Van voren (de tuingevel) en schuin. Op een eigen pagina met een vers project. Samen te vernieuwen met `--alleen bouw-nacht`. De andere beelden zetten de nacht nooit aan: zij bewaken dat er overdag niets veranderde |
 | `bouw-binnenafwerking-laag`, `bouw-binnenafwerking-ruimte` | binnenafwerking (ronde 12, 17/11), op een eigen pagina met een vers project: de voorbeeldwoning met op het gelijkvloers een witte plint en een wit plafond in elke ruimte, in de leefruimte een plint in hout zoals het parket, een houten plafond en een accentmuur in terracotta (de zijgevel met het raam), in de keuken een accentmuur in saliegroen en in slaapkamer 1 een in terracotta (`BINNENAFWERKING` in het script, via het bewaarde project). De 3D met lage muren, schuin en drie stappen dichterbij (de plinten, onderbroken aan de deuren, de accentmuren van keuken en slaapkamer); en de leefruimte *van binnen* (gekozen in de tekening, *Bekijk van binnen*): de accentmuur achteraan, het houten plafond van onder, op de effen achtergrond in het zachte licht van die weergave. Samen te vernieuwen met `--alleen bouw-binnenafwerking` |
 | `bouw-verlichting-schuin`, `bouw-verlichting-ruimte` | verlichting in één tik (ronde 15b, 17/11), elk op een eigen pagina met een vers project (de voorbeeldwoning): de drie voorstellen bij de nacht met de knoppen zelf aangetikt (*Verlichting*, *Ledstrip onder de dakrand*, *Lampen bij de deuren*, *Tuinlampen*; core/src/verlichting.ts rekent uit waar ze komen), schuin: de strips onder elke dakrand (gelijkvloers en verdieping), een buitenlamp naast de terrasdeur en aan weerskanten van het schuifraam, een tuinlamp naast het terras (de voordeur met haar lamp en het pad met de andere tuinlampen liggen aan de andere kant, buiten beeld). En met *Muren laag* de ledstrip rondom langs het plafond van de leefruimte (`VERLICHTING_RUIMTE` in het script, rechtstreeks in het bewaarde project, met `voorstel: 'plafond'`), die dan bovenop de lage muren ligt, bij nacht. Samen te vernieuwen met `--alleen bouw-verlichting` |
+| `bouw-naden-zij`, `bouw-naden-schuin` (close-ups) | geen lichte streepjes in de gevel (ronde 17, 17/11): stukken uit de foto op hoge resolutie, op een eigen pagina met een vers project (de voorbeeldwoning). De zijgevel recht van opzij (standpunt *Zij*: de koppen van twee binnenmuren, drie ramen, sokkel en dakrand) en de linkergevel schuin (standpunt *Schuin*: een hoek, de kop van een binnenmuur en een raam in een gevel die je schuin ziet). Proef: met de bouw van vóór ronde 17 waren ze 0,16 % en 0,17 % anders (de streepjes in het rood). Samen te vernieuwen met `--alleen bouw-naden` |
 | `milton-schuin`, `mabel2-schuin` | fauteuils met de opbouw van de klant: vaste ronde zitting, dunne schaal met bies, houten frame op schuine poten (13/11) |
 | `fraser-schuin` | vier schuine poten met een kruis, zitting in twee lagen, schaal die rond de zitting uitsteekt |
 | `satie-schuin`, `quin-schuin` | trommel tot op de vloer of op een lage voet, met één of vier losse kussens tegen de schaal |
@@ -81,6 +82,22 @@ Voorbeeld (proef van 5/11, de vierkante voet onder Pebble tijdelijk teruggezet):
 Allemaal bij kwaliteit *Mooi*, venster 1400 × 950. Een close-up is een stuk uit de foto op hoge resolutie (2400 px
 breed), opgegeven als `uitsnede` in het script. Ze zijn er sinds 13/11: de gebreken op die plekken waren op het hele
 beeld te klein om op te vallen (zie `docs/analyse-ronde-vormen.md`).
+
+### Vernieuwd in ronde 17 (17/11): geen streepjes in de gevel
+
+Bewust vernieuwd, elk verschilbeeld nagekeken: `bouw-woning`, `bouw-dak`, `bouw-gevel`, `bouw-binnen`, `bouw-zon`,
+`bouw-platte-dakramen`, `bouw-schuin-3d`, `bouw-schuin-binnen`, `bouw-stroken-3d`, `bouw-binnenafwerking-laag`,
+`bouw-losse-3d`, `bouw-techniek-scherm-3d`, `bouw-techniek-buiten`, `bouw-hoog-schuin`, `bouw-verlichting-ruimte`
+(0,10 tot 0,35 % anders) en, onder de drempel maar ook alleen op de naden, `bouw-uitbouw-3d`, `bouw-nacht-voor`,
+`bouw-nacht-schuin`, `bouw-verlichting-schuin` (0,01 tot 0,04 %). Nieuw: `bouw-naden-zij`, `bouw-naden-schuin`.
+
+Waarom: de fijne lichte streepjes in de gevel zijn weg (waar een binnenmuur de gevel raakt, boven en onder elk raam, op de
+sokkelhoogte, in de dakrand, op een hoek, op de verdiepingshoogte van een hoog huis, en binnen in de muren met *Muren
+laag*); het verschil zit bijna alleen op die lijnen (`Plan3DOpties.wijken`, `Blok.wijkt`, `Blok.bedekt`; zie de skill
+`bouw-woning`, *Geen streepjes in de gevel*). Elders schuift soms een rand een beeldpunt op: van boven (`bouw-zon`) de
+voet van een muur tegen de vloer, en met *Muren laag* toont de bovenrand van een plint nu een fijne lichte rand
+(`bouw-binnenafwerking-laag`, de plint in hout). Niet veranderd: alle zetelbeelden, het losse raam, de raamtypes, de
+vaste modellen, de constructie, de tekeningen en de ruimte van binnen (0,00 %).
 
 ## Wat het niet doet
 

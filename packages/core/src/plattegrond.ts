@@ -2231,8 +2231,10 @@ export interface Plan3DOpties {
    * Geen streepjes in de gevel (ronde 17, 17/11): wat binnen ligt of tegen een ander stuk, wijkt in de diepte
    * (`Blok.wijkt`). Dat zijn de kopse kanten tussen de stukken van een muur (waar een binnenmuur tegen de gevel komt, op
    * de sokkelhoogte, naast en boven en onder een raam), de dagkanten, de binnenkant en de bovenkant van de muren, de
-   * binnenmuren, de vloeren en vloerplaten, de naden van de dakrand, en van de topgevel en de stukken onder een hellend dak
-   * alles behalve hun buitenvlak. Zonder grafische kaart schemerden die vlakken als fijne lichte streepjes door de gevel.
+   * binnenmuren, de vloeren en vloerplaten, de naden van de dakrand (niet de plinten en meubels: die staan vóór een muur of
+   * op een vloer die zelf wijkt; met wijken kreeg de bovenrand van een plint stipjes), en van de topgevel en de stukken
+   * onder een hellend dak alles behalve hun buitenvlak. Zonder grafische kaart schemerden die vlakken als fijne lichte
+   * streepjes door de gevel.
    * Het buitenvlak van de gevel (ook de kop van een binnenmuur in de gevel en de kopse kant op een buitenhoek) wijkt nooit.
    * Wat helemaal tegen een ander stuk ligt, staat ook in `Blok.bedekt` (de kijker tekent het niet). Daarvoor zijn een paar
    * stukken anders geknipt, zodat elk vlak ofwel vooraan ligt ofwel helemaal bedekt is: de kop van een binnenmuur in de
@@ -3029,7 +3031,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   if (cat.plinten) {
     for (const r of plan.ruimtes) {
       if (!r.plint || (binnen && r.id !== binnen.ruimte)) continue;
-      for (const b of plintBlokken(plan, cat, r, muren, { open: binnen?.open, code: (c) => metDing(opties, `ruimte:${r.id}`, c) })) voeg({ ...b, ...wijkAlles });
+      for (const b of plintBlokken(plan, cat, r, muren, { open: binnen?.open, code: (c) => metDing(opties, `ruimte:${r.id}`, c) })) voeg(b);
     }
   }
 
@@ -3046,7 +3048,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       if (!t) continue;
       if (binnen && !meubelIn(ruimte.get(binnen.ruimte)!, mb)) continue;
       // Een trap loopt altijd tot de vloer van de verdieping erboven.
-      for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, code: metDing(opties, `meubel:${mb.id}`, b.code), y: b.y + 1.5, ...wijkAlles }, false);
+      for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, code: metDing(opties, `meubel:${mb.id}`, b.code), y: b.y + 1.5 }, false);
     }
   }
   return blokken;
