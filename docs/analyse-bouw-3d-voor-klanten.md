@@ -1146,3 +1146,8 @@ niet gevonden, alleen opgevangen; een garagepoort die je in de woning zet, komt 
 **Vragen aan Jonas:** waarmee hij zoomt (laptop met trackpad, muis of iPad); of techniek in het bestand voor de klant hoort (nu
 alleen in de lijst van posten, niet in de 3D, A30); of elke variant een eigen offertenummer moet hebben (B21); de opbouwen voor
 leien en zink na te lezen door een vakman. **Niet getest:** een echte tablet, iPad of Safari, terugvegen, WebGPU.
+
+**Antwoorden van Jonas (17/11):** hij zoomt met een **muis en een iPad** (Ctrl + wiel ±14 % per klik, knijpen volgt de vingers;
+na te kijken op zijn toestellen); **techniek hoort in het bestand voor de klant, ook zichtbaar in de 3D** (ronde 10c, loopt);
+**elke variant een eigen offertenummer: ja** (zo werkt het al); de opbouwen voor leien en zink laat hij **nalezen door een
+vakman** (blad `docs/na-te-lezen-dakopbouw-leien-zink.md`, ook als Word-bestand gestuurd).
