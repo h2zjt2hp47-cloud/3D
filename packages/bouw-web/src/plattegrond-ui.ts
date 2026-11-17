@@ -70,7 +70,7 @@ import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, aanraak, el, eur, getal, getalVeld, keuzelijst, PRIJZEN, schakelaar, voorVinger } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
-import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
+import { gevelNaWijziging, gevelToets, kiesStrookInGevel, startGevels } from './gevel-ui.js';
 import { dakLijnen, dakraamZonweringVan, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { familie } from './meegeven.js';
@@ -514,7 +514,7 @@ function toonDingKeuzes() {
     if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
     return;
   }
-  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); } });
+  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); }, naarGevel: (strook) => { tikIn3D(null); kiesStrookInGevel(strook); toonWeergave('gevels'); } });
   // Bestaat het ding niet meer (verwijderd, ongedaan gemaakt): ook de aanduiding weg.
   if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
 }
