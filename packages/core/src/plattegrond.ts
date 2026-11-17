@@ -2231,7 +2231,7 @@ export interface Plan3DOpties {
    * Geen streepjes in de gevel (ronde 17, 17/11): wat binnen ligt of tegen een ander stuk, wijkt in de diepte
    * (`Blok.wijkt`). Dat zijn de kopse kanten tussen de stukken van een muur (waar een binnenmuur tegen de gevel komt, op
    * de sokkelhoogte, naast en boven en onder een raam), de dagkanten, de binnenkant en de bovenkant van de muren, de
-   * binnenmuren, de vloerplaten, de naden van de dakrand (niet de vloeren, plinten en meubels: met wijken kreeg de
+   * binnenmuren, de vloerplaten, de staande vlakken van de meubels, de naden van de dakrand (niet de vloeren en plinten: met wijken kreeg de
    * bovenrand van een plint stipjes), en van de topgevel en de stukken
    * onder een hellend dak alles behalve hun buitenvlak. Zonder grafische kaart schemerden die vlakken als fijne lichte
    * streepjes door de gevel.
@@ -2764,7 +2764,10 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   };
 
   // Ronde 17 (`Plan3DOpties.wijken`): wat binnen ligt of tegen een ander stuk, wijkt in de diepte. Zonder: niets erbij.
-  // Ronde 17: de vloeren wijken niet (met wijken kreeg de bovenrand van een plint erop stipjes).
+  // Ronde 17 (`Plan3DOpties.wijken`): de staande vlakken van een meubel wijken in de diepte (een kast die je op haar kant
+  // ziet, kwam anders als een witte streep door de gevel). Niet de boven- en onderkant: een tapijt zakte dan weg in de vloer.
+  // De vloeren wijken niet: dan kreeg de bovenrand van een plint erop stipjes.
+  const wijkStaand: Partial<Blok> = opties.wijken ? { wijkt: ['x+', 'x-', 'z+', 'z-'] } : {};
 
   // Vloeren (met trapgat). Een vrije vorm is een prisma met haar grondvlak; de textuur volgt haar langste muur.
   for (const r of plan.ruimtes) {
@@ -3048,7 +3051,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       if (!t) continue;
       if (binnen && !meubelIn(ruimte.get(binnen.ruimte)!, mb)) continue;
       // Een trap loopt altijd tot de vloer van de verdieping erboven.
-      for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, code: metDing(opties, `meubel:${mb.id}`, b.code), y: b.y + 1.5 }, false);
+      for (const b of meubelIn3D(mb, mb.type === 'trap' ? { ...t, h: H + VLOERDIKTE } : t)) voeg({ ...b, code: metDing(opties, `meubel:${mb.id}`, b.code), y: b.y + 1.5, ...wijkStaand }, false);
     }
   }
   return blokken;
