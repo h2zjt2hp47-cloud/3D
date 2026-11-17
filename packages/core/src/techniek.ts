@@ -39,6 +39,24 @@ export const TECHNIEK_VAKKEN: Record<TechniekVak, { label: string; kleur: string
 export const ALLE_VAKKEN: TechniekVak[] = ['elektriciteit', 'klimaat', 'ventilatie', 'sanitair'];
 
 /**
+ * De vakken in de woorden van de klant (ronde 10c, 17/11): wat de klant te zien krijgt in het bestand voor de klant, de
+ * klantweergave en het blad. De namen van `TECHNIEK_VAKKEN` blijven voor de verkoper en de installateur (palet, telling,
+ * posten). Dezelfde kleur als het vak.
+ */
+export const TECHNIEK_KLANT_VAKKEN: Record<TechniekVak, { naam: string; uitleg: string }> = {
+  elektriciteit: { naam: 'Elektriciteit', uitleg: 'Stopcontacten, schakelaars, licht en de kabels ernaartoe.' },
+  klimaat: { naam: 'Verwarming en koeling', uitleg: 'Warmtepomp, airco, vloerverwarming of radiatoren, en de buizen ertussen.' },
+  ventilatie: { naam: 'Ventilatie', uitleg: 'Verse lucht in de woning, vochtige lucht eruit.' },
+  sanitair: { naam: 'Water en afvoer', uitleg: 'Warm en koud water, regenwater en de afvoer naar de riolering.' },
+};
+
+/** Hoe de klant een toestel of een soort leiding noemt, en wat het is in één gewone zin (ronde 10c). */
+export interface KlantWoorden {
+  naam: string;
+  uitleg: string;
+}
+
+/**
  * Waar een toestel aan hangt: aan een wand (binnen of op de gevel), aan het plafond, op de vloer, buiten op de grond
  * (een buitenunit naast de woning) of op en door het dak (een dakdoorvoer, alleen op een plat dak juist getekend).
  */
@@ -93,6 +111,8 @@ export interface ToestelType {
   /** Waar maten en hoogte vandaan komen; `nagelezen: false` zolang een installateur ze niet nalas. */
   herkomst: OpbouwHerkomst;
   uitleg?: string;
+  /** Voor de klant: hoe hij het noemt en wat het is (ontbreekt = het label zonder de uitleg tussen haakjes). */
+  klant?: KlantWoorden;
 }
 
 /**
@@ -127,6 +147,8 @@ export interface LeidingSoortType {
   maxLengte?: Richtwaarde;
   herkomst: OpbouwHerkomst;
   uitleg?: string;
+  /** Voor de klant: hoe hij het noemt en wat het is (zie `ToestelType.klant`). */
+  klant?: KlantWoorden;
 }
 
 /** De catalogus techniek: zoals de plancatalogus, gegevens en geen programma. Zie core/voorbeelden/techniek.ts. */

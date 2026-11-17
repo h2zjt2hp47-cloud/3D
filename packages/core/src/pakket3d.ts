@@ -79,6 +79,36 @@ export interface Pakket3D {
    * ze over en toont het ontwerp zoals vroeger: de versie blijft 4.
    */
   posten?: Pakket3DPost[];
+  /**
+   * De techniek voor de klant (ronde 10c, 17/11, optioneel; in het bestand voor de klant): per verdieping met techniek de
+   * uitgezette 3D, de legende per vak en per toestel of leiding wat het is, in gewone woorden (zie `techniekPakket` in
+   * techniekklant.ts). Geen maten, lengtes of kringen, geen prijzen. Een oudere kijker slaat het veld over en toont het
+   * ontwerp zoals vroeger: de versie blijft 4 (de scènes gebruiken alleen blokken die versie 4 kent).
+   */
+  techniek?: Pakket3DTechniek;
+}
+
+/** Eén vak van de techniek in de legende (zie `Pakket3D.techniek`). */
+export interface Pakket3DTechniekVak {
+  vak: string;
+  naam: string;
+  kleur: string;
+  uitleg: string;
+  /** De namen van de toestellen die er komen, zonder aantallen. */
+  toestellen: string[];
+  /** De soorten leiding die er komen, met hun kleur in de 3D. */
+  leidingen: { naam: string; kleur: string }[];
+}
+
+/** De techniek in het pakket (zie `Pakket3D.techniek`). */
+export interface Pakket3DTechniek {
+  /** Per verdieping met techniek: haar naam en de uitgezette 3D (met de dingen `toestel:<id>` en `leiding:<id>` in de codes). */
+  niveaus: { naam: string; scene: Scene3D }[];
+  vakken: Pakket3DTechniekVak[];
+  /** Per ding van de 3D: het vak, de naam, wat het is en waar het zit. */
+  dingen: Record<string, { vak: string; naam: string; uitleg: string; waar?: string }>;
+  /** De vaste zin bij alles over techniek (`TECHNIEK_VOORBEHOUD`). */
+  voorbehoud?: string;
 }
 
 /** Eén post van het werk in het pakket (zie `Pakket3D.posten` en `klantPosten` in posten.ts). */
@@ -173,6 +203,32 @@ function isScene(s: unknown): s is Scene3D {
 }
 
 /**
+ * De techniek van een pakket (ronde 10c), alleen wat klopt: verdiepingen met een scène, vakken met een naam en een kleur,
+ * dingen met tekst. Zonder één verdieping met een scène: geen techniek (de kijker toont dan de keuze niet). Tekst blijft
+ * tekst (de kijker zet ze met `textContent` op het scherm).
+ */
+function leesTechniek(x: unknown): Pakket3DTechniek | undefined {
+  const t = x as Partial<Pakket3DTechniek> | null | undefined;
+  if (!t || typeof t !== 'object' || !Array.isArray(t.niveaus)) return undefined;
+  const tekst = (s: unknown) => (typeof s === 'string' ? s : '');
+  const kleur = (s: unknown) => (typeof s === 'string' && /^#[0-9a-f]{3,8}$/i.test(s) ? s : '#777777');
+  const niveaus = t.niveaus.filter((n) => n && isScene(n.scene)).map((n) => ({ naam: tekst(n.naam), scene: n.scene }));
+  if (!niveaus.length) return undefined;
+  const vakken = (Array.isArray(t.vakken) ? t.vakken : []).filter((v) => v && typeof v.vak === 'string' && typeof v.naam === 'string').map((v): Pakket3DTechniekVak => ({
+    vak: v.vak, naam: v.naam, kleur: kleur(v.kleur), uitleg: tekst(v.uitleg),
+    toestellen: Array.isArray(v.toestellen) ? v.toestellen.filter((s) => typeof s === 'string') : [],
+    leidingen: Array.isArray(v.leidingen) ? v.leidingen.filter((l) => l && typeof l.naam === 'string').map((l) => ({ naam: l.naam, kleur: kleur(l.kleur) })) : [],
+  }));
+  const dingen: Pakket3DTechniek['dingen'] = {};
+  if (t.dingen && typeof t.dingen === 'object') {
+    for (const [k, d] of Object.entries(t.dingen)) {
+      if (d && typeof d.naam === 'string' && typeof d.vak === 'string') dingen[k] = { vak: d.vak, naam: d.naam, uitleg: tekst(d.uitleg), ...(typeof d.waar === 'string' ? { waar: d.waar } : {}) };
+    }
+  }
+  return { niveaus, vakken, dingen, ...(typeof t.voorbehoud === 'string' && t.voorbehoud ? { voorbehoud: t.voorbehoud } : {}) };
+}
+
+/**
  * Leest een 3D-pakket (tekst of al ontleed) en controleert het. Gooit een fout in gewone taal als het geen pakket is,
  * als het met een nieuwere versie gemaakt is, of als er een scène ontbreekt.
  */
@@ -225,6 +281,9 @@ export function leesPakket3D(bron: unknown): Pakket3D {
     }));
     if (posten.length) uit.posten = posten;
   }
+  // De techniek voor de klant (ronde 10c): alleen als ze er is en klopt; anders valt ze stil weg (het ontwerp blijft).
+  const techniek = leesTechniek(p.techniek);
+  if (techniek) uit.techniek = techniek;
   const v = p.variant as Partial<NonNullable<Pakket3D['variant']>> | undefined;
   if (v && typeof v === 'object') uit.variant = { naam: String(v.naam ?? ''), verschil: Array.isArray(v.verschil) ? v.verschil.map(String) : [] };
   if (Array.isArray(p.varianten) && p.varianten.length) {
