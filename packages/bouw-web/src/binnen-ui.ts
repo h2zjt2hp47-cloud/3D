@@ -70,8 +70,11 @@ export function sfeerRij(): HTMLElement {
 
 /** De kaart *Binnenafwerking* naast de plattegrond: de sferen, en waar je de rest per ruimte kiest. */
 export function binnenKaart(vak: HTMLElement) {
+  // Ronde 16: dezelfde kop als de andere kaarten naast de tekening (en zo klapt ze dicht tot haar kop, zie vouw-ui.ts).
+  const kop = el('div', { class: 'kaartkop' });
+  kop.append(el('h2', {}, 'Binnenafwerking'));
   vak.replaceChildren(
-    el('h3', {}, 'Binnenafwerking'),
+    kop,
     el('p', { class: 'klein' }, 'Eén tik: vloer, wanden, plafond en plint in alle ruimtes.'),
     sfeerRij(),
     el('p', { class: 'klein' }, 'Per ruimte (plafond, plint, accentmuur): tik op de ruimte.'),

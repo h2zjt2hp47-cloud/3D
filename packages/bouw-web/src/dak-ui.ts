@@ -15,7 +15,7 @@ export const LICHTSTRATEN = new Set(Object.entries(daklichtCatalogus).filter(([,
 
 // Geen knop "Geen" meer (16/11, doorloop A3): een gebouw zonder dakkeuze staat overal met een plat dak, ook in de 3D.
 const VORMEN: { code: DakVorm | 'geen'; label: string; titel: string }[] = [
-  { code: 'plat', label: 'Plat', titel: 'Plat dak met dakrand; hier kunnen lichtkoepels in' },
+  { code: 'plat', label: 'Plat', titel: 'Plat dak met dakrand; hier kunnen daklichten in' },
   { code: 'lessenaar', label: 'Lessenaar', titel: 'Eén schuin dakvlak, van een hoge naar een lage gevel' },
   { code: 'zadel', label: 'Zadel', titel: 'Twee dakvlakken met een nok, en twee topgevels' },
 ];
@@ -74,21 +74,19 @@ export function koepelTeller(): HTMLElement | null {
   const nu = daklichtenOpDak(plan.dak ? plan : { ...plan, dak: standaardDak() });
   if (!nu.plat) return null;
   const type = nu.type ?? 'koepel_100';
-  const rij = el('div', { class: 'teller', role: 'group', 'aria-label': 'Aantal lichtkoepels' });
+  // Ronde 16: overal hetzelfde woord, *Daklicht* (het gereedschap, het palet, de kaart); welk daklicht staat eronder.
+  const rij = el('div', { class: 'teller', role: 'group', 'aria-label': 'Aantal daklichten' });
   const zetAantal = (n: number) => wijzig('plan', (t) => {
     metDak(t);
     t.plan = verdeelDaklichten(t.plan, Math.max(0, n), type);
   });
-  const min = el('button', { type: 'button', class: 'snel-knop klein-knop-teller', 'aria-label': 'Een lichtkoepel minder', 'data-koepels': 'min' }, '−') as HTMLButtonElement;
-  const plus = el('button', { type: 'button', class: 'snel-knop klein-knop-teller', 'aria-label': 'Een lichtkoepel meer', 'data-koepels': 'plus' }, '+') as HTMLButtonElement;
+  const min = el('button', { type: 'button', class: 'snel-knop klein-knop-teller', 'aria-label': 'Een daklicht minder', 'data-koepels': 'min' }, '−') as HTMLButtonElement;
+  const plus = el('button', { type: 'button', class: 'snel-knop klein-knop-teller', 'aria-label': 'Een daklicht meer', 'data-koepels': 'plus' }, '+') as HTMLButtonElement;
   min.disabled = nu.aantal === 0;
   min.addEventListener('click', () => zetAantal(nu.aantal - 1));
   plus.addEventListener('click', () => zetAantal(nu.aantal + 1));
-  // Platte dakramen (ronde 11b) heten zo; de rest blijft "Lichtkoepels", zoals vroeger.
-  const dakraam = daklichtCatalogus[type]?.vorm === 'dakraam';
-  if (dakraam) { min.setAttribute('aria-label', 'Een dakraam minder'); plus.setAttribute('aria-label', 'Een dakraam meer'); rij.setAttribute('aria-label', 'Aantal dakramen'); }
-  rij.append(el('span', {}, dakraam ? 'Dakramen' : 'Lichtkoepels'), min, el('strong', { 'data-koepels': 'aantal' }, String(nu.aantal)), plus);
-  const naam = daklichtCatalogus[type]?.label.replace(/^(Lichtkoepel|Plat dakraam) /, '') ?? '';
+  rij.append(el('span', {}, 'Daklichten'), min, el('strong', { 'data-koepels': 'aantal' }, String(nu.aantal)), plus);
+  const naam = daklichtCatalogus[type]?.label ?? '';
   rij.append(el('span', { class: 'klein' }, `${naam}, gelijk verdeeld op het grootste platte dak`));
   return rij;
 }

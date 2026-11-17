@@ -41,13 +41,21 @@ import { kanOngedaan, momentopname, ongedaan, positieVan, resultaat, toestand, w
 
 type Gereedschap = 'verf' | 'pipet' | 'ramen' | 'raam' | 'strook';
 
-/** `vinger`: de uitleg op een aanraakscherm (zonder Shift en Alt; "tik" in plaats van "klik" doet `voorVinger`). */
+/**
+ * `vinger`: de uitleg op een aanraakscherm (zonder Shift en Alt; "tik" in plaats van "klik" doet `voorVinger`). Ronde 16:
+ * in twee groepen (`GEREEDSCHAP_GROEPEN`): eerst kleur en materiaal (verven, pipet, strook), dan de ramen.
+ */
 const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string; vinger?: string }[] = [
   { code: 'verf', label: 'Verven', toets: 'B', hint: 'Kies een materiaal en een kleur, en klik op een muurvlak. Shift+klik verft de hele gevel, Alt+klik neemt een materiaal over (pipet). Klik op de sokkel om die te verven.', vinger: 'Kies een materiaal en een kleur, en tik op een muurvlak (of kies hierboven wat je met één tik verft). Tik op de sokkel om die te verven.' },
   { code: 'pipet', label: 'Pipet', toets: 'I', hint: 'Klik op een muurvlak of de sokkel om het materiaal en de kleur over te nemen.' },
+  { code: 'strook', label: 'Strook', toets: 'S', hint: 'Een materiaal op een deel van de gevel: kies hieronder wat voor strook en een materiaal, en klik op de gevel.' },
   { code: 'ramen', label: 'Ramen verschuiven', toets: 'V', hint: 'Sleep een raam opzij of in de hoogte (deuren alleen opzij). De maten eronder volgen mee. Shift = per cm.', vinger: 'Sleep een raam opzij of in de hoogte (deuren alleen opzij). De maten eronder volgen mee.' },
   { code: 'raam', label: 'Raam toevoegen', toets: 'R', hint: 'Klik op een muurvlak: er komt een raam (en een regel in het overzicht) op die plaats.' },
-  { code: 'strook', label: 'Strook', toets: 'S', hint: 'Een materiaal op een deel van de gevel: kies hieronder wat voor strook en een materiaal, en klik op de gevel.' },
+];
+/** Ronde 16: de groepen van het gevelpalet, elk met een kop (dezelfde soort kop als in het gereedschap van de plattegrond). */
+const GEREEDSCHAP_GROEPEN: { kop: string; codes: Gereedschap[] }[] = [
+  { kop: 'Kleur en materiaal', codes: ['verf', 'pipet', 'strook'] },
+  { kop: 'Ramen', codes: ['ramen', 'raam'] },
 ];
 /**
  * Ronde 14: een strook in één tik. Wat de tik doet, hangt af van de soort: een band op die hoogte over de hele breedte van
@@ -329,8 +337,8 @@ function toonPalet() {
   $('#gv-hint').textContent = voorVinger(strook ? STROOK_VORMEN.find((x) => x.code === strookVorm)!.hint : (aanraak() ? g?.vinger : undefined) ?? g?.hint ?? '');
   $<HTMLButtonElement>('#gv-ongedaan').disabled = !kanOngedaan();
   const verven = gereedschap === 'verf' || gereedschap === 'pipet' || strook;
-  $('#gv-bereik').hidden = gereedschap !== 'verf';
-  $('#gv-strookvorm').hidden = !strook;
+  $('#gv-bereik').hidden = $('#gv-bereik-kop').hidden = gereedschap !== 'verf';
+  $('#gv-strookvorm').hidden = $('#gv-strookvorm-kop').hidden = !strook;
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gv-strookvorm]')) b.setAttribute('aria-pressed', String(b.dataset.gvStrookvorm === strookVorm));
   $('#gv-materialen').hidden = !verven;
 
@@ -360,7 +368,8 @@ function toonPalet() {
     d.append(rij, el('p', { class: 'klein gv-kleurnaam' }, lijst[waarde ?? '']?.label ?? ''));
     return d;
   };
-  vak.replaceChildren(...groepen.map((groep) => {
+  // Ronde 16: een kop boven de materialen (met Strook aan: die van de strook), zoals de groepen erboven.
+  vak.replaceChildren(el('p', { class: 'groepkop' }, strook ? 'Materiaal van de strook' : 'Materiaal en kleur'), ...groepen.map((groep) => {
     const d = el('div', { class: 'gv-groep' });
     d.append(el('p', { class: 'klein' }, groep));
     const rij = el('div', { class: 'gv-tegels' });
@@ -396,7 +405,7 @@ function toonPalet() {
   const plan = toestand().plan;
   const sokkel = plan.gevelOntwerp?.sokkel;
   const sk = $('#gv-sokkel');
-  sk.replaceChildren(el('p', { class: 'klein' }, 'Sokkel (plint onderaan het gelijkvloers)'));
+  sk.replaceChildren(el('p', { class: 'groepkop' }, 'Sokkel'), el('p', { class: 'klein' }, 'De onderste strook van de gevel van het gelijkvloers'));
   const rij = el('div', { class: 'tabs klein', role: 'group', 'aria-label': 'Hoogte sokkel' });
   for (const h of [0, 20, 30, 50, 80]) {
     const b = el('button', { type: 'button', 'aria-pressed': String((sokkel?.hoogte ?? 0) === h) }, h ? `${h} cm` : 'Geen');
@@ -464,13 +473,14 @@ function toonEigenschappen() {
     return;
   }
   const m = gevelCatalogus[kwast.materiaal];
-  vak.append(el('h3', {}, 'Gevel ontwerpen'));
+  // Ronde 16: de kaart heet naar wat ze toont (de kwast); *Gevel ontwerpen* is het palet links.
+  vak.append(el('h3', {}, 'Kwast'));
   if (m) {
     const kleur = m.kleuren[kwast.kleur]?.label ?? kwast.kleur;
-    vak.append(el('p', {}, `Kwast: ${m.label}, ${kleur.toLowerCase()}${m.voegen && kwast.voeg ? `, voeg ${(m.voegen[kwast.voeg]?.label ?? '').toLowerCase()}` : ''}.`));
+    vak.append(el('p', {}, `${m.label}, ${kleur.toLowerCase()}${m.voegen && kwast.voeg ? `, voeg ${(m.voegen[kwast.voeg]?.label ?? '').toLowerCase()}` : ''}.`));
     if (m.uitleg) vak.append(el('p', { class: 'klein' }, m.uitleg));
   }
-  vak.append(el('p', { class: 'klein' }, `Tip: ${aanraak() ? 'Ongedaan maken staat bovenaan het palet' : 'Ctrl+Z maakt ongedaan'}. In 3D en in het overzicht zie je het resultaat meteen. De kleuren zijn voorbeelden.`));
+  vak.append(el('p', { class: 'klein' }, `Tip: ${aanraak() ? 'Ongedaan staat bovenaan het palet' : 'Ctrl+Z maakt ongedaan'}. In 3D en in het overzicht zie je het resultaat meteen. De kleuren zijn voorbeelden.`));
   const b = el('button', { type: 'button', class: 'tweede' }, 'Bekijk in 3D');
   b.addEventListener('click', () => terug?.naar3D());
   vak.append(b);
@@ -883,12 +893,13 @@ export function gevelNaWijziging() {
 
 export function startGevels(nav: NonNullable<typeof terug>) {
   terug = nav;
-  $('#gv-gereedschap').replaceChildren(...GEREEDSCHAP.map((g) => {
-    const b = el('button', { type: 'button', 'data-gv-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap) });
+  $('#gv-gereedschap').replaceChildren(...GEREEDSCHAP_GROEPEN.flatMap((groep) => [el('p', { class: 'groepkop' }, groep.kop), ...groep.codes.map((code) => {
+    const g = GEREEDSCHAP.find((x) => x.code === code)!;
+    const b = el('button', { type: 'button', 'data-gv-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap), title: `${g.label} (${g.toets})` });
     b.append(el('span', {}, g.label), el('kbd', {}, g.toets));
     b.addEventListener('click', () => kiesGereedschap(g.code));
     return b;
-  }));
+  })]));
   $('#gv-bereik').replaceChildren(...BEREIK.map((x) => {
     const b = el('button', { type: 'button', 'data-gv-bereik': x.code, 'aria-pressed': String(x.code === bereik) }, x.label);
     b.addEventListener('click', () => { bereik = x.code; toonPalet(); });
