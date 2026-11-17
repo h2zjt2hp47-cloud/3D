@@ -336,7 +336,10 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 11 | 2 | ~~**Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik; de bestaande woning neutraal en buiten de telling; tussen twee buren; werk zonder ding (afbraak, container) als regel; de uitbouw uit hoofdstuk 10 als voorbeeldproject~~ **klaar** (hoofdstuk 31; fundering en afvoeren alleen als post) | M |
 | 11b | 2 | ~~**Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering~~ **klaar** (hoofdstuk 30) | M |
 | 11c | 2 | ~~**Volledige doorloop op gebruiksgemak** (vraag van Jonas) en de herstellingen~~ **klaar** (hoofdstuk 32) | M |
-| 12 | 2 | **Vloerafwerking** (legpatroon, formaat, voeg, plinten), het **plafond** en de rest van de afwerkingen | M |
+| 10c | 2 | ~~**Techniek voor de klant**, ook in de 3D (Jonas 17/11: "ja hoort er bij ook zichtbaar in 3D")~~ **klaar** (bestand voor de klant met *De woning / Techniek*, buitentoestellen in de afgewerkte 3D, klantweergave, blad) | M |
+| 12 | 2 | **Beknopte binnenafwerking** (Jonas 17/11: "eventueel beknopte binnenafwerking"): vloer, wand, plafond en plinten per ruimte, snel te kiezen | M |
+| 14 | 2 | **Stroken op de gevel** (Jonas 17/11): een materiaal op een deel van een muur (band, verticale strook, kader rond een raam) | M |
+| 15 | 2 | **Nachtweergave en ledstrips** (Jonas 17/11) | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
 
 Elke ronde eindigt met echte schermafdrukken, een testbestand en de gemeten tikken op tablet en groot scherm.
