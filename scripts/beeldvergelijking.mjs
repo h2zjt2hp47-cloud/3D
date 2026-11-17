@@ -176,7 +176,25 @@ const BOUWBEELDEN = [
   // Op een eigen pagina met een vers project.
   { naam: 'bouw-nacht-voor', nacht: 'voor' },
   { naam: 'bouw-nacht-schuin', nacht: 'schuin' },
+  // Ronde 15b (17/11): verlichting in één tik. De voorbeeldwoning met de drie voorstellen bij de nacht aangetikt (Verlichting,
+  // Ledstrip onder de dakrand, Lampen bij de deuren, Tuinlampen: de knoppen zelf), schuin; en met Muren laag de ledstrip
+  // rondom langs het plafond van de leefruimte (`VERLICHTING_RUIMTE`, rechtstreeks in het bewaarde project), die dan
+  // bovenop de lage muren ligt. Op een eigen pagina met een vers project. Samen te vernieuwen met `--alleen bouw-verlichting`.
+  { naam: 'bouw-verlichting-schuin', verlichting: 'schuin' },
+  { naam: 'bouw-verlichting-ruimte', verlichting: 'ruimte' },
 ];
+
+/**
+ * De ledstrip rondom langs het plafond van de leefruimte van de voorbeeldwoning (ronde 15b), zoals een tik op de ruimte
+ * in de 3D ze maakt (`plafondStroken` in core/src/verlichting.ts): drie stukken van hoogstens 10 m, 1 cm van de muren.
+ */
+const VERLICHTING_RUIMTE = {
+  leidingen: [
+    { id: 'vr1', soort: 'ledstrip', punten: [[16, 386], [814, 386], [814, 452]], hoogte: 'plafond', niveau: 0, voorstel: 'plafond', voorstelBij: 'leef' },
+    { id: 'vr2', soort: 'ledstrip', punten: [[814, 452], [814, 884], [382, 884]], hoogte: 'plafond', niveau: 0, voorstel: 'plafond', voorstelBij: 'leef' },
+    { id: 'vr3', soort: 'ledstrip', punten: [[382, 884], [16, 884], [16, 386]], hoogte: 'plafond', niveau: 0, voorstel: 'plafond', voorstelBij: 'leef' },
+  ],
+};
 
 /** De techniek van de nachtbeelden (ronde 15): buitenlampen, tuinlampen en een ledstrip in de voorbeeldwoning. */
 const NACHT_TECHNIEK = {
@@ -742,6 +760,39 @@ async function maakBeelden() {
       beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       console.log('klaar');
     }
+    await p.close();
+  }
+  // Ronde 15b: verlichting in één tik. Eigen pagina per beeld, vers project (de voorbeeldwoning).
+  for (const b of BOUWBEELDEN.filter((x) => x.verlichting && nodig(x))) {
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    if (b.verlichting === 'ruimte') {
+      await p.evaluate((techniek) => {
+        const index = JSON.parse(localStorage.getItem('bouw-demo.projecten.v1'));
+        const sleutel = `bouw-demo.project.${index.actief}`;
+        const t = JSON.parse(localStorage.getItem(sleutel));
+        Object.assign(t.plan, techniek);
+        localStorage.setItem(sleutel, JSON.stringify(t));
+      }, VERLICHTING_RUIMTE);
+      await p.reload();
+      await p.waitForTimeout(1500);
+    }
+    await p.click('.nav [data-weergave="plan"]');
+    await p.click('[data-pl-weergave="3d"]');
+    await p.waitForTimeout(1500);
+    process.stdout.write(`  ${b.naam} … `);
+    if (b.verlichting === 'ruimte') {
+      await p.click('#pl-laag');
+      await p.waitForTimeout(1000);
+      await p.click('[data-pl-nacht="nacht"]');
+    } else {
+      await p.click('[data-verlichting-open]');
+      for (const s of ['dakrand', 'deuren', 'tuin']) { await p.click(`[data-verlichting="${s}"]`); await p.waitForTimeout(500); }
+      await p.click('[data-pl-standpunt="schuin"]');
+    }
+    beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+    console.log('klaar');
     await p.close();
   }
   await browser.close();

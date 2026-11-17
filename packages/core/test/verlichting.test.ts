@@ -129,6 +129,22 @@ describe('ledstrip rondom langs het plafond', () => {
     // Rondom: het einde van het laatste stuk is het begin van het eerste.
     expect(g!.leidingen[g!.leidingen.length - 1]!.punten.at(-1)).toEqual(g!.leidingen[0]!.punten[0]);
   });
+  it('waar de muur op dezelfde lijn dunner wordt (buiten → binnen), een trapje en geen schuine strip', () => {
+    const plan: Plattegrond = {
+      ruimtes: [
+        { id: 'a', naam: 'Leefruimte', type: 'leefruimte', x: 0, y: 0, b: 600, d: 400, vloer: 'parket_eik', wand: 'wit' },
+        { id: 'b', naam: 'Berging', type: 'berging', x: 200, y: 400, b: 200, d: 200, vloer: 'tegel_grijs', wand: 'wit' },
+      ],
+      openingen: [], meubels: [], muurhoogte: 270, buitenmuur: 30, binnenmuur: 10, gevel: { soort: 'steen', kleur: '#9c4a34' },
+    };
+    const punten = plafondStroken(plan, cat, 'a')[0]!.leidingen.flatMap((l) => l.punten);
+    for (let i = 1; i < punten.length; i++) {
+      const [p, q] = [punten[i - 1]!, punten[i]!];
+      expect(p[0] === q[0] || p[1] === q[1]).toBe(true);
+    }
+    expect(punten.some(([, y]) => y === 384)).toBe(true);
+    expect(punten.some(([, y]) => y === 394)).toBe(true);
+  });
   it('met lage muren: deze strip ligt bovenop de muren; een zelf getekende strip bovenaan blijft weg (zoals in ronde 15)', () => {
     const plan = woning();
     const leef = plan.ruimtes.find((r) => r.type === 'leefruimte')!;

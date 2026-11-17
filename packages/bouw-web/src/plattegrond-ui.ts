@@ -75,6 +75,7 @@ import { gevelNaWijziging, gevelToets, kiesStrookInGevel, startGevels } from './
 import { dakLijnen, dakraamZonweringVan, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { dagNachtKnop, nachtGekozen, toonDagNacht } from './nacht-ui.js';
+import { toonVerlichting, verlichtingIn3D } from './verlichting-ui.js';
 import { familie } from './meegeven.js';
 import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
@@ -2184,8 +2185,8 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
     if (w === '3d') $('#pl-3d').append(ongedaanKnop);
     else if (w === 'plan') $('#pl-zoomvlak').append(ongedaanKnop);
   }
-  // Dag of nacht (ronde 15): rechtsboven op de 3D, één tik.
-  if (w === '3d') $('#pl-3d').append(dagNachtKnop(wisselNacht));
+  // Dag of nacht (ronde 15): rechtsboven op de 3D, één tik; eronder de verlichting in één tik (ronde 15b).
+  if (w === '3d') $('#pl-3d').append(dagNachtKnop(wisselNacht), ...verlichtingIn3D());
 }
 
 /** De knop *Varianten naast elkaar* alleen als dit ontwerp varianten heeft. */
@@ -2209,6 +2210,7 @@ export function ontwerpBeeld(): string | null {
 function nachtIn3D() {
   const getoond = nachtGekozen() && !constructieAan() && !techniekAan();
   toonDagNacht(getoond);
+  toonVerlichting(getoond);
   viewer?.nacht?.(getoond);
 }
 

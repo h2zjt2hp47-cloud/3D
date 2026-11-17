@@ -20,7 +20,7 @@
  */
 import {
   asVan, dakOpbouw, langsAs, murenVan, muurStatus, muurVanOpening, niveauPlan, niveauVan, opAs, planMetDak, plattegrond3D, ruimteOp,
-  verschuifZijden, vlakSleutel, binnenVeelhoek,
+  vlakSleutel, binnenVeelhoek,
   type Muur, type Opening, type PlanCatalogus, type Plattegrond, type Punt,
 } from './plattegrond.js';
 import type { Blok } from './ruimtelijk.js';
@@ -139,7 +139,8 @@ function samenvoegen(lus: Zijde[]): Zijde[] {
 /**
  * De strook rondom, `LEDSTRIP_AFSTAND` van het muurvlak aan de kant `kant` van elke muur (een eenheidsvector op het plan):
  * per gesloten lus de zijden van hoek tot hoek. De hoeken zijn de snijpunten (zoals `verschuifZijden`), dus een strook om
- * een buitenhoek loopt tot op de hoek, een binnenhoek tot tegen de andere muur.
+ * een buitenhoek loopt tot op de hoek, een binnenhoek tot tegen de andere muur. Gaat een muur op dezelfde lijn verder in
+ * een andere dikte (een buitenmuur die een binnenmuur wordt), dan maakt de strook daar een trapje, zoals het muurvlak.
  */
 function stroken(muren: Muur[], kant: (m: Muur) => Punt): StrookZijde[][] {
   const uit: StrookZijde[][] = [];
@@ -148,17 +149,26 @@ function stroken(muren: Muur[], kant: (m: Muur) => Punt): StrookZijde[][] {
     for (const z of ruw) s += z.a[0] * z.b[1] - z.b[0] * z.a[1];
     // Met de klok mee (zoals `metDeKlok`): de normaal naar buiten van zijde a → b is (dy, −dx).
     const lus = s >= 0 ? ruw : ruw.slice().reverse().map((z) => ({ ...z, a: z.b, b: z.a }));
-    const ver = lus.map((z) => {
+    const n = lus.length;
+    const lijnen = lus.map((z) => {
       const dx = z.b[0] - z.a[0], dy = z.b[1] - z.a[1], l = Math.hypot(dx, dy) || 1;
-      const k = kant(z.muren[0]!);
-      const teken = (dy / l) * k[0] + (-dx / l) * k[1] >= 0 ? 1 : -1;
-      return teken * (z.dikte / 2 + LEDSTRIP_AFSTAND);
+      const nb: Punt = [dy / l, -dx / l], k = kant(z.muren[0]!);
+      const t = (nb[0] * k[0] + nb[1] * k[1] >= 0 ? 1 : -1) * (z.dikte / 2 + LEDSTRIP_AFSTAND);
+      return { d: [dx / l, dy / l] as Punt, nb, t };
     });
-    const v = verschuifZijden(lus.map((z) => z.a), ver);
-    if (v.length !== lus.length) continue;
+    // Per hoekpunt van de lus: het snijpunt van de twee verschoven zijden, of (evenwijdig) twee punten: een trapje.
+    const hoeken = lus.map((z, i): [Punt, Punt] => {
+      const a = lijnen[(i + n - 1) % n]!, b = lijnen[i]!, P = z.a;
+      const pa: Punt = [P[0] + a.nb[0] * a.t, P[1] + a.nb[1] * a.t], pb: Punt = [P[0] + b.nb[0] * b.t, P[1] + b.nb[1] * b.t];
+      const det = a.d[0] * b.d[1] - a.d[1] * b.d[0];
+      if (Math.abs(det) < 1e-9) return [pa, pb];
+      const u = ((pb[0] - pa[0]) * b.d[1] - (pb[1] - pa[1]) * b.d[0]) / det;
+      const x: Punt = [pa[0] + a.d[0] * u, pa[1] + a.d[1] * u];
+      return [x, x];
+    });
     uit.push(lus.map((z, i) => ({
-      a: v[i]!, b: v[(i + 1) % v.length]!, as: [z.a, z.b], muren: z.muren,
-      verschuiving: Math.abs(ver[i]!), voor: Math.abs(ver[(i + lus.length - 1) % lus.length]!), na: Math.abs(ver[(i + 1) % lus.length]!),
+      a: hoeken[i]![1], b: hoeken[(i + 1) % n]![0], as: [z.a, z.b], muren: z.muren,
+      verschuiving: Math.abs(lijnen[i]!.t), voor: Math.abs(lijnen[(i + n - 1) % n]!.t), na: Math.abs(lijnen[(i + 1) % n]!.t),
     })));
   }
   return uit;
@@ -418,8 +428,8 @@ function grondvlak(b: Blok): Punt[] {
 const binnenOfBij = (v: Punt[], p: Punt, marge: number) => binnenVeelhoek(v, p[0], p[1]) || v.some((a, i) => afstandTotStuk(p, a, v[(i + 1) % v.length]!) < marge);
 
 /**
- * Tuinlampen (paaltjes) op het gras: naast het terras van een schuifraam twee, bij de verste hoeken (en één in het midden
- * van de verste rand als het terras breder is dan 6 m), en langs het pad naar de voordeur om de ± 1,7 m aan één kant.
+ * Tuinlampen (paaltjes) op het gras: naast het terras van een schuifraam twee, bij de verste hoeken (niet in het midden
+ * van de verste rand: daar loop je de tuin in), en langs het pad naar de voordeur om de ± 1,7 m aan één kant.
  * Terras en pad zijn die van de 3D (`Plan3DOpties.aanleg`). Niet in of tegen de woning of de buren, niet op een terras of
  * pad, niet dichter dan 80 cm bij een andere lamp of een toestel.
  */
@@ -457,7 +467,7 @@ export function tuinLampen(plan: Plattegrond, cat: PlanCatalogus, opties: Verlic
     const hoek = (naast: number, binnen: number): Punt => (binnenGrens(naast) ? naarPlan(naast, u1 - TUIN.naast)
       : naarPlan(Math.min(grens![1]!, Math.max(grens![0]!, binnen)), u1 + TUIN.naast));
     const kandidaten: Punt[][] = terras
-      ? [[hoek(s0 - TUIN.naast, s0 + TUIN.naast)], [hoek(s1 + TUIN.naast, s1 - TUIN.naast)], ...(s1 - s0 > 600 ? [[naarPlan((s0 + s1) / 2, u1 + TUIN.naast)]] : [])]
+      ? [[hoek(s0 - TUIN.naast, s0 + TUIN.naast)], [hoek(s1 + TUIN.naast, s1 - TUIN.naast)]]
       : (() => {
         const k = Math.max(2, Math.round((u1 - u0) / TUIN.tussen));
         const rij = (s: number) => Array.from({ length: k }, (_, i) => naarPlan(s, u0 + ((i + 0.5) * (u1 - u0)) / k));
@@ -490,7 +500,9 @@ export function plafondStroken(plan: Plattegrond, cat: Pick<PlanCatalogus, 'tech
   const n = niveauVan(r);
   const leidingen: VoorstelGroep['leidingen'] = [];
   for (const lus of ruimteStroken(plan, ruimteId)) {
-    const rond = [...lus.map((z) => punt1(z.a)), punt1(lus[0]!.a)];
+    // Rondom, met de trapjes waar de muur van dikte verandert (een zijde eindigt dan niet waar de volgende begint).
+    const rond: Punt[] = [];
+    for (const q of [...lus.flatMap((z) => [z.a, z.b]), lus[0]!.a].map(punt1)) if (!rond.length || afstand(rond[rond.length - 1]!, q) > 0.05) rond.push(q);
     for (const punten of delen(rond, soort.max)) leidingen.push({ soort: soort.code, punten, hoogte: 'plafond', niveau: n, voorstel: 'plafond', voorstelBij: ruimteId });
   }
   return leidingen.length ? [{ bij: ruimteId, leidingen, toestellen: [] }] : [];
