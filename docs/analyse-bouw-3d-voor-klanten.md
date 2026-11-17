@@ -337,8 +337,8 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 11b | 2 | ~~**Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering~~ **klaar** (hoofdstuk 30) | M |
 | 11c | 2 | ~~**Volledige doorloop op gebruiksgemak** (vraag van Jonas) en de herstellingen~~ **klaar** (hoofdstuk 32) | M |
 | 10c | 2 | ~~**Techniek voor de klant**, ook in de 3D (Jonas 17/11: "ja hoort er bij ook zichtbaar in 3D")~~ **klaar** (bestand voor de klant met *De woning / Techniek*, buitentoestellen in de afgewerkte 3D, klantweergave, blad) | M |
-| 12 | 2 | **Beknopte binnenafwerking** (Jonas 17/11: "eventueel beknopte binnenafwerking"): vloer, wand, plafond en plinten per ruimte, snel te kiezen | M |
-| 14 | 2 | **Stroken op de gevel** (Jonas 17/11): een materiaal op een deel van een muur (band, verticale strook, kader rond een raam) | M |
+| 12 | 2 | **Beknopte binnenafwerking** (Jonas 17/11: "eventueel beknopte binnenafwerking"): vloer, wand, plafond en plinten per ruimte, accentmuur, een sfeer voor de hele woning in één tik (loopt) | M |
+| 14 | 2 | ~~**Stroken op de gevel** (Jonas 17/11)~~ **klaar** (gereedschap *Strook* in de gevel-editor: band, naast raam, kader, vrij; bekleding van 2 cm in de 3D, ook in de topgevel; in het aanzicht met maten, in de m², het overzicht, de posten en het bestand voor de klant; `core/src/gevelstroken.ts`) | M |
 | 15 | 2 | **Nachtweergave en ledstrips** (Jonas 17/11) | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
 
