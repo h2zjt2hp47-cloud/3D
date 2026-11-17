@@ -21,6 +21,7 @@ import {
   splitsRuimtes,
   tekenRuimteIn,
   verdiepingenVan,
+  verwijderStrook,
   meubelVoetafdruk,
   langsAs,
   murenVan,
@@ -380,6 +381,8 @@ function toonNiveaus() {
         if (t.plan.losseWanden) t.plan.losseWanden = t.plan.losseWanden.filter((w) => niveauVan(w) !== n);
         if (t.plan.toestellen) t.plan.toestellen = t.plan.toestellen.filter((x) => niveauVan(x) !== n);
         if (t.plan.leidingen) t.plan.leidingen = t.plan.leidingen.filter((x) => niveauVan(x) !== n);
+        // Stroken op die verdieping (ronde 14); een strook over de hele gevel blijft.
+        for (const s of (t.plan.gevelOntwerp?.stroken ?? []).filter((x) => x.niveau === n)) verwijderStrook(t.plan, s.id);
         t.plan.verdiepingen = verdiepingenVan(t.plan).slice(0, n);
       });
       niveau = n - 1;
@@ -2379,6 +2382,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       delete t.plan.losseWanden;
       delete t.plan.toestellen;
       delete t.plan.leidingen;
+      // De stroken op de gevel (ronde 14) hangen aan een kant en maten, niet aan een ruimte: ze gaan mee weg.
+      if (t.plan.gevelOntwerp?.stroken) t.plan.gevelOntwerp = (({ stroken: _, ...o }) => o)(t.plan.gevelOntwerp);
     });
     kiesGereedschap('ruimte');
   });

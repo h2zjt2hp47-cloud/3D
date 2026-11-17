@@ -205,9 +205,19 @@ function gevelVlak(plan: Plattegrond, l: StrookLijn, muren: VlakStuk[], dak?: He
   }
   const uit: GevelPunt[][] = [];
   for (const [a0, a1] of stukken) {
+    const dwars = !!dak && (l.as === 'h') !== (dak.nokAs === 'x');
+    if (dak && dwars && a0 >= dak.p0 - 0.5 && a1 <= dak.p1 + 0.5) {
+      // Muur en topgevel als één vlak (de vorm van de gevel): geen naad op de muurhoogte in een strook over de hele hoogte.
+      const h = (a: number) => Math.max(0, dakHoogte(dak, a));
+      const vorm: GevelPunt[] = [[a0, onder], [a1, onder], [a1, H + h(a1)]];
+      if (dak.vorm === 'zadel' && dak.nokP > a0 + 0.01 && dak.nokP < a1 - 0.01) vorm.push([dak.nokP, H + dak.nok]);
+      vorm.push([a0, H + h(a0)]);
+      uit.push(vorm);
+      continue;
+    }
     uit.push(rechthoek({ a0, a1, h0: onder, h1: H }));
     if (!dak) continue;
-    if ((l.as === 'h') !== (dak.nokAs === 'x')) {
+    if (dwars) {
       // Topgevel: dwars op de nok, tot onder het dak (zoals het gevelaanzicht).
       const b0 = Math.max(a0, dak.p0), b1 = Math.min(a1, dak.p1);
       const top = b1 - b0 > 0.5 ? gevelOnderDak(dak, b0, b1) : [];

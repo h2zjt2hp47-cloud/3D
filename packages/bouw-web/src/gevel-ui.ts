@@ -13,6 +13,8 @@ import {
   murenVan,
   nieuweStrookId,
   niveauPlan,
+  dakOpbouw,
+  strookOppervlaktes,
   niveauVan,
   strookPlaats,
   tekenSvg,
@@ -210,7 +212,8 @@ export function toonGevelEditor() {
   // Tabs per gevel.
   $('#gv-kanten').replaceChildren(...gevels.map((x) => {
     const b = el('button', { type: 'button', 'aria-pressed': String(idVan(x) === gevelId), title: x.naam, 'data-gevel': idVan(x) }, x.schuin ? x.naam : x.naam.replace(/ \(.*\)$/, '') + ` · ${KANT_NAAM[x.kant]}`);
-    b.addEventListener('click', () => { gevelId = idVan(x); gekozen = undefined; zoom?.passendMaken(); toonGevelEditor(); });
+    // Een andere gevel: ook de gekozen strook los (een materiaal in het palet mag geen strook buiten beeld veranderen).
+    b.addEventListener('click', () => { gevelId = idVan(x); gekozen = undefined; gekozenStrook = undefined; zoom?.passendMaken(); toonGevelEditor(); });
     return b;
   }));
 
@@ -503,11 +506,20 @@ function maakStrook(s: Omit<GevelStrook, 'id' | 'kant' | 'materiaal' | 'kleur'>)
   const g = huidigeGevel();
   if (!g) return;
   const id = nieuweStrookId(toestand().plan);
+  const strook: GevelStrook = { id, kant: g.kant, ...s, materiaal: strookKwast.materiaal, kleur: strookKwast.kleur, ...(strookKwast.voeg ? { voeg: strookKwast.voeg } : {}) };
+  // Ligt er niets van op de gevel (naast de woning, op een bestaande muur of tegen de buren): geen onzichtbare strook.
+  const proef = structuredClone(toestand().plan);
+  proef.gevelOntwerp ??= gevelOntwerpVan(proef);
+  voegStrookToe(proef, strook);
+  if (!strookOppervlaktes(proef, dakOpbouw(proef)).some((x) => x.strook.id === id)) {
+    $('#gv-hint').textContent = 'Daar ligt geen nieuwe gevel: de strook kwam er niet. Tik op de gevel zelf (niet op een bestaande muur of een muur tegen de buren).';
+    return;
+  }
   gekozenStrook = id;
   gekozen = undefined;
   wijzig('plan', (t) => {
     metOntwerp(t);
-    voegStrookToe(t.plan, { id, kant: g.kant, ...s, materiaal: strookKwast.materiaal, kleur: strookKwast.kleur, ...(strookKwast.voeg ? { voeg: strookKwast.voeg } : {}) });
+    voegStrookToe(t.plan, strook);
   });
 }
 
