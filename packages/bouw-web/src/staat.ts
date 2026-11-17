@@ -20,7 +20,7 @@ import {
   type RuimteType,
   type HandmatigePost,
 } from '../../core/src/index.js';
-import { beslisStart, herstelIndex, voegLijstenSamen } from '../../core/src/projecten.js';
+import { beslisStart, herstelIndex, uniekeNaam, voegLijstenSamen } from '../../core/src/projecten.js';
 import { plaatsNaast, vrijePlaats, type Plaats } from '../../core/src/openingplaats.js';
 import { UITBOUW_VOORBEELD_NAAM, UITBOUW_VOORBEELD_UITLEG, uitbouwVoorbeeld } from '../../core/voorbeelden/uitbouwvoorbeeld.js';
 import { aanbouw, aanbouwPrijslijst } from '../../core/voorbeelden/aanbouw.js';
@@ -380,7 +380,8 @@ function schoon(x: Toestand, zonderKlant: boolean): Toestand {
 /** Nieuw project, vanuit een bron (leeg, voorbeeld, sjabloon of kopie). */
 export function nieuwProject(bron: Toestand, naam: string, opties: { zonderKlant?: boolean } = {}): string {
   const x = schoon(bron, opties.zonderKlant ?? true);
-  x.meta.project = naam || 'Nieuw project';
+  // Doorloop B20: twee projecten met dezelfde naam krijgen "(2)", zodat je weet welk je opent of verwijdert.
+  x.meta.project = uniekeNaam(naam || 'Nieuw project', index.projecten.map((p) => p.naam));
   x.meta.nummer = volgendNummer();
   const id = `pr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   index.projecten.push(infoVan(id, x));
@@ -391,6 +392,28 @@ export function nieuwProject(bron: Toestand, naam: string, opties: { zonderKlant
 export function dupliceerProject(id: string) {
   const x = laadProject(id);
   if (x) nieuwProject(x, `${x.meta.project} (kopie)`, { zonderKlant: false });
+}
+
+/**
+ * Een project hernoemen vanuit Projecten (doorloop B19; vroeger alleen via het veld Project in het overzicht). Bestaat de
+ * naam al bij een ander project, dan komt er "(2)" achter. Geeft de nieuwe naam (of undefined als het niet lukt).
+ */
+export function hernoemProject(id: string, naam: string): string | undefined {
+  const schoon = naam.trim();
+  if (!schoon) return undefined;
+  const nieuw = uniekeNaam(schoon, index.projecten.filter((p) => p.id !== id).map((p) => p.naam));
+  if (id === index.actief) {
+    wijzig('meta', (x) => { x.meta.project = nieuw; });
+    return nieuw;
+  }
+  const x = laadProject(id);
+  if (!x) return undefined;
+  x.meta.project = nieuw;
+  if (!schrijf(PROJECT(id), x)) return undefined;
+  index.projecten = index.projecten.map((p) => (p.id === id ? { ...p, naam: nieuw } : p));
+  schrijfIndex();
+  for (const l of luisteraars) l('projecten');
+  return nieuw;
 }
 
 export function verwijderProject(id: string) {
@@ -426,6 +449,7 @@ export function projectUitBestand(tekst: string): string {
   if (!isToestand(x)) throw new Error('Dit bestand bevat geen project van de woningconfigurator.');
   const id = `pr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const y = aanvullen(x);
+  y.meta.project = uniekeNaam(y.meta.project || 'Naamloos project', index.projecten.map((p) => p.naam));
   index.projecten.push(infoVan(id, y));
   wissel(id, y);
   return id;

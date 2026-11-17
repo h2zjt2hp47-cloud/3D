@@ -888,6 +888,9 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 @media (max-width: 700px) { body:not(.met-prijzen) .positie { grid-template-columns: 64px minmax(0, 1fr); } body:not(.met-prijzen) .positieprijs { justify-content: flex-start; } }
 /* B24: de vinkjes van "Uit de plattegrond" minstens 44 px hoog op een aanraakscherm (de algemene regel gaf 36 px). */
 @media (pointer: coarse) { #o-uitplan-kaart .schakelaars label { min-height: 44px; display: flex; align-items: center; gap: 8px; } }
+/* B19: hernoemen in Projecten (het naamveld in de lijst). */
+.hernoemveld { width: 100%; min-width: 160px; min-height: 40px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 6px; font: inherit; }
+@media (pointer: coarse) { .hernoemveld { min-height: 44px; } }
 #p-inwoning { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; min-height: 44px; }
 </style>
 </head>

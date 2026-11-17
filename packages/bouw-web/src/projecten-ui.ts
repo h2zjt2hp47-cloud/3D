@@ -11,6 +11,7 @@ import {
   bewaarAlsSjabloon,
   bibliotheek,
   dupliceerProject,
+  hernoemProject,
   laadProject,
   MODELLEN,
   nieuwProject,
@@ -88,12 +89,32 @@ export function toonProjecten() {
     const acties = el('td', { class: 'acties-cel' });
     if (p.id !== actiefProject()) acties.append(knop('Openen', () => { openProject(p.id); naarProject(); }, ''));
     else acties.append(el('span', { class: 'status ok' }, 'open'));
+    // Doorloop B19: hernoemen hier, niet alleen via het overzicht. De naam wordt een veld; Enter of ernaast tikken bewaart.
+    const naamCel = el('td', {}, p.naam);
+    const hernoem = knop('Hernoemen', () => {
+      const veld = el('input', { type: 'text', 'aria-label': `Nieuwe naam voor ${p.naam}`, class: 'hernoemveld' }) as HTMLInputElement;
+      veld.value = p.naam;
+      let klaar = false;
+      const bewaar = () => {
+        if (klaar) return;
+        klaar = true;
+        const nieuw = veld.value.trim() && veld.value.trim() !== p.naam ? hernoemProject(p.id, veld.value) : undefined;
+        if (!nieuw) toonProjecten();
+        else $('#pr-melding').textContent = nieuw === veld.value.trim() ? `Hernoemd tot "${nieuw}".` : `Hernoemd tot "${nieuw}" (die naam bestond al).`;
+      };
+      veld.addEventListener('keydown', (e) => { if (e.key === 'Enter') bewaar(); if (e.key === 'Escape') { klaar = true; toonProjecten(); } });
+      veld.addEventListener('blur', bewaar);
+      naamCel.replaceChildren(veld);
+      veld.focus();
+      veld.select();
+    });
     acties.append(
+      hernoem,
       knop('Dupliceren', () => dupliceerProject(p.id)),
       knop('Bewaar als bestand', () => { if (x) download(bestandsnaam(x), projectAlsBestand(x), 'application/json'); }),
       gevaarKnop('Verwijderen', 'Zeker verwijderen?', () => verwijderProject(p.id)),
     );
-    tr.append(el('td', {}, p.naam), el('td', {}, p.klant || '—'), el('td', { class: 'code' }, p.nummer), el('td', { class: 'num' }, String(p.posities)),
+    tr.append(naamCel, el('td', {}, p.klant || '—'), el('td', { class: 'code' }, p.nummer), el('td', { class: 'num' }, String(p.posities)),
       el('td', { class: 'num prijsdeel' }, PRIJZEN && x ? eur(totaal(x)) : '—'), el('td', { class: 'klein' }, datum(p.gewijzigd)), acties);
     return tr;
   }));
