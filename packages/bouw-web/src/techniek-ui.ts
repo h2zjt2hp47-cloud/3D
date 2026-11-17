@@ -13,7 +13,7 @@
  * `toestelVlak`, `verschuifLeidingPunten` (core/src/techniekplaatsen.ts) en `telTechniek` (core/src/techniek.ts).
  */
 import {
-  ALLE_VAKKEN, LICHTKLEUREN, stripLangsMuren, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, klantWoorden, leidingLangsWanden, leidingVerloop, lichtkleurVan, maatTekst, maatVan, murenVan, niveauPlan,
+  ALLE_VAKKEN, LICHTKLEUREN, stripLangsMuren, stripOverMuur, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, klantWoorden, leidingLangsWanden, leidingVerloop, lichtkleurVan, maatTekst, maatVan, murenVan, niveauPlan,
   niveauVan, nieuweTechniek, nieuwToestel, opToestelVlak, puntGroep, ruimteOp, techniekVoorKlant, technischeOpstelling, tegenWand, telTechniek, toestelMaten, toestelTekenBeeld, toestelVlak,
   toestelVoetafdruk, verschuifLeidingPunten, vloerHoogte, vloerverwarmingLus, vormVanDeel,
   type Leiding, type LeidingHoogte, type Plattegrond, type Punt, type Ruimte, type TechniekKlant, type TechniekRegel, type TechniekVak, type Toestel, type ToestelType,
@@ -306,8 +306,37 @@ function stripKeuzes(vakEl: HTMLElement, l: Leiding, metMaat: boolean) {
   vakEl.append(el('p', { class: 'klein' }, 'Kleur van het licht'), kleur);
 }
 
-/** Een tik met het gereedschap *leiding*: eerst het begin, dan het einde. */
+/**
+ * Hoe een ledstrip getrokken wordt (ronde 15b, Jonas: *"het plaatsen van een ledstrip is te complex"*): *Hele muur* (één
+ * tik op een muur of gevel: de strip loopt over dat hele stuk, van hoek tot hoek) of *Een deel* (twee tikken, van tik tot
+ * tik, zoals in ronde 15). Hoort bij het scherm, niet bij het project.
+ */
+let stripWijze: 'muur' | 'deel' = 'muur';
+const STRIP_WIJZE: ['muur' | 'deel', string, string][] = [
+  ['muur', 'Hele muur', 'Eén tik op een muur of gevel: de strip loopt over dat hele stuk muur'],
+  ['deel', 'Een deel', 'Twee tikken: waar ze begint en waar ze eindigt'],
+];
+
+/** Een ledstrip over een heel stuk muur na één tik (`stripOverMuur`), bovenaan: binnen langs het plafond, buiten onder de dakrand. */
+function stripHeleMuur(code: string, p: Punt) {
+  const soort = tc.leidingen[code]!, n = omg?.niveau() ?? 0;
+  const r = stripOverMuur(toestand().plan, p, n, soort.hoogte);
+  if (!r) { meld('Tik vlak bij een muur (binnen) of een gevel (buiten): de ledstrip loopt dan over dat hele stuk muur. Voor een strip waar geen muur is: Een deel.', p, true); return; }
+  // Een tweede tik op dezelfde muur (een dubbeltik op een tablet) legde er een tweede, gelijke strip bovenop.
+  const gelijk = (a: Punt[], b: Punt[]) => a.length === b.length && a.every((q, i) => Math.hypot(q[0] - b[i]![0], q[1] - b[i]![1]) < 1);
+  const al = (toestand().plan.leidingen ?? []).find((x) => x.soort === code && niveauVan(x) === n && x.hoogte === soort.hoogte && !x.hoogtes && (gelijk(x.punten, r.punten) || gelijk(x.punten, [...r.punten].reverse())));
+  if (al) { omg?.kies({ soort: 'leiding', id: al.id }); meld(`Over deze ${r.buiten ? 'gevel' : 'muur'} hangt al een ledstrip (nu gekozen). Een andere hoogte of kleur kies je hiernaast.`, p, true); return; }
+  const l: Leiding = { id: nieuweId('l'), soort: code, punten: r.punten, hoogte: soort.hoogte, niveau: n };
+  zichtbaar.add(soort.vak);
+  wijzig('plan', (x) => { (x.plan.leidingen ??= []).push(l); });
+  omg?.kies({ soort: 'leiding', id: l.id });
+  const lengte = leidingVerloop(l, toestand().plan, tc, { vloerHoogte: (k) => vloerHoogte(toestand().plan, k) }).lengte;
+  meld(`Ledstrip over de hele ${r.buiten ? 'gevel' : 'muur'}: ${getal(lengte, 1)} m, ${r.buiten ? 'onder de dakrand' : 'bovenaan'}. Tik op een andere muur voor nog een strip; hoogte en kleur kies je hiernaast. Met Nacht in de 3D zie je ze branden.`, p);
+}
+
+/** Een tik met het gereedschap *leiding*: eerst het begin, dan het einde (een ledstrip: zie `stripWijze`). */
 function leidingTik(g: Extract<Gereedschap, { soort: 'leiding' }>, p: Punt) {
+  if (tc.leidingen[g.leiding]?.ledstrip && stripWijze === 'muur') { stripHeleMuur(g.leiding, p); return; }
   // Een ledstrip (ronde 15) begint en eindigt waar je tikt, niet aan een toestel.
   const t = tc.leidingen[g.leiding]?.ledstrip ? undefined : toestelOp(p);
   const snap = omg?.snap ?? ((v: number) => v);
@@ -749,6 +778,7 @@ export function techniekHint(): string {
     const waar = t?.bevestiging === 'plafond' ? 'aan het plafond, op de plaats van de tik' : t?.tuin ? 'buiten, op de plaats van de tik' : t?.bevestiging === 'buiten' ? 'buiten tegen de dichtste gevel' : t?.gevel ? 'tegen de dichtste muur (tik buiten de woning voor de buitenkant van de gevel)' : 'tegen de dichtste muur';
     return `Tik in het plan: ${kortLabel(t?.label ?? '').toLowerCase()} komt ${waar}. Blijf tikken voor meer; Selecteren om te stoppen. Daarna kun je de maten typen (of niet).`;
   }
+  if (g.soort === 'leiding' && tc.leidingen[g.leiding]?.ledstrip && stripWijze === 'muur') return 'Tik op een muur (binnen) of een gevel (buiten): de ledstrip loopt over dat hele stuk muur, bovenaan. Hoogte en kleur kies je daarna; voor een deel van een muur: Een deel.';
   if (g.soort === 'leiding' && tc.leidingen[g.leiding]?.ledstrip) return g.van ? 'Tik waar de ledstrip eindigt, langs dezelfde muur of gevel.' : 'Tik waar de ledstrip begint en waar ze eindigt, vlak bij een muur (binnen) of een gevel (buiten): ze komt tegen de muur, bovenaan; de hoogte en de kleur kies je daarna.';
   if (g.soort === 'leiding') return g.van ? 'Tik op het tweede toestel (of op een punt, bv. buiten of bij een lavabo).' : `Tik op het eerste toestel, dan op het tweede: de ${kortLabel(tc.leidingen[g.leiding]?.label ?? '').toLowerCase()} loopt langs de wanden.`;
   if (g.soort === 'technisch') return 'Tik op de berging, de garage of de ruimte waar de technische toestellen komen.';
@@ -826,6 +856,19 @@ export function toonPalet() {
     b.addEventListener('click', () => kiesGereedschap(actief ? { soort: 'kies' } : { soort: 'leiding', leiding: code }));
     leidingen.append(b);
   }
+  // Ronde 15b: bij de ledstrip de keuze Hele muur (één tik) of Een deel (twee tikken), vlak onder de tegels.
+  const ledstripAan = gereedschap.soort === 'leiding' && !!tc.leidingen[gereedschap.leiding]?.ledstrip;
+  const wijze = el('div', { class: 'tabs stripwijze', role: 'group', 'aria-label': 'Hoe je de ledstrip trekt' });
+  for (const [w, label, uitleg] of STRIP_WIJZE) {
+    const b = el('button', { type: 'button', 'data-strip-wijze': w, 'aria-pressed': String(w === stripWijze), title: uitleg }, label);
+    b.addEventListener('click', () => {
+      stripWijze = w;
+      if (gereedschap.soort === 'leiding') gereedschap.van = undefined;
+      toonPalet();
+      omg?.opnieuw();
+    });
+    wijze.append(b);
+  }
   const een = el('div', { class: 'ttegels' });
   const tr = el('button', { type: 'button', class: 'ttegel', 'data-techniek-een': 'technisch', 'aria-pressed': String(gereedschap.soort === 'technisch'), title: TECHNISCHE_RUIMTE.map((x) => tc.toestellen[x]?.label).join(', ') }, 'Technische ruimte');
   tr.addEventListener('click', () => kiesGereedschap(gereedschap.soort === 'technisch' ? { soort: 'kies' } : { soort: 'technisch' }));
@@ -843,7 +886,7 @@ export function toonPalet() {
     kop,
     el('p', { class: 'tsub', title: 'Kies, en tik dan op de ruimte' }, 'In één tik, op een ruimte'), een,
     tabs,
-    leidingen, toestellen,
+    leidingen, ...(ledstripAan ? [wijze] : []), toestellen,
     el('p', { class: 'tsub' }, 'Tonen (het vak hierboven staat op de voorgrond, de andere lichter)'), vakSchakelaars(),
     el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD),
     voorbeeld,

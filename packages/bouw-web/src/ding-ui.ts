@@ -25,6 +25,7 @@ import { actiefProject, dupliceerProject, positieVan, toestand, wijzig, type Toe
 import { familie } from './meegeven.js';
 import { techniekDingKeuzes, techniekTitel } from './techniek-ui.js';
 import { binnenKeuzes } from './binnen-ui.js';
+import { verlichtingBijDing } from './verlichting-ui.js';
 
 /** Is dit een ding dat je kan aantikken? Andere namen (binnenmuur, terras, schaduw) geven geen keuzes. */
 export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:|wand:|toestel:|leiding:|strook:)/.test(id);
@@ -336,6 +337,8 @@ export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: ()
   else if (soort === 'wand') wandKeuzes(vak, id, nav.sluit);
   else if (soort === 'toestel' || soort === 'leiding') techniekDingKeuzes(vak, ding, nav);
   else if (soort === 'strook') strookKeuzes(vak, id, nav.sluit, nav.naarGevel);
+  // Ronde 15b: verlichting in één tik (gevel, deur naar buiten, ruimte), bovenaan onder de titel.
+  verlichtingBijDing(vak, ding);
   dingPosten(vak, soort === 'ruimte' ? `ruimte:${id}` : ding);
 }
 

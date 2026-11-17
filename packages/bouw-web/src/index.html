@@ -964,6 +964,30 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
 .dagnacht button[data-pl-nacht="nacht"][aria-pressed="true"] { background: #1c2a4a; border-color: #1c2a4a; color: #f3e6c4; }
 .dagnacht .maan { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset -4px -1px 0 0 currentColor; transform: rotate(-20deg); }
 #pl-ongedaan:disabled { opacity: .45; cursor: default; }
+/* Verlichting in één tik (ronde 15b): onder Dag / Nacht rechtsboven op de 3D. Overdag alleen de knop (een tik zet de
+   nacht aan), 's nachts de voorstellen eronder op een donkere achtergrond. Over het beeld: de 3D verandert niet van maat. */
+#pl-3d > .verlichting { position: absolute; top: 62px; right: 10px; z-index: 6; display: grid; gap: 6px; justify-items: end; max-width: calc(100% - 90px); }
+.verlichting .vkop { min-height: 44px; padding: 6px 12px; border: 1px solid var(--lijn); border-radius: 8px; background: var(--vlak); color: var(--inkt); box-shadow: 0 2px 8px rgba(0, 0, 0, .25); display: inline-flex; align-items: center; gap: 8px; font-size: .95rem; cursor: pointer; }
+.verlichting.nacht .vkop { background: #1c2a4a; border-color: #1c2a4a; color: #f3e6c4; }
+.verlichting .lampje { width: 10px; height: 10px; border-radius: 50%; background: #f4c45a; box-shadow: 0 0 6px 2px rgba(244, 196, 90, .65); }
+.verlichting .vpijl { width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translate(-2px, -2px); margin-left: 2px; }
+.verlichting .vkop[aria-expanded="true"] .vpijl { transform: rotate(-135deg) translate(-2px, -2px); }
+.verlichting .vlijst { display: grid; gap: 6px; padding: 6px; border-radius: 10px; background: rgba(20, 28, 48, .84); box-shadow: 0 2px 8px rgba(0, 0, 0, .3); }
+.verlichting .vlijst[hidden] { display: none; }
+.verlichting .vlijst button { min-height: 36px; display: flex; align-items: center; gap: 8px; padding: 4px 10px; border: 1px solid rgba(243, 230, 196, .35); border-radius: 8px; background: transparent; color: #f3e6c4; text-align: left; font: inherit; font-size: .88rem; cursor: pointer; }
+@media (pointer: coarse) { .verlichting .vlijst button { min-height: 44px; } }
+.verlichting .vlijst button[aria-pressed="true"] { background: #f4d27a; border-color: #d9b45a; color: #3a2d06; }
+.verlichting .vlijst button[aria-pressed="mixed"] { border-color: #f4d27a; }
+.verlichting .vvink { flex: none; width: 16px; height: 16px; border: 2px solid currentColor; border-radius: 4px; display: grid; place-items: center; }
+.verlichting button[aria-pressed="true"] .vvink::after { content: ''; width: 9px; height: 5px; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-1px) rotate(-45deg); }
+.verlichting button[aria-pressed="mixed"] .vvink::after { content: ''; width: 9px; height: 2px; background: currentColor; }
+#pl-3d > #pl-verlichting-melding { position: absolute; left: 10px; bottom: 10px; z-index: 6; margin: 0; max-width: min(440px, calc(100% - 20px)); padding: 7px 12px; border-radius: 8px; background: rgba(20, 28, 48, .88); color: #f3e6c4; font-size: .88rem; line-height: 1.3; pointer-events: none; }
+#pl-3d > #pl-verlichting-melding:empty { display: none; }
+.keuzepaneel .vding { display: grid; gap: 4px; padding: 4px 0 6px; border-bottom: 1px solid var(--lijn); }
+.keuzepaneel .vding .vmelding { margin: 0; }
+/* De keuze Hele muur / Een deel bij de tegel Ledstrip in de techniek. */
+.techniekpalet .stripwijze { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (pointer: coarse) { .techniekpalet .stripwijze button { min-height: 44px; } }
 /* Het pijltje als tekening, niet als teken: een teken uit een ander lettertype maakte de knop (en de rij boven de tekening)
    een fractie hoger, en dan schoof de tekening een deel van een beeldpunt. */
 .pijl { width: 14px; height: 14px; vertical-align: -2px; margin-right: 5px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

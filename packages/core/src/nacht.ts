@@ -166,7 +166,14 @@ export function ledstripBlokken(plan: Plattegrond, tc: TechniekCatalogus | undef
     if (opties.totNiveau !== undefined && n > opties.totNiveau) continue;
     const verloop = leidingVerloop(l, plan, tc, { vloerHoogte: (k) => vloerHoogte(plan, k) });
     const y0 = vloerHoogte(plan, n);
-    if (opties.laag !== undefined && n === (opties.laatste ?? n) && verloop.punten.some((q) => q[1] - y0 > opties.laag! + 60)) continue;
+    // Met lage muren zou een strip bovenaan boven de muren zweven: weg. Behalve de strip rondom langs het plafond die met
+    // één tik op de ruimte kwam (ronde 15b, `voorstel: 'plafond'`): die ligt dan bovenop de lage muren, zodat je ziet welke
+    // ruimte ze rondom verlicht (anders zag je na de tik niets; een zelf getekende strip blijft zoals in ronde 15).
+    let verlaagd: number | undefined;
+    if (opties.laag !== undefined && n === (opties.laatste ?? n) && verloop.punten.some((q) => q[1] - y0 > opties.laag! + 60)) {
+      if (l.voorstel !== 'plafond') continue;
+      verlaagd = y0 + Math.max(P.hoog, opties.laag - 3);
+    }
     if (!murenPer.has(n)) murenPer.set(n, murenVan(niveauPlan(plan, n)));
     const muren = murenPer.get(n)!;
     const kleur = lichtkleurVan(l.lichtkleur).kleur;
@@ -176,7 +183,7 @@ export function ledstripBlokken(plan: Plattegrond, tc: TechniekCatalogus | undef
       const p = verloop.punten[i - 1]!, q = verloop.punten[i]!;
       const dx = q[0] - p[0], dz = q[2] - p[2], L = Math.hypot(dx, dz);
       if (L < 1 || Math.abs(q[1] - p[1]) > 0.5) continue;
-      const mx = (p[0] + q[0]) / 2, mz = (p[2] + q[2]) / 2, y = p[1];
+      const mx = (p[0] + q[0]) / 2, mz = (p[2] + q[2]) / 2, y = verlaagd ?? p[1];
       // Aan elk einde een halve diepte langer: de hoeken van een strip die om een hoek loopt, zijn dicht.
       const lengte = L + P.diep;
       const hoek = Math.round((Math.atan2(dz, dx) * 180) / Math.PI * 1e4) / 1e4;
@@ -190,7 +197,9 @@ export function ledstripBlokken(plan: Plattegrond, tc: TechniekCatalogus | undef
       const weg = wegVanMuur(muren, [mx, mz]);
       // Het echte licht hangt een eind vóór de muur en eronder: het verlicht de grond of de vloer, niet één vlek op de muur
       // (de kijker legt de band licht op de muur zelf, zie `waasVan` in drie-d.ts).
-      const licht: BlokLicht = { kleur, sterkte: 1, bereik: LICHT_BEREIK.strip, vanaf: [r2((weg?.[0] ?? 0) * 110), -130, r2((weg?.[1] ?? 0) * 110)] };
+      // Op de lage muren (zie `verlaagd`): het licht op ruim een derde van die hoogte, boven de vloer.
+      const neer = verlaagd !== undefined ? -r2((verlaagd - y0) * 0.6) : -130;
+      const licht: BlokLicht = { kleur, sterkte: 1, bereik: LICHT_BEREIK.strip, vanaf: [r2((weg?.[0] ?? 0) * 110), neer, r2((weg?.[1] ?? 0) * 110)] };
       uit.push(balk('profiel', 'metaal', '#c4c7c9', y - P.hoog / 2 + P.strook, P.hoog - P.strook, P.diep));
       uit.push(balk('licht', 'kunststof', '#f6f3ea', y - P.hoog / 2, P.strook, P.diep * 0.7, { licht }));
       k++;
