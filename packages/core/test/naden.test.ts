@@ -9,6 +9,7 @@ import { planMetDak, plattegrond3D, type Blok, type BlokVlak, type Plan3DOpties,
 import { planCatalogus as cat } from '../voorbeelden/inrichting.js';
 import { voorbeeldWoning } from '../voorbeelden/woning.js';
 import { uitbouwVoorbeeld } from '../voorbeelden/uitbouwvoorbeeld.js';
+import { gebouwMaatlijnen } from '../src/maten3d.js';
 
 const APP: Plan3DOpties = { aanleg: true, gevelkoppen: true, dingen: true };
 const zadel = (plan: Plattegrond): Plattegrond => ({ ...plan, dak: { vorm: 'zadel', helling: 35, richting: 'onder', oversteek: 40, bedekking: { materiaal: 'pannen', kleur: 'rood' } } });
@@ -17,6 +18,7 @@ const GEVALLEN: [string, Plattegrond, Plan3DOpties][] = [
   ['voorbeeldwoning, zadeldak', zadel(voorbeeldWoning().plan), APP],
   ['voorbeeldwoning, nok van boven naar onder', { ...zadel(voorbeeldWoning().plan), dak: { ...zadel(voorbeeldWoning().plan).dak!, richting: 'rechts' } }, APP],
   ['voorbeeldwoning, muren laag', planMetDak(voorbeeldWoning().plan), { ...APP, laag: 110, totNiveau: 0 }],
+  ['voorbeeldwoning, muren laag op de verdieping', planMetDak(voorbeeldWoning().plan), { ...APP, laag: 110 }],
   ['uitbouw achter een rijwoning', planMetDak(uitbouwVoorbeeld().plan), APP],
 ];
 
@@ -99,6 +101,8 @@ describe('geen streepjes in de gevel (ronde 17): wat wijkt en wat bedekt is', ()
       expect([...c.keys()].sort(), naam).toEqual([...a.keys()].sort());
       for (const [k, w] of a) expect(Math.abs(c.get(k)! - w), `${naam}: ${k}`).toBeLessThan(0.5);
       expect(met.blokken.length, naam).toBeGreaterThanOrEqual(zonder.blokken.length);
+      // De maten in de 3D lezen de blokken `muur_…` en `dakrand_…`: ze blijven gelijk.
+      expect(gebouwMaatlijnen(met), naam).toEqual(gebouwMaatlijnen(zonder));
     }
   });
 });
