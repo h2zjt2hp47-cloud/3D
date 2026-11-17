@@ -13,7 +13,7 @@
  * `toestelVlak`, `verschuifLeidingPunten` (core/src/techniekplaatsen.ts) en `telTechniek` (core/src/techniek.ts).
  */
 import {
-  ALLE_VAKKEN, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, klantWoorden, leidingLangsWanden, leidingVerloop, maatTekst, maatVan, murenVan, niveauPlan,
+  ALLE_VAKKEN, LICHTKLEUREN, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, klantWoorden, leidingLangsWanden, leidingVerloop, lichtkleurVan, maatTekst, maatVan, murenVan, niveauPlan,
   niveauVan, nieuweTechniek, nieuwToestel, opToestelVlak, puntGroep, ruimteOp, techniekVoorKlant, technischeOpstelling, tegenWand, telTechniek, toestelMaten, toestelTekenBeeld, toestelVlak,
   toestelVoetafdruk, verschuifLeidingPunten, vloerHoogte, vloerverwarmingLus, vormVanDeel,
   type Leiding, type LeidingHoogte, type Plattegrond, type Punt, type Ruimte, type TechniekKlant, type TechniekRegel, type TechniekVak, type Toestel, type ToestelType,
@@ -209,6 +209,12 @@ function nieuwePlaats(code: string, p: Punt): Toestel | string {
     if (!w) return 'Tik dichter bij de gevel (binnen 3 m).';
     return w.toestel;
   }
+  if (!binnen && t.aan === 'wand' && type.gevel) {
+    // Ronde 15: buiten aan de gevel (een buitenlamp, een laadpaal, een buitenkraan): tegen de buitenkant van de dichtste gevel.
+    const w = tegenWand(plan, t, type, { maxAfstand: 300 });
+    if (!w) return 'Tik dichter bij de gevel (binnen 3 m).';
+    return w.toestel;
+  }
   if (!binnen) return `Tik in een ruimte: ${kortLabel(type.label).toLowerCase()} hoort binnen.`;
   if (t.aan === 'wand') {
     const w = tegenWand(plan, t, type, { maxAfstand: 2000 });
@@ -242,24 +248,75 @@ function afstandVoor(van?: string, naar?: string): number {
 /** Een leiding van toestel (of punt) naar toestel (of punt), langs de wanden, op de standaardhoogte van haar soort. */
 function trekLeiding(code: string, van: { punt: Punt; toestel?: string }, naar: { punt: Punt; toestel?: string }) {
   const soort = tc.leidingen[code]!, n = omg?.niveau() ?? 0, plan = toestand().plan;
-  const punten = leidingLangsWanden(plan, van.punt, naar.punt, { niveau: n, afstand: afstandVoor(van.toestel, naar.toestel) });
+  // Een ledstrip (ronde 15) hangt tegen de muur (1 cm, het profiel), niet een eind ervan zoals een leiding.
+  const punten = leidingLangsWanden(plan, van.punt, naar.punt, { niveau: n, afstand: soort.ledstrip ? LEDSTRIP_AFSTAND : afstandVoor(van.toestel, naar.toestel) });
   if (punten.length < 2) { meld('Tik op twee verschillende plaatsen.', naar.punt, true); return; }
   const l: Leiding = { id: nieuweId('l'), soort: code, punten, hoogte: soort.hoogte, niveau: n, ...(van.toestel ? { van: van.toestel } : {}), ...(naar.toestel ? { naar: naar.toestel } : {}) };
   zichtbaar.add(soort.vak);
   wijzig('plan', (x) => { (x.plan.leidingen ??= []).push(l); });
   omg?.kies({ soort: 'leiding', id: l.id });
   const lengte = leidingVerloop(l, toestand().plan, tc, { vloerHoogte: (k) => vloerHoogte(toestand().plan, k) }).lengte;
-  meld(`${kortLabel(soort.label)} getrokken: ${getal(lengte, 1)} m. Tik op het volgende toestel om er nog een te trekken, of op Selecteren.`, naar.punt);
+  meld(soort.ledstrip
+    ? `Ledstrip getrokken: ${getal(lengte, 1)} m, ${stripHoogteTekst(l)}. Kies hiernaast de hoogte en de kleur van het licht; met Nacht in de 3D zie je ze branden.`
+    : `${kortLabel(soort.label)} getrokken: ${getal(lengte, 1)} m. Tik op het volgende toestel om er nog een te trekken, of op Selecteren.`, naar.punt);
+}
+
+/** Een ledstrip hangt zo ver (cm) van het muurvlak: het midden van het profiel. */
+const LEDSTRIP_AFSTAND = 1;
+/** De hoogtes van een ledstrip om uit te kiezen (ronde 15): bovenaan, onder een kast, laag (trap, plint, tuinmuur). */
+const STRIP_HOOGTE: [LeidingHoogte, string, string][] = [
+  ['plafond', 'Bovenaan', 'Langs het plafond, of buiten onder de dakrand'],
+  [145, 'Onder een kast', 'Op 1,45 m: onder de bovenkasten van een keuken'],
+  [20, 'Laag', 'Op 20 cm: langs een trap, een plint of in een tuinmuur'],
+];
+/** Waar een ledstrip hangt, in woorden. */
+function stripHoogteTekst(l: Leiding): string {
+  const k = STRIP_HOOGTE.find(([w]) => w === l.hoogte);
+  return k ? k[1].toLowerCase() : typeof l.hoogte === 'number' ? `op ${cm(l.hoogte)}` : String(l.hoogte);
+}
+/**
+ * De keuzes van een ledstrip (ronde 15): de hoogte (drie voorstellen en een eigen maat) en de kleur van het licht. Zowel in
+ * de eigenschappen (plattegrond) als in het keuzepaneel van de 3D.
+ */
+function stripKeuzes(vakEl: HTMLElement, l: Leiding, metMaat: boolean) {
+  const hoogte = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Hoogte van de ledstrip' });
+  for (const [w, label, uitleg] of STRIP_HOOGTE) {
+    const b = el('button', { type: 'button', 'data-strip-hoogte': String(w), 'aria-pressed': String(!l.hoogtes && l.hoogte === w), title: uitleg }, label);
+    b.addEventListener('click', () => zetLeiding(l.id, (x) => { x.hoogte = w; delete x.hoogtes; }));
+    hoogte.append(b);
+  }
+  vakEl.append(el('p', { class: 'klein' }, `Hoogte: ${stripHoogteTekst(l)}`), hoogte);
+  if (metMaat) {
+    const H = toestand().plan.muurhoogte;
+    const nu = typeof l.hoogte === 'number' ? l.hoogte : l.hoogte === 'plafond' ? H - 6 : l.hoogte === 'wand' ? 30 : 0;
+    const maten = el('div', { class: 'maten' });
+    maten.append(cmMaat('Eigen hoogte (midden van de strip)', nu, (w) => zetLeiding(l.id, (x) => { x.hoogte = Math.round(w * 10) / 10; delete x.hoogtes; })));
+    vakEl.append(maten);
+  }
+  const kleur = el('div', { class: 'tabs lichtkleuren', role: 'group', 'aria-label': 'Kleur van het licht' });
+  const nu = lichtkleurVan(l.lichtkleur).code;
+  for (const [code, k] of Object.entries(LICHTKLEUREN)) {
+    const b = el('button', { type: 'button', 'data-strip-kleur': code, 'aria-pressed': String(code === nu), title: k.label });
+    const stip = el('span', { class: 'tstip' });
+    stip.style.background = k.kleur;
+    b.append(stip, k.label);
+    b.addEventListener('click', () => zetLeiding(l.id, (x) => { if (code === 'warm') delete x.lichtkleur; else x.lichtkleur = code; }));
+    kleur.append(b);
+  }
+  vakEl.append(el('p', { class: 'klein' }, 'Kleur van het licht'), kleur);
 }
 
 /** Een tik met het gereedschap *leiding*: eerst het begin, dan het einde. */
 function leidingTik(g: Extract<Gereedschap, { soort: 'leiding' }>, p: Punt) {
-  const t = toestelOp(p);
+  // Een ledstrip (ronde 15) begint en eindigt waar je tikt, niet aan een toestel.
+  const t = tc.leidingen[g.leiding]?.ledstrip ? undefined : toestelOp(p);
   const snap = omg?.snap ?? ((v: number) => v);
   const plek = t ? { punt: [t.x, t.y] as Punt, toestel: t.id } : { punt: [snap(p[0]), snap(p[1])] as Punt };
   if (!g.van) {
     g.van = plek;
-    meld(`Begin: ${t ? naamVan(t).toLowerCase() : 'een punt'}. Tik nu op het tweede toestel (of op een punt, bv. buiten).`, p);
+    meld(tc.leidingen[g.leiding]?.ledstrip
+      ? 'Begin van de ledstrip. Tik nu waar ze eindigt, langs dezelfde muur (binnen) of gevel (buiten).'
+      : `Begin: ${t ? naamVan(t).toLowerCase() : 'een punt'}. Tik nu op het tweede toestel (of op een punt, bv. buiten).`, p);
     omg?.opnieuw();
     return;
   }
@@ -928,13 +985,16 @@ export function toonTechniekEigenschappen(vakEl: HTMLElement, s: TechniekSelecti
   vakEl.append(el('h3', {}, soort.label));
   vakEl.append(el('p', { class: 'klein' }, `${TECHNIEK_VAKKEN[soort.vak].label}${l.kring ? ` · ${l.kring}` : ''} · ${getal(verloop.lengte, 1)} m (op het plan ${getal(verloop.lengtePlan, 1)} m, de rest op en neer)${van || naar ? ` · van ${van ? naamVan(van).toLowerCase() : 'een punt'} naar ${naar ? naamVan(naar).toLowerCase() : 'een punt'}` : ''}`));
   const nu = l.hoogtes ? '' : typeof l.hoogte === 'number' ? '' : l.hoogte;
-  const ligging = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Waar de leiding loopt' });
-  for (const [w, label] of LIGGING) {
-    const b = el('button', { type: 'button', 'data-ligging': String(w), 'aria-pressed': String(nu === w) }, label);
-    b.addEventListener('click', () => zetLeiding(l.id, (x) => { x.hoogte = w; delete x.hoogtes; }));
-    ligging.append(b);
+  if (soort.ledstrip) stripKeuzes(vakEl, l, true);
+  else {
+    const ligging = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Waar de leiding loopt' });
+    for (const [w, label] of LIGGING) {
+      const b = el('button', { type: 'button', 'data-ligging': String(w), 'aria-pressed': String(nu === w) }, label);
+      b.addEventListener('click', () => zetLeiding(l.id, (x) => { x.hoogte = w; delete x.hoogtes; }));
+      ligging.append(b);
+    }
+    vakEl.append(el('p', { class: 'klein' }, l.hoogtes ? 'Waar ze loopt: een eigen hoogte per punt (een stuk op of neer). Een keuze hieronder zet alle punten op die hoogte.' : typeof l.hoogte === 'number' ? `Waar ze loopt: op ${cm(l.hoogte)} boven de vloer.` : 'Waar ze loopt'), ligging);
   }
-  vakEl.append(el('p', { class: 'klein' }, l.hoogtes ? 'Waar ze loopt: een eigen hoogte per punt (een stuk op of neer). Een keuze hieronder zet alle punten op die hoogte.' : typeof l.hoogte === 'number' ? `Waar ze loopt: op ${cm(l.hoogte)} boven de vloer.` : 'Waar ze loopt'), ligging);
   if (soort.maten.length > 1) {
     const s2 = el('select', { 'aria-label': 'Maat', 'data-leiding-maat': '' }) as HTMLSelectElement;
     soort.maten.forEach((m, i) => s2.append(el('option', { value: String(i) }, maatTekst(soort, m))));
@@ -956,13 +1016,15 @@ export function toonTechniekEigenschappen(vakEl: HTMLElement, s: TechniekSelecti
   if (l.punten.length >= 2) rij.append(knop('Opnieuw langs de wanden', () => {
     const plan2 = toestand().plan;
     const a = l.punten[0]!, b = l.punten[l.punten.length - 1]!;
-    const punten = leidingLangsWanden(plan2, van ? [van.x, van.y] : a, naar ? [naar.x, naar.y] : b, { niveau: niveauVan(l), afstand: 5 });
+    const punten = leidingLangsWanden(plan2, van ? [van.x, van.y] : a, naar ? [naar.x, naar.y] : b, { niveau: niveauVan(l), afstand: soort.ledstrip ? LEDSTRIP_AFSTAND : 5 });
     zetLeiding(l.id, (x) => { x.punten = punten; delete x.hoogtes; });
   }));
   rij.append(knop('Verwijderen', verwijder, 'gevaar'));
   vakEl.append(rij, el('p', { class: 'klein' }, l.soort === 'vloerverwarming'
     ? 'Een lus leg je opnieuw met Vloerverwarming in een ruimte (en een tik op de ruimte).'
-    : 'Tip: sleep een punt (de bolletjes) om de leiding anders te leggen; het kleeft recht met het punt ernaast.'));
+    : soort.ledstrip
+      ? 'In de 3D (Afgewerkt) een dun profiel; met Nacht brandt ze. Sleep een punt om ze langer of korter te maken. Per strip komt er een voeding (de telling in het overzicht).'
+      : 'Tip: sleep een punt (de bolletjes) om de leiding anders te leggen; het kleeft recht met het punt ernaast.'));
   return true;
 }
 
@@ -1025,13 +1087,16 @@ export function techniekDingKeuzes(vakEl: HTMLElement, ding: string, nav: { slui
     if (!l || !ls) return;
     const lengte = leidingVerloop(l, plan, tc, { vloerHoogte: (k) => vloerHoogte(plan, k) }).lengte;
     vakEl.append(el('p', { class: 'klein' }, `${TECHNIEK_VAKKEN[ls.vak].label} · ${maatTekst(ls, maatVan(l, ls))} · ${getal(lengte, 1)} m${l.kring ? ` · ${l.kring}` : ''}`));
-    const ligging = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Waar de leiding loopt' });
-    for (const [w, label] of LIGGING) {
-      const b = el('button', { type: 'button', 'data-ligging': String(w), 'aria-pressed': String(!l.hoogtes && l.hoogte === w) }, label);
-      b.addEventListener('click', () => zetLeiding(id, (x) => { x.hoogte = w; delete x.hoogtes; }));
-      ligging.append(b);
+    if (ls.ledstrip) stripKeuzes(vakEl, l, false);
+    else {
+      const ligging = el('div', { class: 'tabs', role: 'group', 'aria-label': 'Waar de leiding loopt' });
+      for (const [w, label] of LIGGING) {
+        const b = el('button', { type: 'button', 'data-ligging': String(w), 'aria-pressed': String(!l.hoogtes && l.hoogte === w) }, label);
+        b.addEventListener('click', () => zetLeiding(id, (x) => { x.hoogte = w; delete x.hoogtes; }));
+        ligging.append(b);
+      }
+      vakEl.append(ligging);
     }
-    vakEl.append(ligging);
   }
   const rij = el('div', { class: 'knoppenrij' });
   rij.append(

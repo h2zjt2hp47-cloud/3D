@@ -73,6 +73,7 @@ import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
 import { dakLijnen, dakraamZonweringVan, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
+import { dagNachtKnop, nachtGekozen, toonDagNacht } from './nacht-ui.js';
 import { familie } from './meegeven.js';
 import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
 import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
@@ -491,6 +492,8 @@ function plan3D() {
     viewer?.toon(ruimKader && !techniekAan() ? ruimKaderVan(metMaten) : metMaten);
     // Het beeld in het overzicht (Het ontwerp) is dat van de afgewerkte woning, niet van het skelet.
     beeldActueel = !!viewer && !constructie && !techniekAan();
+    // Dag of nacht (ronde 15): alleen in Afgewerkt; de constructie en de techniek tonen de dag.
+    nachtIn3D();
     if (volgendStandpunt) { viewer?.standpunt(volgendStandpunt); volgendStandpunt = undefined; }
   });
   toonDingKeuzes();
@@ -2178,6 +2181,8 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
     if (w === '3d') $('#pl-3d').append(ongedaanKnop);
     else if (w === 'plan') $('#pl-zoomvlak').append(ongedaanKnop);
   }
+  // Dag of nacht (ronde 15): rechtsboven op de 3D, één tik.
+  if (w === '3d') $('#pl-3d').append(dagNachtKnop(() => nachtIn3D()));
 }
 
 /** De knop *Varianten naast elkaar* alleen als dit ontwerp varianten heeft. */
@@ -2193,7 +2198,15 @@ let beeldActueel = false;
  * was of sindsdien iets veranderde (dan zou het een ander ontwerp tonen).
  */
 export function ontwerpBeeld(): string | null {
-  return beeldActueel ? viewer?.beeld?.('image/jpeg', 0.85) ?? null : null;
+  // Bij nacht (ronde 15) niet: het overzicht toont de woning overdag (dan tekent het overzicht het beeld zelf).
+  return beeldActueel && !nachtGekozen() ? viewer?.beeld?.('image/jpeg', 0.85) ?? null : null;
+}
+
+/** De nacht in de 3D (ronde 15): zoals gekozen, maar alleen in Afgewerkt (niet in de constructie of de techniek). */
+function nachtIn3D() {
+  const afgewerkt = !constructieAan() && !techniekAan();
+  toonDagNacht(afgewerkt);
+  viewer?.nacht?.(nachtGekozen() && afgewerkt);
 }
 
 /** Kwaliteit van de 3D van de woning: de bewaarde keuze, anders Snel op een aanraakscherm en Mooi op een computer. */

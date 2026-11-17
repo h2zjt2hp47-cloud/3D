@@ -567,7 +567,9 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       detail: [
         ...[...meubelTel].map(([label, n]) => `${n} × ${label.toLowerCase()}`),
         ...toestellen.map((r) => `${r.aantal} × ${kleinEerst(r.label)}`),
-        ...(leidingen.length ? [`De leidingen ertussen: ${uniek(leidingen.map((r) => kleinEerst(r.label))).join(', ')}.`] : []),
+        // Een ledstrip (ronde 15) is licht dat je ziet, geen leiding ertussen.
+        ...leidingen.filter((r) => tc?.leidingen[r.materiaal]?.ledstrip).map((r) => `${r.aantal} × ${kleinEerst(r.label)}`),
+        ...(leidingen.some((r) => !tc?.leidingen[r.materiaal]?.ledstrip) ? [`De leidingen ertussen: ${uniek(leidingen.filter((r) => !tc?.leidingen[r.materiaal]?.ledstrip).map((r) => kleinEerst(r.label))).join(', ')}.`] : []),
         TECHNIEK_VOORBEHOUD,
       ],
       intern: leidingen.map((r) => `${hoofd(r.label)}${r.doorsnede ? `, ${r.doorsnede}` : ''}: ${r.aantal} leiding${r.aantal === 1 ? '' : 'en'}, samen ${komma(r.lengte ?? 0)} m`),

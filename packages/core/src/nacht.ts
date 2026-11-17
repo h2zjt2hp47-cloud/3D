@@ -198,18 +198,6 @@ export function ledstripBlokken(plan: Plattegrond, tc: TechniekCatalogus | undef
   return uit;
 }
 
-/** Hoeveel voedingen de ledstrips vragen (richtwaarde): één per strip, en per begonnen `maxLengte` meter één. */
-export function ledstripVoedingen(plan: Plattegrond, tc: TechniekCatalogus, lengte: (l: Leiding) => number): number {
-  let n = 0;
-  for (const l of plan.leidingen ?? []) {
-    const soort = tc.leidingen[l.soort];
-    if (!soort?.ledstrip || l.punten.length < 2) continue;
-    const per = soort.maxLengte?.waarde ?? 10;
-    n += Math.max(1, Math.ceil(lengte(l) / per - 1e-9));
-  }
-  return n;
-}
-
 /** Ligt een strip buiten de woning (het midden van het eerste stuk)? Voor de woorden voor de klant en het voorstel van de hoogte. */
 export function stripBuiten(plan: Plattegrond, l: Leiding): boolean {
   const a = l.punten[0], b = l.punten[1];

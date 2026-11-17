@@ -12,6 +12,7 @@
  * De woorden komen uit de catalogus (`klant` op een toestel of soort leiding, `TECHNIEK_KLANT_VAKKEN`): gegevens, geen
  * programma. Een plan zonder toestellen of leidingen geeft niets terug.
  */
+import { lichtkleurVan, stripBuiten } from './nacht.js';
 import type { Pakket3DTechniek } from './pakket3d.js';
 import { niveauVan, plattegrond3D, ruimteOp, toestelBuiten, verdiepingenVan, vloerHoogte, type PlanCatalogus, type Plattegrond } from './plattegrond.js';
 import type { Scene3D } from './ruimtelijk.js';
@@ -104,7 +105,10 @@ export function techniekVoorKlant(plan: Plattegrond, cat: Pick<PlanCatalogus, 't
     const verbindt = a && b
       ? a === b && l.van === l.naar ? `Begint en eindigt bij ${a}.` : kring ? `Verbindt ${a} met de toestellen van deze kring.` : `Verbindt ${a} met ${b}.`
       : a ? `Vertrekt bij ${a}.` : b ? `Komt bij ${b}.` : '';
-    dingen[`leiding:${l.id}`] = { vak: soort.vak, naam: w.naam, uitleg: w.uitleg, waar: [`Loopt ${ligging(l)}${opVerdieping(niveauVan(l))}.`, verbindt].filter(Boolean).join(' ') };
+    // Een ledstrip (ronde 15): waar ze hangt en de kleur van haar licht, geen leiding die iets verbindt.
+    dingen[`leiding:${l.id}`] = soort.ledstrip
+      ? { vak: soort.vak, naam: w.naam, uitleg: w.uitleg, waar: `${stripWaar(plan, l)}${opVerdieping(niveauVan(l))}. Licht: ${klein(lichtkleurVan(l.lichtkleur).label)}.` }
+      : { vak: soort.vak, naam: w.naam, uitleg: w.uitleg, waar: [`Loopt ${ligging(l)}${opVerdieping(niveauVan(l))}.`, verbindt].filter(Boolean).join(' ') };
     const sleutel = `${soort.vak}|${w.naam}|${soort.kleur}`;
     if (!leidingSoorten.has(sleutel)) leidingSoorten.set(sleutel, { vak: soort.vak, naam: w.naam, kleur: soort.kleur, i });
   }
@@ -117,6 +121,19 @@ export function techniekVoorKlant(plan: Plattegrond, cat: Pick<PlanCatalogus, 't
     vakken.push({ vak, naam: TECHNIEK_KLANT_VAKKEN[vak].naam, kleur: TECHNIEK_VAKKEN[vak].kleur, uitleg: TECHNIEK_KLANT_VAKKEN[vak].uitleg, toestellen, leidingen });
   }
   return { vakken, dingen };
+}
+
+/** Waar een ledstrip hangt, in gewone woorden (ronde 15): binnen in een ruimte of buiten aan de gevel, en hoe hoog. */
+function stripWaar(plan: Plattegrond, l: Leiding): string {
+  const buiten = stripBuiten(plan, l);
+  const a = l.punten[0]!, b = l.punten[1]!;
+  const r = buiten ? undefined : ruimteOp(plan, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, niveauVan(l));
+  const plek = buiten ? 'Buiten, langs de gevel' : `${r?.naam ?? 'Binnen'}, langs de muur`;
+  const h = l.hoogtes ? undefined : l.hoogte;
+  // Zonder maten (die zijn voor de aannemer): bovenaan, onder een kast, halfhoog of laag.
+  const hoogte = h === 'plafond' || (typeof h === 'number' && h >= 180) ? (buiten ? 'onder de dakrand' : 'bovenaan, langs het plafond')
+    : h === 145 ? 'onder een kast' : typeof h === 'number' && h >= 60 ? 'halfhoog' : 'laag';
+  return `${plek}, ${hoogte}`;
 }
 
 /**

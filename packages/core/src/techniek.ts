@@ -766,6 +766,10 @@ export interface TechniekRegel {
   lengte?: number;
 }
 
+/** De voeding van een ledstrip in de telling (ronde 15): geen toestel om te plaatsen, een richtwaarde uit de lengte. */
+export const VOEDING_LEDSTRIP = 'voeding_ledstrip';
+export const VOEDING_LABEL = 'Voeding voor ledstrip (richtwaarde: één per strip, per begonnen 10 m één meer)';
+
 /**
  * De telling: per vak het aantal toestellen per type en de lopende meters leiding per soort en maat. Met `niveau` alleen
  * die verdieping. Netto, zonder snijverlies of reserve, en zonder prijzen.
@@ -790,7 +794,14 @@ export function telTechniek(plan: Plattegrond, cat: TechniekCatalogus, opties: {
     if (!regels.has(k)) regels.set(k, { groep: soort.vak, soort: 'leiding', materiaal: l.soort, label: soort.label, doorsnede, aantal: 0, lengte: 0 });
     const r = regels.get(k)!;
     r.aantal++;
-    r.lengte = (r.lengte ?? 0) + leidingVerloop(l, plan, cat, { vloerHoogte }).lengte;
+    const lengte = leidingVerloop(l, plan, cat, { vloerHoogte }).lengte;
+    r.lengte = (r.lengte ?? 0) + lengte;
+    // Een ledstrip (ronde 15) vraagt een voeding: één per strip, en één per begonnen `maxLengte` (richtwaarde).
+    if (soort.ledstrip) {
+      const v = regels.get(VOEDING_LEDSTRIP) ?? { groep: soort.vak, soort: 'toestel' as const, materiaal: VOEDING_LEDSTRIP, label: VOEDING_LABEL, aantal: 0 };
+      v.aantal += Math.max(1, Math.ceil(lengte / (soort.maxLengte?.waarde ?? 10) - 1e-9));
+      regels.set(VOEDING_LEDSTRIP, v);
+    }
   }
   return [...regels.values()]
     .map((r) => (r.lengte !== undefined ? { ...r, lengte: r2(r.lengte) } : r))
