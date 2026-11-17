@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  binnenKant, binnenMaten, murenVan, niveauPlan, openKantVan, plattegrond3D, plintBlokken, postenVan, ruimteMaten, ruimteVanBinnen, splitsRuimtes,
+  binnenKant, binnenMaten, klantPosten, murenVan, niveauPlan, openKantVan, plattegrond3D, plintBlokken, postenVan, ruimteMaten, ruimteVanBinnen, splitsRuimtes,
   PLINT_DIKTE, type PlanCatalogus, type Plattegrond, type Ruimte,
 } from '../src/index.js';
 import { planCatalogus, planNaarRegels } from '../voorbeelden/inrichting.js';
@@ -161,6 +161,15 @@ describe('plafond', () => {
     const post = postenVan(plan, catOpbouw).find((p) => p.id === 'plafond:hout')!;
     expect(post.titel).toBe('Plafondafwerking: houten plafond (eik)');
     expect(post.dingen).toEqual(['ruimte:leef']);
+  });
+  it('plafond, plint en accentmuur gaan mee in de posten voor de klant (zonder m² of meters)', () => {
+    const plan = metLeef((r) => { r.plafond = 'hout'; r.plint = 'wit'; r.accent = { kant: 'boven', wand: 'steenstrips' }; });
+    const klant = klantPosten(postenVan(plan, catOpbouw));
+    const titels = klant.map((p) => p.titel);
+    expect(titels).toContain('Plafondafwerking: houten plafond (eik)');
+    expect(titels).toContain('Plinten: wit geschilderd');
+    expect(klant.find((p) => p.titel === 'Wanden binnen: steenstrips (accentmuur)')!.detail.join(' ')).toContain('leefruimte (accentmuur)');
+    expect(klant.filter((p) => /^(Plafondafwerking|Plinten)/.test(p.titel)).every((p) => p.aantal === undefined && p.groep === 'Binnenafwerking')).toBe(true);
   });
   it('de gewone 3D van de woning verandert niet door een plafond (het staat in de 3D van binnen)', () => {
     const { plan } = voorbeeldWoning();

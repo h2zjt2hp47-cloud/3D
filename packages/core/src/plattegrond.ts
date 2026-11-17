@@ -2841,18 +2841,10 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
       return [o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0), Math.min(H, o.borstwering + hoogte)];
     };
-    // Eén ruimte van binnen (ronde 12): de volle stukken muur ook op de hoogtes van de openingen geknipt, zodat de hoeken
-    // van de stukken ernaast samenvallen. Anders liet de naad naast een raam van dichtbij de achtergrond door (een lichte
-    // lijn van boven tot onder). In de woning blijft alles zoals vroeger.
-    const banden = binnen ? [...new Set(openingen.flatMap(grenzen))].filter((y) => y > 0.1 && y < H - 0.1).sort((a, b) => a - b) : [];
-    const vol = (code: string, a: number, b: number) => {
-      let y = 0;
-      [...banden, H].forEach((h, i) => { stuk(i ? `${code}_${i}` : code, a, b, y, h); y = h; });
-    };
     let cursor = begin;
     for (const o of openingen) {
       const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
-      vol(`muur_${m.id}_${cursor}`, cursor, a);
+      stuk(`muur_${m.id}_${cursor}`, cursor, a, 0, H);
       const inhoud = opties.inhoud?.(o);
       const [onder, boven] = grenzen(o);
       stuk(`onder_${o.id}`, a, b, 0, onder);
@@ -2860,7 +2852,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       for (const blok of openingBlokken(o, m, inhoud, cat)) voeg(o.positie ? { ...blok, code: metDing(opties, `opening:${o.id}`, blok.code) } : blok);
       cursor = b;
     }
-    vol(`muur_${m.id}_eind`, cursor, einde);
+    stuk(`muur_${m.id}_eind`, cursor, einde, 0, H);
   }
 
   // Plinten (ronde 12): een lijst vóór de binnenkant van de muren, alleen in een ruimte met een plint.
