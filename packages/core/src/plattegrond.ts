@@ -2726,7 +2726,9 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   }
 
   // Gevelafwerking: per muurvlak (gevelontwerp) en een sokkel onderaan het gelijkvloers.
-  const sokkel = n === 0 && plan.gevelOntwerp?.sokkel && plan.gevelOntwerp.sokkel.hoogte > 0 ? plan.gevelOntwerp.sokkel : undefined;
+  // Eén ruimte van binnen (ronde 12): geen sokkel (je ziet de buitenkant niet; de naad op de sokkelhoogte liet tegen de
+  // achtergrond een lijn van stipjes door).
+  const sokkel = n === 0 && !binnen && plan.gevelOntwerp?.sokkel && plan.gevelOntwerp.sokkel.hoogte > 0 ? plan.gevelOntwerp.sokkel : undefined;
   const sokkelAfw = sokkel ? gevelAfwerking(plan, cat, sokkel) : undefined;
   /** Een bestaande muur of een muur tegen de buren: neutraal, zonder sokkel. */
   const neutraal = (m: Muur) => (oud && m.soort === 'buiten' && muurStatus(plan, m) !== 'nieuw' ? buitenAfwerking(plan, cat, m) : undefined);
@@ -2751,9 +2753,8 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       // Eerst verlengen (ook onder een deur op de verdieping komt de rand van de vloerplaat), dan pas de maat controleren.
       if (m.soort === 'buiten' && y0 === 0 && onderkant < 0) y0 = onderkant;
       if (b - a < 0.1 || y1 - y0 < 0.1) return;
-      // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten. Niet in één ruimte van binnen: daar
-      // zie je de buitenkant niet, en de naad op de sokkelhoogte liet tegen de achtergrond een lijn van stipjes door.
-      if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1 && !neutraal(m) && !binnen) {
+      // Sokkel: het stuk onder de sokkelhoogte apart, met het sokkelmateriaal buiten.
+      if (m.soort === 'buiten' && sokkel && y0 < sokkel.hoogte - 0.1 && y1 > sokkel.hoogte + 0.1 && !neutraal(m)) {
         stuk(`${code}_sokkel`, a, b, y0, sokkel.hoogte);
         stuk(code, a, b, sokkel.hoogte, y1);
         return;
@@ -2832,23 +2833,17 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
       voeg(m.as === 'h' ? { ...base, x: a, z: vlak.y, b: b - a, d: vlak.d } : { ...base, x: vlak.x, z: a, b: vlak.b, d: b - a });
     };
     const openingen = plan.openingen.filter((o) => muurVanOpening(o, [m]) === m).sort((a, b) => a.midden - b.midden);
-    /** Waar de muur onder en boven een opening stopt (onder de dunste dorpel of vensterbank, boven de kast). */
-    const grenzen = (o: Opening): [number, number] => {
-      const inhoud = opties.inhoud?.(o);
-      const hoogte = inhoud?.hoogte ?? (o.soort === 'doorgang' ? o.hoogte : o.hoogte + 4);
-      // Vensterbank of dorpel: de muur eronder stopt onder de dunste ervan. Anders vallen de bovenvlakken van
-      // muur en vensterbank samen en flikkert de vensterbank in witte en donkere strepen.
-      const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
-      return [o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0), Math.min(H, o.borstwering + hoogte)];
-    };
     let cursor = begin;
     for (const o of openingen) {
       const a = o.midden - o.breedte / 2, b = o.midden + o.breedte / 2;
       stuk(`muur_${m.id}_${cursor}`, cursor, a, 0, H);
       const inhoud = opties.inhoud?.(o);
-      const [onder, boven] = grenzen(o);
-      stuk(`onder_${o.id}`, a, b, 0, onder);
-      stuk(`boven_${o.id}`, a, b, boven, H);
+      const hoogte = inhoud?.hoogte ?? (o.soort === 'doorgang' ? o.hoogte : o.hoogte + 4);
+      // Vensterbank of dorpel: de muur eronder stopt onder de dunste ervan. Anders vallen de bovenvlakken van
+      // muur en vensterbank samen en flikkert de vensterbank in witte en donkere strepen.
+      const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
+      stuk(`onder_${o.id}`, a, b, 0, o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0));
+      stuk(`boven_${o.id}`, a, b, Math.min(H, o.borstwering + hoogte), H);
       for (const blok of openingBlokken(o, m, inhoud, cat)) voeg(o.positie ? { ...blok, code: metDing(opties, `opening:${o.id}`, blok.code) } : blok);
       cursor = b;
     }

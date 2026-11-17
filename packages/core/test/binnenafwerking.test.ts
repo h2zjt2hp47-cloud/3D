@@ -207,6 +207,14 @@ describe('een ruimte van binnen', () => {
     const links = s.blokken.filter((b) => b.code.startsWith('ruimte:leef:links.'));
     expect(Math.max(...links.map((b) => b.z + b.d))).toBeLessThan(vloer.z + 20);
   });
+  it('van binnen geen sokkel: de muren hebben buiten hun gevel, niet de natuursteen van de sokkel', () => {
+    const { plan } = snelWoning({ breedte: 900, diepte: 1000, verdiepingen: 2 }, stijlCatalogus.klassiek!);
+    expect(plan.gevelOntwerp?.sokkel?.materiaal).toBe('natuursteen');
+    const s = ruimteVanBinnen(plan, planCatalogus, 'leef')!;
+    const soorten = s.blokken.flatMap((b) => [b.soort, ...Object.values(b.zijden ?? {}).map((z) => z.soort)]);
+    expect(soorten).not.toContain('natuursteen');
+    expect(soorten).toContain('steen');
+  });
   it('een ruimte op de verdieping staat op de grond, zonder de rand van de vloerplaat', () => {
     const { plan } = voorbeeldWoning();
     const s = ruimteVanBinnen(plan, planCatalogus, 'slk3')!;

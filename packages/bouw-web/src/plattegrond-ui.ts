@@ -567,10 +567,12 @@ export function bekijkVanBinnen(id: string, open?: GevelKant) {
   volgendStandpunt = 'ooghoogte';
   ruimKader = false;
   if (weergave !== '3d') toonWeergave('3d');
-  // Het paneel van de ruimte blijft onder de 3D open: wat je kiest, zie je meteen van binnen.
+  // Het paneel van de ruimte blijft onder de 3D open: wat je kiest, zie je meteen van binnen. Expliciet getoond: kwam je
+  // uit de plattegrond, dan wacht `plan3D` al op het volgende beeld en toont het het paneel niet nog eens.
   gekozenDing = `ruimte:${id}`;
   viewer?.markeer?.(null);
   plan3D();
+  toonDingKeuzes();
 }
 
 /** Terug van de ruimte van binnen naar de woning (`opnieuw`: de 3D meteen opnieuw tekenen, schuin). */
