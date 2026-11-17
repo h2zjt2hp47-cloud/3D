@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  constructie3D, controleerPlan, dakVan, planMetDak, plattegrond3D, zonderOndergrond,
+  constructie3D, controleerPlan, dakVan, kaderVan, planMetDak, plattegrond3D, zonderOndergrond,
   type Plattegrond, type Ruimte,
 } from '../src/index.js';
 import { planCatalogus } from '../voorbeelden/inrichting.js';
@@ -90,6 +90,30 @@ describe('techniek uitgezet: de lijn op plafondhoogte hangt niet los (doorloop A
     for (const b of staanders) {
       expect(b.y).toBe(12);
       expect(b.y + b.h).toBeCloseTo(270 - 2, 5);
+    }
+  });
+});
+
+describe('topgevel waar een binnenmuur tegen de gevel komt (17/11)', () => {
+  it('de stukken van de topgevel sluiten op elkaar aan: geen spleet ter dikte van de binnenmuur', () => {
+    const plan: Plattegrond = {
+      ruimtes: [kamer('a', 0, 0, 900, 500), kamer('b', 0, 500, 900, 500)],
+      openingen: [], meubels: [], muurhoogte: 270, buitenmuur: 30, binnenmuur: 10, gevel: { soort: 'steen', kleur: '#9c4a34' },
+      dak: { vorm: 'zadel', helling: 40, richting: 'onder', oversteek: 30, bedekking: { materiaal: 'pannen', kleur: 'rood' } },
+    };
+    const stukken = plattegrond3D(plan, cat).blokken.filter((b) => b.code.startsWith('topgevel_'));
+    // Per gevel (zelfde x) de stukken langs z: ze raken elkaar (vroeger 10 cm ertussen).
+    const perGevel = new Map<number, [number, number][]>();
+    for (const b of stukken) {
+      const k = kaderVan([b]);
+      const lijst = perGevel.get(Math.round(k.x)) ?? [];
+      lijst.push([k.z, k.z + k.d]);
+      perGevel.set(Math.round(k.x), lijst);
+    }
+    expect([...perGevel.values()].some((l) => l.length > 1)).toBe(true);
+    for (const l of perGevel.values()) {
+      l.sort((p, q) => p[0] - q[0]);
+      for (let i = 1; i < l.length; i++) expect(Math.abs(l[i]![0] - l[i - 1]![1])).toBeLessThan(0.5);
     }
   });
 });

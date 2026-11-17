@@ -1964,6 +1964,27 @@ function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: 
     const w = cat.wanden[r?.wand ?? ''];
     return w ? { soort: w.soort, kleur: w.kleur } : pleister;
   };
+  // Langs de muur (a) en dwars door haar dikte (t), per rechte buitenmuur.
+  const maten = new Map(muren.filter((m) => m.soort === 'buiten' && m.as !== 's').map((m) => {
+    const v = muurVlak(m, muren);
+    const r: [number, number, number, number] = m.as === 'h' ? [v.x, v.x + v.b, v.y, v.y + v.d] : [v.y, v.y + v.d, v.x, v.x + v.b];
+    return [m, r] as const;
+  }));
+  /**
+   * Waar een binnenmuur tegen de gevel komt, is de buitenmuur in twee stukken gedeeld; tot de muurhoogte vult de kop van
+   * de binnenmuur de spleet. De topgevel erboven sloot er niet: een spleet ter dikte van de binnenmuur, als witte of grijze
+   * lijn in de gevel (17/11). Daarom loopt elk stuk tot halfweg die spleet, zonder te overlappen (anders flikkert het vlak).
+   */
+  const spleet = (m: Muur, a: number, kant: -1 | 1): number => {
+    const [, , t0, t1] = maten.get(m)!;
+    let beste = a;
+    for (const [n, [b0, b1, u0, u1]] of maten) {
+      if (n === m || n.as !== m.as || !gelijk(u0, t0) || !gelijk(u1, t1)) continue;
+      const rand = kant < 0 ? b1 : b0, gat = kant < 0 ? a - rand : rand - a;
+      if (gat > 0.05 && gat <= Math.max(plan.binnenmuur, 1) + 1) beste = (a + rand) / 2;
+    }
+    return beste;
+  };
   for (const m of muren) {
     if (m.soort !== 'buiten') continue;
     const vlak = muurVlak(m, muren);
@@ -1977,7 +1998,7 @@ function hellendDak3D(plan: Plattegrond, cat: PlanCatalogus, p: Plattegrond, d: 
     if ((m.as === 'h') !== (d.nokAs === 'x')) {
       // Topgevel: de muur staat dwars op de nok, haar bovenrand volgt het dak.
       // Elk stuk grijpt 1 cm over de muurkop (anders schemert haar witte bovenkant door de naad).
-      const punten = gevelOnderDak(d, a0, a1);
+      const punten = m.as === 's' ? gevelOnderDak(d, a0, a1) : gevelOnderDak(d, spleet(m, a0, -1), spleet(m, a1, 1));
       if (punten.length) uit.push(prisma(`topgevel_${m.id}`, buiten.soort, buiten.kleur, m.as === 'h' ? 'z' : 'x', t0, t1, punten.map(([a, h]): [number, number] => [a, yb + (h === 0 ? -1 : h)]), { zijden, voeg: buiten.voeg }));
       continue;
     }
