@@ -92,3 +92,4 @@ export * from './posten.js';
 export * from './techniekklant.js';
 export * from './nacht.js';
 export * from './verlichting.js';
+export * from './techniekbinnen.js';

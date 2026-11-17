@@ -127,6 +127,12 @@ export interface ToestelType {
   gevel?: boolean;
   /** Staat los in de tuin, waar je tikt (ronde 15: een tuinlamp), niet tegen de gevel zoals een buitenunit. */
   tuin?: boolean;
+  /**
+   * In de afgewerkte woning (ronde 17, zie techniekbinnen.ts): hoeveel cm van het toestel in de muur of het plafond zit,
+   * zodat alleen het deel dat je echt ziet uitsteekt (een stopcontact: het plaatje van ± 1 cm, de rest is de inbouwdoos;
+   * een inbouwspot: alleen de rand en het glas). De maten `b`, `d`, `h` blijven die om te plaatsen en te controleren.
+   */
+  inbouw?: number;
 }
 
 /**
