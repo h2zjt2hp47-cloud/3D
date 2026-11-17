@@ -172,10 +172,18 @@ function stip(kleur: string, klasse = 'stip') {
   return s;
 }
 
-/** De legende: een knop per vak (alleen dat vak, of alles), de kleuren van de leidingen, de toestellen van één vak. */
+/**
+ * De legende: een knop per vak (alleen dat vak, of alles), de kleuren van de leidingen, de toestellen van één vak; alleen
+ * wat op de getoonde verdieping staat.
+ */
 function toonLegende() {
   const t = pakket!.techniek!;
-  $('#techniek-vakken').replaceChildren(...t.vakken.map((v) => {
+  const niveau = t.niveaus[techniekNiveau] ?? t.niveaus[0];
+  const hier = new Set(niveau?.scene.blokken.map((b) => dingVan(b.code)).filter((d): d is string => !!d && !!t.dingen[d]));
+  const namenHier = new Set([...hier].map((d) => t.dingen[d]!.naam));
+  const vakkenHier = t.vakken.filter((v) => [...hier].some((d) => t.dingen[d]!.vak === v.vak));
+  if (alleenVak && !vakkenHier.some((v) => v.vak === alleenVak)) alleenVak = null;
+  $('#techniek-vakken').replaceChildren(...vakkenHier.map((v) => {
     const b = maak('button', 'tvak');
     b.type = 'button';
     b.dataset.vak = v.vak;
@@ -190,8 +198,8 @@ function toonLegende() {
     });
     return b;
   }));
-  const zichtbaar = alleenVak ? t.vakken.filter((v) => v.vak === alleenVak) : t.vakken;
-  const leidingen = zichtbaar.flatMap((v) => v.leidingen);
+  const zichtbaar = alleenVak ? vakkenHier.filter((v) => v.vak === alleenVak) : vakkenHier;
+  const leidingen = zichtbaar.flatMap((v) => v.leidingen).filter((l) => namenHier.has(l.naam));
   const detail: HTMLElement[] = [];
   if (leidingen.length) {
     const p = maak('p', 'tleidingen');
@@ -205,8 +213,9 @@ function toonLegende() {
   }
   const een = alleenVak ? zichtbaar[0] : undefined;
   const klein = (x: string) => x.charAt(0).toLowerCase() + x.slice(1);
+  const toestellenHier = een?.toestellen.filter((x) => namenHier.has(x)) ?? [];
   detail.push(maak('p', 'klein', een
-    ? `${een.uitleg}${een.toestellen.length ? ` Hier: ${een.toestellen.map(klein).join(', ')}.` : ''} Tik nog eens op ${een.naam} om alles te zien.`
+    ? `${een.uitleg}${toestellenHier.length ? ` Hier: ${toestellenHier.map(klein).join(', ')}.` : ''} Tik nog eens op ${een.naam} om alles te zien.`
     : 'Tik op een vak om alleen dat te zien. De toestellen staan in de kleur van hun vak, met een schijf op de vloer.'));
   $('#techniek-detail').replaceChildren(...detail);
   $('#techniek-voorbehoud').textContent = t.voorbehoud ?? '';
@@ -249,7 +258,8 @@ function toonInfo(ding: string | null) {
   const info = $('#techniek-info');
   const t = pakket?.techniek, d = ding ? t?.dingen[ding] : undefined;
   gekozen = d && ding ? ding : null;
-  viewer?.markeer?.(gekozen);
+  // Oranje aangeduid (zoals de delen van een post): het dunne kader rond een klein toestel zag je op een hele verdieping niet.
+  viewer?.markeer?.(gekozen ? `~${gekozen}.` : null);
   if (!d || !t || !gekozen) { info.hidden = true; info.replaceChildren(); return; }
   const id = gekozen;
   const vak = t.vakken.find((v) => v.vak === d.vak);
