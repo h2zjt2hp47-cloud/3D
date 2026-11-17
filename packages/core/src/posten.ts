@@ -21,6 +21,7 @@
 import { dakOpbouw, delenVan, heeftBestaand, isBestaand, meubelVoetafdruk, murenVan, muurStatus, muurVanOpening, niveauPlan, niveauVan, nieuwPlatDak, nieuweTechniek, ruimteMaten, ruimteOp, verdiepingenVan, vloerHoogte, type PlanCatalogus, type Plattegrond } from './plattegrond.js';
 import { gevelOppervlaktes } from './gevels.js';
 import { telTechniek, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, type TechniekVak } from './techniek.js';
+import { binnenMaten } from './binnenafwerking.js';
 import { woningConstructie, type ConstructieDeel, type WoningConstructie } from './constructie.js';
 import type { BouwdeelLaag } from './bouwdelen.js';
 import type { OpbouwPlaats } from './opbouw.js';
@@ -477,23 +478,34 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
     const blijft = (status: string) => oud && murenPer.some((ms) => ms.some((m) => muurStatus(plan, m) === status && [m.plus, m.min].some((id) => nieuweRuimte(id))));
     const ookBestaand = blijft('bestaand'), ookBuren = blijft('buren');
     const ook = ookBestaand && ookBuren ? '; ook op de bestaande muren en de muren van de buren aan de binnenkant' : ookBestaand ? '; ook op de bestaande muren aan de binnenkant' : ookBuren ? '; ook op de muren van de buren aan de binnenkant' : '';
-    const perWand = new Map<string, { m2: number; ruimtes: string[] }>();
+    const perWand = new Map<string, { m2: number; ruimtes: string[]; accent?: string[] }>();
+    // Ronde 12: plafond, plint en accentmuur per ruimte (alleen als ze gekozen zijn; anders alles zoals vroeger).
+    const binnen = new Map(nieuweRuimtes.filter((r) => r.plafond || r.plint || r.accent).map((r) => [r.id, binnenMaten(plan, cat, r, murenPer[niveauVan(r)]!)]));
     for (const r of nieuweRuimtes) {
       const m = ruimteMaten(plan, r, murenPer[niveauVan(r)]);
+      const accent = r.accent ? binnen.get(r.id)?.accent ?? 0 : 0;
       const x = perWand.get(r.wand) ?? { m2: 0, ruimtes: [] };
-      x.m2 += m.wand; x.ruimtes.push(r.id);
+      x.m2 += accent ? Math.max(0, m.wand - accent) : m.wand; x.ruimtes.push(r.id);
       perWand.set(r.wand, x);
+      if (accent && r.accent) {
+        // De accentmuur bij de afwerking die ze heeft, met "(accentmuur)" achter de naam van de ruimte.
+        const a = perWand.get(r.accent.wand) ?? { m2: 0, ruimtes: [] };
+        a.m2 += accent;
+        (a.accent ??= []).push(r.id);
+        perWand.set(r.accent.wand, a);
+      }
     }
     for (const [wand, x] of perWand) {
       const w = cat.wanden[wand];
+      const namen = [...x.ruimtes.map((id) => ruimteNaam.get(id) ?? ''), ...(x.accent ?? []).map((id) => `${ruimteNaam.get(id) ?? ''} (accentmuur)`)];
       uit.push({
         id: `binnenwanden:${wand}`, groep: 'binnen', titel: `Wanden binnen: ${kleinEerst(w?.label ?? wand)}`, hoeveelheid: r1(x.m2), eenheid: 'm²',
         detail: [
           ...(binnenLaag ? [`${hoofd(laagTekst(binnenLaag, mat))} op de nieuwe buitenwanden (uit hun opbouw)${ook}.`] : []),
-          `Afwerking: ${(w?.label ?? wand).toLowerCase()}, in ${x.ruimtes.map((id) => ruimteNaam.get(id) ?? '').join(', ').toLowerCase()}.`,
+          `Afwerking: ${(w?.label ?? wand).toLowerCase()}, in ${namen.join(', ').toLowerCase()}.`,
           'Netto, zonder ramen en deuren.',
         ],
-        intern: [], dingen: x.ruimtes.map((id) => `ruimte:${id}`),
+        intern: [], dingen: uniek([...x.ruimtes, ...(x.accent ?? [])]).map((id) => `ruimte:${id}`),
       });
     }
     // Het plafond: de lagen onder de balken van het platte dak (de keuze van het plafond zelf komt in een volgende ronde).
@@ -503,8 +515,38 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       const onder = uniek(nieuwPlat.map((s) => s.ruimte));
       uit.push({
         id: 'plafond', groep: 'binnen', titel: titelVan('Plafond', plafondLagen.find((l) => l.rol === 'afwerking_binnen')?.naam ?? plafondLagen[0]!.naam), hoeveelheid: r1(m2Van(plafond)), eenheid: 'm²',
-        detail: [lagenZin('Van boven naar onder', [...plafondLagen].reverse(), mat)!, 'Onder het platte dak; netto, zonder de openingen van de dakramen.'],
+        detail: [
+          lagenZin('Van boven naar onder', [...plafondLagen].reverse(), mat)!, 'Onder het platte dak; netto, zonder de openingen van de dakramen.',
+          // Ronde 12: met een gekozen plafond staat de afwerking in een eigen post.
+          ...([...binnen.values()].some((b) => b.plafond > 0) ? ['De afwerking van het plafond: zie Plafondafwerking.'] : []),
+        ],
         intern: hoeveelheden(plafond, new Set(plafondLagen.map((l) => l.index)), mat), dingen: onder.map((id) => `ruimte:${id}`),
+      });
+    }
+    // Ronde 12: de afwerking van het plafond per soort (m², netto vloeroppervlakte) en de plinten per soort (lopende meter,
+    // zonder de deuren). Alleen als een ruimte ze heeft.
+    const perSoort = (veld: 'plafond' | 'plint') => {
+      const per = new Map<string, { hoeveel: number; ruimtes: string[] }>();
+      for (const r of nieuweRuimtes) {
+        const code = r[veld], b = binnen.get(r.id)?.[veld] ?? 0;
+        if (!code || b <= 0) continue;
+        const x = per.get(code) ?? { hoeveel: 0, ruimtes: [] };
+        x.hoeveel += b; x.ruimtes.push(r.id);
+        per.set(code, x);
+      }
+      return per;
+    };
+    const inRuimtes = (ids: string[]) => ids.map((id) => ruimteNaam.get(id) ?? '').join(', ').toLowerCase();
+    for (const [code, x] of perSoort('plafond')) {
+      const p = cat.plafonds?.[code];
+      uit.push({
+        id: `plafond:${code}`, groep: 'binnen', titel: `Plafondafwerking: ${kleinEerst(p?.label ?? code)}`, hoeveelheid: r1(x.hoeveel), eenheid: 'm²',
+        detail: [
+          `${p?.label ?? code} in ${inRuimtes(x.ruimtes)}.`,
+          ...(p?.verlaagd ? [`Verlaagd tot ${p.verlaagd} cm onder de muurhoogte${p.spots ? ', met inbouwspots (de elektriciteit staat bij de techniek)' : ''}.`] : []),
+          'Netto oppervlakte.',
+        ],
+        intern: [], dingen: x.ruimtes.map((id) => `ruimte:${id}`),
       });
     }
     // De vloer: de gekozen afwerking per soort, op de lagen van de vloeropbouw boven de vloerplaat.
@@ -528,6 +570,14 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
           'Netto oppervlakte, zonder snijverlies.',
         ],
         intern: opGrond ? hoeveelheden(grond, new Set(opbouwBoven.map((l) => l.index)), mat) : [], dingen: x.ruimtes.map((id) => `ruimte:${id}`),
+      });
+    }
+    for (const [code, x] of perSoort('plint')) {
+      const p = cat.plinten?.[code];
+      uit.push({
+        id: `plint:${code}`, groep: 'binnen', titel: `Plinten: ${kleinEerst(p?.label ?? code)}`, hoeveelheid: r1(x.hoeveel), eenheid: 'm',
+        detail: [`${p?.label ?? code}${p ? `, ${p.hoogte} cm hoog` : ''}, in ${inRuimtes(x.ruimtes)}.`, 'Langs de muren, zonder de deuren en de ramen tot op de vloer.'],
+        intern: [], dingen: x.ruimtes.map((id) => `ruimte:${id}`),
       });
     }
   }

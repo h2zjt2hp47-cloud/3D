@@ -1078,6 +1078,25 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 .hernoemveld { width: 100%; min-width: 160px; min-height: 40px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 6px; font: inherit; }
 @media (pointer: coarse) { .hernoemveld { min-height: 44px; } }
 #p-inwoning { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; min-height: 44px; }
+/* Binnenafwerking (ronde 12): sferen voor binnen, plafond, plint, accentmuur, de ruimte van binnen. */
+.sfeerknop .sfeerbeeld svg { width: 80px; height: 52px; display: block; border-radius: 5px; }
+#pl-3d-knoppen .stijlbalk > .klein:first-child { min-width: 3.4em; }
+.sfeerknop { width: 104px; }
+.sfeerknop[aria-pressed="true"], .stijlknop[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+#pl-binnen .sfeerrij { margin: 6px 0; }
+.binnenkeuzes { display: grid; gap: 6px; margin-top: 4px; }
+.binnenkeuzes .eig { margin: 0; }
+.gv-kleur.geen-staal { background: var(--vlak); color: var(--zacht); font-size: 1rem; line-height: 1; }
+.accentkruis { display: grid; grid-template-columns: 1fr minmax(70px, 1.2fr) 1fr; grid-template-areas: ". boven ." "links ruimte rechts" ". onder ."; gap: 4px; max-width: 360px; }
+.accentkruis .kant-boven { grid-area: boven; } .accentkruis .kant-onder { grid-area: onder; }
+.accentkruis .kant-links { grid-area: links; } .accentkruis .kant-rechts { grid-area: rechts; }
+.accentkant { min-height: 36px; padding: 4px 6px; border: 1px dashed var(--lijn); border-radius: 6px; background: var(--vlak); color: inherit; font: inherit; font-size: .78rem; cursor: pointer; overflow-wrap: anywhere; }
+.accentkant[aria-pressed="true"] { border: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--vlak)); font-weight: 600; }
+.accentruimte { grid-area: ruimte; display: grid; place-items: center; min-height: 44px; border: 3px solid #8d8a84; border-radius: 3px; font-size: .78rem; color: var(--zacht); text-align: center; padding: 2px; }
+.binnenbalk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 6px; padding: 6px 10px; border: 2px solid var(--accent); border-radius: 8px; background: var(--vlak); }
+.binnenbalk span { font-weight: 600; margin-right: auto; }
+.binnenbalk button { min-height: 36px; }
+@media (pointer: coarse) { .accentkant, .binnenbalk button, .binnenkeuzes select { min-height: 44px; } #pl-binnen .gv-kleur { width: 44px; height: 44px; } }
 </style>
 </head>
 <body>
@@ -1216,6 +1235,7 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
       <div id="pl-canvas" role="application" tabindex="0" aria-label="Plattegrond: teken ruimtes, plaats ramen, deuren en meubels"></div>
       <p id="pl-hint" class="hint"></p>
       <p id="pl-zoomhint" class="hint klein"></p>
+      <div id="pl-binnenbalk" class="binnenbalk" hidden></div>
       <div class="drie-d" id="pl-3d" hidden></div>
       <section id="pl-3d-keuze" class="keuzepaneel" aria-live="polite" hidden></section>
       <div id="pl-3d-knoppen" hidden>
@@ -1226,6 +1246,10 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
           <button type="button" id="pl-variant" class="tweede" title="Een kopie van dit ontwerp om iets anders te proberen; het origineel blijft">Variant maken</button>
           <button type="button" id="pl-naast" class="tweede" title="Twee of drie varianten van dit ontwerp in 3D naast elkaar, samen draaiend" hidden>Varianten naast elkaar</button>
           <span id="pl-variant-melding" class="klein" role="status"></span>
+        </div>
+        <div class="stijlbalk">
+          <span class="klein">Binnen</span>
+          <div id="pl-sferen"></div>
         </div>
         <div class="knoppenrij">
           <button type="button" data-pl-standpunt="schuin">Schuin</button>
@@ -1250,6 +1274,7 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
     <aside class="rechts">
       <section class="kaart alleen-plan" id="pl-eigenschappen" aria-live="polite"></section>
       <section class="kaart alleen-plan" id="pl-dak" aria-label="Dak"></section>
+      <section class="kaart alleen-plan" id="pl-binnen" aria-label="Binnenafwerking"></section>
       <section class="kaart alleen-gevel" id="gv-eigenschappen" aria-live="polite"></section>
       <section class="kaart intern">
         <div class="kaartkop"><h2>Controles</h2><span id="pl-controle-status" class="status ok"></span></div>

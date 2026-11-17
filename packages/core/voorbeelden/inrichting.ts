@@ -4,7 +4,7 @@
  * En de omzetting van een plattegrond naar offerteregels (vloeren, wanden, deuren, ruwbouw, inrichting).
  */
 import {
-  alleBestaand, dakOpbouw, gevelOppervlaktes, heeftBestaand, isBestaand, losseWandHoogte, losseWandLengte, losseWandRuimte, losseWandVlak, meubelVoetafdruk, murenVan, muurStatus,
+  alleBestaand, binnenMaten, dakOpbouw, gevelOppervlaktes, heeftBestaand, isBestaand, losseWandHoogte, losseWandLengte, losseWandRuimte, losseWandVlak, meubelVoetafdruk, murenVan, muurStatus,
   muurVanOpening, niveauPlan, niveauVan, nieuwPlatDak, ruimteMaten, ruimteOp, verdiepingenVan,
   type DakBedekking, type DakLichtType, type DakMateriaal, type GevelMateriaal, type GevelOntwerp, type Muur, type OfferteRegel, type PlanCatalogus, type Plattegrond,
 } from '../src/index.js';
@@ -158,6 +158,23 @@ export const planCatalogus: PlanCatalogus = {
     tegels_groen: { label: 'Wandtegels zellige groen', soort: 'tegel', kleur: '#6f8f7a' },
     // Ronde 11: gipsplaat die schilderklaar opgeleverd wordt (de klant schildert zelf), zoals in de offertes van een uitbouw.
     schilderklaar: { label: 'Schilderklaar (gipsplaat, niet geschilderd)', soort: 'gevel', kleur: '#e9e6df' },
+    // Ronde 12: voor een accentmuur in de sfeer Industrieel (dunne stenen op de muur).
+    steenstrips: { label: 'Steenstrips (accentmuur)', soort: 'steen', kleur: '#9a5a44' },
+  },
+  // Ronde 12 (binnenafwerking): plafonds en plinten, zoals vloeren en wanden een soort en een kleur. Zelf getekend
+  // (procedureel), geen merk. Een plafond toont de 3D in een ruimte van binnen; een plint ook met lage muren.
+  plafonds: {
+    wit: { label: 'Geschilderd wit', soort: 'gevel', kleur: '#f4f3ef' },
+    gebroken_wit: { label: 'Geschilderd gebroken wit', soort: 'gevel', kleur: '#ece6d9' },
+    hout: { label: 'Houten plafond (eik)', soort: 'planken_h', kleur: '#c29a6e' },
+    beton: { label: 'Zichtbaar beton', soort: 'gevel', kleur: '#b5b3ad' },
+    spots: { label: 'Verlaagd plafond met inbouwspots', soort: 'gevel', kleur: '#f6f5f1', verlaagd: 10, spots: true },
+  },
+  plinten: {
+    wit: { label: 'Wit geschilderd', soort: 'kunststof', kleur: '#f7f6f2', hoogte: 7 },
+    hout: { label: 'Hout, zoals de vloer', soort: 'hout', kleur: '#b48a5a', hoogte: 7, zoalsVloer: true },
+    tegel: { label: 'Tegelplint, zoals de vloer', soort: 'tegel', kleur: '#d9d6cf', hoogte: 7, zoalsVloer: true },
+    zwart: { label: 'Zwart (metaal)', soort: 'metaal', kleur: '#2b2b2b', hoogte: 6 },
   },
   binnendeuren: {
     schilder: { label: 'Schilderdeur wit', soort: 'kunststof', kleur: '#f3f2ee' },
@@ -206,6 +223,10 @@ const PRIJZEN: Record<string, [number, number]> = {
   'vloer:pvc_grijs': [48, 29], 'vloer:gietvloer': [88, 56], 'vloer:tapijt': [38, 22],
   'wand:wit': [17, 9], 'wand:gebroken_wit': [18, 9.5], 'wand:zachtgrijs': [18, 9.5], 'wand:salie': [19, 10], 'wand:terracotta': [19, 10],
   'wand:blauwgrijs': [19, 10], 'wand:tegels_wit': [79, 48], 'wand:tegels_groen': [118, 74], 'wand:schilderklaar': [11, 6],
+  // Ronde 12: steenstrips binnen, plafonds (m²) en plinten (lopende meter), demoprijzen.
+  'wand:steenstrips': [96, 61],
+  'plafond:wit': [22, 12], 'plafond:gebroken_wit': [23, 12.5], 'plafond:hout': [118, 76], 'plafond:beton': [14, 8], 'plafond:spots': [68, 43],
+  'plint:wit': [16, 9], 'plint:hout': [24, 15], 'plint:tegel': [21, 13], 'plint:zwart': [29, 19],
   'deur:schilder': [420, 260], 'deur:eik': [560, 350], 'deur:glas': [690, 430], 'deur:staal': [1450, 920], 'deur:schuif': [890, 560],
   doorgang: [180, 95], buitenmuur: [185, 120], binnenmuur: [68, 42],
   // Buitenmuur zonder gevelafwerking (als de gevel apart in de offerte staat).
@@ -242,7 +263,13 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
     if (oud && r.bestaand === true) continue;
     const m = ruimteMaten(plan, r, murenPerNiveau[niveauVan(r)]);
     tel(`vloer:${r.vloer}`, m.netto);
-    tel(`wand:${r.wand}`, m.wand);
+    // Ronde 12: plafond (m²), plint (m) en de accentmuur (haar m² gaan van de wand van de ruimte naar haar eigen afwerking).
+    // Een ruimte zonder deze keuzes telt zoals vroeger.
+    const b = r.plafond || r.plint || r.accent ? binnenMaten(plan, cat, r, murenPerNiveau[niveauVan(r)]!) : undefined;
+    tel(`wand:${r.wand}`, b?.accent ? Math.max(0, m.wand - b.accent) : m.wand);
+    if (b?.accent && r.accent) tel(`wand:${r.accent.wand}`, b.accent);
+    if (b?.plafond) tel(`plafond:${r.plafond}`, b.plafond);
+    if (b?.plint) tel(`plint:${r.plint}`, b.plint);
   }
   // Losse wanden (ronde 2d): gebouwde lengte × hoogte; binnen telt de afwerking van beide zijden bij de wanden.
   const losse = (plan.losseWanden ?? []).map((w) => {
@@ -258,11 +285,21 @@ export function planNaarRegels(plan: Plattegrond, opties: PlanRegelOpties, cat: 
       // 7 % snijverlies op de vloer.
       regels.push({ code: k, groep: 'Vloeren', omschrijving: cat.vloeren[code]?.label ?? code, eenheid: 'm²', hoeveelheid: rond1(m2 * 1.07), eenheidsprijs: prijs(k)[0], kostprijs: prijs(k)[1] });
     }
+    // Ronde 12: plinten bij de vloeren, in lopende meter (netto omtrek, zonder de deuren).
+    for (const [k, m] of som) if (k.startsWith('plint:') && m > 0) {
+      const code = k.slice(6);
+      regels.push({ code: k, groep: 'Plinten', omschrijving: `Plint: ${(cat.plinten?.[code]?.label ?? code).toLowerCase()} (zonder de deuren)`, eenheid: 'm', hoeveelheid: rond1(m), eenheidsprijs: prijs(k)[0], kostprijs: prijs(k)[1] });
+    }
   }
   if (opties.wanden) {
     for (const [k, m2] of som) if (k.startsWith('wand:') && m2 > 0) {
       const code = k.slice(5);
       regels.push({ code: k, groep: 'Wanden', omschrijving: cat.wanden[code]?.label ?? code, eenheid: 'm²', hoeveelheid: rond1(m2), eenheidsprijs: prijs(k)[0], kostprijs: prijs(k)[1] });
+    }
+    // Ronde 12: plafonds bij de wanden, in m² (netto vloeroppervlakte).
+    for (const [k, m2] of som) if (k.startsWith('plafond:') && m2 > 0) {
+      const code = k.slice(8);
+      regels.push({ code: k, groep: 'Plafonds', omschrijving: `Plafond: ${(cat.plafonds?.[code]?.label ?? code).toLowerCase()}`, eenheid: 'm²', hoeveelheid: rond1(m2), eenheidsprijs: prijs(k)[0], kostprijs: prijs(k)[1] });
     }
   }
   if (opties.binnendeuren) {

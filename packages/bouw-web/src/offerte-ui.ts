@@ -171,6 +171,9 @@ function regelStaal(code: string): string {
   const effen = (hex?: string) => (hex ? `<svg viewBox="0 0 44 30" width="44" height="30" aria-hidden="true"><rect width="44" height="30" fill="${hex}"/></svg>` : '');
   if (soort === 'vloer') return effen(planCatalogus.vloeren[a]?.kleur);
   if (soort === 'wand') return effen(planCatalogus.wanden[a]?.kleur);
+  // Ronde 12: plafond en plint.
+  if (soort === 'plafond') return effen(planCatalogus.plafonds?.[a]?.kleur);
+  if (soort === 'plint') return effen(planCatalogus.plinten?.[a]?.kleur);
   if (soort === 'dak') return effen(planCatalogus.daken?.[b]?.kleuren[c ?? '']?.hex);
   if (soort === 'daklicht') return effen('#cfdde1');
   return '';

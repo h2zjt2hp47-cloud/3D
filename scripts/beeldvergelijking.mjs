@@ -176,6 +176,12 @@ const BOUWBEELDEN = [
   // Op een eigen pagina met een vers project.
   { naam: 'bouw-nacht-voor', nacht: 'voor' },
   { naam: 'bouw-nacht-schuin', nacht: 'schuin' },
+  // Binnenafwerking (ronde 12, 17/11), op een eigen pagina met een vers project: de voorbeeldwoning met een plint, een
+  // plafond en een accentmuur per ruimte (`BINNENAFWERKING`). Met lage muren, schuin en dichterbij (de plinten, de
+  // accentmuren in de keuken en slaapkamer 1); en de leefruimte van binnen (het houten plafond, de plint, de accentmuur
+  // in terracotta achteraan).
+  { naam: 'bouw-binnenafwerking-laag', binnenafwerking: 'laag', toetsen: 'Z3' },
+  { naam: 'bouw-binnenafwerking-ruimte', binnenafwerking: 'ruimte' },
 ];
 
 /** De techniek van de nachtbeelden (ronde 15): buitenlampen, tuinlampen en een ledstrip in de voorbeeldwoning. */
@@ -187,6 +193,17 @@ const NACHT_TECHNIEK = {
     { id: 'tl2', type: 'tuinlamp', x: 760, y: 1180, hoogte: 0, draai: 0, aan: 'buiten' },
   ],
   leidingen: [{ id: 'ls1', soort: 'ledstrip', punten: [[840, 916], [1400, 916]], hoogte: 'plafond' }],
+};
+
+/**
+ * De binnenafwerking van de beelden `bouw-binnenafwerking-…` (ronde 12), bovenop het plan van de voorbeeldwoning: per
+ * ruimte (of `*` voor alle ruimtes van het gelijkvloers) de velden die erbij komen.
+ */
+const BINNENAFWERKING = {
+  '*': { plint: 'wit', plafond: 'wit' },
+  leef: { plint: 'hout', plafond: 'hout', accent: { kant: 'links', wand: 'terracotta' } },
+  keuken: { accent: { kant: 'boven', wand: 'salie' } },
+  slk1: { accent: { kant: 'boven', wand: 'terracotta' } },
 };
 
 /**
@@ -508,6 +525,45 @@ async function maakBeelden() {
         await p.click('[data-pl-weergave="3d"]');
         await p.click('[data-pl-standpunt="voor"]');
         beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+      }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  const binnenafwerking = bouw.filter((x) => x.binnenafwerking);
+  if (binnenafwerking.length) {
+    // Een verse pagina (vers project, de voorbeeldwoning), de binnenafwerking erbij via het bewaarde project, en herladen.
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.evaluate((zet) => {
+      const index = JSON.parse(localStorage.getItem('bouw-demo.projecten.v1'));
+      const sleutel = `bouw-demo.project.${index.actief}`;
+      const t = JSON.parse(localStorage.getItem(sleutel));
+      for (const r of t.plan.ruimtes) if (!r.niveau) Object.assign(r, zet['*'], zet[r.id] ?? {});
+      localStorage.setItem(sleutel, JSON.stringify(t));
+    }, BINNENAFWERKING);
+    await p.reload();
+    await p.waitForTimeout(1500);
+    const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
+    for (const b of binnenafwerking) {
+      process.stdout.write(`  ${b.naam} … `);
+      await p.click('.nav [data-weergave="plan"]');
+      if (b.binnenafwerking === 'laag') {
+        await p.click('[data-pl-weergave="3d"]');
+        await p.check('#pl-laag');
+        await p.click('[data-pl-standpunt="schuin"]');
+        await p.locator('#pl-3d canvas').focus();
+        for (const [, k, n] of (b.toetsen ?? '').matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+        await p.uncheck('#pl-laag');
+      } else {
+        // De leefruimte kiezen in de tekening, dan *Bekijk van binnen* in haar paneel.
+        await p.click('[data-pl-weergave="plan"]');
+        await p.locator('#pl-canvas [data-soort="ruimte"][data-id="leef"]').first().click({ force: true });
+        await p.click('#pl-eigenschappen [data-van-binnen]');
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+        await p.click('[data-binnen-terug]');
       }
       console.log('klaar');
     }

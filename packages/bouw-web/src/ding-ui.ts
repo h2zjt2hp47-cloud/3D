@@ -4,7 +4,8 @@
  *   dak                     vorm, bedekking en kleur, aantal lichtkoepels
  *   gevel:<ruimte>:<kant>   materiaal en kleur, voor dit muurvlak, deze gevel of de hele woning
  *   opening:<id>            kleur van het schrijnwerk en zonwering (raam, deur) of kleur (poort); de rest in de configurator
- *   ruimte:<id>             vloer en wandkleur
+ *   ruimte:<id>             vloer en wandkleur, plafond, plint en accentmuur (ronde 12), de ruimte van binnen bekijken
+ *   ruimte:<id>:<kant>      een muur in de 3D van binnen (ronde 12): die muur als accentmuur
  *   meubel:<id>             draaien of verwijderen
  *   wand:<id>               een losse wand (ronde 2d): hoogte, afwerking of gevelmateriaal, verwijderen
  *   strook:<id>             een strook op de gevel (ronde 14): materiaal en kleur, maten in de gevel, verwijderen
@@ -23,6 +24,7 @@ import { stijlBeeld } from './snelstart-ui.js';
 import { actiefProject, dupliceerProject, positieVan, toestand, wijzig, type Toestand } from './staat.js';
 import { familie } from './meegeven.js';
 import { techniekDingKeuzes, techniekTitel } from './techniek-ui.js';
+import { binnenKeuzes } from './binnen-ui.js';
 
 /** Is dit een ding dat je kan aantikken? Andere namen (binnenmuur, terras, schaduw) geven geen keuzes. */
 export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:|wand:|toestel:|leiding:|strook:)/.test(id);
@@ -152,16 +154,20 @@ function bestaandUitleg(id: string): HTMLElement {
   return blok;
 }
 
-function ruimteKeuzes(vak: HTMLElement, id: string) {
+function ruimteKeuzes(vak: HTMLElement, id: string, kant?: GevelKant, vanBinnen?: (id: string) => void) {
   const r = toestand().plan.ruimtes.find((x) => x.id === id);
   if (!r) return;
   if (r.bestaand === true) { vak.append(bestaandUitleg(id)); return; }
+  // Ronde 12: een muur aangetikt in de 3D van binnen: eerst die muur (als accentmuur), dan de rest van de ruimte.
+  if (kant) binnenKeuzes(vak, id, { stalen: true, kant });
   const zet = (f: (x: NonNullable<typeof r>) => void) => wijzig('plan', (t) => { const x = t.plan.ruimtes.find((y) => y.id === id); if (x) f(x); });
   const vloer = el('div', { class: 'gv-rij', role: 'group', 'aria-label': 'Vloer' });
   for (const [code, v] of Object.entries(cat.vloeren)) vloer.append(staalKnop(v.kleur, v.label, r.vloer === code, () => zet((x) => { x.vloer = code; }), { 'data-vloer': code }));
   const wand = el('div', { class: 'gv-rij', role: 'group', 'aria-label': 'Wanden' });
   for (const [code, w] of Object.entries(cat.wanden)) wand.append(staalKnop(w.kleur, w.label, r.wand === code, () => zet((x) => { x.wand = code; }), { 'data-wand': code }));
   vak.append(el('p', { class: 'klein' }, `Vloer: ${(cat.vloeren[r.vloer]?.label ?? r.vloer).toLowerCase()}`), vloer, el('p', { class: 'klein' }, `Wanden: ${(cat.wanden[r.wand]?.label ?? r.wand).toLowerCase()}`), wand);
+  // Ronde 12: plafond, plint en accentmuur, en de ruimte van binnen bekijken (het plafond zie je alleen daar).
+  if (!kant) binnenKeuzes(vak, id, { stalen: true, vanBinnen: vanBinnen ? () => vanBinnen(id) : undefined });
 }
 
 function meubelKeuzes(vak: HTMLElement, id: string, nadien: () => void) {
@@ -281,7 +287,7 @@ function titel(ding: string): string {
   const kanten: Record<string, string> = { boven: 'bovenkant', onder: 'onderkant', links: 'linkerkant', rechts: 'rechterkant' };
   if (soort === 'gevel') return `Gevel · ${t.plan.ruimtes.find((r) => r.id === id)?.naam ?? ''} (${kant?.startsWith('s') ? 'schuine gevel' : `${kanten[kant ?? ''] ?? kant} van het plan`})`;
   if (soort === 'opening') { const o = t.plan.openingen.find((x) => x.id === id); const p = o && positieVan(o); return p ? `${p.code} · ${p.naam}` : 'Opening'; }
-  if (soort === 'ruimte') return t.plan.ruimtes.find((r) => r.id === id)?.naam ?? 'Ruimte';
+  if (soort === 'ruimte') return `${t.plan.ruimtes.find((r) => r.id === id)?.naam ?? 'Ruimte'}${kant ? ` · muur ${kant}` : ''}`;
   if (soort === 'meubel') { const m = t.plan.meubels.find((x) => x.id === id); return cat.meubels[m?.type ?? '']?.label ?? 'Meubel'; }
   if (soort === 'wand') {
     const w = t.plan.losseWanden?.find((x) => x.id === id);
@@ -301,7 +307,7 @@ function titel(ding: string): string {
  * Vult het paneel met de keuzes van een ding (of verbergt het). `sluit` haalt de keuze weg (ook de aanduiding in de 3D),
  * `naarPositie` opent de configurator voor alle keuzes van een raam.
  */
-export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: () => void; naarPositie: (id: string) => void; metMaten?: (muurId: string) => void; naarGevel?: (strook: string) => void }) {
+export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: () => void; naarPositie: (id: string) => void; metMaten?: (muurId: string) => void; naarGevel?: (strook: string) => void; vanBinnen?: (ruimte: string) => void }) {
   const naam = ding ? titel(ding) : '';
   if (!ding || !naam) { vak.hidden = true; vak.replaceChildren(); return; }
   vak.hidden = false;
@@ -325,12 +331,12 @@ export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: ()
     }
   }
   else if (soort === 'opening') openingKeuzes(vak, id, nav.naarPositie);
-  else if (soort === 'ruimte') ruimteKeuzes(vak, id);
+  else if (soort === 'ruimte') ruimteKeuzes(vak, id, ding.split(':')[2] as GevelKant | undefined, nav.vanBinnen);
   else if (soort === 'meubel') meubelKeuzes(vak, id, nav.sluit);
   else if (soort === 'wand') wandKeuzes(vak, id, nav.sluit);
   else if (soort === 'toestel' || soort === 'leiding') techniekDingKeuzes(vak, ding, nav);
   else if (soort === 'strook') strookKeuzes(vak, id, nav.sluit, nav.naarGevel);
-  dingPosten(vak, ding);
+  dingPosten(vak, soort === 'ruimte' ? `ruimte:${id}` : ding);
 }
 
 /**
