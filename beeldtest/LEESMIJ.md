@@ -94,9 +94,8 @@ Bewust vernieuwd, elk verschilbeeld nagekeken: `bouw-woning`, `bouw-dak`, `bouw-
 Waarom: de fijne lichte streepjes in de gevel zijn weg (waar een binnenmuur de gevel raakt, boven en onder elk raam, op de
 sokkelhoogte, in de dakrand, op een hoek, op de verdiepingshoogte van een hoog huis, en binnen in de muren met *Muren
 laag*); het verschil zit bijna alleen op die lijnen (`Plan3DOpties.wijken`, `Blok.wijkt`, `Blok.bedekt`; zie de skill
-`bouw-woning`, *Geen streepjes in de gevel*). Elders schuift soms een rand een beeldpunt op: van boven (`bouw-zon`) de
-voet van een muur tegen de vloer, en met *Muren laag* toont de bovenrand van een plint nu een fijne lichte rand
-(`bouw-binnenafwerking-laag`, de plint in hout). Niet veranderd: alle zetelbeelden, het losse raam, de raamtypes, de
+`bouw-woning`, *Geen streepjes in de gevel*). Elders schuift soms een rand een beeldpunt op (van boven, `bouw-zon`: de
+voet van een muur tegen de vloer). Niet veranderd: alle zetelbeelden, het losse raam, de raamtypes, de
 vaste modellen, de constructie, de tekeningen en de ruimte van binnen (0,00 %).
 
 ## Wat het niet doet

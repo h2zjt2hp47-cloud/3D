@@ -49,10 +49,10 @@ describe('geen streepjes in de gevel (ronde 17): wat wijkt en wat bedekt is', ()
     }
   });
 
-  it('met de optie wijken binnenmuren, vloeren en de binnenkant; bedekt staat ook in wijkt', () => {
+  it('met de optie wijken binnenmuren en de binnenkant (vloeren, plinten en meubels niet); bedekt staat ook in wijkt', () => {
     const blokken = plattegrond3D(GEVALLEN[0]![1], cat, { ...APP, wijken: true }).blokken;
     expect(blokken.filter((b) => b.code.startsWith('muur_h380_')).every((b) => b.wijkt)).toBe(true);
-    expect(blokken.filter((b) => b.code.includes('vloer_')).every((b) => b.wijkt === true)).toBe(true);
+    expect(blokken.filter((b) => b.code.includes('vloer_') || b.code.startsWith('meubel:')).some((b) => b.wijkt)).toBe(false);
     expect(blokken.some((b) => b.bedekt?.length)).toBe(true);
     for (const b of blokken) for (const v of b.bedekt ?? []) expect(b.wijkt === true || b.wijkt?.includes(v)).toBe(true);
   });

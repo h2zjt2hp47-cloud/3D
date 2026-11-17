@@ -2231,8 +2231,8 @@ export interface Plan3DOpties {
    * Geen streepjes in de gevel (ronde 17, 17/11): wat binnen ligt of tegen een ander stuk, wijkt in de diepte
    * (`Blok.wijkt`). Dat zijn de kopse kanten tussen de stukken van een muur (waar een binnenmuur tegen de gevel komt, op
    * de sokkelhoogte, naast en boven en onder een raam), de dagkanten, de binnenkant en de bovenkant van de muren, de
-   * binnenmuren, de vloeren en vloerplaten, de naden van de dakrand (niet de plinten en meubels: die staan vóór een muur of
-   * op een vloer die zelf wijkt; met wijken kreeg de bovenrand van een plint stipjes), en van de topgevel en de stukken
+   * binnenmuren, de vloerplaten, de naden van de dakrand (niet de vloeren, plinten en meubels: met wijken kreeg de
+   * bovenrand van een plint stipjes), en van de topgevel en de stukken
    * onder een hellend dak alles behalve hun buitenvlak. Zonder grafische kaart schemerden die vlakken als fijne lichte
    * streepjes door de gevel.
    * Het buitenvlak van de gevel (ook de kop van een binnenmuur in de gevel en de kopse kant op een buitenhoek) wijkt nooit.
@@ -2764,7 +2764,7 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
   };
 
   // Ronde 17 (`Plan3DOpties.wijken`): wat binnen ligt of tegen een ander stuk, wijkt in de diepte. Zonder: niets erbij.
-  const wijkAlles: Partial<Blok> = opties.wijken ? { wijkt: true } : {};
+  // Ronde 17: de vloeren wijken niet (met wijken kreeg de bovenrand van een plint erop stipjes).
 
   // Vloeren (met trapgat). Een vrije vorm is een prisma met haar grondvlak; de textuur volgt haar langste muur.
   for (const r of plan.ruimtes) {
@@ -2773,11 +2773,11 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     for (const deel of delenVan(r)) {
       if (deel.omtrek) {
         const vorm = vormVanDeel(deel);
-        for (const stuk of zonderGatenVorm(vorm)) voeg(grondPrisma(metDing(opties, `ruimte:${r.id}`, `vloer_${r.id}`), v?.soort ?? 'gevel', v?.kleur ?? '#cfccc4', stuk, 0, 1.5, { vlakRichting: vloerRichting(vorm), ...wijkAlles }));
+        for (const stuk of zonderGatenVorm(vorm)) voeg(grondPrisma(metDing(opties, `ruimte:${r.id}`, `vloer_${r.id}`), v?.soort ?? 'gevel', v?.kleur ?? '#cfccc4', stuk, 0, 1.5, { vlakRichting: vloerRichting(vorm) }));
         continue;
       }
       for (const s of zonderGaten(deel)) {
-        voeg({ code: metDing(opties, `ruimte:${r.id}`, `vloer_${r.id}`), soort: v?.soort ?? 'gevel', vorm: 'blok', x: s.x, y: 0, z: s.y, b: s.b, h: 1.5, d: s.d, kleur: v?.kleur ?? '#cfccc4', ...wijkAlles });
+        voeg({ code: metDing(opties, `ruimte:${r.id}`, `vloer_${r.id}`), soort: v?.soort ?? 'gevel', vorm: 'blok', x: s.x, y: 0, z: s.y, b: s.b, h: 1.5, d: s.d, kleur: v?.kleur ?? '#cfccc4' });
       }
     }
   }

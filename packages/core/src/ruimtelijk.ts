@@ -152,7 +152,7 @@ export interface Blok {
   /**
    * Vlakken die in de diepte wijken (ronde 17, 17/11; woning): ze liggen binnen in de woning of tegen een ander stuk (de
    * kopse kant tussen twee stukken van een muur, de dagkant van een raam, de binnenkant van een muur, een binnenmuur, een
-   * vloer). De kijker tekent ze een fractie dieper, naar hun helling ten opzichte van de camera, zodat ze nooit door de gevel
+   * vloerplaat). De kijker tekent ze een fractie dieper, naar hun helling ten opzichte van de camera, zodat ze nooit door de gevel
    * ervoor schemeren. Zonder grafische kaart (rasteren met vier monsters per beeldpunt) deden ze dat wel: een vlak dat je
    * bijna op zijn kant ziet, kwam langs zijn rand als een fijne lichte streep door de gevel (vooral van opzij). true = alle
    * vlakken. Het buitenvlak van de gevel wijkt nooit: dat moet vooraan blijven. Een kijker van vóór ronde 17 kent het veld
