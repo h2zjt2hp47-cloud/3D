@@ -19,7 +19,7 @@ export function techniekBeeldGegevens(): { pakket: Pakket3D; plan: string; klant
     woning: [{ naam: 'Techniek, uitgezet', scene, laag: scene }],
     posities: [],
   };
-  const o = { aanleg: true, gevelkoppen: true, meubels: true, dingen: true, techniekBuiten: true };
+  const o = { aanleg: true, gevelkoppen: true, wijken: true, meubels: true, dingen: true, techniekBuiten: true };
   const klant: Pakket3D = {
     soort: PAKKET3D_SOORT, versie: PAKKET3D_VERSIE, gemaakt: '2026-11-17T12:00:00.000Z',
     project: { nummer: 'beeldtest', naam: 'Voorbeeldwoning met techniek' },

@@ -503,6 +503,8 @@ function plan3D() {
       // Terras en pad horen bij de woning (gegevens); lucht, gras en horizon tekent de kijker (omgeving 'buiten').
       aanleg: true,
       gevelkoppen: true,
+      // Ronde 17: wat binnen ligt of tegen een ander stuk, wijkt in de diepte: geen streepjes in de gevel.
+      wijken: true,
       // Elk blok zegt bij welk ding het hoort: tik op het dak, een raam of een gevel (zie ding-ui.ts).
       dingen: true,
       totNiveau: alleNiveaus && !muurLaag ? undefined : niveau,

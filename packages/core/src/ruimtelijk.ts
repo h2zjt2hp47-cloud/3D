@@ -24,6 +24,13 @@ export type BlokSoort =
 /** Zijde van een blok (balk), voor een ander materiaal op één zijvlak (bv. baksteen buiten, verf binnen). */
 export type BlokZijde = 'x+' | 'x-' | 'z+' | 'z-' | 'y+';
 
+/**
+ * Een vlak van een blok (zie `Blok.wijkt`): een zijde van een balk (ook het ondervlak 'y-'), een kopse kant van een prisma
+ * ('x-'/'x+' bij as 'x', 'z-'/'z+' bij as 'z', 'y-'/'y+' bij as 'y'), of met een getal de staande zijde i van de doorsnede
+ * van een prisma (van punt i naar punt i + 1).
+ */
+export type BlokVlak = BlokZijde | 'y-' | number;
+
 export interface Blok {
   code: string;
   soort: BlokSoort;
@@ -142,6 +149,16 @@ export interface Blok {
    * ronde 15 kent het veld niet en tekent het blok zoals altijd.
    */
   licht?: BlokLicht;
+  /**
+   * Vlakken die in de diepte wijken (ronde 17, 17/11; woning): ze liggen binnen in de woning of tegen een ander stuk (de
+   * kopse kant tussen twee stukken van een muur, de dagkant van een raam, de binnenkant van een muur, een binnenmuur, een
+   * vloer). De kijker tekent ze een fractie dieper, naar hun helling ten opzichte van de camera, zodat ze nooit door de gevel
+   * ervoor schemeren. Zonder grafische kaart (rasteren met vier monsters per beeldpunt) deden ze dat wel: een vlak dat je
+   * bijna op zijn kant ziet, kwam langs zijn rand als een fijne lichte streep door de gevel (vooral van opzij). true = alle
+   * vlakken. Het buitenvlak van de gevel wijkt nooit: dat moet vooraan blijven. Een kijker van vóór ronde 17 kent het veld
+   * niet en tekent het blok zoals altijd.
+   */
+  wijkt?: true | BlokVlak[];
 }
 
 /** Hoe een blok 's nachts licht geeft (zie `Blok.licht`). */
@@ -931,6 +948,8 @@ export function plaatsBlokken(blokken: Blok[], plaats: { x: number; y?: number; 
       n.zijden = {};
       for (const [k, w] of Object.entries(b.zijden)) n.zijden[k === 'y+' ? 'y+' : richting(k as 'x+')] = w;
     }
+    // Ronde 17: de vlakken die wijken draaien mee (een zijde van een doorsnede en het boven- en ondervlak blijven).
+    if (Array.isArray(b.wijkt)) n.wijkt = b.wijkt.map((v) => (typeof v === 'number' || v === 'y+' || v === 'y-' ? v : richting(v)));
     return n;
   });
 }
