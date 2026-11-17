@@ -334,7 +334,8 @@ Herschikt op 15/11 naar het doel hierboven: eerst fase 1 (snel, mooi, meegeven),
 | 9 | 2 | **Klaar (16/11, hoofdstukken 20 en 25)**, ook op de schermen: **Staalbouw** (loods of hal) en **staal in en rond de woning** (trap, balustrade, luifel) | L |
 | 10 | 2 | **Klaar (16/11, hoofdstukken 24 en 28), ook op het scherm; zonwering en avondbeeld nog niet:** **Techniek en installateur** (hoofdstuk 11): toestellen en leidingen, zonwering, ventilatie, elektriciteit, verlichting met avondbeeld | L |
 | 11 | 2 | ~~**Detail van de offerte** (hoofdstuk 10): elk deel van de 3D kent zijn post; detail in het overzicht en op een tik; de bestaande woning neutraal en buiten de telling; tussen twee buren; werk zonder ding (afbraak, container) als regel; de uitbouw uit hoofdstuk 10 als voorbeeldproject~~ **klaar** (hoofdstuk 31; fundering en afvoeren alleen als post) | M |
-| 11b | 2 | ~~**Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering~~ **klaar** (hoofdstuk 30; het paneel in de plattegrond heet nog *Lichtkoepel*) | M |
+| 11b | 2 | ~~**Detail van ramen en dakramen:** twee screens op één raam, raamventilatie op het raam, plat dakraam met buitenzonwering~~ **klaar** (hoofdstuk 30) | M |
+| 11c | 2 | ~~**Volledige doorloop op gebruiksgemak** (vraag van Jonas) en de herstellingen~~ **klaar** (hoofdstuk 32) | M |
 | 12 | 2 | **Vloerafwerking** (legpatroon, formaat, voeg, plinten), het **plafond** en de rest van de afwerkingen | M |
 | 13 | 2 | **Beheer door de aannemer**, met bewaren in Missing Link | L |
 
@@ -1102,3 +1103,46 @@ bestaande ramen staan met aantal 0 in de lijst van posities.
 alle projecten: de wandafwerking *schilderklaar* staat in de lijst, en een "×" in de naam van een download wordt een x (Chrome gaf
 anders een bestand zonder extensie).
 
+## 32. Volledige doorloop op gebruiksgemak en de herstellingen (16-17/11)
+
+Vraag van Jonas: *"kan er een volledige doorloop van alle functies bekeken worden en op gebruiksgemak worden gecontroleerd"*.
+Twee doorlopen, elk van nul, op een tablet staand (820 × 1180, aanraking), een tablet liggend (1180 × 820) en een laptop
+(1440 × 900), in Chromium zonder grafische kaart: **deel A, ontwerpen** (snelstart, plattegrond met al het gereedschap, gevels,
+3D, techniek, doorsnede) en **deel B, uitwerken en meegeven** (configurator, overzicht en Werken, klantweergave, meegeven en de
+kijker, varianten, projecten, enkel ramen). Geen enkele foutmelding in de pagina in alle proefritten; het bestand voor de klant
+haalt niets van buiten.
+
+| Deel | Blokkerend | Hinderlijk | Klein | Idee |
+|---|---|---|---|---|
+| A, ontwerpen | 4 | 10 | 16 | 2 |
+| B, uitwerken en meegeven | 3 (+1 onzeker) | 13 | 9 | 3 |
+
+**Hersteld** (vier rondes, elk met tests, typecheck en beeldvergelijking; zetelbeelden ongewijzigd):
+
+| Wat schortte | Nu |
+|---|---|
+| De vaste standpunten (Schuin, Zij, Boven, gevels) en het bestand voor de klant knipten een gewone woning af (A1, B2) | Elk standpunt past het hele gebouw in beeld, ook hoog en smal en op een tablet staand; verder uitzoomen kan (B12). Beeld `bouw-hoog-schuin`. |
+| Een plan zonder dakkeuze: een open doos in de app, een plat dak voor de klant (A3) | Overal hetzelfde platte dak (`planMetDak`); de knop *Geen* is weg; binnenkijken met *Muren laag*, die nu van schuin boven kijkt (A12). |
+| *+ Verdieping* hing in de lucht boven een L-vorm of een schuine aanbouw (A4) | Volgt de vorm van het gelijkvloers; een ruimte boven niets geeft een waarschuwing (`zonderOndergrond`). |
+| Paletten, *Ongedaan maken* en de uitleg na een geweigerde tik stonden onder de vouw; het maatvenster ving de volgende tik (A6, A7, A8, A14) | Het palet staat op de plaats van het gereedschap, naast de tekening (nooit meer scrollen); *Ongedaan maken* naast het zoomen en in de 3D; het maatvenster boven de tekening; de uitleg bij de tik. |
+| Groot scherm in de 3D op een tablet staand toonde het gereedschap (A2) | De 3D bovenaan. |
+| Techniek: een los kader boven de woning, de vloerverwarming onzichtbaar (A9, A20) | Een draadmodel op staanders; in de woning ligt wat in de vloer zit zichtbaar op de vloer. |
+| Ctrl + scrollen op een trackpad zoomde te snel (A13) | Rustig zoals een muiswiel; knijpen volgt de vingers (nog na te kijken op een echt toestel). |
+| "Uw bedrijf" als firmanaam voor de klant (B1) | Geen verzonnen naam; de app vraagt de firma vlak onder *Meegeven aan de klant* en toont wat de klant bovenaan ziet. |
+| Een post beschreef dakpannen bij een zinken dak; dubbele titels; "bestaande muren" bij nieuwbouw (B3, B23, B22, B25) | Het hellende dak volgt de bedekking (nieuwe opbouwen voor leien en zink, door geen vakman nagelezen); geen dubbele titels; carport bij *Bijgebouwen en buitenwerk*. |
+| De klantweergave toonde meetstaat, EPB, knoppen, invulvelden en de namen van andere klanten (B10) | Alleen om te kijken: geen technische kaarten, knoppen of velden, alleen het open project, de plattegrond wijzigt niets. |
+| *Toon in 3D*: een dunne groene lijn, van ver (B11) | Een oranje laag met een dik kader, de camera voor het deel. |
+| In de configurator schoof de 3D weg; een raam begon van binnen (B5, B6) | De 3D blijft in beeld na elke keuze; een raam, deur of poort begint van buiten. |
+| Een raam uit het overzicht stond niet in de woning; verwijderen zonder weg terug (B7, B8) | Label "staat nog niet in de woning" met *In de woning zetten*; *Ongedaan maken* (ook Ctrl+Z) na verwijderen en na een geplakte maatlijst. |
+| Maatlijst: posnummer als aantal, poort als raam; "1,2" werd 12 mm (B9, B16) | Kolomkoppen gelezen, soort uit de omschrijving; "1,2" is 1,2 m, een lege of onmogelijke maat wordt niet bewaard. |
+| Projectenlijst soms leeg na herladen als bestand; een carport opende op een lege plattegrond; de terugknop verliet de app (B4, B14, B15) | De lijst wordt nooit overschreven op een lege opslag; een vast model opent in de configurator; *Terug* gaat naar het vorige scherm. |
+| Kleinere punten | Zelf tekenen in de snelstart (A11), een begrensde maat wordt gemeld (A17), stijlteksten voor een los raam (A27), projectnaam volgt de stijl (A24), Voorgevel/Achtergevel volgen de voordeur (A5), een schuifraam krijgt zelf een versterkte tussenstijl (A22), een binnenwand op een poort wordt geweigerd (A21), de doorsnede onder een lessenaarsdak (A10), woorden voor de vinger (A16), Daklicht en het paneel van een plat dakraam (A18), daklichten niet over elkaar (A19), dubbel tikken (A23, B18), het overzicht korter (B17), hernoemen in Projecten (B19). |
+
+**Nog open:** de namen van de gevels verschillen nog per scherm (A15); het dak van een vrije vorm is in de constructie een effen
+plaat (A29); op een tablet liggend staan niet alle toestellen van een vak naast de tekening; in de klantweergave blijven de
+configurator, de snelstart en *Varianten naast elkaar* werkschermen; de reden van B4 (Chromium met een bestand op de schijf) is
+niet gevonden, alleen opgevangen; een garagepoort die je in de woning zet, komt op het langste vrije stuk muur.
+
+**Vragen aan Jonas:** waarmee hij zoomt (laptop met trackpad, muis of iPad); of techniek in het bestand voor de klant hoort (nu
+alleen in de lijst van posten, niet in de 3D, A30); of elke variant een eigen offertenummer moet hebben (B21); de opbouwen voor
+leien en zink na te lezen door een vakman. **Niet getest:** een echte tablet, iPad of Safari, terugvegen, WebGPU.
