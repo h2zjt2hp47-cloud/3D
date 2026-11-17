@@ -18,7 +18,10 @@
  *     een eind erboven, over de breedte van het toestel plus een rand, in de wand van de ruimte, zoals een snede die daar
  *     hoger blijft. Een binnenmuur over haar hele dikte (aan elke kant de wand van die ruimte); een buitenmuur alleen met
  *     haar binnenblad (14 cm): de gevel blijft op de snijhoogte, anders stond er buiten een schoorsteen van baksteen.
- *     Toestellen dicht bij elkaar delen één stukje; een stukje loopt nooit over een raam of deur of door een hoek.
+ *     Toestellen dicht bij elkaar delen één stukje; een stukje loopt nooit over een raam of deur of door een hoek. Het
+ *     toestel en zijn stukje zijn **alleen te zien van de kant van de ruimte** waarin het hangt (`Blok.alleenVanVoren`,
+ *     de kijker volgt de camera): van achteren of van buiten de woning zie je gewoon de lage muur (vervolg ronde 17: in het
+ *     eerste beeld *Schuin* stond de witte achterkant van het stukje achter de airco vooraan en verborg de leefruimte).
  *   - aan het plafond (lichtpunt, inbouwspot, hanglamp, ventiel, cassette): weg; je ziet ze van binnen (`techniekVanBinnen`)
  *     en in de woning met volle muren en een dak.
  *   - op de vloer (warmtepomp, boiler, batterij): gewoon, ook als ze hoger zijn dan de lage muren (zoals een kast).
@@ -29,7 +32,7 @@
 import { binnenKant, isAccent, PLAFOND_DIKTE } from './binnenafwerking.js';
 import { toestelLicht } from './nacht.js';
 import {
-  buitenAfwerking, grondPrisma, langsAs, murenVan, muurVanOpening, niveauPlan, niveauVan, NEUTRAAL, opAs, ruimteOp, toestelBuiten,
+  asVan, buitenAfwerking, grondPrisma, langsAs, murenVan, muurVanOpening, niveauPlan, niveauVan, NEUTRAAL, opAs, ruimteOp, toestelBuiten,
   vloerHoogte, type GevelAfwerking, type GevelKant, type Muur, type PlanCatalogus, type Plattegrond, type Punt, type Ruimte,
 } from './plattegrond.js';
 import type { Blok } from './ruimtelijk.js';
@@ -100,8 +103,22 @@ function muurAchter(t: Toestel, type: ToestelType, muren: Muur[]): { m: Muur; s:
   return beste;
 }
 
-/** Een stukje muur: langs muur m van a tot b (langs de as), van y0 tot y1 (in de wereld). */
-interface Stukje { m: Muur; a: number; b: number; y0: number; y1: number; toestel: string }
+/**
+ * Een stukje muur: langs muur m van a tot b (langs de as), van y0 tot y1 (in de wereld), aan de kant `plus` of min van
+ * de muur (de kant van het toestel), en alleen te zien van die kant (`voren`).
+ */
+interface Stukje { m: Muur; a: number; b: number; y0: number; y1: number; toestel: string; plus: boolean; voren: NonNullable<Blok['alleenVanVoren']> }
+
+/**
+ * Het vlak van muur m aan de kant van een toestel (`plus` of min), met de normaal naar de ruimte: het toestel en zijn
+ * stukje muur zijn alleen te zien als de camera aan die kant staat (`Blok.alleenVanVoren`). Van achteren of van buiten de
+ * woning zie je dan gewoon de lage muur, zoals met de techniek uit.
+ */
+function vanVoren(m: Muur, plus: boolean, s: number, y: number): NonNullable<Blok['alleenVanVoren']> {
+  const { n } = asVan(m), k = plus ? 1 : -1;
+  const [x, z] = langsAs(m, s, m.lijn + (k * m.dikte) / 2);
+  return { punt: [r2(x), r2(y), r2(z)], normaal: [n[0] * k, 0, n[1] * k] };
+}
 
 /** De afwerking van de kant van muur m naar ruimte `id` (de wand, of de accentmuur), of de gevel als er geen ruimte is. */
 function kantAfwerking(plan: Plattegrond, cat: PlanCatalogus, m: Muur, id: string | undefined): GevelAfwerking {
@@ -113,11 +130,15 @@ function kantAfwerking(plan: Plattegrond, cat: PlanCatalogus, m: Muur, id: strin
   return w ? { soort: w.soort, kleur: w.kleur } : { soort: 'gevel', kleur: SNEDE };
 }
 
-/** De stukjes muur als blokken: per muur de stukjes die elkaar raken samen (geen vlakken op elkaar die flikkeren). */
+/**
+ * De stukjes muur als blokken: per muur en per kant de stukjes die elkaar raken samen (geen vlakken op elkaar die
+ * flikkeren). Twee stukjes aan weerskanten van dezelfde binnenmuur zie je nooit samen (elk alleen van zijn kant).
+ */
 function stukjesBlokken(plan: Plattegrond, cat: PlanCatalogus, stukjes: Stukje[], dingen: boolean): Blok[] {
   const uit: Blok[] = [];
   const perMuur = new Map<string, Stukje[]>();
-  for (const s of stukjes) perMuur.set(s.m.id, [...(perMuur.get(s.m.id) ?? []), s]);
+  for (const s of stukjes) { const k = `${s.m.id}|${s.plus}`; perMuur.set(k, [...(perMuur.get(k) ?? []), s]); }
+  const teller = new Map<string, number>();
   for (const lijst of perMuur.values()) {
     lijst.sort((p, q) => p.a - q.a);
     const samen: Stukje[] = [];
@@ -126,8 +147,10 @@ function stukjesBlokken(plan: Plattegrond, cat: PlanCatalogus, stukjes: Stukje[]
       if (vorige && s.a <= vorige.b + STUKJE_MUUR.samen) samen[samen.length - 1] = { ...vorige, b: Math.max(vorige.b, s.b), y1: Math.max(vorige.y1, s.y1) };
       else samen.push(s);
     }
-    for (const [i, s] of samen.entries()) {
+    for (const s of samen) {
       const { m } = s;
+      const i = teller.get(m.id) ?? 0;
+      teller.set(m.id, i + 1);
       const code = `${BINNEN_TECHNIEK}_muur_${m.id}_${i}`;
       const naam = dingen ? `toestel:${s.toestel}.${code}` : code;
       // Dwars op de muur: een binnenmuur helemaal; een buitenmuur alleen haar binnenblad (de gevel blijft op de snijhoogte,
@@ -146,14 +169,14 @@ function stukjesBlokken(plan: Plattegrond, cat: PlanCatalogus, stukjes: Stukje[]
         // Met de klok mee, zoals de muren (`metDeKlok`): anders omgekeerd, de randen mee (rand i loopt van punt i naar i + 1).
         const opp = punten.reduce((t, p, k) => { const q = punten[(k + 1) % punten.length]!; return t + p[0] * q[1] - q[0] * p[1]; }, 0);
         const [pt, rn] = opp < 0 ? [[...punten].reverse(), [randen[2]!, randen[1]!, randen[0]!, randen[3]!]] : [punten, randen];
-        uit.push(grondPrisma(naam, 'gevel', SNEDE, pt, r2(s.y0), h, { randen: rn }));
+        uit.push(grondPrisma(naam, 'gevel', SNEDE, pt, r2(s.y0), h, { randen: rn, alleenVanVoren: s.voren }));
         continue;
       }
       const [zp, zm] = m.as === 'h' ? (['z+', 'z-'] as const) : (['x+', 'x-'] as const);
       const zijden: Blok['zijden'] = {};
       if (plusAfw) zijden[zp] = plusAfw;
       if (minAfw) zijden[zm] = minAfw;
-      const basis = { code: naam, soort: 'gevel' as const, vorm: 'blok' as const, kleur: SNEDE, y: r2(s.y0), h, zijden };
+      const basis = { code: naam, soort: 'gevel' as const, vorm: 'blok' as const, kleur: SNEDE, y: r2(s.y0), h, zijden, alleenVanVoren: s.voren };
       uit.push(m.as === 'h'
         ? { ...basis, x: r2(s.a), z: r2(w0), b: r2(s.b - s.a), d: r2(w1 - w0) }
         : { ...basis, x: r2(w0), z: r2(s.a), b: r2(w1 - w0), d: r2(s.b - s.a) });
@@ -218,7 +241,7 @@ export function techniekBinnenBlokken(plan: Plattegrond, cat: PlanCatalogus, o: 
     if (t.aan === 'plafond' && bovenste && (laag !== undefined || !o.dakErop)) continue;
     const vloer = vloerHoogte(plan, n);
     const code = `${BINNEN_TECHNIEK}_${t.id}`;
-    const blokken = toestelAfgewerkt(t, type, vloer, H, code);
+    let blokken = toestelAfgewerkt(t, type, vloer, H, code);
     if (t.aan === 'wand' && laag !== undefined) {
       const top = Math.max(...blokken.map((b) => b.y + b.h)) - vloer;
       if (top > laag + 0.5) {
@@ -228,7 +251,10 @@ export function techniekBinnenBlokken(plan: Plattegrond, cat: PlanCatalogus, o: 
         // Geen muur erachter (of het hangt in een opening): niet tonen, anders zweeft het.
         if (!achter || !langs) continue;
         const y1 = boven === 'plafond' ? H : Math.min(H, Math.max(top + STUKJE_MUUR.boven, laag + STUKJE_MUUR.minstens));
-        stukjes.push({ m: achter.m, a: langs[0], b: langs[1], y0: vloer + laag, y1: vloer + y1, toestel: t.id });
+        // Het toestel en zijn stukje muur alleen van de kant van de ruimte waarin het hangt (zie `vanVoren`).
+        const voren = vanVoren(achter.m, achter.plus, achter.s, vloer + laag);
+        stukjes.push({ m: achter.m, a: langs[0], b: langs[1], y0: vloer + laag, y1: vloer + y1, toestel: t.id, plus: achter.plus, voren });
+        blokken = blokken.map((b) => ({ ...b, alleenVanVoren: voren }));
       }
     }
     const metLicht = o.verlichting ? gloeiBinnen(blokken, type, t) : blokken;

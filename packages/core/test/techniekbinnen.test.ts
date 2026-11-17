@@ -134,8 +134,10 @@ describe('techniek binnen in de afgewerkte woning (techniekBinnen)', () => {
       expect(dekt!.y).toBe(LAAG);
       expect(dekt!.y + dekt!.h).toBeGreaterThanOrEqual(top(eigen) + STUKJE_MUUR.boven - 0.01);
     }
-    // Geen twee stukjes die elkaar overlappen (vlakken op elkaar flikkeren), geen stukje over een opening.
+    // Geen twee stukjes van dezelfde kant die elkaar overlappen (vlakken op elkaar flikkeren; twee kanten zie je nooit
+    // samen, zie hieronder), geen stukje over een opening.
     for (const [i, a] of stukjes.entries()) for (const b of stukjes.slice(i + 1)) {
+      if (JSON.stringify(a.alleenVanVoren?.normaal) !== JSON.stringify(b.alleenVanVoren?.normaal)) continue;
       const overlap = Math.min(a.x + a.b, b.x + b.b) - Math.max(a.x, b.x) > 0.01 && Math.min(a.z + a.d, b.z + b.d) - Math.max(a.z, b.z) > 0.01;
       expect(overlap).toBe(false);
     }
@@ -155,6 +157,41 @@ describe('techniek binnen in de afgewerkte woning (techniekBinnen)', () => {
     expect(Object.keys(achterAirco.zijden ?? {})).toEqual(['z-']);
     // Alle stukjes horen bij een toestel binnen (een tik erop kiest dat toestel).
     for (const s of stukjes) expect(plan.toestellen!.some((t) => t.id === idVan(s))).toBe(true);
+  });
+
+  it('muren laag: een hoog toestel en zijn stukje muur alleen van de kant van de ruimte (alleenVanVoren); de rest altijd', () => {
+    const { plan } = uitgerusteWoning();
+    const tc = cat.techniek!;
+    const bl = binnen(plattegrond3D(plan, cat, { dingen: true, laag: LAAG, totNiveau: 0, techniekBinnen: true }).blokken);
+    const voor = (b: Blok, p: readonly [number, number, number]) => {
+      const v = b.alleenVanVoren!;
+      return (p[0] - v.punt[0]) * v.normaal[0] + (p[1] - v.punt[1]) * v.normaal[1] + (p[2] - v.punt[2]) * v.normaal[2];
+    };
+    for (const t of plan.toestellen!.filter((x) => (x.niveau ?? 0) === 0 && !toestelBuiten(plan, x))) {
+      const eigen = bl.filter((b) => idVan(b) === t.id && !b.code.includes('_muur_'));
+      if (!eigen.length) continue;
+      const hoog = t.aan === 'wand' && t.hoogte + toestelMaten(tc.toestellen[t.type]!, t.aan).h > LAAG;
+      expect(eigen.every((b) => !!b.alleenVanVoren === hoog), t.id).toBe(true);
+      if (!hoog) continue;
+      // Het vlak ligt op de muur achter het toestel: het toestel (een eind vóór de muur) staat aan de voorkant, een punt een
+      // halve meter achter de muur niet.
+      const [vx, vy] = voorRichting(t.draai);
+      const m3 = toestelMaten(tc.toestellen[t.type]!, t.aan);
+      const b0 = eigen[0]!;
+      expect(voor(b0, [t.x + vx * 50, 150, t.y + vy * 50]), t.id).toBeGreaterThan(0);
+      expect(voor(b0, [t.x - vx * (m3.d / 2 + 60), 150, t.y - vy * (m3.d / 2 + 60)]), t.id).toBeLessThan(0);
+      // Het stukje muur achter het toestel ligt in hetzelfde vlak (zelfde normaal, punt op hetzelfde vlak).
+      const zelfdeVlak = (b: Blok) => !!b.alleenVanVoren && JSON.stringify(b.alleenVanVoren.normaal) === JSON.stringify(b0.alleenVanVoren!.normaal) && Math.abs(voor(b0, b.alleenVanVoren.punt)) < 0.01;
+      expect(bl.some((b) => b.code.includes('_muur_') && zelfdeVlak(b)), t.id).toBe(true);
+    }
+    // Elk stukje muur heeft een vlak; zonder lage muren en van binnen heeft niets het.
+    expect(bl.filter((b) => b.code.includes('_muur_')).every((b) => !!b.alleenVanVoren)).toBe(true);
+    expect(binnen(plattegrond3D(plan, cat, { dingen: true, techniekBinnen: true }).blokken).some((b) => b.alleenVanVoren)).toBe(false);
+    expect(binnen(ruimteVanBinnen(plan, cat, 'leef', { dingen: true, techniek: true })!.blokken).some((b) => b.alleenVanVoren)).toBe(false);
+    // De airco hangt aan de tuingevel (voorkant naar de straat): van de tuinkant (het standpunt Schuin) is ze weg.
+    const airco = bl.find((b) => idVan(b) === plan.toestellen!.find((t) => t.type === 'airco_wand')!.id)!;
+    expect(voor(airco, [700, 600, 2000])).toBeLessThan(0);
+    expect(voor(airco, [700, 600, -1200])).toBeGreaterThan(0);
   });
 
   it('muren laag, andere manieren: tot het plafond of weg', () => {
