@@ -13,6 +13,7 @@ import {
 import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from './ruimtelijk.js';
 import type { WoningOpbouw, WoningOpbouwCatalogus } from './opbouw.js';
 import { controleerLosseWanden, losseWandBlokken, type LosseWand } from './lossewand.js';
+import { strokenVan, strookBlokken, type GevelStrook } from './gevelstroken.js';
 import {
   toestelMaten, leidingVerloop, techniekBlokken, toestelBlokken, toestelVoetafdruk, voorRichting,
   type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
@@ -187,6 +188,11 @@ export interface GevelOntwerp {
   vlakken?: Record<string, GevelKeuze>;
   /** Plint onderaan de gevel van het gelijkvloers (hoogte in cm; 0 = geen). */
   sokkel?: GevelKeuze & { hoogte: number };
+  /**
+   * Stroken (ronde 14): een materiaal op een deel van een gevel (een band, een strook naast een deur, een kader rond een
+   * raam), in de volgorde waarin ze gemaakt zijn (een latere gaat voor). Zie gevelstroken.ts. Ontbreekt = geen.
+   */
+  stroken?: GevelStrook[];
 }
 
 /** Een gevelmateriaal in de catalogus: soort voor 3D en tekening, kleuren (stalen) en prijs per m². */
@@ -2204,6 +2210,8 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     const hellendHier = isTop && topDak && !!opbouw.hellend;
     const scene = niveau3D(p, cat, { ...opties, laag: n === laatste ? opties.laag : undefined }, zonderGaten, n, hellendHier, zonderGatenVorm);
     for (const b of scene) blokken.push({ ...b, y: r2(b.y + y0) });
+    // Stroken op de gevel (ronde 14): een bekleding vóór de muur, ook in de topgevel. Zonder stroken: niets.
+    if (strokenVan(plan).length) blokken.push(...strookBlokken(plan, cat, n, { uitsparing: muurUitsparing(opties), dak: hellendHier ? opbouw.hellend : undefined, laag: n === laatste ? opties.laag : undefined, code: (s, c) => metDing(opties, `strook:${s}`, c) }));
     // Plat dak: boven de delen die niet onder een hogere (getoonde) verdieping liggen, en met een dakkeuze ook
     // op de bovenste verdieping.
     const platHier = !hellendHier && (n < laatste || (isTop && topDak));
@@ -2733,6 +2741,19 @@ function niveau3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, z
     }
   }
   return blokken;
+}
+
+/**
+ * Het gat dat een opening in een strook op de gevel maakt (ronde 14), zoals in de muur zelf (`niveau3D`): van onder de
+ * dunste dorpel of vensterbank tot boven de zonweringskast. Anders vallen bovenvlak van de dorpel en de strook samen.
+ */
+function muurUitsparing(opties: Plan3DOpties): (o: Opening) => [number, number] {
+  return (o) => {
+    const inhoud = opties.inhoud?.(o);
+    const hoogte = inhoud?.hoogte ?? (o.soort === 'doorgang' ? o.hoogte : o.hoogte + 4);
+    const dorpels = (inhoud?.blokken ?? []).filter((x) => (x.code === 'vensterbank' || x.code === 'dorpel') && x.y < 0).map((x) => -x.y);
+    return [o.borstwering - (dorpels.length ? Math.min(...dorpels) : 0), o.borstwering + hoogte];
+  };
 }
 
 /** Raam, deur of doorgang op de juiste plaats en in de juiste richting in de muur. */

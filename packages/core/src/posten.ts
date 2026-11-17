@@ -193,7 +193,7 @@ function buitenwandTitels(plan: Plattegrond, cat: PlanCatalogus, groepen: [strin
   const kort = new Map(groepen.map(([code]) => [code, titelVan('Buitenwand', opbouwNaam(code).split(',')[0]!)]));
   const dubbel = (t: string) => [...kort.values()].filter((x) => x === t).length > 1;
   if (![...kort.values()].some(dubbel)) return kort;
-  const materiaal = new Map(gevelOppervlaktes(plan).filter((v) => v.keuze).map((v) => [`gevel:${v.sleutel}`, v.keuze!.materiaal]));
+  const materiaal = new Map(gevelOppervlaktes(plan).filter((v) => v.keuze && !v.strook).map((v) => [`gevel:${v.sleutel}`, v.keuze!.materiaal]));
   const achter = new Map(groepen.map(([code, lijst]) => {
     const labels = uniek(lijst.map((d) => materiaal.get(d.ding ?? '')).filter((m): m is string => !!m).map((m) => kleinEerst(cat.gevels?.[m]?.label ?? m)));
     return [code, labels.length ? `achter ${labels.length > 1 ? `${labels.slice(0, -1).join(', ')} en ${labels[labels.length - 1]}` : labels[0]}` : ''];
@@ -410,12 +410,14 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
   }
   // Gevelbekleding, per materiaal en kleur (netto, zonder ramen en deuren), en de sokkel.
   if (plan.gevelOntwerp && cat.gevels) {
-    const per = new Map<string, { m2: number; sokkel: number; sleutels: string[]; materiaal: string; kleur: string; voeg?: string }>();
+    // Een strook (ronde 14) telt bij haar materiaal, met haar eigen ding (`strook:<id>`); het muurvlak eronder telt ze niet.
+    const per = new Map<string, { m2: number; sokkel: number; sleutels: string[]; stroken: string[]; strookM2: number; materiaal: string; kleur: string; voeg?: string }>();
     for (const v of gevelOppervlaktes(plan)) {
       if (!v.keuze || v.netto + v.sokkel <= 0) continue;
       const k = `${v.keuze.materiaal}:${v.keuze.kleur}:${v.keuze.voeg ?? ''}`;
-      const x = per.get(k) ?? { m2: 0, sokkel: 0, sleutels: [], ...v.keuze };
-      x.m2 += v.netto; x.sokkel += v.sokkel; x.sleutels.push(v.sleutel);
+      const x = per.get(k) ?? { m2: 0, sokkel: 0, sleutels: [], stroken: [], strookM2: 0, ...v.keuze };
+      x.m2 += v.netto; x.sokkel += v.sokkel;
+      if (v.strook) { x.stroken.push(v.strook); x.strookM2 += v.netto; } else x.sleutels.push(v.sleutel);
       per.set(k, x);
     }
     for (const [k, x] of per) {
@@ -423,17 +425,22 @@ export function postenVan(plan: Plattegrond, cat: PlanCatalogus, opties: PostenO
       if (!m || x.m2 <= 0) continue;
       const kleur = m.kleuren[x.kleur]?.label ?? x.kleur;
       const voeg = m.voegen && x.voeg ? m.voegen[x.voeg]?.label : undefined;
-      const dingen = uniek(x.sleutels.map((s) => `gevel:${s}`));
+      const vlakken = uniek(x.sleutels.map((s) => `gevel:${s}`)), stroken = uniek(x.stroken);
+      const dingen = [...vlakken, ...stroken.map((s) => `strook:${s}`)];
       // De lagen achter de bekleding (latten, spouw) uit de opbouw van die muren.
-      const wanden = delen.filter((d) => d.plaats === 'buitenwand' && d.ding && dingen.includes(d.ding));
+      const wanden = delen.filter((d) => d.plaats === 'buitenwand' && d.ding && vlakken.includes(d.ding));
       const achter = wanden[0] ? lagenVan(wanden[0], verdeel(wanden[0]).buiten).filter((l) => l.rol !== 'afwerking_buiten') : [];
+      const waar = [
+        ...(vlakken.length ? [vlakken.length === 1 ? 'één muurvlak' : `${vlakken.length} muurvlakken`] : []),
+        ...(stroken.length ? [stroken.length === 1 ? `een strook (${komma(x.strookM2)} m²)` : `${stroken.length} stroken (samen ${komma(x.strookM2)} m²)`] : []),
+      ];
       uit.push({
         id: `gevel:${k}`, groep: 'winddicht', titel: `Gevelbekleding: ${kleinEerst(m.label)}`, hoeveelheid: r1(x.m2), eenheid: 'm²',
         detail: [
           `${m.label}, ${kleur.toLowerCase()}${voeg ? `, voeg ${voeg.toLowerCase()}` : ''}.`,
           ...(m.uitleg ? [m.uitleg] : []),
           ...(achter.length ? [lagenZin('Erachter', achter, mat)!] : []),
-          `Op ${dingen.length === 1 ? 'één muurvlak' : `${dingen.length} muurvlakken`}; netto, zonder ramen en deuren.`,
+          `Op ${waar.join(' en ')}; netto, zonder ramen en deuren.`,
         ],
         intern: hoeveelheden(wanden, new Set(wanden.flatMap((d) => [...verdeel(d).buiten])), mat), dingen,
       });
