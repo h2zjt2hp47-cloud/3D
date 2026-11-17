@@ -13,14 +13,14 @@
  * `toestelVlak`, `verschuifLeidingPunten` (core/src/techniekplaatsen.ts) en `telTechniek` (core/src/techniek.ts).
  */
 import {
-  ALLE_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, leidingLangsWanden, leidingVerloop, maatTekst, maatVan, murenVan, niveauPlan,
-  niveauVan, nieuweTechniek, nieuwToestel, opToestelVlak, puntGroep, ruimteOp, technischeOpstelling, tegenWand, telTechniek, toestelMaten, toestelTekenBeeld, toestelVlak,
+  ALLE_VAKKEN, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, klantWoorden, leidingLangsWanden, leidingVerloop, maatTekst, maatVan, murenVan, niveauPlan,
+  niveauVan, nieuweTechniek, nieuwToestel, opToestelVlak, puntGroep, ruimteOp, techniekVoorKlant, technischeOpstelling, tegenWand, telTechniek, toestelMaten, toestelTekenBeeld, toestelVlak,
   toestelVoetafdruk, verschuifLeidingPunten, vloerHoogte, vloerverwarmingLus, vormVanDeel,
-  type Leiding, type LeidingHoogte, type Plattegrond, type Punt, type Ruimte, type TechniekRegel, type TechniekVak, type Toestel, type ToestelType,
+  type Leiding, type LeidingHoogte, type Plattegrond, type Punt, type Ruimte, type TechniekKlant, type TechniekRegel, type TechniekVak, type Toestel, type ToestelType,
 } from '../../core/src/index.js';
 import { TECHNISCHE_RUIMTE, techniekCatalogus as tc } from '../../core/voorbeelden/techniek.js';
 import { uitgerusteWoning } from '../../core/voorbeelden/techniekwoning.js';
-import { $, el, getal, kopieer } from './hulp.js';
+import { $, el, getal, klantweergave, kopieer } from './hulp.js';
 import { constructieAan, zetWeergave as zetConstructieWeergave } from './constructie-ui.js';
 import { cmVeld, leesCm, vraagMaat } from './maten-ui.js';
 import { momentopname, nieuweId, nieuwProject, ongedaan, toestand, voorbeeldToestand, wijzig, type Toestand } from './staat.js';
@@ -702,7 +702,8 @@ function vakSchakelaars(): HTMLElement {
     const b = el('button', { type: 'button', 'data-techniek-vak': v, 'aria-pressed': String(zichtbaar.has(v)), title: `${TECHNIEK_VAKKEN[v].label} tonen of verbergen` });
     const stip = el('span', { class: 'tstip' });
     stip.style.background = TECHNIEK_VAKKEN[v].kleur;
-    b.append(stip, el('span', {}, TECHNIEK_VAKKEN[v].label));
+    // De klant krijgt zijn eigen woorden (ronde 10c): Verwarming en koeling, Water en afvoer.
+    b.append(stip, el('span', { class: 'intern' }, TECHNIEK_VAKKEN[v].label), el('span', { class: 'alleen-klantweergave' }, TECHNIEK_KLANT_VAKKEN[v].naam));
     b.addEventListener('click', () => {
       if (zichtbaar.has(v)) zichtbaar.delete(v); else zichtbaar.add(v);
       const s = omg?.selectie();
@@ -806,14 +807,41 @@ let balk3D: HTMLElement | undefined;
 let tab3D: HTMLButtonElement | undefined;
 const TIKHINT = 'Tik op een toestel of een leiding om het te wijzigen.';
 
+/** Een streep in de kleur van een leiding, met haar naam (de legende voor de klant). */
+function leidingStreep(naam: string, kleur: string): HTMLElement {
+  const s = el('span'), lijn = el('span', { class: 'lijn' });
+  lijn.style.background = kleur;
+  s.append(lijn, naam);
+  return s;
+}
+
+/**
+ * Voor de klant (klantweergave, ronde 10c) onder de vakken: de kleuren van de leidingen van de vakken die getoond worden,
+ * in zijn woorden, en wat een tik doet. Alleen in de klantweergave te zien.
+ */
+function klantLegende(): HTMLElement[] {
+  const k = techniekVoorKlant(toestand().plan, { techniek: tc });
+  if (!k) return [];
+  const leidingen = k.vakken.filter((v) => zichtbaar.has(v.vak)).flatMap((v) => v.leidingen);
+  const uit: HTMLElement[] = [];
+  if (leidingen.length) {
+    const p = el('p', { class: 'tleidingen alleen-klantweergave' });
+    p.append(el('span', { class: 'klein' }, 'Leidingen:'), ...leidingen.map((l) => leidingStreep(l.naam, l.kleur)));
+    uit.push(p);
+  }
+  uit.push(el('p', { class: 'klein alleen-klantweergave' }, 'Tik op een toestel of een leiding: wat het is en waar het zit. Tik op een vak om het te tonen of te verbergen.'));
+  return uit;
+}
+
 /** De knop *Techniek* bij Afgewerkt en Constructie, en de balk eronder (in de woning of uitgezet, de vakken). */
 export function toonBalk3D() {
   if (tab3D) {
     tab3D.hidden = !aan && !heeftTechniek();
     tab3D.setAttribute('aria-pressed', String(aan));
     // Met de techniek uit: hoeveel er is, zodat je ziet dat er iets te zien is (in Afgewerkt staat de techniek niet).
+    // In de klantweergave zonder het aantal: dat telt voor de installateur, niet voor de klant (ronde 10c).
     const plan = toestand().plan, n = (plan.toestellen?.length ?? 0) + (plan.leidingen?.length ?? 0);
-    tab3D.textContent = !aan && n ? `Techniek (${n})` : 'Techniek';
+    tab3D.replaceChildren('Techniek', ...(!aan && n ? [el('span', { class: 'intern' }, ` (${n})`)] : []));
     // Afgewerkt en Constructie: niet ingedrukt terwijl de techniek aan staat; daarna weer zoals de constructie staat.
     const nu = aan ? 'techniek' : constructieAan() ? 'constructie' : 'afgewerkt';
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-3d-weergave]')) b.setAttribute('aria-pressed', String(b.dataset['3dWeergave'] === nu));
@@ -829,7 +857,7 @@ export function toonBalk3D() {
     b.addEventListener('click', () => { uitgezet = w === 'uitgezet'; toonBalk3D(); omg?.drieD(); });
     weergave.append(b);
   }
-  balk3D.replaceChildren(weergave, vakSchakelaars(), el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD));
+  balk3D.replaceChildren(weergave, vakSchakelaars(), ...klantLegende(), el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD));
   if (hint) {
     hint.dataset.afgewerkt ??= hint.textContent ?? '';
     hint.textContent = TIKHINT;
@@ -947,19 +975,42 @@ export function toonTechniekZonderKeuze(vakEl: HTMLElement) {
 
 // ---------- tik in de 3D: het keuzepaneel van een toestel of leiding ----------
 
-/** Titel van een toestel of leiding in de 3D. */
+/** Titel van een toestel of leiding in de 3D (in de klantweergave in de woorden van de klant, ronde 10c). */
 export function techniekTitel(ding: string): string {
   const [soort, id] = ding.split(':');
   const plan = toestand().plan;
-  if (soort === 'toestel') return naamVan(plan.toestellen?.find((x) => x.id === id));
-  if (soort === 'leiding') { const l = plan.leidingen?.find((x) => x.id === id); return l ? tc.leidingen[l.soort]?.label ?? l.soort : ''; }
+  const klant = klantweergave();
+  if (soort === 'toestel') {
+    const t = plan.toestellen?.find((x) => x.id === id), type = t && typeVan(t);
+    return klant && type ? klantWoorden(type).naam : naamVan(t);
+  }
+  if (soort === 'leiding') {
+    const l = plan.leidingen?.find((x) => x.id === id), ls = l && tc.leidingen[l.soort];
+    return ls ? (klant ? klantWoorden(ls).naam : ls.label) : l?.soort ?? '';
+  }
   return '';
+}
+
+/**
+ * Voor de klant (klantweergave, ronde 10c): bij een aangetikt toestel of een leiding het vak, wat het is en waar het zit,
+ * in gewone woorden. De rest van het paneel (hoogte, ligging, verwijderen) is voor de verkoper.
+ */
+function klantUitleg(vakEl: HTMLElement, ding: string, k: TechniekKlant | undefined) {
+  const d = k?.dingen[ding];
+  if (!d) return;
+  const blok = el('div', { class: 'tklant alleen-klantweergave' });
+  const vakrij = el('p', { class: 'klein' }), stip = el('span', { class: 'tstip' });
+  stip.style.background = TECHNIEK_VAKKEN[d.vak].kleur;
+  vakrij.append(stip, TECHNIEK_KLANT_VAKKEN[d.vak].naam);
+  blok.append(vakrij, el('p', {}, d.uitleg), el('p', { class: 'klein' }, d.waar));
+  vakEl.append(blok);
 }
 
 /** De keuzes van een toestel of leiding na een tik in de 3D. */
 export function techniekDingKeuzes(vakEl: HTMLElement, ding: string, nav: { sluit: () => void }) {
   const [soort, id = ''] = ding.split(':') as ['toestel' | 'leiding', string];
   const plan = toestand().plan;
+  klantUitleg(vakEl, ding, techniekVoorKlant(plan, { techniek: tc }));
   if (soort === 'toestel') {
     const t = plan.toestellen?.find((x) => x.id === id), type = t && typeVan(t);
     if (!t || !type) return;
@@ -1004,20 +1055,24 @@ export function techniekTekst(regels: TechniekRegel[]): string {
 
 const open = new Set<string>();
 
-/** De kaart *Techniek* in het overzicht (alleen als het plan techniek heeft); de telling klapt open en rekent pas dan. */
-export function toonTechniekOverzicht() {
+/**
+ * De kaart *Techniek* in het overzicht (alleen als het plan techniek heeft); de telling klapt open en rekent pas dan.
+ * Sinds ronde 10c ook in de klantweergave (`voor-klant`): daar zonder telling, met per vak in gewone woorden wat er komt,
+ * de kleuren van de leidingen en *Bekijk de techniek in 3D* (`bekijk3D`).
+ */
+export function toonTechniekOverzicht(nav: { bekijk3D?: () => void } = {}) {
   let kaart = document.getElementById('o-techniek');
   const plan = toestand().plan;
   if (!heeftTechniek(plan)) { if (kaart) kaart.hidden = true; return; }
   if (!kaart) {
-    kaart = el('section', { class: 'kaart alleen-woning', id: 'o-techniek', 'aria-label': 'Techniek' });
+    kaart = el('section', { class: 'kaart alleen-woning voor-klant', id: 'o-techniek', 'aria-label': 'Techniek' });
     (document.getElementById('o-constructie') ?? document.getElementById('o-regels-kaart'))?.after(kaart);
   }
   kaart.hidden = false;
   const nt = plan.toestellen?.length ?? 0, nl = plan.leidingen?.length ?? 0;
   const kop = el('div', { class: 'kaartkop' });
-  kop.append(el('h2', {}, 'Techniek'), el('span', { class: 'klein' }, `${nt} toestel${nt === 1 ? '' : 'len'} · ${nl} leiding${nl === 1 ? '' : 'en'}`));
-  const d = el('details', { class: 'constructiedeel', id: 'o-techniek-telling' }) as HTMLDetailsElement;
+  kop.append(el('h2', {}, 'Techniek'), el('span', { class: 'klein intern' }, `${nt} toestel${nt === 1 ? '' : 'len'} · ${nl} leiding${nl === 1 ? '' : 'en'}`));
+  const d = el('details', { class: 'constructiedeel intern', id: 'o-techniek-telling' }) as HTMLDetailsElement;
   const s = el('summary');
   s.append(el('span', {}, 'Telling per vak'), el('span', { class: 'klein' }, 'aantallen toestellen en lopende meters leiding, zonder prijzen'));
   const vakEl = el('div', { class: 'constructieinhoud' });
@@ -1025,7 +1080,41 @@ export function toonTechniekOverzicht() {
   d.open = open.has('telling');
   d.addEventListener('toggle', () => { if (d.open) { open.add('telling'); if (!vakEl.childElementCount) vulTelling(vakEl); } else open.delete('telling'); });
   if (d.open) vulTelling(vakEl);
-  kaart.replaceChildren(kop, el('p', { class: 'klein voorbehoud' }, TECHNIEK_VOORBEHOUD), d);
+  kaart.replaceChildren(kop, ...klantKaart(plan, nav.bekijk3D), el('p', { class: 'klein voorbehoud' }, TECHNIEK_VOORBEHOUD), d);
+}
+
+/**
+ * Wat de klant in de kaart *Techniek* ziet (alleen in de klantweergave): per vak met zijn kleur wat er komt (de toestellen
+ * zonder aantallen) en de kleuren van de leidingen, en een knop naar de techniek in de 3D. Geen telling, geen maten.
+ */
+function klantKaart(plan: Plattegrond, bekijk3D?: () => void): HTMLElement[] {
+  const k = techniekVoorKlant(plan, { techniek: tc });
+  if (!k) return [];
+  const blok = el('div', { class: 'tklantkaart alleen-klantweergave' });
+  blok.append(el('p', { class: 'klein' }, 'Wat er aan techniek in de woning komt, per vak. In de 3D zie je waar.'));
+  const lijst = el('ul', { class: 'tklantvakken' });
+  for (const v of k.vakken) {
+    const li = el('li'), kop = el('div', { class: 'tklantvak' }), stip = el('span', { class: 'tstip' });
+    stip.style.background = v.kleur;
+    kop.append(stip, el('strong', {}, v.naam));
+    li.append(kop);
+    if (v.toestellen.length) li.append(el('p', {}, `${v.toestellen.map((x, i) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x)).join(', ')}.`));
+    if (v.leidingen.length) {
+      const p = el('p', { class: 'tleidingen' });
+      p.append(...v.leidingen.map((l) => leidingStreep(l.naam, l.kleur)));
+      li.append(p);
+    }
+    lijst.append(li);
+  }
+  blok.append(lijst);
+  if (bekijk3D) {
+    const b = el('button', { type: 'button', class: 'tweede', 'data-techniek-bekijk': '' }, 'Bekijk de techniek in 3D');
+    b.addEventListener('click', bekijk3D);
+    const acties = el('div', { class: 'acties' });
+    acties.append(b);
+    blok.append(acties);
+  }
+  return [blok];
 }
 
 function vulTelling(vakEl: HTMLElement) {

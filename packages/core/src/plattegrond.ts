@@ -14,7 +14,7 @@ import { kaderVan, plaatsBlokken, type Blok, type BlokSoort, type Scene3D } from
 import type { WoningOpbouw, WoningOpbouwCatalogus } from './opbouw.js';
 import { controleerLosseWanden, losseWandBlokken, type LosseWand } from './lossewand.js';
 import {
-  toestelMaten, leidingVerloop, techniekBlokken, toestelVoetafdruk, voorRichting,
+  toestelMaten, leidingVerloop, techniekBlokken, toestelBlokken, toestelVoetafdruk, voorRichting,
   type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
 } from './techniek.js';
 
@@ -2146,6 +2146,25 @@ export interface Plan3DOpties {
    * Ontbreekt = de blokken van vroeger. Zie techniek.ts.
    */
   techniek?: TechniekWeergave;
+  /**
+   * Wat je van de techniek in werkelijkheid buiten ziet (ronde 10c, 17/11), in de afgewerkte woning: de toestellen buiten
+   * (de buitenunit van een airco of een warmtepomp), op het dak (een dakdoorvoer) en aan de buitenkant van een gevel (een
+   * laadpaal, een buitenkraan, een gevelrooster), zie `toestelBuiten`. Op hun echte maat, in hun eigen kleur, zonder
+   * merkteken, na het kader (de camera verandert niet). Geen leidingen. Telt niet als `techniek` gezet is (dan staan ze er
+   * al). Uit = de blokken van vroeger; een plan zonder toestellen verandert nooit.
+   */
+  techniekBuiten?: boolean;
+}
+
+/**
+ * Staat of hangt dit toestel buiten, waar je het in werkelijkheid ziet (ronde 10c)? Buiten of op het dak (zijn
+ * bevestiging), of aan een wand buiten elke ruimte van zijn verdieping: tegen de buitenkant van een gevel (zoals
+ * `toestelVlak` in techniekplaatsen.ts). Een toestel aan het plafond of op de vloer buiten de woning is een fout in het
+ * plan (de controles melden het) en telt niet.
+ */
+export function toestelBuiten(plan: Plattegrond, t: Toestel): boolean {
+  if (t.aan === 'buiten' || t.aan === 'dak') return true;
+  return t.aan === 'wand' && !ruimteOp(plan, t.x, t.y, t.niveau ?? 0);
 }
 
 /** Code van een blok met het ding waar het bij hoort (zie `Plan3DOpties.dingen`). */
@@ -2295,6 +2314,7 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     if (opties.aanleg) blokken.push(...aanlegBlokken(plan));
     blokken.push(...buren);
     blokken.push(...techniek3D(plan, cat, opties));
+    blokken.push(...techniekBuiten3D(plan, cat, opties, laatste, opbouw, topDak));
     return { blokken, kader };
   }
   // Het kader is dat van de woning zelf: met terras en pad erbij zou de camera verder weg gaan staan.
@@ -2304,7 +2324,32 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
   blokken.push(...burenBlokken(plan, opties, laatste, opbouw, topDak));
   // Techniek (alleen met de optie): na het kader, zoals de aanleg (een buitenunit naast de woning verzet de camera niet).
   blokken.push(...techniek3D(plan, cat, opties));
+  // Wat je van de techniek buiten ziet, in de afgewerkte woning (ronde 10c): ook na het kader.
+  blokken.push(...techniekBuiten3D(plan, cat, opties, laatste, opbouw, topDak));
   return { blokken, kader };
+}
+
+/**
+ * De toestellen die je buiten ziet (`Plan3DOpties.techniekBuiten`, `toestelBuiten`), op hun echte maat en zonder
+ * merkteken. Wat niet getoond wordt: een verdieping boven `totNiveau`; op de bovenste getoonde verdieping met lage muren
+ * een toestel aan de gevel dat boven de snijhoogte uitkomt (een laadpaal naast een muur van 110 cm zou zweven; een
+ * buitenunit staat op de grond en blijft); een toestel op het
+ * dak waar geen plat dak getekend wordt (de bovenste verdieping zonder dak, onder een hellend dak).
+ */
+function techniekBuiten3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, laatste: number, opbouw: DakOpbouw | undefined, topDak: boolean): Blok[] {
+  const tc = cat.techniek;
+  if (!opties.techniekBuiten || opties.techniek || !tc || !plan.toestellen?.length) return [];
+  const uit: Blok[] = [];
+  for (const t of plan.toestellen) {
+    const type = tc.toestellen[t.type], n = t.niveau ?? 0;
+    if (!type || n > laatste || !toestelBuiten(plan, t)) continue;
+    if (t.aan === 'dak' && !(n < laatste || (topDak && !!opbouw && n === opbouw.top && !opbouw.hellend))) continue;
+    if (t.aan === 'wand' && n === laatste && opties.laag !== undefined && t.hoogte + toestelMaten(type, t.aan).h > opties.laag) continue;
+    const code = `toestel_${t.id}`;
+    const blokken = toestelBlokken(t, type, vloerHoogte(plan, n), plan.muurhoogte, code, false);
+    uit.push(...blokken.map((b) => ({ ...b, code: metDing(opties, `toestel:${t.id}`, b.code) })));
+  }
+  return uit;
 }
 
 /** De toestellen en leidingen voor de 3D (zie `Plan3DOpties.techniek`); leeg zonder de optie of zonder catalogus. */

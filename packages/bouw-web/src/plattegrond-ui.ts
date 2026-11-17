@@ -472,6 +472,8 @@ function plan3D() {
       // Techniek (ronde 10b): de installaties, in de woning of uitgezet (alleen als de techniek aan staat); uitgezet
       // alleen de verdieping waarop je werkt.
       ...techniek3DOpties(niveau),
+      // Ronde 10c: in Afgewerkt wat je van de techniek buiten ziet (buitenunit, laadpaal, dakdoorvoer …), op ware grootte.
+      techniekBuiten: true,
     });
     // Constructie (ronde 6): wanden, vloeren en dak als skelet, met het kader van de afgewerkte woning (de camera springt niet).
     const constructie = constructieAan();

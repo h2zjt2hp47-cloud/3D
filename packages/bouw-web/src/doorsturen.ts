@@ -2,7 +2,7 @@
  * 3D doorsturen: maakt van het huidige project een 3D-pakket (zie core/src/pakket3d.ts), de 3D als gewone gegevens.
  * Een ander systeem (bv. Missing Link) toont het met de losse kijker (kijker.ts → dist/bouw-kijker.html).
  */
-import { gebouwKader, passendKader, plattegrond3D, standaardDak, verdiepingenVan, PAKKET3D_SOORT, PAKKET3D_VERSIE, ZENDING_SOORT, ZENDING_VERSIE, type Pakket3D, type Scene3D, type Zending } from '../../core/src/index.js';
+import { gebouwKader, passendKader, plattegrond3D, standaardDak, techniekPakket, verdiepingenVan, PAKKET3D_SOORT, PAKKET3D_VERSIE, ZENDING_SOORT, ZENDING_VERSIE, type Pakket3D, type Scene3D, type Zending } from '../../core/src/index.js';
 import { maak3D, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { isGebouw, openingInhoudUit, positieMaatlijnen, positieScene } from './positie-3d.js';
@@ -27,6 +27,8 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
     inhoud: openingInhoudUit(t.posities),
     // Ronde 11 (bestand voor de klant): elk blok zegt bij welk ding het hoort, zodat een tik in de kijker de posten toont.
     ...(opties.dingen ? { dingen: true } : {}),
+    // Ronde 10c: wat je van de techniek buiten ziet (buitenunit, laadpaal, dakdoorvoer …), zoals in de 3D van de app.
+    techniekBuiten: true,
   });
 }
 
@@ -34,9 +36,11 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
  * Het 3D-pakket van het huidige project, of van een ander project (`t`, bv. een variant), zonder van project te wisselen.
  * `omschrijf` geeft de omschrijving van een positie zoals op de offerte.
  */
-export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = toestand(), opties: { dingen?: boolean } = {}): Pakket3D {
+export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = toestand(), opties: { dingen?: boolean; techniek?: boolean } = {}): Pakket3D {
   // Zonder ruimtes (een aanbouw of een raam uit de snelstart) is er geen woning om te tonen: anders zag je alleen gras.
   const niveaus = t.meta.zonderWoning || !t.plan.ruimtes.length ? [] : verdiepingenVan(t.plan);
+  // Ronde 10c (bestand voor de klant): de techniek per verdieping, uitgezet, met de woorden voor de klant. Optioneel.
+  const techniek = opties.techniek && niveaus.length ? techniekPakket(t.plan, cat) : undefined;
   return {
     soort: PAKKET3D_SOORT,
     versie: PAKKET3D_VERSIE,
@@ -57,6 +61,7 @@ export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = to
         ...(isGebouw(p) ? { gebouw: true } : {}), ...(maatlijnen?.length ? { maatlijnen } : {}),
       };
     }),
+    ...(techniek ? { techniek } : {}),
   };
 }
 

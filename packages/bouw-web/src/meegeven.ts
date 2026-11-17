@@ -99,7 +99,8 @@ export function klantPakket(leden: Variant[], omschrijf: (p: Positie) => string)
   const pakketten = leden.map((v, i) => {
     // Ronde 11: met de dingen in de 3D en de posten van het werk (zonder wat alleen voor de aannemer is), zodat de klant
     // ziet wat er gebeurt en een tik in de 3D de post toont. Een oudere kijker slaat de posten over.
-    const p = maakPakket3D(omschrijf, v.t, { dingen: true });
+    // Ronde 10c: ook de techniek (per verdieping uitgezet, in gewone woorden), als het plan er heeft.
+    const p = maakPakket3D(omschrijf, v.t, { dingen: true, techniek: true });
     const posten = klantPosten(v.id === actiefProject() ? huidigePosten() : postenVanToestand(v.t));
     if (posten.length) p.posten = posten;
     // Geen firmanaam ingevuld: dan staat er geen (vroeger "Uw bedrijf", doorloop B1).
