@@ -115,9 +115,15 @@ describe('de techniek in het 3D-pakket', () => {
     soort: PAKKET3D_SOORT, versie: PAKKET3D_VERSIE, gemaakt: '2026-11-17T12:00:00.000Z', project: { nummer: 'OF-1', naam: 'Woning' },
     woning: [{ naam: 'Gelijkvloers', scene: plattegrond3D(plan, cat, { dingen: true, techniekBuiten: true }), laag: plattegrond3D(plan, cat, { dingen: true, laag: 110 }) }], posities: [],
   };
-  it('per verdieping de uitgezette 3D zoals op het scherm, met de dingen; de woorden en het voorbehoud', () => {
+  it('per verdieping de uitgezette 3D zoals op het scherm, op de grond gezet, met de dingen; de woorden en het voorbehoud', () => {
     expect(techniek.niveaus.map((n) => n.naam)).toEqual(['Gelijkvloers', 'Verdieping 1']);
-    expect(techniek.niveaus[1]!.scene).toEqual(plattegrond3D(plan, cat, { techniek: { weergave: 'uitgezet', niveau: 1, opvallend: true }, dingen: true }));
+    const opties = (niveau: number) => ({ techniek: { weergave: 'uitgezet' as const, niveau, opvallend: true }, dingen: true });
+    expect(techniek.niveaus[0]!.scene).toEqual(plattegrond3D(plan, cat, opties(0)));
+    // Verdieping 1 zakt evenveel als haar vloer hoog ligt: dezelfde blokken, de vloer op de grond, het kader mee.
+    const hoog = plattegrond3D(plan, cat, opties(1)), dy = vloerHoogte(plan, 1), v1 = techniek.niveaus[1]!.scene;
+    expect(v1.blokken.map((b) => ({ ...b, y: Math.round((b.y + dy) * 100) / 100 }))).toEqual(hoog.blokken);
+    expect(v1.kader).toEqual({ ...hoog.kader, h: hoog.kader.h - dy });
+    expect(Math.min(...v1.blokken.filter((b) => b.code.startsWith('uitgezet_')).map((b) => b.y))).toBe(0);
     expect(techniek.voorbehoud).toBe(TECHNIEK_VOORBEHOUD);
     // Elk ding in de scènes heeft zijn woorden.
     const dingen = new Set(techniek.niveaus.flatMap((n) => n.scene.blokken.map((b) => /^((?:toestel|leiding):[^.]+)\./.exec(b.code)?.[1]).filter((x): x is string => !!x)));

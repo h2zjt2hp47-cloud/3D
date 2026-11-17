@@ -13,7 +13,8 @@
  * programma. Een plan zonder toestellen of leidingen geeft niets terug.
  */
 import type { Pakket3DTechniek } from './pakket3d.js';
-import { niveauVan, plattegrond3D, ruimteOp, toestelBuiten, verdiepingenVan, type PlanCatalogus, type Plattegrond } from './plattegrond.js';
+import { niveauVan, plattegrond3D, ruimteOp, toestelBuiten, verdiepingenVan, vloerHoogte, type PlanCatalogus, type Plattegrond } from './plattegrond.js';
+import type { Scene3D } from './ruimtelijk.js';
 import {
   ALLE_VAKKEN, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, liggingHoogte,
   type KlantWoorden, type Leiding, type LeidingSoortType, type TechniekVak, type Toestel, type ToestelType,
@@ -119,6 +120,26 @@ export function techniekVoorKlant(plan: Plattegrond, cat: Pick<PlanCatalogus, 't
 }
 
 /**
+ * Een verdieping op de grond gezet (ronde 10c): in het bestand voor de klant en op het blad hing een verdieping in de
+ * uitgezette 3D op haar hoogte boven het gras, als een plaat in de lucht met een leiding eronder. De klant kiest de
+ * verdieping zelf; op de grond leest ze als een plattegrond per verdieping. Alles zakt evenveel (het kader ook); een
+ * leiding naar de verdieping eronder stopt nu net onder het gras. De app toont de verdieping nog op haar hoogte.
+ */
+function opDeGrond(s: Scene3D, dy: number): Scene3D {
+  if (!dy) return s;
+  const r2 = (x: number) => Math.round(x * 100) / 100;
+  return {
+    ...s,
+    blokken: s.blokken.map((b) => ({
+      ...b, y: r2(b.y - dy),
+      // Een prisma langs x of z draagt de hoogte in zijn doorsnede (een dak; in de uitgezette 3D komt het niet voor).
+      ...(b.vorm === 'prisma' && b.as !== 'y' && b.doorsnede ? { doorsnede: b.doorsnede.map(([p, y]): [number, number] => [p, r2(y - dy)]) } : {}),
+    })),
+    kader: { ...s.kader, h: r2(s.kader.h - dy) },
+  };
+}
+
+/**
  * De techniek voor het 3D-pakket (bestand voor de klant): per verdieping met techniek de uitgezette 3D, zoals op het
  * scherm (alleen die verdieping, lage wanden, de kleine toestellen groot met hun merkteken, de leidingen in de vloer
  * zichtbaar op de vloer), met de dingen in de codes zodat een tik het toestel of de leiding kent; en de woorden van
@@ -129,7 +150,7 @@ export function techniekPakket(plan: Plattegrond, cat: PlanCatalogus): Pakket3DT
   if (!klant || !cat.techniek) return undefined;
   const metTechniek = new Set([...(plan.toestellen ?? []).map(niveauVan), ...(plan.leidingen ?? []).map(niveauVan)]);
   const niveaus = verdiepingenVan(plan).flatMap((v, n) => (metTechniek.has(n)
-    ? [{ naam: v.naam, scene: plattegrond3D(plan, cat, { techniek: { weergave: 'uitgezet', niveau: n, opvallend: true }, dingen: true }) }]
+    ? [{ naam: v.naam, scene: opDeGrond(plattegrond3D(plan, cat, { techniek: { weergave: 'uitgezet', niveau: n, opvallend: true }, dingen: true }), vloerHoogte(plan, n)) }]
     : []));
   if (!niveaus.length) return undefined;
   return { niveaus, vakken: klant.vakken, dingen: klant.dingen, voorbehoud: TECHNIEK_VOORBEHOUD };

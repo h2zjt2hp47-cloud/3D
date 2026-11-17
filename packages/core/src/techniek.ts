@@ -45,9 +45,9 @@ export const ALLE_VAKKEN: TechniekVak[] = ['elektriciteit', 'klimaat', 'ventilat
  */
 export const TECHNIEK_KLANT_VAKKEN: Record<TechniekVak, { naam: string; uitleg: string }> = {
   elektriciteit: { naam: 'Elektriciteit', uitleg: 'Stopcontacten, schakelaars, licht en de kabels ernaartoe.' },
-  klimaat: { naam: 'Verwarming en koeling', uitleg: 'Warmtepomp, airco, vloerverwarming of radiatoren, en de buizen ertussen.' },
+  klimaat: { naam: 'Verwarming en koeling', uitleg: 'Wat de woning verwarmt of koelt (bijvoorbeeld een warmtepomp, airco, vloerverwarming of radiatoren) en de buizen ertussen.' },
   ventilatie: { naam: 'Ventilatie', uitleg: 'Verse lucht in de woning, vochtige lucht eruit.' },
-  sanitair: { naam: 'Water en afvoer', uitleg: 'Warm en koud water, regenwater en de afvoer naar de riolering.' },
+  sanitair: { naam: 'Water en afvoer', uitleg: 'Het water in de woning (warm, koud, eventueel regenwater) en de afvoer naar de riolering.' },
 };
 
 /** Hoe de klant een toestel of een soort leiding noemt, en wat het is in één gewone zin (ronde 10c). */

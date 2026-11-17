@@ -137,7 +137,7 @@ const toestellen: Record<string, ToestelType> = {
     label: 'Warmtepomp binnenunit', vak: 'klimaat', b: 60, d: 65, h: 185, hoogte: 0, bevestiging: 'vloer',
     teken: 'kader', afkorting: 'WP', vorm: 'kolom', kleur: WIT, vrij: { voor: 60 }, technisch: true,
     herkomst: onderzoek('6.2 [I9]: 60 tot 76 breed, 180 tot 190 hoog, 62 tot 90 diep; 6.5 [I20]: doorgang van minstens 60 cm ervoor'),
-    klant: { naam: 'Warmtepomp (binnendeel)', uitleg: 'Het deel van de warmtepomp binnen: het stuurt het warme water naar de vloerverwarming en de radiatoren.' },
+    klant: { naam: 'Warmtepomp (binnendeel)', uitleg: 'Het deel van de warmtepomp binnen: het stuurt het warme water naar de verwarming (vloerverwarming of radiatoren).' },
   },
   boiler: {
     label: 'Boiler bij de warmtepomp (200 liter)', vak: 'klimaat', b: 60, d: 60, h: 150, hoogte: 0, bevestiging: 'vloer',
@@ -175,7 +175,7 @@ const toestellen: Record<string, ToestelType> = {
     label: 'Ventilatie-unit systeem C', vak: 'ventilatie', b: 40, d: 30, h: 25, hoogte: 190, bevestiging: 'wand',
     teken: 'kader', afkorting: 'C', vorm: 'kast', kleur: WIT, technisch: true,
     herkomst: kennis('de soort uit 5.2 [V1][V8]; de maat: algemene kennis'),
-    klant: { naam: 'Ventilatietoestel', uitleg: 'Zuigt de vochtige lucht uit keuken, badkamer en wc naar buiten; verse lucht komt binnen langs roosters boven de ramen.' },
+    klant: { naam: 'Ventilatietoestel', uitleg: 'Zuigt de vochtige lucht uit de natte ruimtes (keuken, badkamer, wc) naar buiten; verse lucht komt binnen langs roosters, bijvoorbeeld boven de ramen.' },
   },
   ventilatie_d: {
     label: 'Ventilatie-unit systeem D (met warmteterugwinning)', vak: 'ventilatie', b: 75, d: 55, h: 60, hoogte: 140, bevestiging: 'wand',
@@ -232,7 +232,7 @@ const toestellen: Record<string, ToestelType> = {
     label: 'Regenwaterpomp met filter', vak: 'sanitair', b: 50, d: 30, h: 40, hoogte: 0, bevestiging: 'vloer',
     teken: 'kader', afkorting: 'RW', vorm: 'pomp', kleur: '#3d6fa3', technisch: true,
     herkomst: kennis('de put in de tuin, pomp en filter binnen (6.3 [I16]); de maat: algemene kennis'),
-    klant: { naam: 'Regenwaterpomp', uitleg: 'Pompt het regenwater uit de put naar de wc, de wasmachine en de buitenkraan.' },
+    klant: { naam: 'Regenwaterpomp', uitleg: 'Pompt het regenwater uit de put naar wat het gebruikt, bijvoorbeeld de wc of de wasmachine.' },
   },
   buitenkraan: {
     label: 'Buitenkraan', vak: 'sanitair', b: 8, d: 12, h: 8, hoogte: 60, bevestiging: 'wand',
@@ -263,12 +263,12 @@ const leidingen: Record<string, LeidingSoortType> = {
   aanvoer_verwarming: {
     label: 'Aanvoer verwarming', vak: 'klimaat', kleur: '#a3172c', vorm: 'rond', maten: [20, 16, 26], hoogte: 'vloer',
     herkomst: kennis('kleur: rood volgens een forum (6.6 [I22]), donkerder om ze van warm water te onderscheiden'),
-    klant: { naam: 'Verwarming, heen', uitleg: 'Brengt het warme water naar de vloerverwarming of de radiator.' },
+    klant: { naam: 'Verwarming, heen', uitleg: 'Brengt het warme water van het toestel dat verwarmt naar de vloerverwarming of de radiatoren.' },
   },
   retour_verwarming: {
     label: 'Retour verwarming', vak: 'klimaat', kleur: '#1d3a8a', vorm: 'rond', maten: [20, 16, 26], hoogte: 'vloer',
     herkomst: kennis('kleur: blauw volgens een forum (6.6 [I22]), donkerder om ze van koud water te onderscheiden'),
-    klant: { naam: 'Verwarming, terug', uitleg: 'Brengt het afgekoelde water terug naar de warmtepomp.' },
+    klant: { naam: 'Verwarming, terug', uitleg: 'Brengt het afgekoelde water terug naar het toestel dat verwarmt.' },
   },
   vloerverwarming: {
     label: 'Lus vloerverwarming', vak: 'klimaat', kleur: '#e8836e', vorm: 'rond', maten: [16, 17, 20], hoogte: 'vloer',
@@ -279,7 +279,7 @@ const leidingen: Record<string, LeidingSoortType> = {
   gas: {
     label: 'Gasleiding', vak: 'klimaat', kleur: '#f0c419', vorm: 'rond', maten: [15, 22, 28], hoogte: 'wand', naarBuiten: true,
     herkomst: onderzoek('6.6 [I22]: gasleidingen in kunststof zijn geel; de maten: algemene kennis'),
-    klant: { naam: 'Gasleiding', uitleg: 'Brengt het gas naar de ketel of het kookvuur.' },
+    klant: { naam: 'Gasleiding', uitleg: 'Brengt het gas naar de toestellen op gas, bijvoorbeeld de ketel of het kookvuur.' },
   },
   ventilatie_rond: {
     label: 'Ventilatiekanaal rond', vak: 'ventilatie', kleur: '#7cb342', vorm: 'rond', maten: [160, 125, 180, 200, 90, 75, 63], hoogte: 'plafond',
@@ -294,22 +294,22 @@ const leidingen: Record<string, LeidingSoortType> = {
   warm_water: {
     label: 'Warm water', vak: 'sanitair', kleur: '#e53935', vorm: 'rond', maten: [16, 20, 26], hoogte: 'vloer',
     herkomst: onderzoek('6.3 [I15]: 16 mm naar de toestellen, 20 tot 26 mm voor de hoofdleiding; kleur 6.6 [I22]'),
-    klant: { naam: 'Warm water', uitleg: 'Leiding met warm water naar de kranen en de douche.' },
+    klant: { naam: 'Warm water', uitleg: 'Leiding met warm water naar de kranen, bijvoorbeeld in de keuken en de badkamer.' },
   },
   koud_water: {
     label: 'Koud water', vak: 'sanitair', kleur: '#1e88e5', vorm: 'rond', maten: [16, 20, 26], hoogte: 'vloer', naarBuiten: true,
     herkomst: onderzoek('6.3 [I15]; kleur 6.6 [I22]'),
-    klant: { naam: 'Koud water', uitleg: 'Leiding met drinkwater naar de kranen, de wc en de toestellen.' },
+    klant: { naam: 'Koud water', uitleg: 'Leiding met drinkwater naar de kranen en de toestellen.' },
   },
   afvoer: {
     label: 'Afvoer', vak: 'sanitair', kleur: '#795548', vorm: 'rond', maten: [110, 75, 50, 40, 32], hoogte: 'vloer', naarBuiten: true, afvoer: true,
     herkomst: onderzoek('6.3 [I14]: wc 110 mm, bad, douche en spoelbak 50 mm, lavabo 40 mm; afschot 0,5 tot 1,5 cm per meter (niet getekend)'),
-    klant: { naam: 'Afvoer', uitleg: 'Voert het gebruikte water van wc, lavabo, douche en keuken af naar de riolering.' },
+    klant: { naam: 'Afvoer', uitleg: 'Voert het gebruikte water af naar de riolering, bijvoorbeeld van de wc, een lavabo, een douche of de keuken.' },
   },
   regenwater: {
     label: 'Regenwater', vak: 'sanitair', kleur: '#2e7d32', vorm: 'rond', maten: [20, 26, 32], hoogte: 'vloer', naarBuiten: true,
     herkomst: onderzoek('6.3 [I16]: aparte leiding naar wc, wasmachine en buiten; kleur 6.6 [I22]'),
-    klant: { naam: 'Regenwater', uitleg: 'Leiding met regenwater uit de put, voor de wc, de wasmachine en de buitenkraan.' },
+    klant: { naam: 'Regenwater', uitleg: 'Leiding met regenwater uit de put, bijvoorbeeld voor de wc, de wasmachine of een buitenkraan.' },
   },
 };
 
