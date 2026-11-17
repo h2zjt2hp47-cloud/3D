@@ -159,6 +159,13 @@ export interface Blok {
    * niet en tekent het blok zoals altijd.
    */
   wijkt?: true | BlokVlak[];
+  /**
+   * Vlakken van een balk die helemaal tegen een ander stuk liggen (ronde 17; woning): de kijker tekent ze niet. Alleen
+   * waar de motor zeker is dat het stuk ernaast over het hele vlak massief is (de naad op de sokkelhoogte, de kopse kant
+   * van een stuk muur tegen de muur ernaast, de zijkant van het stuk onder of boven een raam tegen de muur ernaast); bij
+   * twijfel wijkt het vlak alleen (`wijkt`). Staat ook in `wijkt`. Een kijker van vóór ronde 17 tekent ze zoals altijd.
+   */
+  bedekt?: BlokVlak[];
 }
 
 /** Hoe een blok 's nachts licht geeft (zie `Blok.licht`). */
@@ -949,7 +956,9 @@ export function plaatsBlokken(blokken: Blok[], plaats: { x: number; y?: number; 
       for (const [k, w] of Object.entries(b.zijden)) n.zijden[k === 'y+' ? 'y+' : richting(k as 'x+')] = w;
     }
     // Ronde 17: de vlakken die wijken draaien mee (een zijde van een doorsnede en het boven- en ondervlak blijven).
-    if (Array.isArray(b.wijkt)) n.wijkt = b.wijkt.map((v) => (typeof v === 'number' || v === 'y+' || v === 'y-' ? v : richting(v)));
+    const draaiVlak = (v: BlokVlak): BlokVlak => (typeof v === 'number' || v === 'y+' || v === 'y-' ? v : richting(v));
+    if (Array.isArray(b.wijkt)) n.wijkt = b.wijkt.map(draaiVlak);
+    if (b.bedekt) n.bedekt = b.bedekt.map(draaiVlak);
     return n;
   });
 }

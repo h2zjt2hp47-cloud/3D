@@ -1332,6 +1332,12 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
    */
   const WIJKEN = { helling: 1, eenheden: 1 };
   const wijktVlak = (b: Blok, v: BlokVlak) => b.wijkt === true || (Array.isArray(b.wijkt) && b.wijkt.includes(v));
+  /**
+   * Een vlak van een balk dat helemaal tegen een ander stuk ligt (`Blok.bedekt`): niet tekenen (een groep met een
+   * onzichtbaar materiaal slaat three over, ook in de schaduwkaart). Waar de diepteverschuiving niet volstond: de kopse
+   * kant van een muur op een hoek, gezien in een gevel die je schuin ziet.
+   */
+  const onzichtbaar = new THREE.MeshBasicMaterial({ visible: false });
   function wijkend(m: any): any {
     if (!m || m.transmission || m.polygonOffset) return m;
     const sleutel = `wijkt:${m.uuid}`;
@@ -2168,10 +2174,12 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     if (b.textuur) { const tegel = { b: b.textuurCm ?? 15, h: b.textuurCm ?? 15 }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     else if (b.weefsel && b.weefsel in WEEFSEL_CM) { const cm = WEEFSEL_CM[b.weefsel as Weefsel]; const tegel = { b: cm, h: cm }; wereldUV(geo, [tegel, tegel, tegel, tegel, tegel, tegel], cx, b.y, cz); }
     let mat: any = materiaal(b);
-    if ((b.zijden || Array.isArray(b.wijkt)) && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
-      // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z. Ronde 17: een vlak dat wijkt, de wijkende versie.
+    if ((b.zijden || Array.isArray(b.wijkt) || b.bedekt) && !b.afronding && (b.vorm ?? 'blok') === 'blok') {
+      // Volgorde van de vlakken in BoxGeometry: +x, -x, +y, -y, +z, -z. Ronde 17: een vlak dat wijkt, de wijkende versie;
+      // een vlak dat bedekt is, niet.
       const z = b.zijden ?? {};
       const kies = (k: keyof NonNullable<Blok['zijden']> | 'y-') => {
+        if (b.bedekt?.includes(k)) return onzichtbaar;
         const m = k !== 'y-' && z[k] ? materiaal(z[k]!) : mat;
         return wijktVlak(b, k) ? wijkend(m) : m;
       };
