@@ -1320,24 +1320,26 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
 
   /**
    * Ronde 17 (17/11, woning): een vlak dat in de diepte wijkt (`Blok.wijkt`): het ligt binnen in de woning of tegen een
-   * ander stuk. Zonder grafische kaart (swiftshader, vier monsters per beeldpunt) kwam zo'n vlak dat je bijna op zijn kant
-   * ziet, langs zijn rand door de gevel ervoor: fijne lichte streepjes waar een binnenmuur de gevel raakt, boven en onder
-   * elk raam, op de sokkelhoogte en in de dakrand. Zonder die monsters was er geen streepje; een andere voorste grens van
-   * de camera of de blokken in wereldmaat veranderden niets. Het lijkt erop dat de diepte van zo'n vlak dan voor het hele
-   * beeldpunt in het midden berekend wordt, ook buiten het vlak, en daar komt een vlak op zijn kant ver naar voren.
-   * Daarom tekent de kijker het met een diepteverschuiving naar zijn helling (polygonOffset): hoe schuiner je het ziet, hoe
-   * verder het wijkt. Een vlak dat je recht ziet, verschuift nagenoeg niet. Hetzelfde materiaal (kleur, textuur, reliëf),
-   * een eigen kopie; glas wijkt nooit. Het buitenvlak van de gevel krijgt het nooit: met de verschuiving overal kwamen de
-   * binnenmuren juist langs de rand van een gevel die je schuin ziet naar voren (geprobeerd).
+   * ander stuk. Gemeten zonder grafische kaart (Chromium met swiftshader, de WebGL2-weg, vier monsters per beeldpunt): zulke
+   * vlakken kwamen langs hun rand als fijne lichte streepjes door de gevel ervoor (waar een binnenmuur de gevel raakt,
+   * boven en onder elk raam, op de sokkelhoogte, in de dakrand). Zonder die vier monsters was er geen enkel streepje; een
+   * verdere voorste grens van de camera of alle balken in wereldmaat veranderden niets. Waarom swiftshader dat doet, is
+   * niet uitgezocht; op een echte grafische kaart (de M5) is het niet nagekeken.
+   * Wat hielp: zo'n vlak tekenen met een diepteverschuiving naar zijn helling (polygonOffset, 1 en 1): hoe schuiner je het
+   * ziet, hoe verder het wijkt; een vlak dat je recht ziet, verschuift nagenoeg niet. Hetzelfde materiaal (een kopie);
+   * glas wijkt nooit. Wat niet hielp: de verschuiving op alle vlakken (dan kwamen de binnenmuren juist langs de rand van
+   * een gevel die je schuin ziet naar voren) en een sterkere verschuiving (4: dan door de ramen naar binnen). Wat dan nog
+   * bleef (op een hoek, in een gevel die je schuin ziet), lost `bedekt` op.
    */
   const WIJKEN = { helling: 1, eenheden: 1 };
   const wijktVlak = (b: Blok, v: BlokVlak) => b.wijkt === true || (Array.isArray(b.wijkt) && b.wijkt.includes(v));
   /**
-   * Een vlak van een balk dat helemaal tegen een ander stuk ligt (`Blok.bedekt`): niet tekenen (een groep met een
-   * onzichtbaar materiaal slaat three over, ook in de schaduwkaart). Waar de diepteverschuiving niet volstond: de kopse
-   * kant van een muur op een hoek, gezien in een gevel die je schuin ziet.
+   * Een vlak van een balk dat helemaal tegen een ander stuk ligt (`Blok.bedekt`): niet tekenen, wel in de schaduwkaart
+   * laten (het materiaal van een blok dat alleen schaduw werpt). Dat haalde de laatste streepjes weg, in een gevel die je
+   * schuin ziet: op een hoek, naast de kop van een binnenmuur, boven en onder een raam. Eerst helemaal weggelaten (ook uit
+   * de schaduw): dan kreeg de vloer die tot in de muur loopt daar zon, en zag je ze van boven als een lichte lijn langs de
+   * muur (beeld `bouw-zon`).
    */
-  const onzichtbaar = new THREE.MeshBasicMaterial({ visible: false });
   function wijkend(m: any): any {
     if (!m || m.transmission || m.polygonOffset) return m;
     const sleutel = `wijkt:${m.uuid}`;
@@ -2179,7 +2181,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       // een vlak dat bedekt is, niet.
       const z = b.zijden ?? {};
       const kies = (k: keyof NonNullable<Blok['zijden']> | 'y-') => {
-        if (b.bedekt?.includes(k)) return onzichtbaar;
+        if (b.bedekt?.includes(k)) return schaduwMateriaal;
         const m = k !== 'y-' && z[k] ? materiaal(z[k]!) : mat;
         return wijktVlak(b, k) ? wijkend(m) : m;
       };

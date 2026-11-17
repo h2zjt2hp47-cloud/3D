@@ -2234,7 +2234,11 @@ export interface Plan3DOpties {
    * binnenmuren, de vloeren en vloerplaten, de naden van de dakrand, en van de topgevel en de stukken onder een hellend dak
    * alles behalve hun buitenvlak. Zonder grafische kaart schemerden die vlakken als fijne lichte streepjes door de gevel.
    * Het buitenvlak van de gevel (ook de kop van een binnenmuur in de gevel en de kopse kant op een buitenhoek) wijkt nooit.
-   * Geen andere maten, codes of blokken. Uit = de blokken van vroeger.
+   * Wat helemaal tegen een ander stuk ligt, staat ook in `Blok.bedekt` (de kijker tekent het niet). Daarvoor zijn een paar
+   * stukken anders geknipt, zodat elk vlak ofwel vooraan ligt ofwel helemaal bedekt is: de kop van een binnenmuur in de
+   * gevel is een eigen stuk (`…_gevelkop`), net als de hoek van een buitenmuur (`…_hoek`), en een buitenmuur naast een
+   * opening is in banden geknipt op de hoogtes van die opening (`…_1`, `…_2`). Dezelfde plaats in de ruimte, dezelfde
+   * dingen en hetzelfde kader. Uit = de blokken van vroeger.
    */
   wijken?: boolean;
 }
