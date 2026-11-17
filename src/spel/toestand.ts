@@ -1,4 +1,5 @@
 // De toestand van een spel: alles wat bewaard wordt. Enkel gewone gegevens, zodat opslaan eenvoudig is.
+import type { Belasting, Gebouw } from './economie';
 
 export interface Factie {
   id: string;
@@ -17,6 +18,11 @@ export interface Factie {
   bestaat: boolean;
   /** aantal vakken bij de start */
   vakkenBijStart: number;
+  /** zilver in de schatkist */
+  schat: number;
+  belasting: Belasting;
+  /** netto inkomen van de vorige maand */
+  inkomenVorigeMaand: number;
 }
 
 export interface VakToestand {
@@ -31,6 +37,15 @@ export interface VakToestand {
   /** voortgang van een bezetting, 0 tot 1 */
   bezetting: number;
   bezetter: string | null;
+  /** 0 tot 100; laag = kans op opstand */
+  tevredenheid: number;
+  /** dag waarop de huidige eigenaar het vak kreeg */
+  sindsVerovering: number;
+  landbouw: number;
+  markt: number;
+  weg: number;
+  /** wat er gebouwd wordt en wanneer het klaar is */
+  bouw: { wat: Gebouw; klaar: number } | null;
 }
 
 export interface Leger {
@@ -66,7 +81,7 @@ export interface Keuze {
 }
 
 export interface Toestand {
-  versie: 1;
+  versie: 2;
   dag: number;
   zaad: number;
   speler: string;
@@ -135,4 +150,23 @@ export function vakkenVan(t: Toestand, f: string): number[] {
   const uit: number[] = [];
   t.vakken.forEach((v, i) => { if (v.eigenaar === f) uit.push(i); });
   return uit;
+}
+
+/** een bewaard spel van een oudere versie bijwerken; null als het niet kan */
+export function migreer(x: unknown): Toestand | null {
+  const t = x as Omit<Toestand, 'versie'> & { versie: number };
+  if (!t || typeof t !== 'object') return null;
+  if (t.versie === 1) {
+    for (const f of Object.values(t.facties)) Object.assign(f, { schat: 100, belasting: 'gewoon', inkomenVorigeMaand: 0 });
+    for (const v of t.vakken) Object.assign(v, { tevredenheid: v.eigenaar === v.oorsprong ? 60 : 35, sindsVerovering: 0, landbouw: 0, markt: 0, weg: 0, bouw: null });
+    t.versie = 2;
+  }
+  return t.versie === 2 ? (t as Toestand) : null;
+}
+
+/** naam in een zin: "Rome", maar "de Nerviërs" */
+export function wie(t: Toestand, f: string, hoofdletter = false): string {
+  const fac = t.facties[f];
+  if (fac.soort === 'rijk') return fac.naam;
+  return `${hoofdletter ? 'De' : 'de'} ${fac.naam}`;
 }

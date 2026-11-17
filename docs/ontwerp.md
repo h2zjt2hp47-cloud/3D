@@ -78,7 +78,8 @@ Elke stap eindigt met een bestand dat je kan openen en spelen.
 ### Stand (17/11/2026)
 - **Stap 1 is gebouwd**: `dist/belgica.html`. Kaart met 250 vakken, klok met pauze en vijf snelheden, twaalf volken (Rome, Remi, tien Belgische stammen en de Treveri), legers met moraal, veldslagen met terrein en rivieren, bezetting en belegering van versterkingen, uitputting, computerspelers, onderwerping en opstand, opvolging, drie vaste gebeurtenissen (de bond van 57, de opstand van Ambiorix in 54, nieuwe legioenen in 53) en een score.
 - Zelfde start, verschillende afloop: in vier proefoorlogen won Rome twee keer veel terrein, één keer half en één keer bleven de Belgen overeind.
-- Nog niet: economie, diplomatie en vrede, huwelijken, de tijd na 50 v.Chr.
+- **Stap 2 is gebouwd** (economie en bestuur): schatkist in zilver (een spelmunt), belastingdruk laag/gewoon/hoog, soldij per maand, oproepen kost geld, bouwen per vak (akkers, markt, versterking, en voor Rome de Romeinse weg), bevolkingsgroei en plundering, tevredenheid per vak met opstanden in veroverd land, schatting van onderworpen volken aan hun heer, een kaart van de tevredenheid. De bedragen zijn spelverhoudingen, geen historische waarden.
+- Nog niet: diplomatie en vrede, huwelijken en erfenis, de tijd na 50 v.Chr.
 
 ## 5. Opgelet
 

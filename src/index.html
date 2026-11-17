@@ -47,6 +47,15 @@ small { color: var(--zacht); }
 #paneel { position: fixed; top: 60px; right: 12px; width: 290px; max-height: calc(100% - 72px); overflow: auto; background: var(--paneel); border: 1px solid var(--rand); border-radius: 6px; padding: 12px 14px; z-index: 4; }
 #paneel h3 { margin: 0 0 4px; font-family: Georgia, serif; font-size: 17px; display: flex; align-items: center; }
 #paneel p { margin: 6px 0; }
+#paneel h4 { margin: 12px 0 4px; font-family: Georgia, serif; font-size: 14px; color: var(--goud); font-weight: 600; }
+.keuzes button.aan { background: #6b5526; border-color: var(--goud); }
+.lijn { font-size: 13px; padding: 3px 0; cursor: pointer; border-top: 1px solid rgba(255,255,255,0.06); }
+.lijn:hover { color: var(--goud); }
+button.bouw { display: flex; justify-content: space-between; gap: 8px; width: 100%; text-align: left; margin-top: 5px; font-size: 13px; }
+button.bouw > span:last-child { text-align: right; white-space: nowrap; }
+.balkje { display: inline-block; width: 60px; height: 6px; background: #111; border-radius: 3px; overflow: hidden; vertical-align: 1px; }
+.balkje i { display: block; height: 100%; }
+.rood { color: #ff8a70; }
 #paneel .klein, .klein { font-size: 12.5px; color: var(--zacht); }
 #paneel a { color: var(--goud); }
 #paneel table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0; }
@@ -90,6 +99,8 @@ small { color: var(--zacht); }
   #balk { gap: 8px; padding: 0 8px; }
   #balk .cijfers, #balk .wie small, #balk .wie b { display: none; }
   #balk .wie { flex: none; }
+  #balk .breed { display: none; }
+  #paneel { max-height: 55%; }
   #balk .klok { flex: 1; justify-content: center; }
   #balk .datum { min-width: 0; font-size: 12px; }
   #balk .snelheden button:nth-child(n+4) { display: none; }

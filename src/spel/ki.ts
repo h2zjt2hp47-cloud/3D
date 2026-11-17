@@ -1,6 +1,7 @@
 // De computerspelers: eenvoudige regels, om de paar dagen per factie.
 import { kaart as standaardKaart, type Kaart } from '../kaart/kaart';
 import { bereik, geefBevel, kracht, roepOp, voegSamen, zoekPad } from './regels';
+import { OPROEPKOST, rekening, SOLDIJ } from './economie';
 import { bevriend, inOorlog, legersIn, vakkenVan, type Leger, type Toestand } from './toestand';
 
 export function kiBeurt(t: Toestand, f: string, k: Kaart = standaardKaart) {
@@ -11,9 +12,13 @@ export function kiBeurt(t: Toestand, f: string, k: Kaart = standaardKaart) {
 
   // oproepen
   const eigenSterkte = eigen.reduce((s, l) => s + l.sterkte, 0);
-  if (fac.mankracht >= 2000 && (vijanden.length || eigenSterkte < 2000)) {
+  // oproepen als er mannen en geld zijn, en de soldij betaalbaar blijft
+  const r = rekening(t, f, k);
+  const betaalbaar = Math.floor(((r.belasting + r.steun + r.schatting + r.soldij) / SOLDIJ[fac.soort]) * 1000 / 100) * 100;
+  const max = Math.min(Math.floor(fac.mankracht / 100) * 100, 6000, Math.floor(fac.schat / OPROEPKOST * 1000 / 100) * 100, vijanden.length ? Math.max(betaalbaar, 0) + 2000 : betaalbaar);
+  if (max >= 2000 && (vijanden.length || eigenSterkte < 2000)) {
     const vak = oproepVak(t, k, f);
-    if (vak !== null) roepOp(t, f, vak, Math.min(Math.floor(fac.mankracht / 100) * 100, 6000));
+    if (vak !== null) roepOp(t, f, vak, max);
   }
   if (!vijanden.length) return;
 

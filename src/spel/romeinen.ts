@@ -92,7 +92,10 @@ export function nieuwSpel(speler: string, zaad = 57, k: Kaart = standaardKaart):
     }
     const t = TERREIN[v.terrein];
     const bevolking = Math.round((t.bevolking * (v.oppervlakte / 235) * (v.rivier ? 1.15 : 1)) / 100) * 100;
-    return { eigenaar: beste.id, oorsprong: beste.id, bevolking, fort: 0, fortNaam: null, garnizoen: 0, bezetting: 0, bezetter: null };
+    return {
+      eigenaar: beste.id, oorsprong: beste.id, bevolking, fort: 0, fortNaam: null, garnizoen: 0, bezetting: 0, bezetter: null,
+      tevredenheid: 65, sindsVerovering: 0, landbouw: 0, markt: 0, weg: 0, bouw: null,
+    };
   });
   for (const f of VERSTERKINGEN) {
     const v = vakBij(k, f.ligging[0], f.ligging[1]);
@@ -108,11 +111,12 @@ export function nieuwSpel(speler: string, zaad = 57, k: Kaart = standaardKaart):
     facties[id] = {
       id, naam: s.naam, kleur: s.kleur, kwaliteit: s.kwaliteit, soort: s.soort, heerser: s.heerser, beschrijving: s.beschrijving,
       hoofdstad, mankracht: id === 'rome' ? 6000 : Math.round(volk * 0.02), heer: null, bestaat: true, vakkenBijStart: eigen.length,
+      schat: id === 'rome' ? 250 : Math.round(volk / 1000 * 0.5 * 3), belasting: 'gewoon', inkomenVorigeMaand: 0,
     };
   }
 
   const t: Toestand = {
-    versie: 1, dag: 0, zaad, speler, facties, vakken, legers: [], volgendLeger: 1,
+    versie: 2, dag: 0, zaad, speler, facties, vakken, legers: [], volgendLeger: 1,
     oorlog: [], bond: [], berichten: [], gedaan: [], wachtend: [], onderwerpVraagNa: 0,
   };
 

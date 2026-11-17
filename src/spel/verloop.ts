@@ -3,10 +3,11 @@
 import { kaart as standaardKaart, type Kaart } from '../kaart/kaart';
 import { datumVan, dagnummerVan, jaarTekst } from './kalender';
 import { kiBeurt } from './ki';
+import { kiEconomie, maandEconomie } from './economie';
 import { dagStap, verdwijn } from './regels';
 import { ingangVanRome, nieuwLeger } from './romeinen';
 import {
-  hoofd, inOorlog, kans, legersIn, meld, paar, sluitVrede, vakkenVan, verklaarOorlog,
+  hoofd, inOorlog, kans, legersIn, meld, paar, sluitVrede, vakkenVan, verklaarOorlog, wie,
   type Keuze, type Toestand,
 } from './toestand';
 
@@ -119,7 +120,7 @@ function onderwerp(t: Toestand, f: string, heer: string) {
   for (const p of [...t.oorlog]) if (p.split('|').includes(f)) t.oorlog = t.oorlog.filter((x) => x !== p);
   t.bond = t.bond.filter((p) => !p.split('|').includes(f));
   for (const l of t.legers) if (l.factie === f) { l.sterkte = Math.min(l.sterkte, 1500); l.pad = []; }
-  meld(t, `De ${fac.naam} onderwerpen zich aan ${t.facties[heer].naam}.`, 'gebeurtenis');
+  meld(t, `${wie(t, f, true)} onderwerpen zich aan ${wie(t, heer)}.`, 'gebeurtenis');
 }
 
 export function komInOpstand(t: Toestand, k: Kaart, f: string, leger: number): boolean {
@@ -143,7 +144,7 @@ export function komInOpstand(t: Toestand, k: Kaart, f: string, leger: number): b
   if (!eigen.length) return false;
   const plek = fac.hoofdstad !== null && eigen.includes(fac.hoofdstad) ? fac.hoofdstad : eigen[0];
   nieuwLeger(t, f, plek, leger, `Opstand van de ${fac.naam}`);
-  meld(t, `De ${fac.naam} komen in opstand tegen ${t.facties[heer].naam}.`, 'gebeurtenis', plek);
+  meld(t, `${wie(t, f, true)} komen in opstand tegen ${wie(t, heer)}.`, 'gebeurtenis', plek);
   return true;
 }
 
@@ -158,6 +159,8 @@ export function spelerOpstand(t: Toestand, k: Kaart) {
 
 function maandelijks(t: Toestand, k: Kaart) {
   const d = datumVan(t.dag);
+  maandEconomie(t, k);
+  for (const f of Object.keys(t.facties)) if (f !== t.speler) kiEconomie(t, f, k);
   // Rome krijgt elk voorjaar versterking als het weinig troepen heeft
   if (d.maand === 3) {
     const romeins = t.legers.filter((l) => l.factie === 'rome').reduce((s, l) => s + l.sterkte, 0);
@@ -229,7 +232,7 @@ export function score(t: Toestand, f: string) {
   const leger = t.legers.filter((l) => l.factie === f).reduce((s, l) => s + l.sterkte, 0);
   const fac = t.facties[f];
   return {
-    welvaart: Math.round(volk / 10000),
+    welvaart: Math.round(volk / 10000 + Math.max(0, fac.schat) / 100),
     macht: Math.round(leger / 1000 + eigen.length * 0.5),
     vrijheid: !fac.bestaat ? 0 : fac.heer ? 30 : 100,
   };

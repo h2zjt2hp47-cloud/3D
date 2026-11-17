@@ -9,7 +9,7 @@ Eigen strategiespel (doorlopende klok met pauze, kaart met vakken) over het gebi
 - De configurator zelf staat op `claude/vigilant-cray-yi2j33`: daar niets aan veranderen vanuit dit spel.
 
 ## Stand
-- Stap 1 (de Romeinen, oorlog) is gebouwd; zie `LEESMIJ.md` voor de opbouw en `docs/ontwerp.md` (Stand) voor wat er nog niet is.
+- Stap 1 (de Romeinen, oorlog) en stap 2 (economie en bestuur) zijn gebouwd; zie `LEESMIJ.md` voor de opbouw en `docs/ontwerp.md` (Stand) voor wat er nog niet is.
 
 ## Werkwijze
 - TypeScript, in de browser, gebundeld tot één HTML-bestand om te openen. Niets van een CDN laden.

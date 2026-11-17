@@ -3,7 +3,7 @@ import { TERREIN, type Kaart, type Punt, type Terrein } from '../kaart/kaart';
 import { kracht } from '../spel/regels';
 import { inOorlog, type Leger, type Toestand } from '../spel/toestand';
 
-export type Kaartsoort = 'politiek' | 'terrein';
+export type Kaartsoort = 'politiek' | 'terrein' | 'tevredenheid';
 
 const TERREINKLEUR: Record<Terrein, string> = {
   vlakte: '#cdd29a', heide: '#d6c493', heuvels: '#b9b07e', bos: '#7f9e68', ardennen: '#6f845a', moeras: '#93b5a6',
@@ -119,7 +119,7 @@ export class Kaartbeeld {
     k.vakken.forEach((v, i) => {
       const e = t.vakken[i].eigenaar;
       const f = t.facties[e];
-      let kleur = this.soort === 'terrein' ? TERREINKLEUR[v.terrein] : f.kleur;
+      let kleur = this.soort === 'terrein' ? TERREINKLEUR[v.terrein] : this.soort === 'tevredenheid' ? tevredenheidKleur(t.vakken[i].tevredenheid) : f.kleur;
       if (this.soort === 'politiek' && f.heer) kleur = meng(f.kleur, t.facties[f.heer].kleur, 0.35);
       ctx.fillStyle = kleur;
       for (const p of this.vakPaden[i]) ctx.fill(p);
@@ -238,6 +238,14 @@ export class Kaartbeeld {
 
   private tekenVersterkingen(t: Toestand) {
     const { ctx, k } = this;
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    t.vakken.forEach((v, i) => {
+      if (!v.bouw || v.eigenaar !== t.speler) return;
+      const [sx, sy] = this.naarScherm(k.vakken[i].midden);
+      ctx.fillText('🔨', sx + 26, sy);
+    });
     t.vakken.forEach((v, i) => {
       if (!v.fort) return;
       const [sx, sy] = this.naarScherm(k.vakken[i].midden);
@@ -353,6 +361,12 @@ function spatieer(s: string) {
 function hex(k: string): [number, number, number] {
   const n = parseInt(k.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/** rood (ontevreden) over geel naar groen (tevreden) */
+function tevredenheidKleur(x: number): string {
+  const f = Math.max(0, Math.min(1, x / 100));
+  return f < 0.5 ? meng('#b8452f', '#d9c35a', f * 2) : meng('#d9c35a', '#5f9e55', (f - 0.5) * 2);
 }
 
 function meng(a: string, b: string, f: number): string {

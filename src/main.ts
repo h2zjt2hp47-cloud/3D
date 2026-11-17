@@ -1,11 +1,14 @@
 // Belgica: het scherm, de klok en de bediening.
 import { kaart, TERREIN } from './kaart/kaart';
 import { datumTekst, seizoenVan } from './spel/kalender';
-import { geefBevel, roepOp, splits, voegSamen } from './spel/regels';
+import { geefBevel, oproepKost, roepOp, splits, voegSamen } from './spel/regels';
+import { BELASTING, bouw, GEBOUWEN, inkomenVak, kanBouwen, niveau, rekening, tevredenheidDoel, type Belasting, type Gebouw } from './spel/economie';
 import { nieuwSpel, STAMMEN } from './spel/romeinen';
-import { bevriend, inOorlog, legersIn, vakkenVan, type Leger, type Toestand } from './spel/toestand';
+import { bevriend, inOorlog, legersIn, migreer, vakkenVan, type Leger, type Toestand } from './spel/toestand';
 import { kies, score, spelerOpstand, vasteGebeurtenissen, volgendeDag } from './spel/verloop';
-import { Kaartbeeld, kort, type Selectie } from './ui/kaartbeeld';
+import { Kaartbeeld, kort, type Kaartsoort, type Selectie } from './ui/kaartbeeld';
+
+const KAARTNAAM: Record<Kaartsoort, string> = { politiek: 'volken', terrein: 'terrein', tevredenheid: 'tevredenheid' };
 
 const OPSLAG = 'belgica-spel-1';
 const DAGEN_PER_SECONDE = [0, 1, 3, 8, 20, 60];
@@ -20,6 +23,12 @@ let laatsteSnelheid = 2;
 let opgespaard = 0;
 const sel: Selectie = { legers: [], vak: null };
 let paneelVuil = true;
+let laatstePaneel = 0;
+let muisOpPaneel = false;
+for (const id of ['#paneel', '#balk', '#berichten']) {
+  $(id).addEventListener('pointerdown', () => { muisOpPaneel = true; });
+}
+window.addEventListener('pointerup', () => { setTimeout(() => { muisOpPaneel = false; }, 0); });
 
 // ---------- opslaan ----------
 function bewaar() {
@@ -30,8 +39,7 @@ function laadBewaard(): Toestand | null {
   try {
     const s = localStorage.getItem(OPSLAG);
     if (!s) return null;
-    const x = JSON.parse(s) as Toestand;
-    return x.versie === 1 ? x : null;
+    return migreer(JSON.parse(s));
   } catch { return null; }
 }
 
@@ -114,7 +122,11 @@ function frame(nu: number) {
   }
   if (t) {
     beeld.teken(t, sel, nu);
-    if (paneelVuil) { werkBalkBij(); werkPaneelBij(); werkBerichtenBij(); paneelVuil = false; }
+    if (paneelVuil && !muisOpPaneel && nu - laatstePaneel > (snelheid ? 300 : 0)) {
+      werkBalkBij(); werkPaneelBij(); werkBerichtenBij();
+      paneelVuil = false;
+      laatstePaneel = nu;
+    }
   }
   requestAnimationFrame(frame);
 }
@@ -125,6 +137,7 @@ function werkBalkBij() {
   const f = t.facties[t.speler];
   const s = score(t, t.speler);
   const seizoen = seizoenVan(t.dag);
+  const netto = rekening(t, t.speler, kaart).netto;
   $('#balk').innerHTML = `
     <div class="wie"><span class="kleur" style="background:${f.kleur}"></span><span><b>${f.naam}</b><small>${f.heerser}${f.heer ? ` · onderworpen aan ${t.facties[f.heer].naam}` : ''}</small></span></div>
     <div class="klok">
@@ -133,18 +146,23 @@ function werkBalkBij() {
       <div class="snelheden">${[1, 2, 3, 4, 5].map((n) => `<button data-s="${n}" class="${(snelheid || -1) === n ? 'aan' : ''}" title="Snelheid ${n} (toets ${n})">${'›'.repeat(Math.min(n, 3))}${n > 3 ? n : ''}</button>`).join('')}</div>
     </div>
     <div class="cijfers">
+      <span title="Zilver in de schatkist (netto per maand)" class="${f.schat < 0 ? 'rood' : ''}">🪙 ${Math.round(f.schat)} <small>${netto >= 0 ? '+' : ''}${Math.round(netto)}</small></span>
       <span title="Mannen die je nog kan oproepen">🛡️ ${kort(f.mankracht)}</span>
       <span title="Welvaart">🌾 ${s.welvaart}</span>
       <span title="Macht">⚔️ ${s.macht}</span>
       <span title="Vrijheid">🕊️ ${s.vrijheid}</span>
     </div>
     <div class="knoppen">
-      <button id="soort">${beeld.soort === 'politiek' ? 'Terrein' : 'Volken'}</button>
+      <button id="soort" title="Wissel de kaart">Kaart<span class="breed">: ${KAARTNAAM[beeld.soort]}</span></button>
       <button id="menu">Menu</button>
     </div>`;
   $('#balk .speel').addEventListener('click', () => zetSnelheid(snelheid ? 0 : laatsteSnelheid));
   $('#balk').querySelectorAll<HTMLButtonElement>('[data-s]').forEach((b) => b.addEventListener('click', () => zetSnelheid(Number(b.dataset.s))));
-  $('#soort').addEventListener('click', () => { beeld.soort = beeld.soort === 'politiek' ? 'terrein' : 'politiek'; paneelVuil = true; });
+  $('#soort').addEventListener('click', () => {
+    const soorten = Object.keys(KAARTNAAM) as Kaartsoort[];
+    beeld.soort = soorten[(soorten.indexOf(beeld.soort) + 1) % soorten.length];
+    paneelVuil = true;
+  });
   $('#menu').addEventListener('click', toonMenu);
 }
 
@@ -167,6 +185,9 @@ function toonUitleg() {
       <li>Een leger in vijandelijk land bezet het vak na een tijd. Een versterking moet je belegeren tot het garnizoen op is.</li>
       <li>Legers met lage moraal (de balk onder de fiche) trekken zich terug. Op eigen grond herstellen ze.</li>
       <li>Te veel soldaten in één vak raken uitgeput, zeker in de winter.</li>
+      <li><b>Zilver</b> komt uit belastingen. Legers kosten elke maand soldij, en oproepen kost ook geld. Raakt de schatkist leeg, dan verliezen je legers moed.</li>
+      <li>Klik op een eigen vak om te <b>bouwen</b>: akkers (meer volk), een markt (meer handel) of een versterking.</li>
+      <li><b>Tevredenheid</b> daalt door hoge belastingen, vreemd bestuur en plunderende legers. Een veroverd vak dat te ontevreden is, komt in opstand. Een eigen leger in het vak houdt de orde.</li>
       <li>Verlies je je hoofdplaats en de helft van je land, dan kan je je onderwerpen aan Rome. Verdwijnt je volk, dan speel je verder als wie je land heeft.</li>
     </ul>`, [['Sluiten', () => {}]]);
 }
@@ -184,10 +205,43 @@ function werkPaneelBij() {
     <h3>${f.naam}</h3>
     <p class="klein">${f.beschrijving}</p>
     <p>${vakkenVan(t, f.id).length} vakken · ${t.legers.filter((l) => l.factie === f.id).length} legers</p>
+    ${schatkist()}
     ${f.heer ? `<button id="opstand" class="gevaar">In opstand komen tegen ${t.facties[f.heer].naam}</button>` : ''}
     <p class="klein">Klik op een leger of een vak. <a href="#" id="uitleg">Hoe speel je?</a></p>`;
   $('#uitleg').addEventListener('click', (e) => { e.preventDefault(); toonUitleg(); });
+  document.querySelectorAll<HTMLButtonElement>('[data-bel]').forEach((b) => b.addEventListener('click', () => {
+    t!.facties[t!.speler].belasting = b.dataset.bel as Belasting;
+    paneelVuil = true;
+  }));
+  document.querySelectorAll<HTMLElement>('[data-ganaar]').forEach((b) => b.addEventListener('click', () => {
+    const v = Number(b.dataset.ganaar);
+    beeld.camera.x = kaart.vakken[v].midden[0]; beeld.camera.y = kaart.vakken[v].midden[1];
+    sel.vak = v; sel.legers = []; paneelVuil = true;
+  }));
   $('#opstand')?.addEventListener('click', () => { if (spelerOpstand(t!, kaart)) paneelVuil = true; });
+}
+
+function schatkist(): string {
+  const f = t!.facties[t!.speler];
+  const r = rekening(t!, f.id, kaart);
+  const getal = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(Math.round(x))}`;
+  const eigen = vakkenVan(t!, f.id);
+  const bezig = eigen.filter((i) => t!.vakken[i].bouw);
+  const onrustig = eigen.filter((i) => t!.vakken[i].tevredenheid < 30).sort((a, b) => t!.vakken[a].tevredenheid - t!.vakken[b].tevredenheid);
+  return `
+    <h4>Schatkist: 🪙 ${Math.round(f.schat)}</h4>
+    <table>
+      <tr><td>Belastingen</td><td>${getal(r.belasting)} per maand</td></tr>
+      ${r.steun ? `<tr><td>Steun uit Rome</td><td>${getal(r.steun)}</td></tr>` : ''}
+      ${r.schatting ? `<tr><td>${r.schatting < 0 ? 'Schatting aan je heer' : 'Schatting van onderworpen volken'}</td><td>${getal(r.schatting)}</td></tr>` : ''}
+      <tr><td>Soldij</td><td>${getal(r.soldij)}</td></tr>
+      <tr><td><b>Netto</b></td><td><b>${getal(r.netto)}</b></td></tr>
+    </table>
+    ${f.heer ? '' : `<p class="klein">Belastingdruk:</p>
+    <div class="rij keuzes">${(Object.keys(BELASTING) as Belasting[]).map((b) => `<button data-bel="${b}" class="${f.belasting === b ? 'aan' : ''}">${BELASTING[b].naam}</button>`).join('')}</div>
+    <p class="klein">Hoog brengt de helft meer op, maar maakt het volk ontevreden. Laag kost geld en kalmeert.</p>`}
+    ${bezig.length ? `<h4>In aanbouw</h4>${bezig.map((i) => `<div class="lijn" data-ganaar="${i}">${GEBOUWEN[t!.vakken[i].bouw!.wat].naam} in ${kaart.vakken[i].naam} <small>nog ${t!.vakken[i].bouw!.klaar - t!.dag} dagen</small></div>`).join('')}` : ''}
+    ${onrustig.length ? `<h4>Onrustig</h4>${onrustig.slice(0, 6).map((i) => `<div class="lijn" data-ganaar="${i}">${kaart.vakken[i].naam} <small>tevredenheid ${Math.round(t!.vakken[i].tevredenheid)}</small></div>`).join('')}` : ''}`;
 }
 
 function legerPaneel(legers: Leger[]): string {
@@ -232,6 +286,7 @@ function vakPaneel(i: number): string {
   const eigen = s.eigenaar === t!.speler && !e.heer;
   const legers = legersIn(t!, i);
   const mk = t!.facties[t!.speler].mankracht;
+  const zilver = t!.facties[t!.speler].schat;
   return `
     <h3><span class="kleur" style="background:${e.kleur}"></span>${v.naam}</h3>
     <p class="klein">Vandaag: ${v.gebied}</p>
@@ -239,18 +294,47 @@ function vakPaneel(i: number): string {
       <tr><td>Eigenaar</td><td>${e.naam}${e.heer ? ` (onder ${t!.facties[e.heer].naam})` : ''}</td></tr>
       <tr><td>Oorspronkelijk</td><td>${t!.facties[s.oorsprong].naam}</td></tr>
       <tr><td>Terrein</td><td>${TERREIN[v.terrein].naam}${v.rivier ? ', aan een rivier' : ''}${v.kust ? ', aan zee' : ''}</td></tr>
-      <tr><td>Bevolking</td><td>${s.bevolking.toLocaleString('nl-BE')}</td></tr>
+      <tr><td>Bevolking</td><td>${Math.round(s.bevolking).toLocaleString('nl-BE')}</td></tr>
+      <tr><td>Tevredenheid</td><td><span class="balkje"><i style="width:${s.tevredenheid}%;background:${tevKleur(s.tevredenheid)}"></i></span> ${Math.round(s.tevredenheid)} <small>→ ${Math.round(tevredenheidDoel(t!, i))}</small></td></tr>
+      <tr><td>Opbrengst</td><td>🪙 ${inkomenVak(t!, kaart, i).toFixed(1).replace('.', ',')} per maand</td></tr>
+      <tr><td>Gebouwd</td><td>${gebouwd(i)}</td></tr>
       <tr><td>Verdediging</td><td>×${TERREIN[v.terrein].verdediging.toFixed(2).replace('.', ',')}</td></tr>
       ${s.fort ? `<tr><td>Versterking</td><td>${s.fortNaam}: ${Math.round(s.garnizoen)} / ${s.fort}</td></tr>` : ''}
       ${s.bezetter ? `<tr><td>Bezetting</td><td>${t!.facties[s.bezetter].naam}, ${Math.round(s.bezetting * 100)}%</td></tr>` : ''}
       <tr><td>Legers</td><td>${legers.length ? legers.map((l) => `${t!.facties[l.factie].naam} ${kort(l.sterkte)}`).join('<br>') : 'geen'}</td></tr>
     </table>
     ${eigen ? `
-      <p class="klein">Oproepen (je hebt ${kort(mk)} man):</p>
-      <div class="rij">${[2000, 5000].map((n) => `<button data-op="${n}" ${mk < n ? 'disabled' : ''}>${kort(n)} oproepen</button>`).join('')}</div>` : ''}`;
+      <h4>Oproepen</h4>
+      <p class="klein">Je hebt ${kort(mk)} man en 🪙 ${Math.round(zilver)}.</p>
+      <div class="rij">${[2000, 5000].map((n) => `<button data-op="${n}" ${mk < n || zilver < oproepKost(n) ? 'disabled' : ''}>${kort(n)} oproepen <small>🪙 ${oproepKost(n)}</small></button>`).join('')}</div>
+      <h4>Bouwen</h4>
+      ${s.bouw ? `<p class="klein">Bezig: ${GEBOUWEN[s.bouw.wat].naam}, nog ${s.bouw.klaar - t!.dag} dagen.</p>` : ''}
+      ${(Object.keys(GEBOUWEN) as Gebouw[]).filter((g) => !GEBOUWEN[g].enkelRijk || e.soort === 'rijk').map((g) => {
+        const nee = kanBouwen(t!, t!.speler, i, g);
+        const info = GEBOUWEN[g];
+        return `<button class="bouw" data-bouw="${g}" ${nee ? `disabled title="${nee}"` : ''}><span><b>${info.naam}</b> <small>${niveau(s, g)}/${info.max}</small><br><small>${info.uitleg}</small></span><span>🪙 ${info.kost}<br><small>${info.dagen} d</small></span></button>`;
+      }).join('')}` : ''}`;
+}
+
+function gebouwd(i: number): string {
+  const s = t!.vakken[i];
+  const delen: string[] = [];
+  if (s.landbouw) delen.push(`akkers ${s.landbouw}`);
+  if (s.markt) delen.push('markt');
+  if (s.weg) delen.push('Romeinse weg');
+  if (s.fort) delen.push('versterking');
+  return delen.join(', ') || 'niets';
+}
+
+function tevKleur(x: number): string {
+  return x < 30 ? '#d0543c' : x < 50 ? '#e0b84a' : '#7bc96f';
 }
 
 function koppelVakKnoppen(i: number) {
+  document.querySelectorAll<HTMLButtonElement>('[data-bouw]').forEach((b) => b.addEventListener('click', () => {
+    bouw(t!, t!.speler, i, b.dataset.bouw as Gebouw);
+    paneelVuil = true;
+  }));
   document.querySelectorAll<HTMLButtonElement>('[data-op]').forEach((b) => b.addEventListener('click', () => {
     const l = roepOp(t!, t!.speler, i, Number(b.dataset.op));
     if (l) { sel.legers = [l.id]; sel.vak = null; }
