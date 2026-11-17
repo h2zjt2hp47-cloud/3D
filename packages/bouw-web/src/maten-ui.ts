@@ -4,8 +4,9 @@
  * - het paneel *Ruimte met maten*: een rechthoek (twee maten, de overkant volgt) of een vrije vorm (vier zijden en een
  *   diagonaal, zoals een inmeter meet), gemeten aan de buiten- of binnenkant, tegen een gevel van de woning op een
  *   gemeten afstand, los ervan, of als nieuw project; de schets en de tekening tonen de vorm meteen;
- * - een kleine maatvraag op de tekening (`vraagMaat`): na een tik op een maat, of na het plaatsen van een raam, deur of
- *   wand, een veld (of twee) om de maat in cm te typen. Wat je typt, zie je meteen; Enter of OK sluit, Esc zet terug.
+ * - een kleine maatvraag boven de tekening (`vraagMaat`): na een tik op een maat, of na het plaatsen van een raam, deur,
+ *   wand of toestel, een veld (of twee) om de maat in cm te typen. Wat je typt, zie je meteen; Enter of OK sluit, Esc zet
+ *   terug. Ze ligt nooit op de tekening (16/11): de volgende tik op de tekening telt gewoon (en sluit de vraag).
  * Elke maat leest `leesMaat` ("450", "4,5 m", "300+150"); een maat die begint met + of − telt bij de huidige op.
  * De meetkunde staat in de motor (`core/src/maatinvoer.ts`).
  */
@@ -31,7 +32,7 @@ import {
 } from '../../core/src/index.js';
 import { leesMaat } from '../../core/voorbeelden/snelstart.js';
 import { $, el, getal, keuzelijst } from './hulp.js';
-import { legeToestand, nieuweId, nieuwProject, toestand, wijzig, type Toestand } from './staat.js';
+import { legeToestand, nieuweId, nieuwProject, ongedaan, toestand, wijzig, type Toestand } from './staat.js';
 
 // ---------- een maat lezen ----------
 
@@ -69,8 +70,11 @@ export interface MatenOmgeving {
   opnieuw: () => void;
   /** Na het plaatsen: de nieuwe ruimte kiezen, een melding tonen en terug naar Selecteren. */
   geplaatst: (ruimteId: string, melding: string) => void;
-  /** Het vak rond de tekening (voor de maatvraag) en de tekening zelf. */
-  vlak: () => HTMLElement;
+  /**
+   * De kaart met de tekening: de maatvraag staat erin, boven de tekening (over de knoppen van de weergave en het zoomen),
+   * nooit op de tekening zelf. En de tekening zelf.
+   */
+  kaart: () => HTMLElement;
   svg: () => SVGSVGElement | null;
   /** Het paneel ging dicht (bv. met Sluiten): het gereedschap terug naar Selecteren. */
   dicht: () => void;
@@ -82,17 +86,7 @@ export function startMaten(o: MatenOmgeving) {
   omg = o;
 }
 
-/** Plaats op het scherm (in het vak rond de tekening) van een punt van het plan. */
-function opScherm(p: Punt): { x: number; y: number } | undefined {
-  const svg = omg?.svg(), vlak = omg?.vlak();
-  const m = svg?.getScreenCTM();
-  if (!svg || !m || !vlak) return undefined;
-  const q = new DOMPoint(p[0], p[1]).matrixTransform(m);
-  const r = vlak.getBoundingClientRect();
-  return { x: q.x - r.left, y: q.y - r.top };
-}
-
-// ---------- de maatvraag op de tekening ----------
+// ---------- de maatvraag boven de tekening ----------
 
 export interface MaatVraagVeld {
   code: string;
@@ -102,9 +96,12 @@ export interface MaatVraagVeld {
   min?: number;
   max?: number;
 }
+/**
+ * Een maatvraag. Ze staat altijd boven de tekening, over de hele breedte (16/11, doorloop A7): vroeger stond ze ernaast op
+ * de tekening en ving ze de volgende tik op (een tweede stopcontact, de technische ruimte). Wat ze wijzigt, is in de
+ * tekening gekozen (blauw).
+ */
 export interface MaatVraag {
-  /** Waar ze staat: een punt van het plan, of een plaats op het scherm (een aangetikte maat). */
-  anker: Punt | DOMRect;
   titel: string;
   velden: MaatVraagVeld[];
   /** Keuze welke kant beweegt of van waar je meet (bv. links of rechts), met de gekozen kant. */
@@ -129,13 +126,8 @@ export interface MaatVraag {
    * na elke tik het toetsenbord over de tekening, en wie niets typt, wil snel verder tekenen.
    */
   meteenTypen?: boolean;
-  /**
-   * In de hoek van de tekening aan de andere kant van het anker, niet ernaast (techniek, ronde 10b): wie na het plaatsen
-   * van een toestel meteen het volgende plaatst, tikt vlak naast het vorige; daar mag de vraag niet in de weg staan.
-   */
-  ver?: boolean;
 }
-let vraag: { v: MaatVraag; doos: HTMLElement; toegepast: boolean; kant?: string } | undefined;
+let vraag: { v: MaatVraag; doos: HTMLElement; toegepast: boolean; kant?: string; waarnemer?: ResizeObserver } | undefined;
 /** Waar tijdens het toepassen van de maatvraag zelf (dan sluit een wijziging van het plan ze niet). */
 let bezig = false;
 
@@ -147,61 +139,40 @@ export function sluitMaatVraag(bevestig = true) {
   const q = vraag;
   if (!q) return;
   vraag = undefined;
+  q.waarnemer?.disconnect();
   q.doos.remove();
   if (!bevestig && q.toegepast) q.v.terug();
   q.v.na?.();
 }
 
-/** Zet de maatvraag weer bij haar anker (na het hertekenen of zoomen). */
+/**
+ * Zet de maatvraag boven de tekening, nooit erop (na het hertekenen, zoomen of een andere maat): haar onderkant net boven
+ * de tekening, over de knoppen van de weergave en het zoomen. Is ze hoger dan die strook (een losse wand met drie maten,
+ * een melding erbij), dan loopt ze verder naar boven, tot de bovenkant van het venster (in het groot scherm tot de
+ * bovenkant van de kaart, die daar zelf scrolt). Zo blijft de tekening vrij voor de volgende tik, en ook op een tablet
+ * staand met het toetsenbord open staat de vraag boven wat ze wijzigt (onder de tekening kan het toetsenbord erover komen).
+ */
 export function plaatsMaatVraag() {
   if (!vraag || !omg) return;
-  const { v, doos } = vraag;
-  const vlak = omg.vlak();
-  if (!doos.isConnected) vlak.append(doos);
-  let x: number, y: number, h = 0;
-  if (Array.isArray(v.anker)) {
-    const p = opScherm(v.anker);
-    if (!p) return;
-    ({ x, y } = p);
-  } else {
-    const r = vlak.getBoundingClientRect();
-    x = v.anker.left + v.anker.width / 2 - r.left;
-    y = v.anker.top + v.anker.height / 2 - r.top;
-    h = v.anker.height / 2;
-  }
-  const b = doos.offsetWidth || 260, d = doos.offsetHeight || 140;
-  const W = vlak.clientWidth, H = vlak.clientHeight;
-  if (v.ver) {
-    doos.style.left = `${x < W / 2 ? Math.max(4, W - b - 4) : 4}px`;
-    doos.style.top = `${y < H / 2 ? Math.max(4, H - d - 4) : 4}px`;
-    return;
-  }
-  // Naast het anker als er plaats is (dan blijft wat je wijzigt in beeld), anders eronder of erboven.
-  const marge = 28 + (Array.isArray(v.anker) ? 0 : v.anker.width / 2);
-  const rechts = x + marge, links = x - marge - b;
-  let l: number, t: number;
-  if (rechts + b <= W - 4 || links >= 4) {
-    l = rechts + b <= W - 4 && (x < W / 2 || links < 4) ? rechts : links;
-    t = Math.max(4, Math.min(H - d - 4, y - d / 2));
-  } else {
-    l = Math.max(4, Math.min(W - b - 4, x - b / 2));
-    const onder = y + h + 18;
-    t = onder + d > H && y - h - 18 - d > 0 ? y - h - 18 - d : Math.min(onder, Math.max(4, H - d - 4));
-  }
-  doos.style.left = `${l}px`;
-  doos.style.top = `${t}px`;
+  const { doos } = vraag;
+  const kaart = omg.kaart();
+  if (doos.parentElement !== kaart) kaart.append(doos);
+  const tekening = omg.svg()?.getBoundingClientRect();
+  if (!tekening) return;
+  const k = kaart.getBoundingClientRect();
+  const nul = k.top + kaart.clientTop - kaart.scrollTop;
+  const scrolt = getComputedStyle(kaart).overflowY !== 'visible';
+  const hoogst = scrolt ? kaart.scrollTop : Math.min(kaart.scrollTop, 4 - nul);
+  doos.style.top = `${Math.round(Math.max(hoogst, tekening.top - 4 - doos.offsetHeight - nul))}px`;
 }
 
 /** Een kleine vraag naar een maat op de tekening (zie `MaatVraag`). */
 export function vraagMaat(v: MaatVraag) {
   sluitMaatVraag(true);
   if (!omg) return;
-  const doos = el('div', { class: 'maatvraag', role: 'dialog', 'aria-label': v.titel });
-  const kop = el('div', { class: 'maatvraag-kop' });
-  const sluit = el('button', { type: 'button', class: 'tweede', 'aria-label': 'Sluiten zonder wijzigen (Esc)', title: 'Sluiten zonder wijzigen (Esc)' }, '×');
-  sluit.addEventListener('click', () => sluitMaatVraag(false));
-  kop.append(el('strong', {}, v.titel), sluit);
-  doos.append(kop);
+  const doos = el('div', { class: 'maatvraag gedokt', role: 'dialog', 'aria-label': v.titel });
+  if (v.uitleg) doos.title = v.uitleg;
+  doos.append(el('strong', { class: 'maatvraag-titel' }, v.titel));
   const melding = el('p', { class: 'maatvraag-melding', role: 'status' });
   const velden: { veld: MaatVraagVeld; input: HTMLInputElement }[] = [];
   const rij = el('div', { class: 'maatvraag-velden' });
@@ -248,9 +219,17 @@ export function vraagMaat(v: MaatVraag) {
   }
   if (v.uitleg) doos.append(el('p', { class: 'klein maatvraag-uitleg' }, v.uitleg));
   doos.append(melding);
+  // Rechts onderaan: ongedaan maken (de vraag ligt over de knop boven de tekening), OK en sluiten.
+  const acties = el('div', { class: 'maatvraag-acties' });
+  const terug = el('button', { type: 'button', class: 'tweede', 'data-maatvraag-ongedaan': '', title: 'Ongedaan maken (Ctrl+Z): wat je typte, of anders wat je net plaatste', 'aria-label': 'Ongedaan maken' }, 'Ongedaan');
+  terug.insertAdjacentHTML('afterbegin', '<svg class="pijl" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3 2 7l4 4M2.5 7H10a4 4 0 0 1 0 8H8"/></svg>');
+  terug.addEventListener('click', () => { sluitMaatVraag(true); ongedaan(); });
   const ok = el('button', { type: 'button', class: 'maatvraag-ok' }, 'OK');
   ok.addEventListener('click', () => { if (pasToe(true)) sluitMaatVraag(true); });
-  doos.append(ok);
+  const sluit = el('button', { type: 'button', class: 'tweede', 'aria-label': 'Sluiten zonder wijzigen (Esc)', title: 'Sluiten zonder wijzigen (Esc)' }, '×');
+  sluit.addEventListener('click', () => sluitMaatVraag(false));
+  acties.append(terug, ok, sluit);
+  doos.append(acties);
 
   /**
    * Leest alle velden en past ze toe; geeft false als iets niet kan (de melding staat er dan). Wat al toegepast was, gaat
@@ -297,9 +276,12 @@ export function vraagMaat(v: MaatVraag) {
       if (pasToe(true)) sluitMaatVraag(true);
     });
   }
-  vraag = { v, doos, toegepast: false, kant: v.kanten?.gekozen };
+  // Wordt de vraag hoger (een melding erbij), dan schuift ze naar boven: haar onderkant blijft boven de tekening.
+  const waarnemer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => plaatsMaatVraag()) : undefined;
+  waarnemer?.observe(doos);
+  vraag = { v, doos, toegepast: false, kant: v.kanten?.gekozen, waarnemer };
   toonKant();
-  omg.vlak().append(doos);
+  omg.kaart().append(doos);
   plaatsMaatVraag();
   const eerste = velden[0]?.input;
   const aanraak = window.matchMedia?.('(pointer: coarse)').matches;

@@ -67,11 +67,11 @@ import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { maak3D, type Kwaliteit, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { isDing, maakVariant, stijlRij, toonDing } from './ding-ui.js';
 import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
-import { $, el, eur, getal, getalVeld, keuzelijst, PRIJZEN, schakelaar } from './hulp.js';
+import { $, aanraak, el, eur, getal, getalVeld, keuzelijst, PRIJZEN, schakelaar, voorVinger } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
 import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
-import { dakLijnen, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
+import { dakLijnen, dakraamZonweringVan, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { familie } from './meegeven.js';
 import { cmVeld, leesCm, maatVraagBezig, startMaten, matenKader, matenPaneelOpen, matenTik, matenVoorbeeld, maatVraagOpen, openMatenPaneel, plaatsMaatVraag, sluitMaatVraag, sluitMatenPaneel, vraagMaat, type MatenOmgeving } from './maten-ui.js';
@@ -101,27 +101,43 @@ import {
 type Gereedschap = 'kies' | 'ruimte' | 'maten' | 'wand' | 'losse_wand' | 'wand_v' | 'wand_h' | 'raam' | 'buitendeur' | 'schuifraam' | 'garagepoort' | 'binnendeur' | 'doorgang' | 'meubel' | 'daklicht';
 type Selectie = { soort: 'ruimte' | 'opening' | 'meubel' | 'daklicht' | 'wand' | 'toestel' | 'leiding'; id: string } | undefined;
 
-const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
-  { code: 'kies', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
-  { code: 'ruimte', label: 'Ruimte tekenen', toets: 'T', hint: 'Sleep een rechthoek, ook binnen een bestaande ruimte ("ruimte in ruimte"): wat overlapt wordt uit de oude ruimte gesneden. Muren volgen automatisch.' },
-  { code: 'maten', label: 'Ruimte met maten', toets: 'N', hint: 'Typ de maten van de muren in cm (rechthoek, of vier zijden en een diagonaal voor schuine muren) en kies waar de ruimte komt: tegen een gevel (tik op de muur), los of als nieuw project.' },
-  { code: 'wand', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld (er komt een ruimte bij). Een muur die niets opdeelt (een muurtje, een muur die halverwege stopt, een tuinmuur)? Kies Losse wand.' },
-  { code: 'losse_wand', label: 'Losse wand (deelt niets)', toets: 'L', hint: 'Sleep van het begin naar het einde van de muur, ook schuin; ze kleeft aan muren en hoekpunten. Een losse wand deelt niets: de ruimte blijft één ruimte (een muurtje, een muur die halverwege stopt, buiten een tuinmuur). Daarna typ je lengte, afstand tot de muur en hoogte.' },
-  { code: 'wand_v', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
-  { code: 'wand_h', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
-  { code: 'raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een regel in het overzicht bij.' },
-  { code: 'buitendeur', label: 'Buitendeur', toets: '', hint: 'Klik op een buitenmuur. In een hal wordt het een voordeur, anders een terrasdeur.' },
-  { code: 'schuifraam', label: 'Schuifraam', toets: '', hint: 'Klik op een buitenmuur.' },
-  { code: 'garagepoort', label: 'Garagepoort', toets: '', hint: 'Klik op een buitenmuur. Belijning, vensters en kleur kies je in de configurator.' },
-  { code: 'binnendeur', label: 'Binnendeur', toets: 'D', hint: 'Klik op een binnenmuur. Draairichting wissel je in de eigenschappen.' },
-  { code: 'doorgang', label: 'Doorgang (zonder deur)', toets: '', hint: 'Klik op een binnenmuur.' },
-  { code: 'meubel', label: 'Meubel', toets: 'M', hint: 'Kies een meubel hieronder en klik in de plattegrond.' },
-  { code: 'daklicht', label: 'Lichtkoepel of lichtstraat', toets: 'K', hint: 'Kies een maat hieronder en klik in een ruimte zonder verdieping erboven. Het dak moet daar plat zijn.' },
+/**
+ * Het gereedschap. `kort` staat op de knop (op een tablet in twee kolommen naast de tekening), `label` in de titel; de
+ * uitleg (`hint`) staat onder de tekening, met "tik" in plaats van "klik" op een aanraakscherm (`voorVinger`).
+ */
+const GEREEDSCHAP: { code: Gereedschap; kort: string; label: string; toets: string; hint: string }[] = [
+  { code: 'kies', kort: 'Selecteren', label: 'Selecteren en verplaatsen', toets: 'V', hint: 'Klik om te selecteren. Sleep een ruimte, raam, deur of meubel. Sleep de blauwe bolletjes om een wand te verschuiven.' },
+  { code: 'ruimte', kort: 'Ruimte tekenen', label: 'Ruimte tekenen', toets: 'T', hint: 'Sleep een rechthoek, ook binnen een bestaande ruimte ("ruimte in ruimte"): wat overlapt wordt uit de oude ruimte gesneden. Muren volgen automatisch.' },
+  { code: 'maten', kort: 'Ruimte met maten', label: 'Ruimte met maten', toets: 'N', hint: 'Typ de maten van de muren in cm (rechthoek, of vier zijden en een diagonaal voor schuine muren) en kies waar de ruimte komt: tegen een gevel (tik op de muur), los of als nieuw project.' },
+  { code: 'wand', kort: 'Wand (indelen)', label: 'Wand tekenen (indelen)', toets: 'W', hint: 'Sleep een wand door een of meer ruimtes: elke ruimte die de wand kruist, wordt in twee gedeeld (er komt een ruimte bij). Een muur die niets opdeelt (een muurtje, een muur die halverwege stopt, een tuinmuur)? Kies Losse wand.' },
+  { code: 'losse_wand', kort: 'Losse wand', label: 'Losse wand (deelt niets)', toets: 'L', hint: 'Sleep van het begin naar het einde van de muur, ook schuin; ze kleeft aan muren en hoekpunten. Een losse wand deelt niets: de ruimte blijft één ruimte (een muurtje, een muur die halverwege stopt, buiten een tuinmuur). Daarna typ je lengte, afstand tot de muur en hoogte.' },
+  { code: 'wand_v', kort: 'Indelen │', label: 'Indelen │ (staande wand)', toets: '', hint: 'Klik in een ruimte om ze met een staande wand in twee te delen.' },
+  { code: 'wand_h', kort: 'Indelen ─', label: 'Indelen ─ (liggende wand)', toets: '', hint: 'Klik in een ruimte om ze met een liggende wand in twee te delen.' },
+  { code: 'raam', kort: 'Raam', label: 'Raam', toets: 'R', hint: 'Klik op een buitenmuur. Er komt ook een regel in het overzicht bij.' },
+  { code: 'buitendeur', kort: 'Buitendeur', label: 'Buitendeur', toets: '', hint: 'Klik op een buitenmuur. In een hal wordt het een voordeur, anders een terrasdeur.' },
+  { code: 'schuifraam', kort: 'Schuifraam', label: 'Schuifraam', toets: '', hint: 'Klik op een buitenmuur.' },
+  { code: 'garagepoort', kort: 'Garagepoort', label: 'Garagepoort', toets: '', hint: 'Klik op een buitenmuur. Belijning, vensters en kleur kies je in de configurator.' },
+  { code: 'binnendeur', kort: 'Binnendeur', label: 'Binnendeur', toets: 'D', hint: 'Klik op een binnenmuur. Draairichting wissel je in de eigenschappen.' },
+  { code: 'doorgang', kort: 'Doorgang', label: 'Doorgang (zonder deur)', toets: '', hint: 'Klik op een binnenmuur.' },
+  { code: 'meubel', kort: 'Meubel', label: 'Meubel of trap', toets: 'M', hint: 'Kies een meubel in het palet en klik in de plattegrond; daarna kun je het verslepen. Voor nog een kies je opnieuw een meubel.' },
+  { code: 'daklicht', kort: 'Daklicht', label: 'Daklicht: lichtkoepel, lichtstraat of plat dakraam', toets: 'K', hint: 'Kies een daklicht in het palet en klik in een ruimte zonder verdieping erboven. Het dak moet daar plat zijn.' },
 ];
+/** Gereedschap met een palet: het palet staat dan op de plaats van het gereedschap, naast de tekening. */
+type Palet = 'meubel' | 'daklicht';
+const PALET_TITEL: Record<Palet, string> = { meubel: 'Meubel of trap', daklicht: 'Daklicht' };
 
 let gereedschap: Gereedschap = 'kies';
 let meubelType = 'bank3';
 let daklichtType = 'koepel_100';
+/**
+ * Het palet dat open staat (Meubel of Daklicht), of geen. Het blijft open na het plaatsen (dan staat Selecteren aan: wat
+ * je plaatste, kun je meteen verslepen); *← Terug* of een ander gereedschap sluit het.
+ */
+let palet: Palet | undefined;
+/** De groep van het meubelpalet die open staat (Zitten, Slapen, …, Trappen). */
+let meubelGroep: string | undefined;
+/** De knop *Ongedaan maken* (`#pl-ongedaan`): verhuist tussen de rij van het zoomen en de hoek van de 3D. */
+let ongedaanKnop: HTMLButtonElement | undefined;
 /** Dak op de bovenste verdieping tonen in de 3D (uit = erin kijken). */
 let toonDakIn3D = true;
 let selectie: Selectie;
@@ -135,7 +151,7 @@ let pannen: { bewogen: boolean; x: number; y: number } | undefined;
  */
 let tikWacht: { soort: 'maat'; doel: string; el: Element } | { soort: 'gevel'; x: number; y: number } | undefined;
 /** Een maat boven een ruimte, raam of meubel: na het loslaten zonder slepen de maatvraag (anders was het verslepen). */
-let maatNaKlik: { doel: string; vak: DOMRect; x: number; y: number } | undefined;
+let maatNaKlik: { doel: string; x: number; y: number } | undefined;
 let voorbeeld: { x: number; y: number; b: number; d: number } | undefined;
 let voorbeeldOpening: Opening | undefined;
 let weergave: 'plan' | 'gevels' | '3d' | 'doorsnede' = 'plan';
@@ -310,7 +326,9 @@ export function render() {
   plaatsMaatVraag();
   zoom?.bijwerken();
   const zi = document.getElementById('pl-zoomhint');
-  if (zi) zi.textContent = `Zoomen: Ctrl (⌘) + scrollen, knijpen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
+  if (zi) zi.textContent = aanraak()
+    ? `Zoomen: knijp met twee vingers of tik op + − · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`
+    : `Zoomen: Ctrl (⌘) + scrollen of + − (in het groot scherm volstaat scrollen) · verschuiven: sleep op een leeg stuk · raster ${rasterStap()} cm`;
   houder.dataset.gereedschap = gereedschap;
   // Met de techniek aan staan de meubels lichter (de tekens en leidingen op de voorgrond).
   houder.toggleAttribute('data-techniek', techniekAan());
@@ -349,9 +367,8 @@ function toonNiveaus() {
   plus.addEventListener('click', nieuweVerdieping);
   vak.append(plus);
   if (lijst.length > 1 && niveau === lijst.length - 1) {
-    const weg = el('button', { type: 'button', class: 'gevaar' }, 'Verdieping verwijderen');
-    weg.addEventListener('click', () => {
-      if (weg.dataset.zeker !== '1') { weg.dataset.zeker = '1'; weg.textContent = 'Zeker? Alles op deze verdieping verdwijnt'; return; }
+    const weg = el('button', { type: 'button', class: 'gevaar' }, 'Verdieping verwijderen') as HTMLButtonElement;
+    zekerKnop(weg, 'Zeker? Alles op deze verdieping verdwijnt', () => {
       const n = niveau;
       wijzig('plan', (t) => {
         const weg = new Set(t.plan.openingen.filter((o) => niveauVan(o) === n).map((o) => o.positie).filter(Boolean));
@@ -613,10 +630,72 @@ function openingOp(soort: OpeningSoort, x: number, y: number): { opening: Openin
   return { opening, fout, ruimte };
 }
 
+// ---------- de uitleg na een tik, bij de tik (doorloop A14) ----------
+
+let tikMeldingKlok = 0;
+/**
+ * De uitleg na een tik die niet kan bij de tik zelf, in het zichtbare deel van de tekening; wat een tik met de techniek
+ * deed (`info`: de technische ruimte, een leiding) onderaan dat deel, zodat ze het resultaat niet bedekt. Vroeger stond
+ * de uitleg alleen bovenaan de eigenschappen: op een tablet tot 340 beeldpunten onder het scherm, en de verkoper zag
+ * alleen dat zijn tik niets deed. Ze vangt zelf geen tik (`pointer-events: none`) en verdwijnt bij de volgende tik op de
+ * tekening, bij een ander gereedschap of na een tijd die met de lengte van de tekst meegroeit. De melding blijft ook bij
+ * de eigenschappen staan, zoals vroeger.
+ */
+export function tikMelding(tekst: string, bij?: Punt, soort: 'weiger' | 'info' = 'weiger') {
+  const vlak = $('#pl-canvas').parentElement;
+  if (!vlak || !tekst) return;
+  let m = vlak.querySelector<HTMLElement>('.tikmelding');
+  if (!m) {
+    m = el('div', { class: 'tikmelding', role: 'status', 'aria-live': 'polite' });
+    vlak.append(m);
+  }
+  m.textContent = tekst;
+  m.classList.toggle('info', soort === 'info');
+  m.hidden = false;
+  plaatsTikMelding(m, soort === 'info' ? undefined : bij);
+  window.clearTimeout(tikMeldingKlok);
+  const doos = m;
+  tikMeldingKlok = window.setTimeout(() => { doos.hidden = true; }, Math.max(5000, tekst.length * 70));
+}
+
+function verbergTikMelding() {
+  const m = $('#pl-canvas').parentElement?.querySelector<HTMLElement>('.tikmelding');
+  if (m) m.hidden = true;
+}
+
+/** Boven de tik (anders eronder), of zonder tik onderaan; binnen het deel van de tekening dat op het scherm staat. */
+function plaatsTikMelding(m: HTMLElement, bij?: Punt) {
+  const vlak = m.parentElement!, svg = $('#pl-canvas').querySelector('svg');
+  const v = vlak.getBoundingClientRect(), s = (svg ?? vlak).getBoundingClientRect();
+  const boven = Math.max(s.top, 0), onder = Math.min(s.bottom, window.innerHeight);
+  const b = m.offsetWidth, h = m.offsetHeight;
+  let x = (s.left + s.right) / 2, t = onder - h - 6;
+  const ctm = svg?.getScreenCTM();
+  if (bij && ctm) {
+    const q = new DOMPoint(bij[0], bij[1]).matrixTransform(ctm);
+    x = q.x;
+    t = q.y - h - 22;
+    if (t < boven + 6) t = q.y + 22;
+  }
+  const l = Math.min(s.right - b - 6, Math.max(s.left + 6, x - b / 2));
+  t = Math.max(boven + 6, Math.min(onder - h - 6, t));
+  m.style.left = `${Math.round(l - v.left)}px`;
+  m.style.top = `${Math.round(t - v.top)}px`;
+}
+
+/** Een tik die niet kan: de uitleg bij de tik en bij de eigenschappen. */
+function weiger(tekst: string, bij?: Punt) {
+  melding = tekst;
+  render();
+  toonEigenschappen();
+  tikMelding(tekst, bij);
+}
+
 function plaatsOpening(soort: OpeningSoort, x: number, y: number) {
   const r = openingOp(soort, x, y);
-  if (!r) { melding = 'Klik dichter bij een muur.'; toonEigenschappen(); return; }
-  if (r.fout) { melding = r.fout; toonEigenschappen(); return; }
+  // In een plan zonder ruimte is er nog geen muur: zeg wat eerst moet (niet "dichter bij een muur").
+  if (!r) { weiger(plan().ruimtes.length ? voorVinger('Klik dichter bij een muur.') : 'Teken eerst een ruimte: ramen en deuren komen in haar muren.', [x, y]); return; }
+  if (r.fout) { weiger(r.fout, [x, y]); return; }
   bewaarNieuweOpening(soort, r.opening, r.ruimte);
   melding = '';
   selectie = { soort: 'opening', id: r.opening.id };
@@ -677,7 +756,7 @@ function voegRaamToe(n: number, muurId: string, midden: number): string | undefi
 
 function splits(x: number, y: number, staand: boolean) {
   const r = ruimteOp(plan(), x, y);
-  if (!r) return;
+  if (!r) { weiger(voorVinger('Klik in een ruimte om ze in twee te delen.'), [x, y]); return; }
   const lijn = staand ? kleef(x, 'x', 10, r.id) : kleef(y, 'y', 10, r.id);
   // Het binnenvlak van de ruimte op die plaats en het plan vóór het indelen (om de wand op een gemeten plaats te zetten).
   const rand = binnenRand(toestand().plan, r, staand ? 'v' : 'h', [x, y]);
@@ -686,7 +765,26 @@ function splits(x: number, y: number, staand: boolean) {
   vraagWand(staand, lijn, [x, y], rand, voor);
 }
 
-/** Plaatst een lichtkoepel of lichtstraat met het midden op de klik; alleen op een plat dak, volledig boven één ruimte. */
+/** "hij" (de koepel), "ze" (de lichtstraat) of "het" (het dakraam), voor de uitleg bij een daklicht. */
+const daklichtHij = (type: string) => ({ dakraam: 'het', lichtstraat: 'ze' } as Record<string, string>)[cat.daklichten?.[type]?.vorm ?? ''] ?? 'hij';
+
+/**
+ * Een ander daklicht op dezelfde verdieping dat over dit daklicht ligt of er minder dan 20 cm naast (doorloop A19). Zelfde
+ * regel als de controle (`controleerPlan`): wat hier geweigerd wordt, zou er meteen als fout staan.
+ */
+function daklichtTeDicht(l: Pick<DakLicht, 'id' | 'x' | 'y' | 'b' | 'd'> & { niveau?: number }): DakLicht | undefined {
+  return (toestand().plan.daklichten ?? []).find((a) => a.id !== l.id && niveauVan(a) === (l.niveau ?? 0)
+    && Math.min(a.x + a.b, l.x + l.b) - Math.max(a.x, l.x) > -20 && Math.min(a.y + a.d, l.y + l.d) - Math.max(a.y, l.y) > -20);
+}
+
+/** De uitleg als een daklicht te dicht bij een ander komt. */
+const teDichtTekst = (type: string, ander: DakLicht) =>
+  `Hier kan geen ${(cat.daklichten?.[type]?.label ?? 'daklicht').toLowerCase()}: ${daklichtHij(type)} ligt over of minder dan 20 cm naast een ander daklicht (${(cat.daklichten?.[ander.type]?.label ?? 'daklicht').toLowerCase()}). Tik verder weg, of versleep het andere.`;
+
+/**
+ * Plaatst een daklicht (lichtkoepel, lichtstraat of plat dakraam) met het midden op de tik; alleen op een plat dak,
+ * volledig boven één ruimte, en niet over of tegen een ander daklicht.
+ */
 function plaatsDaklicht(x: number, y: number) {
   const type = cat.daklichten?.[daklichtType];
   if (!type) return;
@@ -694,14 +792,11 @@ function plaatsDaklicht(x: number, y: number) {
   // Proef op een kopie: ligt hij op een plat dak?
   const proef = structuredClone(toestand().plan);
   (proef.daklichten ??= []).push(l);
-  const reden = dakOpbouw(proef)?.daklichten.find((q) => q.licht.id === l.id)?.reden;
+  const reden = dakOpbouw(proef, cat)?.daklichten.find((q) => q.licht.id === l.id)?.reden;
   voorbeeld = undefined;
-  if (reden) {
-    melding = `Hier kan geen ${type.label.toLowerCase()}: hij ${reden}`;
-    render();
-    toonEigenschappen();
-    return;
-  }
+  if (reden) { weiger(`Hier kan geen ${type.label.toLowerCase()}: ${daklichtHij(daklichtType)} ${reden}`, [x, y]); return; }
+  const ander = daklichtTeDicht(l);
+  if (ander) { weiger(teDichtTekst(daklichtType, ander), [x, y]); return; }
   wijzig('plan', (t) => { metDak(t); (t.plan.daklichten ??= []).push(l); });
   selectie = { soort: 'daklicht', id: l.id };
   melding = '';
@@ -719,8 +814,7 @@ function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number): boo
   const geraakt = proef.openingen.find((o) => niveauVan(o) === niveau && muurVanOpening(o, voor) && !muurVanOpening(o, na));
   if (geraakt) {
     const naam = ({ raam: 'een raam', buitendeur: 'een buitendeur', schuifraam: 'een schuifraam', binnendeur: 'een binnendeur', doorgang: 'een doorgang', garagepoort: 'een garagepoort' } as Record<OpeningSoort, string>)[geraakt.soort];
-    melding = `Hier komt de nieuwe wand uit op ${naam}: schuif de wand een stukje op, of verschuif eerst de opening.`;
-    toonEigenschappen();
+    weiger(`Hier komt de nieuwe wand uit op ${naam}: schuif de wand een stukje op, of verschuif eerst de opening.`, as === 'v' ? [lijn, (van + tot) / 2] : [(van + tot) / 2, lijn]);
     return false;
   }
   let nieuw: Ruimte[] = [];
@@ -728,8 +822,7 @@ function deelMetWand(as: 'h' | 'v', lijn: number, van: number, tot: number): boo
     nieuw = splitsRuimtes(t.plan, niveau, as, lijn, Math.min(van, tot), Math.max(van, tot), (oud) => ({ ...oud, id: nieuweId('r'), naam: nieuweRuimteNaam(), delen: undefined }), 60);
   });
   if (!nieuw.length) {
-    melding = 'Geen ruimte gedeeld: de wand moet door een ruimte lopen, minstens 60 cm van de rand.';
-    toonEigenschappen();
+    weiger('Geen ruimte gedeeld: de wand moet door een ruimte lopen, minstens 60 cm van de rand.', as === 'v' ? [lijn, (van + tot) / 2] : [(van + tot) / 2, lijn]);
     return false;
   }
   selectie = { soort: 'ruimte', id: nieuw[0]!.id };
@@ -780,9 +873,7 @@ function nieuweLosseWand(van: Punt, tot: Punt, id: string): LosseWand {
 function plaatsLosseWand(w: LosseWand) {
   const v = losseWandVlak(w, murenVan(plan()), andereWanden());
   if (losseWandLengte(v) < LOSSE_WAND_MIN) {
-    melding = `Sleep van het begin naar het einde van de muur (minstens ${LOSSE_WAND_MIN} cm).`;
-    render();
-    toonEigenschappen();
+    weiger(`Sleep van het begin naar het einde van de muur (minstens ${LOSSE_WAND_MIN} cm).`, w.van);
     return;
   }
   wijzig('plan', (t) => { (t.plan.losseWanden ??= []).push(w); });
@@ -795,9 +886,10 @@ function plaatsLosseWand(w: LosseWand) {
 /**
  * De maten van een losse wand, na het tekenen of na een tik op haar maat: de lengte (wat gebouwd wordt, vanaf de muur
  * waartegen ze staat; het vrije einde schuift), de vrije maat tot de evenwijdige muur aan een gekozen kant (de wand
- * schuift dwars) en de hoogte. Wat je typt, zie je meteen; één keer *Ongedaan maken* zet alles terug.
+ * schuift dwars) en de hoogte. Wat je typt, zie je meteen; één keer *Ongedaan maken* zet alles terug. `opMaat` = geopend
+ * met een tik op een maat (dan meteen typen).
  */
-function vraagLosseWand(id: string, anker?: DOMRect, kant?: string) {
+function vraagLosseWand(id: string, opMaat = false, kant?: string) {
   const pl = plan();
   const w0 = pl.losseWanden?.find((x) => x.id === id);
   if (!w0) return;
@@ -821,7 +913,6 @@ function vraagLosseWand(id: string, anker?: DOMRect, kant?: string) {
     return binnen && w.hoogte! >= H - 0.5 ? rest : { ...rest, hoogte: w.hoogte! };
   };
   vraagMaat({
-    anker: anker ?? losseWandMidden(w0, v0),
     titel: binnen ? 'Losse wand: maten' : 'Losse muur buiten: maten',
     velden: [
       { code: 'lengte', label: 'Lengte', waarde: Math.round(losseWandLengte(v0) * 10) / 10, min: LOSSE_WAND_MIN },
@@ -836,7 +927,7 @@ function vraagLosseWand(id: string, anker?: DOMRect, kant?: string) {
     },
     knoppen: binnen ? [{ label: 'Tot het plafond', waarden: () => ({ hoogte: H }) }] : [],
     uitleg: `Lengte: wat gebouwd wordt${v0.aan.some((a) => a.soort !== 'vrij') ? ', vanaf de muur waartegen ze staat' : ''}. Vrij tot de muur: van het vlak van de muur tot de wand. Een losse wand deelt de ruimte niet.`,
-    meteenTypen: !!anker,
+    meteenTypen: opMaat,
     toepassen: (w, k, eerste) => {
       const x = nieuw(w, k);
       const v = losseWandVlak(x, muren, andere);
@@ -865,7 +956,6 @@ function vraagOpening(id: string) {
   const titels: Record<OpeningSoort, string> = { raam: 'Raam', buitendeur: 'Buitendeur', schuifraam: 'Schuifraam', binnendeur: 'Binnendeur', doorgang: 'Doorgang', garagepoort: 'Garagepoort' };
   const nu = () => { const x = plan().openingen.find((q) => q.id === id); return x && openingAfstanden(toestand().plan, x); };
   vraagMaat({
-    anker: langsAs(o, o.midden, o.lijn),
     titel: `${titels[o.soort]}: maten`,
     velden: [
       { code: 'breedte', label: 'Breedte', waarde: o.breedte, min: 40, max: vrij },
@@ -917,7 +1007,6 @@ function vraagWand(staand: boolean, lijn: number, p: Punt, rand: [number, number
     return undefined;
   };
   vraagMaat({
-    anker: p,
     titel: 'Wand: afstand tot de muur',
     velden: [{ code: 'afstand', label: 'Vrij tot de muur', waarde: Math.round(vanBegin * 10) / 10, min: 0 }],
     kanten: { label: 'Gemeten vanaf', opties: [['begin', a], ['einde', b]], gekozen: kant },
@@ -930,12 +1019,12 @@ function vraagWand(staand: boolean, lijn: number, p: Punt, rand: [number, number
 }
 
 /** Wat een maat op de tekening is (zie `maatDoelen` in tekenPlattegrond) en wat er gebeurt als je ze wijzigt. */
-function tikOpMaat(doel: string, vak: DOMRect) {
+function tikOpMaat(doel: string) {
   const [soort, id, extra] = doel.split(':') as [string, string, string | undefined];
   // Een losse wand: haar lengte of de vrije maat tot een muur (de maatvraag kent alle drie de maten).
   if (soort === 'wand' || soort === 'wandafstand') {
     if (selectie?.soort !== 'wand' || selectie.id !== id) { selectie = { soort: 'wand', id }; melding = ''; render(); toonEigenschappen(); }
-    vraagLosseWand(id, vak, extra);
+    vraagLosseWand(id, true, extra);
     return;
   }
   const pl = plan();
@@ -959,16 +1048,16 @@ function tikOpMaat(doel: string, vak: DOMRect) {
     const m = murenVan(pl).filter((x) => x.as === as && Math.abs(x.lijn - lijn) < 0.5 && Math.min(x.tot, tot) - Math.max(x.van, van) > 1);
     return m.length ? Math.max(...m.map((x) => x.dikte)) : 0;
   };
-  if (soort === 'ruimte') maatRuimte(pl, oud, id, extra === 'b', vak, pas, dikteOp);
-  else if (soort === 'zijde' || soort === 'muur') maatZijde(pl, oud, soort, id, Number(extra), vak, pas);
-  else if (soort === 'ketting') maatKetting(pl, id, Number(extra), vak, pas);
-  else if (soort === 'totaal') maatTotaal(pl, oud, id === 'b', vak, pas);
+  if (soort === 'ruimte') maatRuimte(pl, oud, id, extra === 'b', pas, dikteOp);
+  else if (soort === 'zijde' || soort === 'muur') maatZijde(pl, oud, soort, id, Number(extra), pas);
+  else if (soort === 'ketting') maatKetting(pl, id, Number(extra), pas);
+  else if (soort === 'totaal') maatTotaal(pl, oud, id === 'b', pas);
 }
 
 type Pas = (eerste: boolean, f: (t: Plattegrond) => string | undefined) => string | undefined;
 
 /** Breedte of diepte van een rechthoekige ruimte: een muur schuift, met de buurruimtes (zoals de grepen). */
-function maatRuimte(pl: Plattegrond, oud: Plattegrond, id: string, breed: boolean, vak: DOMRect, pas: Pas, dikteOp: (as: 'h' | 'v', lijn: number, van: number, tot: number) => number) {
+function maatRuimte(pl: Plattegrond, oud: Plattegrond, id: string, breed: boolean, pas: Pas, dikteOp: (as: 'h' | 'v', lijn: number, van: number, tot: number) => number) {
   const r = pl.ruimtes.find((x) => x.id === id);
   if (!r) return;
   // Welke muur schuift: standaard rechts (of onder), tenzij daar een buurruimte ligt en aan de andere kant niet.
@@ -978,7 +1067,6 @@ function maatRuimte(pl: Plattegrond, oud: Plattegrond, id: string, breed: boolea
   const [t0, t1] = breed ? [dikteOp('v', r.x, r.y, r.y + r.d), dikteOp('v', r.x + r.b, r.y, r.y + r.d)] : [dikteOp('h', r.y, r.x, r.x + r.b), dikteOp('h', r.y + r.d, r.x, r.x + r.b)];
   const maat = breed ? r.b : r.d;
   vraagMaat({
-    anker: vak,
     titel: `${r.naam}: ${breed ? 'breedte' : 'diepte'}`,
     velden: [{ code: 'maat', label: breed ? 'Breedte' : 'Diepte', waarde: maat, min: 60 }],
     kanten: { label: 'Deze muur schuift', opties: breed ? [['w', '◀ links'], ['o', 'rechts ▶']] : [['n', '▲ boven'], ['s', 'onder ▼']], gekozen: kant },
@@ -993,7 +1081,7 @@ function maatRuimte(pl: Plattegrond, oud: Plattegrond, id: string, breed: boolea
 }
 
 /** Een zijde van een vrije vorm of een schuine muur: een uiteinde schuift langs de zijde, de muur ernaast draait mee. */
-function maatZijde(pl: Plattegrond, oud: Plattegrond, soort: string, id: string, zijde: number, vak: DOMRect, pas: Pas) {
+function maatZijde(pl: Plattegrond, oud: Plattegrond, soort: string, id: string, zijde: number, pas: Pas) {
   let r: Ruimte | undefined, i = zijde, verschil = 0;
   if (soort === 'muur') {
     const m = murenVan(pl).find((x) => x.id === id);
@@ -1019,7 +1107,6 @@ function maatZijde(pl: Plattegrond, oud: Plattegrond, soort: string, id: string,
   const lengte = Math.hypot(b[0] - a[0], b[1] - a[1]);
   const letter = (j: number) => 'ABCDEFGH'[j % v.length] ?? '?';
   vraagMaat({
-    anker: vak,
     titel: `${ruimte.naam}: muur ${letter(i)}${letter(i + 1)}`,
     velden: [{ code: 'maat', label: 'Lengte', waarde: Math.round((lengte - verschil) * 10) / 10, min: 20 }],
     kanten: { label: 'Dit hoekpunt schuift', opties: [['begin', letter(i)], ['einde', letter(i + 1)]], gekozen: 'einde' },
@@ -1040,7 +1127,7 @@ function maatZijde(pl: Plattegrond, oud: Plattegrond, soort: string, id: string,
 }
 
 /** Een stuk van de kettingmaat langs het gekozen raam: de afstand tot de hoek of een ander raam, of de breedte. */
-function maatKetting(pl: Plattegrond, id: string, j: number, vak: DOMRect, pas: Pas) {
+function maatKetting(pl: Plattegrond, id: string, j: number, pas: Pas) {
   const o = pl.openingen.find((x) => x.id === id);
   const af = o && openingAfstanden(toestand().plan, o);
   if (!o || !af) return;
@@ -1051,7 +1138,6 @@ function maatKetting(pl: Plattegrond, id: string, j: number, vak: DOMRect, pas: 
   if (!zelf && !ervoor && !erna) { melding = 'Tik op een maat naast het gekozen raam of de gekozen deur (of kies het andere raam).'; toonEigenschappen(); return; }
   const [n1, n2] = eindNamen(o.as);
   vraagMaat({
-    anker: vak,
     titel: zelf ? 'Breedte van de opening' : 'Afstand',
     velden: [{ code: 'maat', label: zelf ? 'Breedte' : 'Afstand', waarde: Math.round((q - p) * 10) / 10, min: zelf ? 40 : 0 }],
     ...(zelf ? { kanten: { label: 'Deze kant schuift', opties: [['begin', n1], ['einde', n2]] as [string, string][], gekozen: 'einde' } } : {}),
@@ -1071,7 +1157,7 @@ function maatKetting(pl: Plattegrond, id: string, j: number, vak: DOMRect, pas: 
 }
 
 /** De totale buitenmaat: de buitenste muur aan één kant schuift, met alle ruimtes en ramen ertegen. */
-function maatTotaal(pl: Plattegrond, oud: Plattegrond, breed: boolean, vak: DOMRect, pas: Pas) {
+function maatTotaal(pl: Plattegrond, oud: Plattegrond, breed: boolean, pas: Pas) {
   const delen = pl.ruimtes.flatMap(delenVan);
   if (!delen.length) return;
   const x0 = Math.min(...delen.map((q) => q.x)), y0 = Math.min(...delen.map((q) => q.y));
@@ -1079,7 +1165,6 @@ function maatTotaal(pl: Plattegrond, oud: Plattegrond, breed: boolean, vak: DOMR
   const t = pl.buitenmuur;
   const [begin, einde] = breed ? [x0, x1] : [y0, y1];
   vraagMaat({
-    anker: vak,
     titel: breed ? 'Totale breedte (buiten)' : 'Totale diepte (buiten)',
     velden: [{ code: 'maat', label: breed ? 'Breedte' : 'Diepte', waarde: Math.round(einde - begin + t), min: 60 + t }],
     kanten: { label: 'Deze kant schuift', opties: breed ? [['begin', '◀ links'], ['einde', 'rechts ▶']] : [['begin', '▲ boven'], ['einde', 'onder ▼']], gekozen: 'einde' },
@@ -1097,6 +1182,7 @@ function maatTotaal(pl: Plattegrond, oud: Plattegrond, breed: boolean, vak: DOMR
 // ---------- muis ----------
 function naPointerDown(ev: PointerEvent) {
   if (ev.button !== 0) return;
+  verbergTikMelding();
   const p = punt(ev);
   const doel = ev.target as Element;
   const houder = $('#pl-canvas');
@@ -1124,7 +1210,7 @@ function naPointerDown(ev: PointerEvent) {
   // Een korte losse wand ligt onder haar eigen lengtemaat: de eerste tik kiest de wand (geen maatvraag over de tekening),
   // een tik op haar maat als ze gekozen is, opent de maatvraag.
   const eersteTikOpWand = onderMaat?.dataset.soort === 'wand' && !(selectie?.soort === 'wand' && selectie.id === onderMaat.dataset.id);
-  maatNaKlik = onderMaat && maat && !eersteTikOpWand ? { doel: maat.dataset.maat!, vak: maat.getBoundingClientRect(), x: ev.clientX, y: ev.clientY } : undefined;
+  maatNaKlik = onderMaat && maat && !eersteTikOpWand ? { doel: maat.dataset.maat!, x: ev.clientX, y: ev.clientY } : undefined;
   if (((maat && gereedschap === 'kies') || gereedschap === 'maten') && !onderMaat) {
     // Pas bij het loslaten (als de vinger niet schoof): de maat aantikken, of met Ruimte met maten de gevel kiezen.
     // Slepen verschuift het beeld, zoals op een leeg stuk.
@@ -1435,7 +1521,7 @@ function naPointerUp(ev: PointerEvent) {
     const t = tikWacht;
     tikWacht = undefined;
     if (t && klik) {
-      if (t.soort === 'maat') { if (t.el.isConnected) tikOpMaat(t.doel, t.el.getBoundingClientRect()); }
+      if (t.soort === 'maat') { if (t.el.isConnected) tikOpMaat(t.doel); }
       else matenTik(t.x, t.y);
       return;
     }
@@ -1458,9 +1544,7 @@ function naPointerUp(ev: PointerEvent) {
     const w = voorbeeldLosseWand;
     voorbeeldLosseWand = undefined;
     if (w && s.bewogen) { plaatsLosseWand({ ...w, id: nieuweId('w') }); return; }
-    melding = 'Sleep van het begin naar het einde van de muur.';
-    render();
-    toonEigenschappen();
+    weiger('Sleep van het begin naar het einde van de muur.', [s.start.x, s.start.y]);
     return;
   }
   if (s?.soort === 'teken') {
@@ -1476,14 +1560,14 @@ function naPointerUp(ev: PointerEvent) {
       kiesGereedschap('kies');
       return;
     }
-    if (v) melding = 'Te klein: een ruimte moet minstens 80 × 80 cm zijn.';
+    if (v && (v.b || v.d)) { weiger('Te klein: een ruimte moet minstens 80 × 80 cm zijn.', [v.x + v.b / 2, v.y + v.d / 2]); return; }
   }
   render();
   toonEigenschappen();
   // Een tik (zonder slepen) op een maat boven een ruimte of raam: de maatvraag.
   const m = maatNaKlik;
   maatNaKlik = undefined;
-  if (m && s && !s.bewogen) tikOpMaat(m.doel, m.vak);
+  if (m && s && !s.bewogen) tikOpMaat(m.doel);
 }
 
 // ---------- eigenschappen ----------
@@ -1563,6 +1647,30 @@ function knop(tekst: string, f: () => void, cls = 'tweede'): HTMLButtonElement {
   const b = el('button', { type: 'button', class: cls }, tekst) as HTMLButtonElement;
   b.addEventListener('click', f);
   return b;
+}
+
+/**
+ * Een knop die iets wist: de eerste tik vraagt "Zeker?", de tweede doet het. Een tweede tik binnen 0,6 s (een dubbeltik of
+ * een vinger die twee keer raakt) telt niet: die moet bewust zijn. Na 6 s zonder tweede tik staat de knop weer zoals eerst.
+ */
+function zekerKnop(b: HTMLButtonElement, vraag: string, doe: () => void) {
+  const gewoon = b.textContent ?? '';
+  let sinds = 0, terug = 0;
+  const herstel = () => { window.clearTimeout(terug); b.dataset.zeker = ''; b.textContent = gewoon; };
+  b.addEventListener('click', () => {
+    const nu = performance.now();
+    if (b.dataset.zeker !== '1') {
+      b.dataset.zeker = '1';
+      b.textContent = vraag;
+      sinds = nu;
+      window.clearTimeout(terug);
+      terug = window.setTimeout(herstel, 6000);
+      return;
+    }
+    if (nu - sinds < 600) return;
+    herstel();
+    doe();
+  });
 }
 
 function toonEigenschappen() {
@@ -1705,7 +1813,7 @@ function toonEigenschappen() {
     if (af) vak.append(el('p', { class: 'klein' }, `Tot de muren: links ${getal(af.links)} · rechts ${getal(af.rechts)} · boven ${getal(af.boven)} · onder ${getal(af.onder)} cm`));
     if (PRIJZEN && t?.prijs) vak.append(el('p', { class: 'klein prijsdeel' }, `Richtprijs ${eur(t.prijs)} (alleen in de offerte als "Inrichting" aan staat).`));
     const r = el('div', { class: 'knoppenrij' });
-    r.append(knop('Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
+    r.append(knop(aanraak() ? 'Draaien 90°' : 'Draaien 90° (Q)', draaiMeubel), knop('Verwijderen', verwijderSelectie, 'gevaar'));
     vak.append(r);
   } else if (s?.soort === 'wand') {
     if (!toonLosseWand(vak, pl, s.id)) { selectie = undefined; return toonEigenschappen(); }
@@ -1716,18 +1824,25 @@ function toonEigenschappen() {
     if (!l) { selectie = undefined; return toonEigenschappen(); }
     const type = cat.daklichten?.[l.type];
     const zet = (f: (x: DakLicht) => void) => wijzig('plan', (tt) => { const x = tt.plan.daklichten?.find((y) => y.id === l.id); if (x) f(x); });
-    vak.append(el('h3', {}, type?.vorm === 'lichtstraat' ? 'Lichtstraat' : 'Lichtkoepel'));
+    // De naam van wat er ligt: een lichtkoepel, een lichtstraat of een plat dakraam (doorloop A18).
+    vak.append(el('h3', {}, type?.vorm === 'lichtstraat' ? 'Lichtstraat' : type?.vorm === 'dakraam' ? 'Plat dakraam' : 'Lichtkoepel'));
     const rij = el('label', { class: 'eig' });
-    rij.append(el('span', {}, 'Maat'), keuzelijst('pl-daklicht-type', Object.entries(cat.daklichten ?? {}).map(([k, v]) => [k, v.label]), l.type, (w) => zet((x) => {
-      // Andere maat: het midden blijft op zijn plaats.
+    rij.append(el('span', {}, 'Maat'), keuzelijst('pl-daklicht-type', Object.entries(cat.daklichten ?? {}).map(([k, v]) => [k, v.label]), l.type, (w) => {
+      // Andere maat: het midden blijft op zijn plaats; niet als het dan over een ander daklicht valt.
       const nieuw = cat.daklichten?.[w];
       if (!nieuw) return;
-      const cx = x.x + x.b / 2, cy = x.y + x.d / 2;
-      Object.assign(x, { type: w, b: nieuw.b, d: nieuw.d, x: snap(cx - nieuw.b / 2, 5), y: snap(cy - nieuw.d / 2, 5) });
-    })));
+      const cx = l.x + l.b / 2, cy = l.y + l.d / 2;
+      const maat = { x: snap(cx - nieuw.b / 2, 5), y: snap(cy - nieuw.d / 2, 5), b: nieuw.b, d: nieuw.d };
+      const ander = daklichtTeDicht({ ...maat, id: l.id, niveau: niveauVan(l) });
+      if (ander) { weiger(teDichtTekst(w, ander), [cx, cy]); return; }
+      zet((x) => { Object.assign(x, { type: w, ...maat }); });
+    }));
     vak.append(rij);
-    const reden = dakOpbouw(toestand().plan)?.daklichten.find((x) => x.licht.id === l.id)?.reden;
-    if (reden) vak.append(el('p', { class: 'kleinmelding fout' }, `Kan hier niet: hij ${reden}`));
+    const reden = dakOpbouw(toestand().plan, cat)?.daklichten.find((x) => x.licht.id === l.id)?.reden;
+    if (reden) vak.append(el('p', { class: 'kleinmelding fout' }, `Kan hier niet: ${daklichtHij(l.type)} ${reden}`));
+    // Een plat dakraam: de buitenzonwering (screen) en hoe ver ze in de 3D dicht is, zoals in de kaart Dak.
+    const zon = dakraamZonweringVan(l.id);
+    if (zon) vak.append(zon);
     const onder = ruimteOp(pl, l.x + l.b / 2, l.y + l.d / 2);
     vak.append(el('p', { class: 'klein' }, `Opening ${getal(l.b)} × ${getal(l.d)} cm${onder ? ` boven ${onder.naam}` : ''}. Telt mee voor het daglicht: ongeveer ${getal((l.b * l.d * DAKLICHT_GLAS) / 10000, 2)} m² glas.`));
     const r = el('div', { class: 'knoppenrij' });
@@ -1891,7 +2006,7 @@ function toonOverzicht() {
   $('#pl-controle-status').textContent = nF ? `${nF} fout${nF === 1 ? '' : 'en'}` : meldingen.length ? `${meldingen.length} aandachtspunt${meldingen.length === 1 ? '' : 'en'}` : 'alles in orde';
   $('#pl-controle-status').className = `status ${nF ? 'fout' : meldingen.length ? 'let-op' : 'ok'}`;
   $('#pl-offerte').textContent = PRIJZEN ? `${eur(berekenHuidigeOfferte().excl)} excl. btw` : '';
-  $<HTMLButtonElement>('#pl-ongedaan').disabled = !kanOngedaan();
+  if (ongedaanKnop) ongedaanKnop.disabled = !kanOngedaan();
 }
 
 // ---------- gereedschap ----------
@@ -1900,6 +2015,11 @@ function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPane
   if (g !== 'maten' && matenPaneelOpen()) sluitMatenPaneel();
   // Een gewoon gereedschap (een sneltoets) zet de techniek uit.
   if (g !== 'kies' && techniekAan()) zetTechniek(false, { stil: true });
+  // Meubel en Daklicht openen hun palet (op de plaats van het gereedschap); een ander gereedschap sluit het, Selecteren
+  // niet (na het plaatsen blijft het palet open, zodat je meteen een volgend meubel kiest).
+  if (g === 'meubel' || g === 'daklicht') palet = g;
+  else if (g !== 'kies') palet = undefined;
+  if (g !== gereedschap) verbergTikMelding();
   gereedschap = g;
   voorbeeldOpening = undefined;
   voorbeeldLosseWand = undefined;
@@ -1914,15 +2034,87 @@ function kiesGereedschap(g: Gereedschap, begin?: Parameters<typeof openMatenPane
   toonEigenschappen();
 }
 
-/** Met de techniek aan staat het palet van de techniek in de plaats van het gereedschap (zie techniek-ui.ts). */
+/**
+ * Met de techniek aan staat het palet van de techniek in de plaats van het gereedschap (zie techniek-ui.ts); met een open
+ * palet van Meubel of Daklicht dat palet. Zo staat wat je kiest altijd naast de tekening (doorloop A6: vroeger stond het
+ * palet onder 15 knoppen, tot 1175 beeldpunten diep).
+ */
+let paletSleutel = '';
 function toonGereedschapKaart() {
   const tech = techniekAan();
-  $('#pl-hint').textContent = tech ? techniekHint() : GEREEDSCHAP.find((x) => x.code === gereedschap)?.hint ?? '';
-  $('#pl-gereedschap').hidden = tech;
+  const open = tech ? undefined : palet;
+  // Het palet alleen opnieuw opbouwen als er iets veranderde (render() roept dit bij elke beweging op).
+  const sleutel = `${open}|${gereedschap}|${meubelType}|${daklichtType}|${meubelGroep}`;
+  const nieuw = sleutel !== paletSleutel;
+  paletSleutel = sleutel;
+  const hint = tech ? techniekHint() : open && gereedschap === 'kies'
+    ? `Klik op wat je plaatste om het te verslepen, of kies hiernaast ${open === 'meubel' ? 'een meubel' : 'een daklicht'} om nog een te plaatsen. ← Terug brengt het gereedschap terug.`
+    : GEREEDSCHAP.find((x) => x.code === gereedschap)?.hint ?? '';
+  $('#pl-hint').textContent = voorVinger(hint);
+  $('#pl-gereedschap').hidden = tech || !!open;
   const kop = $('#pl-gereedschap').previousElementSibling;
-  if (kop) kop.textContent = tech ? 'Techniek' : 'Gereedschap';
-  $('#pl-meubels').hidden = tech || gereedschap !== 'meubel';
-  $('#pl-daklichten').hidden = tech || gereedschap !== 'daklicht';
+  if (kop) kop.textContent = tech ? 'Techniek' : open ? PALET_TITEL[open] : 'Gereedschap';
+  $('#pl-meubels').hidden = open !== 'meubel';
+  $('#pl-daklichten').hidden = open !== 'daklicht';
+  if (!nieuw) return;
+  // Het open palet opnieuw opbouwen; een dicht palet leeg (zijn knoppen staan dan niet dubbel in de pagina).
+  if (open === 'meubel') toonMeubelPalet(); else $('#pl-meubels').replaceChildren();
+  if (open === 'daklicht') toonDaklichtPalet(); else $('#pl-daklichten').replaceChildren();
+}
+
+/** De kop van een palet: terug naar het gereedschap, en Selecteren (om wat je plaatste te verslepen). */
+function paletKop(): HTMLElement {
+  const kop = el('div', { class: 'knoppenrij tkop' });
+  const terug = el('button', { type: 'button', class: 'tweede', 'data-palet-terug': '', title: 'Terug naar het gereedschap' }, '← Terug');
+  terug.addEventListener('click', () => { palet = undefined; kiesGereedschap('kies'); });
+  const kies = el('button', { type: 'button', 'data-palet-kies': '', 'aria-pressed': String(gereedschap === 'kies') }, 'Selecteren');
+  kies.addEventListener('click', () => kiesGereedschap('kies'));
+  kop.append(terug, kies);
+  return kop;
+}
+
+/**
+ * Het meubelpalet: de groepen als tabs (Zitten, Eten, …, Trappen) en de meubels van de open groep als tegels, zodat het
+ * hele palet naast de tekening past (vroeger 24 knoppen onder elkaar, de trap helemaal onderaan).
+ */
+function toonMeubelPalet() {
+  const vak = $('#pl-meubels');
+  const groepen = [...new Set(Object.values(cat.meubels).map((m) => m.groep))];
+  meubelGroep = meubelGroep && groepen.includes(meubelGroep) ? meubelGroep : cat.meubels[meubelType]?.groep ?? groepen[0];
+  const tabs = el('div', { class: 'tabs paletgroepen', role: 'group', 'aria-label': 'Soort meubel' });
+  for (const g of groepen) {
+    const b = el('button', { type: 'button', 'data-meubel-groep': g, 'aria-pressed': String(g === meubelGroep) }, g);
+    b.addEventListener('click', () => { meubelGroep = g; toonMeubelPalet(); });
+    tabs.append(b);
+  }
+  const tegels = el('div', { class: 'ttegels', role: 'group', 'aria-label': meubelGroep ?? 'Meubels' });
+  for (const [code, m] of Object.entries(cat.meubels).filter(([, m]) => m.groep === meubelGroep)) {
+    const actief = gereedschap === 'meubel' && code === meubelType;
+    const b = el('button', { type: 'button', class: 'ttegel', 'data-meubel': code, 'aria-pressed': String(actief) }, m.label);
+    b.addEventListener('click', () => { meubelType = code; kiesGereedschap('meubel'); });
+    tegels.append(b);
+  }
+  vak.className = 'paletlade';
+  vak.replaceChildren(paletKop(), tabs, tegels);
+}
+
+/** Het palet van de daklichten: lichtkoepels, lichtstraten en platte dakramen (vaste maten uit de catalogus). */
+function toonDaklichtPalet() {
+  const vak = $('#pl-daklichten');
+  const groepen = [...new Set(Object.values(cat.daklichten ?? {}).map((t) => t.groep))];
+  const delen: HTMLElement[] = [paletKop()];
+  for (const g of groepen) {
+    const tegels = el('div', { class: 'ttegels', role: 'group', 'aria-label': g });
+    for (const [code, t] of Object.entries(cat.daklichten ?? {}).filter(([, t]) => t.groep === g)) {
+      const actief = gereedschap === 'daklicht' && code === daklichtType;
+      const b = el('button', { type: 'button', class: 'ttegel', 'data-daklicht': code, 'aria-pressed': String(actief) }, t.label);
+      b.addEventListener('click', () => { daklichtType = code; kiesGereedschap('daklicht'); });
+      tegels.append(b);
+    }
+    delen.push(el('p', { class: 'tsub' }, g), tegels);
+  }
+  vak.className = 'paletlade';
+  vak.replaceChildren(...delen);
 }
 
 function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
@@ -1958,6 +2150,12 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
     viewer?.formaat();
     plan3D();
     toonNaastKnop();
+  }
+  // Ongedaan maken staat bij wat je ziet: in de hoek van de 3D (meteen terug na een stijl of een keuze in het keuzepaneel),
+  // anders in de rij van het zoomen boven de tekening. Bij de gevels en de doorsnede staat ze in een verborgen vak.
+  if (ongedaanKnop) {
+    if (w === '3d') $('#pl-3d').append(ongedaanKnop);
+    else if (w === 'plan') $('#pl-zoomvlak').append(ongedaanKnop);
   }
 }
 
@@ -2020,46 +2218,13 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   naarVarianten = nav.naarVarianten;
   const lijst = $('#pl-gereedschap');
   lijst.replaceChildren(...GEREEDSCHAP.map((g) => {
-    const b = el('button', { type: 'button', 'data-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap) });
-    b.append(el('span', {}, g.label));
+    const b = el('button', { type: 'button', 'data-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap), title: g.label });
+    b.append(el('span', {}, g.kort));
     if (g.toets) b.append(el('kbd', {}, g.toets));
     b.addEventListener('click', () => { sluitMaatVraag(true); kiesGereedschap(g.code); });
     return b;
   }));
-  // Meubelpalet per groep.
-  const palet = $('#pl-meubels');
-  const groepen = [...new Set(Object.values(cat.meubels).map((m) => m.groep))];
-  palet.replaceChildren(...groepen.map((g) => {
-    const d = el('div', { class: 'palet' });
-    d.append(el('p', { class: 'klein' }, g));
-    for (const [code, m] of Object.entries(cat.meubels).filter(([, m]) => m.groep === g)) {
-      const b = el('button', { type: 'button', 'data-meubel': code, 'aria-pressed': String(code === meubelType) }, m.label);
-      b.addEventListener('click', () => {
-        meubelType = code;
-        for (const x of palet.querySelectorAll<HTMLButtonElement>('[data-meubel]')) x.setAttribute('aria-pressed', String(x.dataset.meubel === code));
-        kiesGereedschap('meubel');
-      });
-      d.append(b);
-    }
-    return d;
-  }));
-  // Palet met lichtkoepels en lichtstraten (vaste maten uit de catalogus).
-  const koepels = $('#pl-daklichten');
-  const koepelGroepen = [...new Set(Object.values(cat.daklichten ?? {}).map((t) => t.groep))];
-  koepels.replaceChildren(...koepelGroepen.map((g) => {
-    const d = el('div', { class: 'palet' });
-    d.append(el('p', { class: 'klein' }, g));
-    for (const [code, t] of Object.entries(cat.daklichten ?? {}).filter(([, t]) => t.groep === g)) {
-      const b = el('button', { type: 'button', 'data-daklicht': code, 'aria-pressed': String(code === daklichtType) }, t.label);
-      b.addEventListener('click', () => {
-        daklichtType = code;
-        for (const x of koepels.querySelectorAll<HTMLButtonElement>('[data-daklicht]')) x.setAttribute('aria-pressed', String(x.dataset.daklicht === code));
-        kiesGereedschap('daklicht');
-      });
-      d.append(b);
-    }
-    return d;
-  }));
+  // De paletten van Meubel en Daklicht worden opgebouwd als ze opengaan (toonGereedschapKaart).
   const houder = $('#pl-canvas');
   zoom = new Zoom({
     doel: houder,
@@ -2081,12 +2246,15 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   });
   const vlak = document.createElement('div');
   vlak.className = 'zoomvlak';
+  vlak.id = 'pl-zoomvlak';
   houder.before(vlak);
   // Het paneel Ruimte met maten staat over de hele breedte boven het gereedschap en de tekening (op een tablet blijft
   // het zo boven het toetsenbord in beeld).
   startMaten(matenOmgeving);
   $('#view-plan .planraster').before(el('section', { id: 'pl-maatpaneel', class: 'maatpaneel', hidden: '', 'aria-label': 'Ruimte met maten' }));
-  vlak.append(houder, zoom.knoppen({ selectie: selectieKader, grootScherm: $('#view-plan') }));
+  // Ongedaan maken links in de rij van het zoomen (in de 3D gaat de knop naar de hoek van de 3D, zie toonWeergave).
+  ongedaanKnop = $<HTMLButtonElement>('#pl-ongedaan');
+  vlak.append(houder, zoom.knoppen({ selectie: selectieKader, grootScherm: $('#view-plan') }), ongedaanKnop);
   houder.addEventListener('pointerdown', naPointerDown);
   houder.addEventListener('pointermove', naPointerMove);
   houder.addEventListener('pointerup', naPointerUp);
@@ -2127,8 +2295,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     kies: (s) => { selectie = s; melding = ''; render(); toonEigenschappen(); },
     opnieuw: () => render(),
     eigenschappen: () => toonEigenschappen(),
-    melding: (tekst) => { melding = tekst; toonEigenschappen(); },
-    gewisseld: () => { selectie = undefined; melding = ''; kiesGereedschap('kies'); if (weergave === '3d') plan3D(); },
+    melding: (tekst, bij, weigering) => { melding = tekst; toonEigenschappen(); if (bij) tikMelding(tekst, bij, weigering ? 'weiger' : 'info'); },
+    gewisseld: () => { selectie = undefined; melding = ''; if (techniekAan()) palet = undefined; kiesGereedschap('kies'); if (weergave === '3d') plan3D(); },
     drieD: () => plan3D(),
     svg: () => $('#pl-canvas').querySelector('svg'),
     naarPlan: (s) => {
@@ -2162,6 +2330,13 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     // De techniek ook: een nieuw ontwerp (de snelstart) begint met het gewone beeld (het voorbeeld met techniek zet ze daarna weer aan).
     if (techniekAan()) zetTechniek(false, { stil: true });
     if (matenPaneelOpen()) { sluitMatenPaneel(); gereedschap = 'kies'; for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === 'kies')); }
+    // Een open palet hoort ook bij het vorige project: het nieuwe begint met het gereedschap.
+    if (palet) palet = undefined;
+    if (gereedschap === 'meubel' || gereedschap === 'daklicht') {
+      gereedschap = 'kies';
+      for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gereedschap === 'kies'));
+    }
+    verbergTikMelding();
     if (weergave === '3d') toonNaastKnop();
     niveau = 0;
     selectie = undefined;
@@ -2171,11 +2346,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   });
   $('#pl-ongedaan').addEventListener('click', () => { sluitMaatVraag(true); ongedaan(); });
   $('#pl-voorbeeld').addEventListener('click', () => naarProjecten());
-  const wis = $<HTMLButtonElement>('#pl-leeg');
-  wis.addEventListener('click', () => {
-    if (wis.dataset.zeker !== '1') { wis.dataset.zeker = '1'; wis.textContent = 'Zeker? (ongedaan maken kan)'; return; }
-    wis.dataset.zeker = '';
-    wis.textContent = 'Plattegrond wissen';
+  // Wissen vraagt een tweede, bewuste tik (een dubbeltik wist niet meer: doorloop A23).
+  zekerKnop($<HTMLButtonElement>('#pl-leeg'), 'Zeker? (ongedaan maken kan)', () => {
     selectie = undefined;
     niveau = 0;
     // Alleen de plattegrond van dit project; posities zonder opening blijven in de offerte.
@@ -2198,6 +2370,16 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     naarPlan: (id) => { toonWeergave('plan'); toonPlan(id); },
     naar3D: () => toonWeergave('3d'),
   });
+
+  // Esc sluit eerst het maatvenster (zoals ×: wat getypt was, gaat terug), ook als de focus niet in het venster staat (na
+  // een tik op de tekening); het gereedschap en het groot scherm blijven dan zoals ze zijn (doorloop A7). Vóór alle andere
+  // luisteraars, ook die van het groot scherm.
+  window.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape' || !maatVraagOpen() || $('#view-plan').hidden) return;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    sluitMaatVraag(false);
+  }, true);
 
   document.addEventListener('keydown', (ev) => {
     if ($('#view-plan').hidden) return;
@@ -2242,7 +2424,7 @@ const matenOmgeving: MatenOmgeving = {
     // De nieuwe ruimte in beeld.
     zoom?.passendMaken();
   },
-  vlak: () => $('#pl-canvas').parentElement!,
+  kaart: () => $('#pl-werkvlak'),
   svg: () => $('#pl-canvas').querySelector('svg'),
   dicht: () => kiesGereedschap('kies'),
   naar3D: () => toonWeergave('3d'),

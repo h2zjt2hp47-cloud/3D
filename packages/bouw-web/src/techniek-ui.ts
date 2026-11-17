@@ -38,10 +38,13 @@ export interface TechniekOmgeving {
   /** Wat gekozen is in de tekening (gedeeld met de plattegrond), en iets kiezen (tekent opnieuw). */
   selectie: () => { soort: string; id: string } | undefined;
   kies: (s: TechniekSelectie | undefined) => void;
-  /** Tekening opnieuw; eigenschappen opnieuw; een melding bij de eigenschappen. */
+  /**
+   * Tekening opnieuw; eigenschappen opnieuw; een melding bij de eigenschappen, en met de plaats van de tik (`bij`) ook bij
+   * de tik in de tekening (een weigering, of wat de tik deed).
+   */
   opnieuw: () => void;
   eigenschappen: () => void;
-  melding: (tekst: string) => void;
+  melding: (tekst: string, bij?: Punt, weigering?: boolean) => void;
   /** De modus ging aan of uit: gereedschap, tekening en 3D bijwerken. */
   gewisseld: () => void;
   /** De 3D opnieuw tekenen (andere vakken, uitgezet). */
@@ -52,11 +55,13 @@ export interface TechniekOmgeving {
   naarPlan: (s: TechniekSelectie) => void;
 }
 let omg: TechniekOmgeving | undefined;
-/** De melding van de laatste tik, ook vlak onder de tekening (op een tablet staan de eigenschappen eronder, uit beeld). */
-let meldingVak: HTMLElement | undefined;
-function meld(tekst: string) {
-  if (meldingVak) { meldingVak.textContent = tekst; meldingVak.hidden = !tekst || !aan; }
-  omg?.melding(tekst);
+/**
+ * De melding van een tik: bij de eigenschappen, en met de plaats van de tik ook in de tekening bij die tik (op een tablet
+ * staan de eigenschappen onder de tekening, uit beeld; sinds 16/11 niet meer apart onder de tekening, die op een tablet
+ * liggend ook buiten beeld viel). `weigering` = de tik kon niet.
+ */
+function meld(tekst: string, bij?: Punt, weigering = false) {
+  omg?.melding(tekst, bij, weigering);
 }
 
 // ---------- de toestand van het scherm (niet bewaard) ----------
@@ -92,7 +97,6 @@ export function zetTechniek(nieuw: boolean, opties: { stil?: boolean } = {}) {
   gereedschap = { soort: 'kies' };
   sleep = undefined;
   if (!aan) { const s = omg?.selectie(); if (s?.soort === 'toestel' || s?.soort === 'leiding') omg?.kies(undefined); }
-  if (meldingVak) meldingVak.hidden = true;
   toonPalet();
   toonBalk3D();
   if (!opties.stil) omg?.gewisseld();
@@ -221,7 +225,7 @@ function nieuwePlaats(code: string, p: Punt): Toestel | string {
 function plaatsToestel(code: string, p: Punt) {
   voorbeeld = undefined;
   const t = nieuwePlaats(code, p);
-  if (typeof t === 'string') { meld(t); return; }
+  if (typeof t === 'string') { meld(t, p, true); return; }
   const type = tc.toestellen[code]!;
   zichtbaar.add(type.vak);
   wijzig('plan', (x) => { (x.plan.toestellen ??= []).push(t); });
@@ -239,13 +243,13 @@ function afstandVoor(van?: string, naar?: string): number {
 function trekLeiding(code: string, van: { punt: Punt; toestel?: string }, naar: { punt: Punt; toestel?: string }) {
   const soort = tc.leidingen[code]!, n = omg?.niveau() ?? 0, plan = toestand().plan;
   const punten = leidingLangsWanden(plan, van.punt, naar.punt, { niveau: n, afstand: afstandVoor(van.toestel, naar.toestel) });
-  if (punten.length < 2) { meld('Tik op twee verschillende plaatsen.'); return; }
+  if (punten.length < 2) { meld('Tik op twee verschillende plaatsen.', naar.punt, true); return; }
   const l: Leiding = { id: nieuweId('l'), soort: code, punten, hoogte: soort.hoogte, niveau: n, ...(van.toestel ? { van: van.toestel } : {}), ...(naar.toestel ? { naar: naar.toestel } : {}) };
   zichtbaar.add(soort.vak);
   wijzig('plan', (x) => { (x.plan.leidingen ??= []).push(l); });
   omg?.kies({ soort: 'leiding', id: l.id });
   const lengte = leidingVerloop(l, toestand().plan, tc, { vloerHoogte: (k) => vloerHoogte(toestand().plan, k) }).lengte;
-  meld(`${kortLabel(soort.label)} getrokken: ${getal(lengte, 1)} m. Tik op het volgende toestel om er nog een te trekken, of op Selecteren.`);
+  meld(`${kortLabel(soort.label)} getrokken: ${getal(lengte, 1)} m. Tik op het volgende toestel om er nog een te trekken, of op Selecteren.`, naar.punt);
 }
 
 /** Een tik met het gereedschap *leiding*: eerst het begin, dan het einde. */
@@ -255,7 +259,7 @@ function leidingTik(g: Extract<Gereedschap, { soort: 'leiding' }>, p: Punt) {
   const plek = t ? { punt: [t.x, t.y] as Punt, toestel: t.id } : { punt: [snap(p[0]), snap(p[1])] as Punt };
   if (!g.van) {
     g.van = plek;
-    meld(`Begin: ${t ? naamVan(t).toLowerCase() : 'een punt'}. Tik nu op het tweede toestel (of op een punt, bv. buiten).`);
+    meld(`Begin: ${t ? naamVan(t).toLowerCase() : 'een punt'}. Tik nu op het tweede toestel (of op een punt, bv. buiten).`, p);
     omg?.opnieuw();
     return;
   }
@@ -270,14 +274,14 @@ function leidingTik(g: Extract<Gereedschap, { soort: 'leiding' }>, p: Punt) {
  * Wat al in het plan staat (een tellerkast …) komt er niet nog eens bij. Van een paar volgordes de beste (de meeste
  * toestellen langs de wanden); wat niet past, komt in de melding.
  */
-function technischeRuimte(r: Ruimte) {
+function technischeRuimte(r: Ruimte, bij: Punt) {
   const plan = toestand().plan;
   const al = new Set((plan.toestellen ?? []).map((t) => t.type));
   const types = TECHNISCHE_RUIMTE.filter((x) => !al.has(x));
   const dubbel = TECHNISCHE_RUIMTE.filter((x) => al.has(x)).map((x) => kortLabel(tc.toestellen[x]!.label).toLowerCase());
-  if (!types.length) { meld(`De technische ruimte staat er al (${dubbel.join(', ')}).`); return; }
+  if (!types.length) { meld(`De technische ruimte staat er al (${dubbel.join(', ')}).`, bij, true); return; }
   const o = besteOpstelling(plan, r.id, types);
-  if (!o.toestellen.length) { meld(o.meldingen[0] ?? `In ${r.naam} past niets langs de wanden.`); return; }
+  if (!o.toestellen.length) { meld(o.meldingen[0] ?? `In ${r.naam} past niets langs de wanden.`, bij, true); return; }
   const nieuw = o.toestellen.map((t) => ({ ...t, id: nieuweId('t') }));
   // Met de collector staat er sanitair in het plan: vanaf dan meldt de controle ook elke natte ruimte zonder afvoer.
   // (Vóór de wijziging bekijken: `wijzig` past het plan ter plaatse aan.)
@@ -289,7 +293,7 @@ function technischeRuimte(r: Ruimte) {
     `Technische ruimte in ${r.naam}: ${nieuw.length} toestellen langs de wanden.`, ...o.meldingen,
     dubbel.length ? `Al in het plan (niet nog eens): ${dubbel.join(', ')}.` : '',
     sanitair ? 'Er staat nu sanitair in het plan: de controles melden ook de natte ruimtes zonder afvoer (trek een afvoer bij Sanitair).' : '',
-  ].filter(Boolean).join(' '));
+  ].filter(Boolean).join(' '), bij);
 }
 
 /**
@@ -324,7 +328,7 @@ function besteOpstelling(plan: Plattegrond, ruimte: string, types: string[]) {
  * de grootste lengte van haar soort te houden (richtwaarde), aangesloten op de verdeler van deze verdieping (aan- en
  * afvoer langs de wanden). Een tweede tik op dezelfde ruimte legt ze opnieuw.
  */
-function vloerverwarming(r: Ruimte) {
+function vloerverwarming(r: Ruimte, bij: Punt) {
   const plan = toestand().plan, n = niveauVan(r), soort = tc.leidingen.vloerverwarming!;
   const verdeler = (plan.toestellen ?? []).filter((t) => t.type === 'verdeler_vloerverwarming' && niveauVan(t) === n)
     .sort((a, b) => Math.hypot(a.x - r.x, a.y - r.y) - Math.hypot(b.x - r.x, b.y - r.y))[0];
@@ -350,12 +354,12 @@ function vloerverwarming(r: Ruimte) {
     }
     if (lussen.every((l) => leidingVerloop(l, zonder, tc, { vloerHoogte: vh }).lengte <= max)) break;
   }
-  if (!lussen.length) { meld(`In ${r.naam} past geen lus.`); return; }
+  if (!lussen.length) { meld(`In ${r.naam} past geen lus.`, bij, true); return; }
   zichtbaar.add('klimaat');
   wijzig('plan', (x) => { x.plan.leidingen = [...(x.plan.leidingen ?? []).filter((l) => !l.id.startsWith(prefix)), ...lussen]; });
   const lengtes = lussen.map((l) => leidingVerloop(l, toestand().plan, tc, { vloerHoogte: vh }).lengte);
   omg?.kies(undefined);
-  meld(`Vloerverwarming in ${r.naam}: ${lussen.length === 1 ? 'één lus' : `${lussen.length} lussen`} van ${lengtes.map((x) => getal(x, 0)).join(', ')} m${verdeler ? ', aangesloten op de verdeler.' : '. Er staat nog geen verdeler op deze verdieping: plaats er een (of de technische ruimte) en tik dan opnieuw op de ruimte.'}`);
+  meld(`Vloerverwarming in ${r.naam}: ${lussen.length === 1 ? 'één lus' : `${lussen.length} lussen`} van ${lengtes.map((x) => getal(x, 0)).join(', ')} m${verdeler ? ', aangesloten op de verdeler.' : '. Er staat nog geen verdeler op deze verdieping: plaats er een (of de technische ruimte) en tik dan opnieuw op de ruimte.'}`, bij);
 }
 
 // ---------- voorbeeld onder de muis ----------
@@ -384,13 +388,12 @@ export function techniekPlan(plan: Plattegrond): Plattegrond {
  */
 export function techniekPointerDown(ev: PointerEvent, p: Punt, doel: Element): 'pan' | 'klaar' {
   const g = gereedschap;
-  if (meldingVak) meldingVak.hidden = true;
   if (g.soort === 'toestel') { plaatsToestel(g.type, p); return 'klaar'; }
   if (g.soort === 'leiding') { leidingTik(g, p); return 'klaar'; }
   if (g.soort === 'technisch' || g.soort === 'vloerverwarming') {
     const r = ruimteOp(toestand().plan, p[0], p[1], omg?.niveau() ?? 0);
-    if (!r) { meld('Tik in een ruimte.'); return 'klaar'; }
-    if (g.soort === 'technisch') technischeRuimte(r); else vloerverwarming(r);
+    if (!r) { meld('Tik in een ruimte.', p, true); return 'klaar'; }
+    if (g.soort === 'technisch') technischeRuimte(r, p); else vloerverwarming(r, p);
     kiesGereedschap({ soort: 'kies' });
     return 'klaar';
   }
@@ -617,14 +620,12 @@ export function vraagToestel(id: string) {
       return (t.x - vlak.van[0]) * vlak.u[0] + (t.y - vlak.van[1]) * vlak.u[1];
     };
     vraagMaat({
-      anker: [t0.x, t0.y],
       titel,
       velden: [{ code: 'afstand', label: 'Van de hoek', waarde: r1(kant === 'tot' ? vlak.lengte - vlak.s : vlak.s), min: half, max: vlak.lengte - half }, ...hoogteVeld],
       kanten: { label: `Gemeten vanaf de hoek${vlak.buiten ? ' (van buiten gezien)' : ''}`, opties: [['van', a], ['tot', b]], gekozen: kant },
       bijKant: (k) => ({ afstand: r1(k === 'tot' ? vlak.lengte - sNu() : sNu()) }),
       uitleg: `Van het ${vlak.buiten ? 'buitenvlak van de hoek van de gevel' : 'binnenvlak van de hoek'} tot het midden van het toestel${metHoogte ? '; de hoogte is de onderkant boven de afgewerkte vloer' : ''}. Richtwaarden: de installateur beslist.`,
       meteenTypen: false,
-      ver: gereedschap.soort === 'toestel',
       toepassen: (w, k, eerste) => {
         const s = k === 'tot' ? vlak.lengte - w.afstand! : w.afstand!;
         if (eerste) momentopname();
@@ -643,12 +644,10 @@ export function vraagToestel(id: string) {
   const v = binnenVorm(vormVanDeel(deel), muren);
   const x0 = Math.min(...v.map((q) => q[0])), y0 = Math.min(...v.map((q) => q[1]));
   vraagMaat({
-    anker: [t0.x, t0.y],
     titel,
     velden: [{ code: 'links', label: 'Van links', waarde: r1(t0.x - x0), min: 0 }, { code: 'boven', label: 'Van boven', waarde: r1(t0.y - y0), min: 0 }, ...hoogteVeld],
     uitleg: `Van het binnenvlak van de muur links en de muur boven (op de tekening) in ${r.naam} tot het midden van het toestel.`,
     meteenTypen: false,
-    ver: gereedschap.soort === 'toestel',
     toepassen: (w, _k, eerste) => {
       if (!ruimteOp(plan, x0 + w.links!, y0 + w.boven!, niveauVan(r))) return 'Zo komt het buiten de ruimte.';
       if (eerste) momentopname();
@@ -730,7 +729,7 @@ export function toonPalet() {
   palet.hidden = !aan;
   if (!aan) { palet.replaceChildren(); return; }
   const kop = el('div', { class: 'knoppenrij tkop' });
-  const terug = el('button', { type: 'button', class: 'tweede', 'data-techniek-uit': '' }, '← Gereedschap');
+  const terug = el('button', { type: 'button', class: 'tweede', 'data-techniek-uit': '', title: 'Terug naar het gereedschap' }, '← Terug');
   terug.addEventListener('click', () => zetTechniek(false));
   const kies = el('button', { type: 'button', 'data-techniek-kies': '', 'aria-pressed': String(gereedschap.soort === 'kies') }, 'Selecteren');
   kies.addEventListener('click', () => kiesGereedschap({ soort: 'kies' }));
@@ -763,19 +762,24 @@ export function toonPalet() {
     b.addEventListener('click', () => kiesGereedschap(actief ? { soort: 'kies' } : { soort: 'leiding', leiding: code }));
     leidingen.append(b);
   }
-  const een = el('div', { class: 'ttegels breed' });
+  const een = el('div', { class: 'ttegels' });
   const tr = el('button', { type: 'button', class: 'ttegel', 'data-techniek-een': 'technisch', 'aria-pressed': String(gereedschap.soort === 'technisch'), title: TECHNISCHE_RUIMTE.map((x) => tc.toestellen[x]?.label).join(', ') }, 'Technische ruimte');
   tr.addEventListener('click', () => kiesGereedschap(gereedschap.soort === 'technisch' ? { soort: 'kies' } : { soort: 'technisch' }));
-  const vv = el('button', { type: 'button', class: 'ttegel', 'data-techniek-een': 'vloerverwarming', 'aria-pressed': String(gereedschap.soort === 'vloerverwarming') }, 'Vloerverwarming in een ruimte');
+  const vv = el('button', { type: 'button', class: 'ttegel', 'data-techniek-een': 'vloerverwarming', 'aria-pressed': String(gereedschap.soort === 'vloerverwarming') }, 'Vloerverwarming');
+  vv.title = 'Vloerverwarming in een ruimte: tik daarna op de ruimte';
   vv.addEventListener('click', () => kiesGereedschap(gereedschap.soort === 'vloerverwarming' ? { soort: 'kies' } : { soort: 'vloerverwarming' }));
   een.append(tr, vv);
   const voorbeeld = el('button', { type: 'button', class: 'tweede', 'data-techniek-voorbeeld': '' }, 'Voorbeeld openen: woning met techniek');
   voorbeeld.addEventListener('click', openVoorbeeld);
+  // Wat je het meest nodig hebt bovenaan, zodat het naast de tekening staat, ook op een tablet liggend (doorloop A6): de
+  // technische ruimte en de vloerverwarming (in één tik, voor elk vak), de vakken, de leidingen (smalle tegels met een
+  // streep in hun kleur) en dan de toestellen (met hun teken); zonder koppen ertussen, de tegels zeggen zelf wat ze zijn.
+  // Tonen, het voorbehoud en het voorbeeld onderaan.
   palet.replaceChildren(
-    kop, tabs,
-    el('p', { class: 'tsub' }, 'Toestellen: tik er een, tik in het plan'), toestellen,
-    el('p', { class: 'tsub' }, 'Leidingen: tik er een, dan op twee toestellen'), leidingen,
-    el('p', { class: 'tsub' }, 'In één tik: kies, tik dan op de ruimte'), een,
+    kop,
+    el('p', { class: 'tsub', title: 'Kies, en tik dan op de ruimte' }, 'In één tik, op een ruimte'), een,
+    tabs,
+    leidingen, toestellen,
     el('p', { class: 'tsub' }, 'Tonen (het vak hierboven staat op de voorgrond, de andere lichter)'), vakSchakelaars(),
     el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD),
     voorbeeld,
@@ -1063,10 +1067,8 @@ export function startTechniek(o: TechniekOmgeving) {
   const gereedschap = document.getElementById('pl-gereedschap');
   palet = el('div', { id: 'pl-techniek', class: 'techniekpalet', hidden: '' });
   gereedschap?.parentElement?.append(palet);
-  meldingVak = el('p', { id: 'pl-techniek-melding', class: 'melding', role: 'status', hidden: '' });
-  document.getElementById('pl-hint')?.before(meldingVak);
   const knopAan = el('button', { type: 'button', 'data-techniek-aan': '', class: 'techniekknop', title: 'Toestellen en leidingen voor de installateur: stopcontacten, licht, airco, warmtepomp, ventilatie, water en afvoer' });
-  knopAan.append(el('span', {}, 'Techniek (installateur) …'));
+  knopAan.append(el('span', {}, 'Techniek (installateur)'));
   knopAan.addEventListener('click', () => zetTechniek(true));
   gereedschap?.append(knopAan);
   // De 3D: *Techniek* naast Afgewerkt en Constructie, en de balk eronder.

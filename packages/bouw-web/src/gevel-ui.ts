@@ -26,15 +26,16 @@ import {
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { openingenVan } from '../../core/voorbeelden/raamraster.js';
 import { Zoom, type Kader } from '../../demo-web/src/zoom.js';
-import { $, el, eur, getal, getalVeld, PRIJZEN, schakelaar } from './hulp.js';
+import { $, aanraak, el, eur, getal, getalVeld, PRIJZEN, schakelaar, voorVinger } from './hulp.js';
 import { kanOngedaan, momentopname, ongedaan, positieVan, resultaat, toestand, wijzig, type Toestand } from './staat.js';
 
 type Gereedschap = 'verf' | 'pipet' | 'ramen' | 'raam';
 
-const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string }[] = [
-  { code: 'verf', label: 'Verven', toets: 'B', hint: 'Kies een materiaal en een kleur, en klik op een muurvlak. Shift+klik verft de hele gevel, Alt+klik neemt een materiaal over (pipet). Klik op de sokkel om die te verven.' },
+/** `vinger`: de uitleg op een aanraakscherm (zonder Shift en Alt; "tik" in plaats van "klik" doet `voorVinger`). */
+const GEREEDSCHAP: { code: Gereedschap; label: string; toets: string; hint: string; vinger?: string }[] = [
+  { code: 'verf', label: 'Verven', toets: 'B', hint: 'Kies een materiaal en een kleur, en klik op een muurvlak. Shift+klik verft de hele gevel, Alt+klik neemt een materiaal over (pipet). Klik op de sokkel om die te verven.', vinger: 'Kies een materiaal en een kleur, en tik op een muurvlak (of kies hierboven wat je met één tik verft). Tik op de sokkel om die te verven.' },
   { code: 'pipet', label: 'Pipet', toets: 'I', hint: 'Klik op een muurvlak of de sokkel om het materiaal en de kleur over te nemen.' },
-  { code: 'ramen', label: 'Ramen verschuiven', toets: 'V', hint: 'Sleep een raam opzij of in de hoogte (deuren alleen opzij). De maten eronder volgen mee. Shift = per cm.' },
+  { code: 'ramen', label: 'Ramen verschuiven', toets: 'V', hint: 'Sleep een raam opzij of in de hoogte (deuren alleen opzij). De maten eronder volgen mee. Shift = per cm.', vinger: 'Sleep een raam opzij of in de hoogte (deuren alleen opzij). De maten eronder volgen mee.' },
   { code: 'raam', label: 'Raam toevoegen', toets: 'R', hint: 'Klik op een muurvlak: er komt een raam (en een regel in het overzicht) op die plaats.' },
 ];
 const BEREIK: { code: VerfBereik; label: string }[] = [
@@ -274,7 +275,8 @@ export function gevelStaal(materiaal: string, kleur: string, voeg?: string): str
 function toonPalet() {
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gv-gereedschap]')) b.setAttribute('aria-pressed', String(b.dataset.gvGereedschap === gereedschap));
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-gv-bereik]')) b.setAttribute('aria-pressed', String(b.dataset.gvBereik === bereik));
-  $('#gv-hint').textContent = GEREEDSCHAP.find((g) => g.code === gereedschap)?.hint ?? '';
+  const g = GEREEDSCHAP.find((x) => x.code === gereedschap);
+  $('#gv-hint').textContent = voorVinger((aanraak() ? g?.vinger : undefined) ?? g?.hint ?? '');
   $<HTMLButtonElement>('#gv-ongedaan').disabled = !kanOngedaan();
   const verven = gereedschap === 'verf' || gereedschap === 'pipet';
   $('#gv-bereik').hidden = gereedschap !== 'verf';
@@ -343,7 +345,7 @@ function toonPalet() {
   sk.append(rij);
   if (sokkel?.hoogte) {
     const m = gevelCatalogus[sokkel.materiaal];
-    sk.append(el('p', { class: 'klein' }, `Nu: ${m?.label ?? sokkel.materiaal}, ${(m?.kleuren[sokkel.kleur]?.label ?? sokkel.kleur).toLowerCase()}. Klik met het verfgereedschap op de sokkel om hem in het gekozen materiaal te zetten.`));
+    sk.append(el('p', { class: 'klein' }, `Nu: ${m?.label ?? sokkel.materiaal}, ${(m?.kleuren[sokkel.kleur]?.label ?? sokkel.kleur).toLowerCase()}. ${voorVinger('Klik')} met het verfgereedschap op de sokkel om hem in het gekozen materiaal te zetten.`));
   }
 }
 
@@ -393,7 +395,7 @@ function toonEigenschappen() {
     vak.append(el('p', {}, `Kwast: ${m.label}, ${kleur.toLowerCase()}${m.voegen && kwast.voeg ? `, voeg ${(m.voegen[kwast.voeg]?.label ?? '').toLowerCase()}` : ''}.`));
     if (m.uitleg) vak.append(el('p', { class: 'klein' }, m.uitleg));
   }
-  vak.append(el('p', { class: 'klein' }, 'Tip: Ctrl+Z maakt ongedaan. In 3D en in het overzicht zie je het resultaat meteen. De kleuren zijn voorbeelden.'));
+  vak.append(el('p', { class: 'klein' }, `Tip: ${aanraak() ? 'Ongedaan maken staat bovenaan het palet' : 'Ctrl+Z maakt ongedaan'}. In 3D en in het overzicht zie je het resultaat meteen. De kleuren zijn voorbeelden.`));
   const b = el('button', { type: 'button', class: 'tweede' }, 'Bekijk in 3D');
   b.addEventListener('click', () => terug?.naar3D());
   vak.append(b);

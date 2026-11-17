@@ -10,6 +10,18 @@ export function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<
 
 export const eur = (x: number) => new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR' }).format(x);
 
+/**
+ * Een aanraakscherm (een tablet, de vinger) of een muis? Dezelfde vraag als in de CSS (`pointer: coarse`), zodat tekst en
+ * opmaak overeenkomen. Telkens opnieuw gevraagd: een laptop met aanraakscherm kan wisselen.
+ */
+export const aanraak = () => !!window.matchMedia?.('(pointer: coarse)').matches;
+
+/** Uitleg voor de vinger op een aanraakscherm: "tik" in plaats van "klik" (op een computer blijft de tekst zoals ze is). */
+export function voorVinger(tekst: string): string {
+  if (!aanraak()) return tekst;
+  return tekst.replace(/\b([Kk])lik(t|ken)?\b/g, (_, k: string, eind = '') => `${k === 'K' ? 'T' : 't'}ik${eind}`);
+}
+
 /** Een schakelaar (aan of uit) met zijn label, minstens 44 beeldpunten hoog (ronde 11: *Bestaand*, *Tegen de buren*). */
 export function schakelaar(label: string, aan: boolean, wissel: (aan: boolean) => void, data: Record<string, string> = {}): HTMLLabelElement {
   const l = el('label', { class: 'schakelaar schakelaar-groot', ...data });

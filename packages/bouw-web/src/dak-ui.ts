@@ -112,6 +112,39 @@ export function daklichtSoort(): HTMLElement | null {
   return l;
 }
 
+/** Zonwering op dakramen: de gegevens wijzigen en de knoppen (kaart Dak en het paneel van één dakraam). */
+const zetZon = (ids: string[], f: (l: DakLicht) => void) => wijzig('plan', (t) => { for (const l of t.plan.daklichten ?? []) if (ids.includes(l.id)) f(l); });
+const zonAan = (l: DakLicht) => { l.zonwering = 'screen'; };
+const zonUit = (l: DakLicht) => { delete l.zonwering; delete l.zonweringStand; };
+function zonKnoppen(label: string, opties: [string, string][], nu: string, kies: (w: string) => void, data: string): HTMLElement {
+  const rij = el('div', { class: 'tabs', role: 'group', 'aria-label': label });
+  for (const [w, tekst] of opties) {
+    const b = el('button', { type: 'button', 'aria-pressed': String(w === nu), [`data-${data}`]: w }, tekst);
+    b.addEventListener('click', () => kies(w));
+    rij.append(b);
+  }
+  return rij;
+}
+
+/**
+ * De buitenzonwering van één plat dakraam (het paneel van een aangetikt dakraam in de plattegrond, doorloop A18): Geen of
+ * Screen, en met een screen hoe ver het in de 3D dicht is. Dezelfde gegevens als in de kaart Dak. Null als het daklicht
+ * geen zonwering kent (een lichtkoepel of lichtstraat).
+ */
+export function dakraamZonweringVan(id: string): HTMLElement | null {
+  const l = toestand().plan.daklichten?.find((x) => x.id === id);
+  if (!l || !daklichtCatalogus[l.type]?.zonwering) return null;
+  const vak = el('div', { class: 'dak-zonwering' });
+  const screen = l.zonwering === 'screen';
+  vak.append(el('p', { class: 'klein' }, 'Buitenzonwering op dit dakraam'),
+    zonKnoppen('Buitenzonwering', [['geen', 'Geen'], ['screen', 'Screen']], screen ? 'screen' : 'geen', (w) => zetZon([id], w === 'screen' ? zonAan : zonUit), 'daklicht-zon'));
+  if (screen) {
+    vak.append(el('p', { class: 'klein' }, 'In de 3D'), zonKnoppen('Screen in de 3D', [['half', 'Half dicht'], ['dicht', 'Helemaal dicht']], l.zonweringStand === 'dicht' ? 'dicht' : 'half',
+      (w) => zetZon([id], (x) => { if (w === 'dicht') x.zonweringStand = 'dicht'; else delete x.zonweringStand; }), 'daklicht-stand'));
+  }
+  return vak;
+}
+
 /**
  * Buitenzonwering op de platte dakramen (ronde 11b): een screen boven het glas, met één tik voor alle dakramen, en hoe ver
  * het in de 3D dicht is (half of helemaal). Per dakraam apart kan onder "Per dakraam". Null zonder dakraam dat zonwering kent.
@@ -119,29 +152,17 @@ export function daklichtSoort(): HTMLElement | null {
 export function dakraamZonwering(): HTMLElement | null {
   const ramen = (toestand().plan.daklichten ?? []).filter((l) => daklichtCatalogus[l.type]?.zonwering);
   if (!ramen.length) return null;
-  const zet = (ids: string[], f: (l: DakLicht) => void) => wijzig('plan', (t) => { for (const l of t.plan.daklichten ?? []) if (ids.includes(l.id)) f(l); });
-  const aan = (l: DakLicht) => { l.zonwering = 'screen'; };
-  const uit = (l: DakLicht) => { delete l.zonwering; delete l.zonweringStand; };
-  const knoppen = (label: string, opties: [string, string][], nu: string, kies: (w: string) => void, data: string) => {
-    const rij = el('div', { class: 'tabs', role: 'group', 'aria-label': label });
-    for (const [w, tekst] of opties) {
-      const b = el('button', { type: 'button', 'aria-pressed': String(w === nu), [`data-${data}`]: w }, tekst);
-      b.addEventListener('click', () => kies(w));
-      rij.append(b);
-    }
-    return rij;
-  };
   const ids = ramen.map((l) => l.id), met = ramen.filter((l) => l.zonwering === 'screen');
   const vak = el('div', { class: 'dak-zonwering' });
   const alle = met.length === ramen.length ? 'screen' : met.length ? '' : 'geen';
   vak.append(
     el('p', { class: 'klein' }, ramen.length > 1 ? `Buitenzonwering op de dakramen${alle ? '' : ` (${met.length} van ${ramen.length} met screen)`}` : 'Buitenzonwering op het dakraam'),
-    knoppen('Buitenzonwering', [['geen', 'Geen'], ['screen', 'Screen']], alle, (w) => zet(ids, w === 'screen' ? aan : uit), 'dakraam-zon'),
+    zonKnoppen('Buitenzonwering', [['geen', 'Geen'], ['screen', 'Screen']], alle, (w) => zetZon(ids, w === 'screen' ? zonAan : zonUit), 'dakraam-zon'),
   );
   if (met.length) {
     const stand = met.every((l) => l.zonweringStand === 'dicht') ? 'dicht' : met.every((l) => l.zonweringStand !== 'dicht') ? 'half' : '';
-    vak.append(el('p', { class: 'klein' }, 'In de 3D'), knoppen('Screen in de 3D', [['half', 'Half dicht'], ['dicht', 'Helemaal dicht']], stand,
-      (w) => zet(met.map((l) => l.id), (l) => { if (w === 'dicht') l.zonweringStand = 'dicht'; else delete l.zonweringStand; }), 'dakraam-stand'));
+    vak.append(el('p', { class: 'klein' }, 'In de 3D'), zonKnoppen('Screen in de 3D', [['half', 'Half dicht'], ['dicht', 'Helemaal dicht']], stand,
+      (w) => zetZon(met.map((l) => l.id), (l) => { if (w === 'dicht') l.zonweringStand = 'dicht'; else delete l.zonweringStand; }), 'dakraam-stand'));
   }
   if (ramen.length > 1) {
     const per = el('details', { class: 'meer-opties', 'data-dakraam-per': '' });
@@ -150,7 +171,7 @@ export function dakraamZonwering(): HTMLElement | null {
     per.append(el('summary', {}, 'Per dakraam'));
     ramen.forEach((l, i) => {
       per.append(el('p', { class: 'klein' }, `Dakraam ${i + 1} · ${l.b} × ${l.d} cm`),
-        knoppen(`Dakraam ${i + 1}`, [['geen', 'Geen'], ['screen', 'Screen']], l.zonwering === 'screen' ? 'screen' : 'geen', (w) => zet([l.id], w === 'screen' ? aan : uit), `dakraam-zon-${i + 1}`));
+        zonKnoppen(`Dakraam ${i + 1}`, [['geen', 'Geen'], ['screen', 'Screen']], l.zonwering === 'screen' ? 'screen' : 'geen', (w) => zetZon([l.id], w === 'screen' ? zonAan : zonUit), `dakraam-zon-${i + 1}`));
     });
     vak.append(per);
   }
