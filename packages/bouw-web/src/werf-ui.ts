@@ -7,6 +7,7 @@ import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting
 import { $, el, eur, getal, num } from './hulp.js';
 import { klantKorting, nieuweId, openingVan, resultaat, toestand, wijzig, zonderPrijs, type Inmeting, type Positie } from './staat.js';
 import { samenvatting } from './positie-ui.js';
+import { aannemerNaam } from './meegeven.js';
 
 let tab: 'inmeting' | 'meerwerk' = 'inmeting';
 let naarPositie: (id: string) => void = () => {};
@@ -349,7 +350,7 @@ function drukMeerwerkbon() {
     ...mw.lijnen.map((l) => `<tr><td>${esc(l.code)}</td><td><strong>${esc(l.omschrijving)}</strong><br><span class="a-klein">${l.wijzigingen.map(esc).join('<br>')}</span></td><td class="num">${l.bedrag < 0 ? '− ' : ''}${eur(Math.abs(l.bedrag))}</td></tr>`),
     ...mw.vrij.map((l) => `<tr><td>extra</td><td>${esc(l.omschrijving)}</td><td class="num">${eur(l.bedrag)}</td></tr>`),
   ].join('');
-  $('#afdruk').innerHTML = `<header class="a-kop"><div><div class="a-firma">Uw bedrijf · Ramen, deuren en renovatie</div><h1>Meerwerkbon ${bon?.nummer ?? 1}</h1><p>bij offerte ${esc(t.meta.nummer)} · ${esc(vandaag())}</p></div>
+  $('#afdruk').innerHTML = `<header class="a-kop"><div>${aannemerNaam() ? `<div class="a-firma">${esc(aannemerNaam())}</div>` : ''}<h1>Meerwerkbon ${bon?.nummer ?? 1}</h1><p>bij offerte ${esc(t.meta.nummer)} · ${esc(vandaag())}</p></div>
     <div class="a-klant"><strong>${esc(t.meta.klant)}</strong><br>${esc(t.meta.adres)}<br>Project: ${esc(t.meta.project)}</div></header>
     <p>Akkoord offerte op ${esc(t.meta.akkoord!.datum)} door ${esc(t.meta.akkoord!.naam)}. Deze bon somt alle wijzigingen sindsdien op.</p>
     <table><thead><tr><th>Positie</th><th>Wijziging</th><th class="num">Bedrag excl. btw</th></tr></thead><tbody>${rijen || '<tr><td colspan="3">Geen wijzigingen.</td></tr>'}</tbody></table>

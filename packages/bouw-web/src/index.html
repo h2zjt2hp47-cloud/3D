@@ -972,6 +972,67 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
 .tikmelding { position: absolute; z-index: 15; max-width: min(340px, calc(100% - 16px)); padding: 8px 12px; border-radius: 10px; background: #fff4e0; border: 2px solid #c9771e; color: #22262a; box-shadow: 0 6px 18px rgba(0, 0, 0, .22); font-size: .9rem; line-height: 1.3; pointer-events: none; }
 .tikmelding.info { background: #f2f6f8; border-color: #34505f; }
 .tikmelding[hidden] { display: none; }
+
+/* ---------- Doorloop B (16/11): configurator, overzicht, ramenlijst en projecten voor de verkoper ---------- */
+/* B5: de 3D (of het vooraanzicht) blijft in beeld bij elke keuze. Op een breed scherm (laptop, tablet liggend) stond de
+   hele rechterkolom vast, maar die is langer dan het scherm en schoof dus toch weg: nu staat alleen de kaart met de 3D
+   vast en lopen de andere kaarten eronder door. Op een tablet in staande stand blijft de kaart bovenaan staan, ook in 3D
+   (vroeger alleen het vooraanzicht en de 3D van een vast model). */
+@media (min-width: 901px) {
+  .positieraster > .resultaat { position: static; align-self: stretch; align-content: start; }
+  .positieraster > .resultaat > #p-voorkaart { position: sticky; top: 8px; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
+}
+@media (max-width: 900px) and (min-height: 1000px) {
+  .positieraster > .resultaat > #p-voorkaart:has(#p-3d:not([hidden])) { position: sticky; top: 0; z-index: 6; box-shadow: 0 10px 16px -10px rgba(0, 0, 0, .3); }
+  #p-voorkaart:has(#p-3d:not([hidden])) .knoppenrij { margin-top: 6px; gap: 6px; }
+  /* Een veld dat je aantikt of waarnaar de browser scrolt, komt onder de vaste 3D in beeld (niet erachter): de kaart is
+     de 3D (62 % van de breedte) plus kop en knoppen. */
+  html:has(#view-positie:not([hidden]) #p-voorkaart #p-3d:not([hidden])) { scroll-padding-top: calc(62vw + 100px); }
+}
+/* B6: de knop van het standpunt waarin je kijkt (Buiten bij een raam, deur of poort; Schuin bij een vast model). */
+#p-3d-knoppen button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
+/* B7: een raam, deur of poort die nog niet in de woning staat (in het overzicht en de configurator). */
+.label.niet-in-woning { font-size: .75rem; border: 1px solid var(--let-op); border-radius: 999px; padding: 0 8px; background: color-mix(in srgb, var(--let-op) 18%, transparent); color: var(--inkt); }
+#p-inwoning-vak { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+#p-inwoning-vak[hidden] { display: none; }
+/* B8: na verwijderen of een geplakte maatlijst onderaan het scherm een balk met Ongedaan maken. */
+.terugbalk { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px); padding: 8px 8px 8px 16px; border-radius: 10px; background: var(--inkt); color: var(--vlak); box-shadow: 0 8px 24px rgba(0, 0, 0, .3); font-size: .95rem; }
+.terugbalk[hidden] { display: none; }
+.terugbalk button { min-height: 44px; padding: 6px 16px; border: 1px solid var(--vlak); border-radius: 8px; background: var(--vlak); color: var(--inkt); font-weight: 600; cursor: pointer; white-space: nowrap; }
+/* B16: een lengte typ je als tekst ("1,2" = 1,2 m), zelfde vorm als een getalveld; een maat die niet kan staat eronder. */
+.getalrij input[type="text"] { width: 96px; padding: 6px 8px; border: 1px solid var(--lijn); border-radius: 6px; background: var(--achtergrond); text-align: right; font-variant-numeric: tabular-nums; }
+.heeft-fout .getalrij input[type="text"], .veld:has(.veldmelding:not(:empty)) .getalrij input[type="text"] { border-color: var(--fout); }
+#o-ramenlijst input.maat { min-width: 0; }
+/* B13: het 3D-beeld van het ontwerp wordt getekend: een vak met de reden zolang het er niet is. */
+.ontwerp-wachtvak { display: grid; place-items: center; min-height: 160px; aspect-ratio: 960 / 595; border-radius: 4px; background: #e9e7e1; color: var(--zacht); font-size: .9rem; text-align: center; padding: 12px; }
+/* B17: een regel in het overzicht is compact: een klein beeld, de kop en de maat; Bewerken rechts bij het aantal. */
+body:not(.met-prijzen) .positie { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; padding: 6px 0; align-items: start; }
+body:not(.met-prijzen) .positie .mini { height: 56px; overflow: hidden; }
+body:not(.met-prijzen) .positie .mini svg, body:not(.met-prijzen) .positie .mini img { max-height: 50px; width: auto; max-width: 100%; }
+body:not(.met-prijzen) .positie .mini svg[viewBox="0 0 120 110"] { width: 56px; }
+body:not(.met-prijzen) .positie { align-items: center; }
+body:not(.met-prijzen) .positie details.regeldetail { padding: 0; border-bottom: 0; }
+body:not(.met-prijzen) .positie details.regeldetail > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 44px; font-weight: 400; }
+body:not(.met-prijzen) .positie details.regeldetail > summary .positiekop::before { content: '▸'; color: var(--zacht); }
+body:not(.met-prijzen) .positie details.regeldetail[open] > summary .positiekop::before { content: '▾'; }
+body:not(.met-prijzen) .positie .positiekop { gap: 6px; }
+body:not(.met-prijzen) .positie .regelmaat { font-size: .9rem; color: var(--zacht); }
+body:not(.met-prijzen) .positieprijs { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
+.regelacties { margin: 2px 0 10px; }
+@media (max-width: 700px) { body:not(.met-prijzen) .positie { grid-template-columns: 64px minmax(0, 1fr); } body:not(.met-prijzen) .positieprijs { justify-content: flex-start; } }
+/* B17: Het ontwerp op een tablet: de 3D groot links, de plattegronden kleiner ernaast, zodat Meegeven hoger staat. */
+@media (min-width: 701px) and (max-width: 1000px) {
+  .ontwerpbeelden { grid-template-columns: 3fr 2fr; }
+  .ontwerpbeelden figure:first-child:not(:has(svg)) { grid-row: span 2; }
+  .ontwerpbeelden figure svg { max-height: 200px; }
+}
+/* B24: de vinkjes van "Uit de plattegrond" minstens 44 px hoog op een aanraakscherm (de algemene regel gaf 36 px). */
+@media (pointer: coarse) { #o-uitplan-kaart .schakelaars label { min-height: 44px; display: flex; align-items: center; gap: 8px; } }
+/* B19: hernoemen in Projecten (het naamveld in de lijst). */
+.hernoemveld { width: 100%; min-width: 160px; min-height: 40px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: 6px; font: inherit; }
+@media (pointer: coarse) { .hernoemveld { min-height: 44px; } }
+#p-inwoning { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; min-height: 44px; }
 </style>
 </head>
 <body>
@@ -1168,6 +1229,7 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
       <label class="klein">Aantal <input type="number" id="p-aantal" min="1" step="1"></label>
       <span id="p-model" class="klein"></span>
       <button type="button" id="p-naarplan" class="tweede alleen-woning">Toon in plattegrond</button>
+      <span id="p-inwoning-vak" class="alleen-woning" hidden><span class="label niet-in-woning">staat nog niet in de woning</span> <button type="button" id="p-inwoning" title="Op een vrij stuk buitenmuur, in een ruimte van deze soort; daarna verschuif je het in de plattegrond.">In de woning zetten</button> <span id="p-inwoning-melding" class="klein" role="status"></span></span>
       <button type="button" id="p-vrij" hidden>Vrij verder tekenen in de plattegrond</button>
     </div>
     <div class="positieraster">
@@ -1241,6 +1303,7 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
   <section class="kaart alleen-ramen" id="o-ramenlijst-kaart">
     <div class="kaartkop"><h2>Ramenlijst</h2><span class="klein">enkel ramen en deuren, zonder woning · maten in mm</span></div>
     <div class="tabelhouder"><table id="o-ramenlijst"><thead><tr><th>Pos.</th><th>Omschrijving</th><th>Soort</th><th>Indeling (van binnen)</th><th class="num">Breedte</th><th class="num">Hoogte</th><th>Ruimte</th><th class="num">Verd.</th><th class="num">Aantal</th><th class="num prijsdeel" id="o-ramenlijst-totaal">Totaal</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p id="o-ramenlijst-melding" class="veldfout" role="alert"></p>
     <p id="o-ramenlijst-leeg" class="klein">Nog geen ramen. Voeg er een toe of plak hieronder een maatlijst.</p>
     <div class="nieuw">
       <button type="button" class="tweede" data-ramen-nieuw="raam">+ Raam</button>
@@ -1297,7 +1360,7 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
           <label>korting <input type="number" id="o-korting" min="0" max="50" step="1" style="width:60px"> %</label>
         </div>
       </section>
-      <section class="kaart intern">
+      <section class="kaart intern" id="o-statiek-kaart">
         <h3>Statiek (voordimensionering)</h3>
         <p class="klein">Winddruk op de gevel volgens NBN EN 1991-1-4 (windzone, terrein, hoogte). Te laten bepalen per project.</p>
         <div class="positieacties">
@@ -1305,7 +1368,7 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
           <button type="button" id="o-winddruk-toepassen" class="tweede">Toepassen op alle ramen</button>
         </div>
       </section>
-      <section class="kaart alleen-woning">
+      <section class="kaart alleen-woning" id="o-uitplan-kaart">
         <h3>Uit de plattegrond</h3>
         <p class="klein">Wat er in het overzicht komt (hoeveelheden).</p>
         <div class="schakelaars" style="display:grid;gap:6px">
@@ -1350,7 +1413,7 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
       </section>
       <section class="kaart alleen-woning voor-klant" id="o-posities-kaart">
         <div class="kaartkop"><h2 id="o-posities-kop">Ramen, deuren en poorten</h2><span class="klein o-btwlabel prijsdeel"></span><span id="o-status" class="status ok"></span></div>
-        <p class="klein">Tik op een regel om de materialen en de opbouw te zien.</p>
+        <p class="klein">Tik op een regel voor de materialen en de opbouw, en om te dupliceren of te verwijderen.</p>
         <div id="o-posities"></div>
         <p id="o-leeg" class="klein" hidden>Nog geen ramen of deuren. Plaats ze in de plattegrond of voeg ze hier toe.</p>
         <div class="nieuw">
@@ -1390,6 +1453,7 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
       </section>
     </div>
   </div>
+  <div id="o-terug" class="terugbalk" role="status" hidden><span id="o-terug-tekst"></span><button type="button" id="o-terug-knop">Ongedaan maken</button></div>
 </main>
 <main id="view-varianten" class="view" hidden>
   <section class="kaart">

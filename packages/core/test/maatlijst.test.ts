@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { berekenConfiguratie } from '../src/index.js';
+import { berekenConfiguratie, standaardKeuzes } from '../src/index.js';
 import { leesMaatlijst } from '../voorbeelden/maatlijst.js';
-import { raamdeur, raamPrijslijst } from '../voorbeelden/raam.js';
+import { berekenRaam, raamdeur, raamPrijslijst } from '../voorbeelden/raam.js';
+import { garagepoort, poortPrijslijst } from '../voorbeelden/garagepoort.js';
 import { raamKeuzes } from '../voorbeelden/woning.js';
 
 describe('maatlijst lezen (enkel ramen, zonder woning)', () => {
@@ -45,5 +46,63 @@ describe('maatlijst lezen (enkel ramen, zonder woning)', () => {
     // Het voorbeeld uit het scherm geeft alleen geldige posities (ook het schuifraam van 3 m: aluminium).
     const vb = leesMaatlijst('Keuken 1600 x 1200 vast + draai-kip rechts\nLiving schuifraam 3000 x 2300\nSlaapkamer verdieping 1200 x 1400 draai-kip links 2 st\nBadkamer 600 x 600\nVoordeur 1000 x 2300 rechts');
     for (const x of vb.regels) expect(berekenConfiguratie(raamdeur, raamKeuzes({ winddruk: 800, situatie: 'renovatie', ...x.keuzes }), raamPrijslijst).geldig, x.naam).toBe(true);
+  });
+
+  it('kopregel uit Excel (doorloop B9): het posnummer is geen aantal, de kolom Aantal telt, de soort uit de omschrijving', () => {
+    const r = leesMaatlijst([
+      'Pos\tOmschrijving\tBreedte\tHoogte\tAantal',
+      '2\tLiving schuifraam\t300\t230\t1',
+      '3\tSlaapkamer\t120\t140\t2',
+      '4\tgarage poort\t250\t215\t1',
+      '5\tKeuken\t\t\t1',
+    ].join('\n'));
+    expect(r.overgeslagen.map((x) => [x.regel, x.reden])).toEqual([[1, 'kopregel'], [5, 'geen maten gevonden (bv. 1200 x 1400)']]);
+    const [living, slaap, poort] = r.regels;
+    expect(living).toMatchObject({ naam: 'Living schuifraam', aantal: 1, keuzes: { type: 'schuif', breedte: 3000, hoogte: 2300, ruimte: 'leefruimte' } });
+    expect(living!.model).toBeUndefined();
+    expect(slaap).toMatchObject({ aantal: 2, keuzes: { type: 'raam', breedte: 1200, hoogte: 1400, ruimte: 'slaapkamer' } });
+    expect(poort).toMatchObject({ naam: 'garage poort', aantal: 1, model: 'POORT', keuzes: { breedte: 2500, hoogte: 2150 } });
+    expect(poort!.keuzes.ruimte).toBeUndefined();
+  });
+
+  it('kolommen in een andere volgorde, met lege cellen en een kolom Soort', () => {
+    const r = leesMaatlijst('Aantal;Breedte (mm);Hoogte (mm);Soort;Ruimte;Verdieping\n3;1200;1400;;slaapkamer;1\n1;3500;2400;hef-schuifdeur;living;0');
+    expect(r.regels[0]).toMatchObject({ aantal: 3, keuzes: { type: 'raam', breedte: 1200, hoogte: 1400, ruimte: 'slaapkamer', verdieping: 1 } });
+    expect(r.regels[1]).toMatchObject({ aantal: 1, keuzes: { type: 'hefschuif', breedte: 3500, delen: 'd2', ruimte: 'leefruimte', verdieping: 0 } });
+  });
+
+  it('zonder kopregel: een posnummer vooraan telt niet als aantal, het laatste kleine getal na de maten wel', () => {
+    const r = leesMaatlijst('2\tLiving schuifraam\t3000\t2300\n7\tKeuken\t1600\t1200\t2');
+    expect(r.regels.map((x) => x.aantal)).toEqual([1, 2]);
+    expect(r.regels[0]!.naam).toBe('Living schuifraam');
+  });
+
+  it('de soort uit de omschrijving: garagepoort, hef-schuif, vouwwand, glaswand; elke regel is geldig', () => {
+    const r = leesMaatlijst([
+      'garage poort 2500 x 2150',
+      'Sectionale poort 3000 x 2125',
+      'Living hef-schuifdeur 5000 x 2400',
+      'Veranda vouwwand 3600 x 2300',
+      'Vaste glaswand 3600 x 2500',
+      'Schuifraam 3000 x 2300',
+    ].join('\n'));
+    expect(r.regels.map((x) => x.model ?? x.keuzes.type)).toEqual(['POORT', 'POORT', 'hefschuif', 'vouwwand', 'glaswand', 'schuif']);
+    expect(r.regels[2]!.keuzes).toMatchObject({ delen: 'd3', schuif_richting: 'beide' });
+    expect(r.regels[3]!.keuzes).toMatchObject({ delen: 'd4' });
+    expect(r.regels[4]!.keuzes).toMatchObject({ delen: 'd3' });
+    for (const x of r.regels.filter((y) => !y.model)) {
+      const res = berekenRaam(raamKeuzes({ winddruk: 800, situatie: 'renovatie', ...x.keuzes }));
+      expect(res.meldingen.filter((m) => m.ernst === 'fout').map((m) => m.melding), x.naam).toEqual([]);
+    }
+    for (const x of r.regels.filter((y) => y.model === 'POORT')) {
+      expect(berekenConfiguratie(garagepoort, { ...standaardKeuzes(garagepoort), ...x.keuzes }, poortPrijslijst).geldig, x.naam).toBe(true);
+    }
+  });
+
+  it('"b x h" met kolommen zoals vroeger: naam vóór de maat, aantal in een eigen kolom, geen posnummer als aantal', () => {
+    const r = leesMaatlijst('Keuken 1200 x 1400\t2\nKeuken 1200 x 1400; draai-kip links\n3\tLiving 3000 x 2300\t1\n4\tBureau 1200 x 1400');
+    expect(r.regels.map((x) => [x.naam, x.aantal])).toEqual([['Keuken', 2], ['Keuken', 1], ['Living', 1], ['Bureau', 1]]);
+    expect(r.regels[1]!.keuzes).toMatchObject({ vakken: 'v1', vak1: 'draaikip_l' });
+    expect(r.regels[2]!.keuzes).toMatchObject({ type: 'raam', ruimte: 'leefruimte' });
   });
 });

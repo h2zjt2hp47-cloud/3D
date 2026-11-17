@@ -223,6 +223,31 @@ export function leesMaat(tekst: string, m: Pick<SnelMaat, 'eenheid'>): number | 
   if (m.eenheid === 'stuks') return Math.round(som);
   return m.eenheid === 'mm' ? Math.round(som * 10) : Math.round(som);
 }
+/**
+ * Een getypte lengte in een veld van een model, in **mm** of **cm** (doorloop B16, 16/11: in de configurator en de ramenlijst
+ * werd "1,2" 12 mm). Een kaal getal is in de eenheid van het veld ("1200" = 1200 mm), een getal met een komma of punt onder
+ * 20 is meter, zoals in de snelstart ("1,2" of "1.2" = 1200 mm; een raam van 1,2 mm bestaat niet), een eenheid erbij mag
+ * ("1,2 m", "120 cm", "1200 mm") en een som ook ("1000 + 200"). Geeft de waarde in de eenheid van het veld (afgerond op een
+ * hele mm of cm), of undefined als er geen getal staat (ook bij een leeg veld). Begrenzen doet het scherm.
+ */
+export function leesLengte(tekst: string, eenheid: 'mm' | 'cm'): number | undefined {
+  const schoon = tekst.trim().toLowerCase().replace(/\s+/g, '').replace(/[−–]/g, '-');
+  const stuk = /([+-]?)(\d+(?:[.,]\d+)?)(mm|cm|m)?/y;
+  let som = 0, n = 0;
+  stuk.lastIndex = 0;
+  while (stuk.lastIndex < schoon.length) {
+    const r = stuk.exec(schoon);
+    if (!r || (n === 0 && r[1]) || (n > 0 && !r[1])) return undefined;
+    const x = Number(r[2]!.replace(',', '.'));
+    const e = r[3] ?? (/[.,]/.test(r[2]!) && x < 20 ? 'm' : eenheid);
+    const mm = e === 'm' ? x * 1000 : e === 'cm' ? x * 10 : x;
+    som += r[1] === '-' ? -mm : mm;
+    n++;
+  }
+  if (!n) return undefined;
+  return eenheid === 'mm' ? Math.round(som) : Math.round(som / 10);
+}
+
 const r5 = (x: number) => Math.round(x / 5) * 5;
 const binnen = (x: number, min: number, max: number) => Math.min(max, Math.max(min, x));
 const indeling = (code: string) => INDELINGEN.find((i) => i.code === code)!;

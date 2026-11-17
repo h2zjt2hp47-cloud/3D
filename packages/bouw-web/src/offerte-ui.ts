@@ -16,15 +16,16 @@ import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
 import { controles, inbegrepen, meetstaatLijst, positieBeeld, samenvatting } from './positie-ui.js';
 import { tegelBeeld } from './snelstart-ui.js';
 import { legAkkoordVast, meerwerk } from './werf-ui.js';
-import { bibliotheek, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zonderPrijs, type ModelCode, type Positie } from './staat.js';
+import { bibliotheek, dupliceerPositie, kanInWoning, klantKorting, MODELLEN, nieuwePositie, openingVan, positieUitBibliotheek, resultaat, toestand, wijzig, zetInWoning, zonderPrijs, type ModelCode, type Positie } from './staat.js';
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
-import { maakPakket3D, maakZending } from './doorsturen.js';
+import { maakPakket3D, maakZending, tekenBeeld, woningScene } from './doorsturen.js';
 import { datumTekst, drukBlad } from './blad.js';
 import { metFirma } from './firma-ui.js';
 import { aannemerNaam, familie, gaatMee, grootteTekst, maakKlantBestand, meeTeGeven, verschilVan, zetAannemerNaam, zetMee, type Variant } from './meegeven.js';
 import { toonConstructieOverzicht } from './constructie-ui.js';
 import { toonTechniekOverzicht } from './techniek-ui.js';
 import { toonWerkenOverzicht } from './werken-ui.js';
+import { BRON_TERUG, startTerug, toonTerug } from './terug-ui.js';
 
 /** Het pictogram (van de snelstart) van een vast model zonder 3D-beeld in het overzicht. */
 const MINI_BEELD: Record<string, string> = { OVERKAPPING: 'overkapping', TUINHUIS: 'tuinhuis', LOODS: 'loods', BALUSTRADE: 'balustrade', LUIFEL: 'luifel', STAALTRAP: 'trap' };
@@ -92,7 +93,7 @@ function toonKlantVoorbeeld() {
   if (document.activeElement !== veld) veld.value = firma;
   const vak = $('#o-klantvoorbeeld');
   const vast = !t.plan.ruimtes.length ? t.posities.find((p) => isVastModel(p.model) && p.aantal > 0) : undefined;
-  const beeld = t.meta.zonderWoning ? undefined : (t.plan.ruimtes.length ? laatsteBeeld : vast && beeldVan(vast)) ?? undefined;
+  const beeld = t.meta.zonderWoning ? undefined : (t.plan.ruimtes.length ? laatsteBeeld?.beeld : vast && beeldVan(vast)) ?? undefined;
   const tekst = el('div', { class: 'kv-tekst' });
   const kop = el('div', { class: 'kv-kop' });
   kop.append(el('strong', { class: 'kv-titel' }, t.meta.project || 'Ontwerp'), firma ? el('span', { class: 'kv-firma' }, firma) : el('span', { class: 'kv-firma kv-leeg' }, 'Nog geen firmanaam'));
@@ -176,10 +177,16 @@ function regelStaal(code: string): string {
 }
 
 /** Een positie als regel die openklapt: soort en maat, open de materialen en de opbouw (zonder prijzen). */
-function regelDetail(p: Positie, r: ReturnType<typeof resultaat>): HTMLElement {
+function regelDetail(p: Positie, r: ReturnType<typeof resultaat>, boven?: HTMLElement, kop?: HTMLElement): HTMLElement {
   const d = el('details', { class: 'regeldetail' });
-  d.append(el('summary', {}, kort(p)));
+  // Doorloop B17: de kop van de regel (nummer, naam, status) en de maat samen op de regel die openklapt.
+  const regelKop = el('summary');
+  if (kop) regelKop.append(kop, el('span', { class: 'regelmaat' }, kort(p)));
+  else regelKop.textContent = kort(p);
+  d.append(regelKop);
   const inhoud = el('div', { class: 'regelinhoud' });
+  // Doorloop B17: de knoppen die je zelden nodig hebt (Toon in plattegrond, Dupliceren, Verwijderen) staan in de open regel.
+  if (boven) inhoud.append(boven);
   inhoud.append(el('p', { class: 'klein' }, omschrijving(p)));
   // `intern`: hoeveelheden van materiaal, alleen voor de aannemer (niet in de klantweergave, doorloop B10).
   const lijst = (titel: string, items: string[], intern = false) => {
@@ -213,21 +220,81 @@ function beeldVan(p: Positie): string | undefined {
   return b && b.sleutel === beeldSleutel(p) ? b.beeld : undefined;
 }
 
-/** Beeld van het ontwerp bovenaan het overzicht: de 3D zoals ze laatst op het scherm stond, en de plattegrond per verdieping. */
-let laatsteBeeld: string | null = null;
+/** Waarom een positie niet in de woning gezet kon worden (bij die regel). */
+let plaatsMelding: { id: string; tekst: string } | undefined;
+
+/**
+ * Beeld van het ontwerp bovenaan het overzicht: de 3D zoals ze laatst op het scherm stond, en de plattegrond per verdieping.
+ * Doorloop B13 (16/11): na een wijziging (in de configurator, of hier) was er geen 3D-beeld meer tot je eerst naar de 3D
+ * ging. Nu wordt het beeld dan buiten beeld getekend (`tekenBeeld`, schuin, zoals de zending), met een korte zin zolang
+ * het tekent. Het beeld hoort bij een stand van plan en posities (`ontwerpSleutel`): een oud beeld wordt nooit getoond.
+ */
+let laatsteBeeld: { sleutel: string; beeld: string } | null = null;
+/** De stand van de woning die het beeld toont: plan en de keuzes van de posities (de klant of een aantal niet). */
+const ontwerpSleutel = (t: ReturnType<typeof toestand>) => JSON.stringify([t.plan, t.posities.map((p) => [p.id, p.model, p.keuzes])]);
+/** Waarom er (nog) geen 3D-beeld staat, als er geen is. */
+let ontwerpZin = '';
+/** Het beeld dat nu getekend wordt (voor welke stand), en de stand waarvoor het niet lukte (niet blijven proberen). */
+let tekentVoor = '';
+let mislukt = '';
+
+/**
+ * Eén verborgen kijker tekent de beelden voor het overzicht, het blad en de zending (doorsturen.ts): na elkaar, nooit
+ * door elkaar (anders krijgt een beeld de scène van een ander).
+ */
+let rij: Promise<unknown> = Promise.resolve();
+export function naElkaar<T>(f: () => Promise<T>): Promise<T> {
+  const volgende = rij.then(f, f);
+  rij = volgende.catch(() => undefined);
+  return volgende;
+}
+
+function maakOntwerpBeeld(sleutel: string) {
+  if (tekentVoor === sleutel || mislukt === sleutel) return;
+  tekentVoor = sleutel;
+  ontwerpZin = '3D-beeld maken …';
+  void naElkaar(async () => {
+    try {
+      const t = toestand();
+      if (ontwerpSleutel(t) !== sleutel) return;
+      const beeld = await tekenBeeld(woningScene(undefined, false, t), { standpunt: 'schuin', buiten: true });
+      if (!beeld) { ontwerpZin = 'Geen 3D-beeld: de 3D werkt niet op dit toestel.'; mislukt = sleutel; }
+      else if (ontwerpSleutel(toestand()) === sleutel) { laatsteBeeld = { sleutel, beeld }; ontwerpZin = ''; }
+    } catch (fout) {
+      // Geen rode foutmelding voor een beeld dat niet lukte: de reden staat in het vak.
+      console.warn('3D-beeld van het ontwerp', fout);
+      ontwerpZin = 'Het 3D-beeld kon niet getekend worden. Open de 3D in de plattegrond om het te maken.';
+      mislukt = sleutel;
+    } finally {
+      if (tekentVoor === sleutel) tekentVoor = '';
+      // Het overzicht staat nog open: het beeld (of de reden) meteen tonen.
+      if (!$('#view-offerte').hidden && !toestand().meta.zonderWoning) toonOntwerp(false);
+    }
+  });
+}
+
 function toonOntwerp(nieuwBeeld: boolean) {
   const t = toestand();
+  const sleutel = ontwerpSleutel(t);
   if (nieuwBeeld) {
-    laatsteBeeld = ontwerpBeeld();
+    // De 3D van de woning zoals ze laatst op het scherm stond, als ze sindsdien niet veranderde.
+    const live = ontwerpBeeld();
+    if (live) laatsteBeeld = { sleutel, beeld: live };
     // De 3D van de positie die laatst in de configurator stond (een carport, een loods …), als ze nog klopt.
     const pb = positieBeeld();
     const p = pb && t.posities.find((x) => x.id === pb.id);
     if (pb && p) positieBeelden.set(p.id, { sleutel: beeldSleutel(p), beeld: pb.beeld });
   }
   const beelden: HTMLElement[] = [];
-  if (laatsteBeeld) {
+  if (laatsteBeeld?.sleutel === sleutel) {
     const f = el('figure');
-    f.append(el('img', { src: laatsteBeeld, alt: 'De woning in 3D' }), el('figcaption', {}, '3D'));
+    f.append(el('img', { src: laatsteBeeld.beeld, alt: 'De woning in 3D' }), el('figcaption', {}, '3D'));
+    beelden.push(f);
+  } else if (t.plan.ruimtes.length) {
+    // Geen (actueel) beeld: het buiten beeld tekenen; tot dan zegt een vak waarom het er nog niet staat.
+    maakOntwerpBeeld(sleutel);
+    const f = el('figure', { class: 'ontwerp-wacht' });
+    f.append(el('div', { class: 'ontwerp-wachtvak', role: 'status' }, ontwerpZin || '3D-beeld maken …'), el('figcaption', {}, '3D'));
     beelden.push(f);
   }
   // Geen woning, wel een carport, tuinhuis, loods of staalwerk: hun 3D-beeld (als het er is) is het ontwerp.
@@ -332,27 +399,52 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     kop.append(el('span', { class: 'code' }, p.code), el('strong', {}, p.naam));
     const opening = openingVan(p);
     if (opening) kop.append(el('span', { class: 'label' }, 'in plattegrond'));
+    // Doorloop B7: wat in het overzicht toegevoegd werd (+ Raam, uit de bibliotheek, een kopie zonder plaats ernaast) staat
+    // niet vanzelf in de woning: dat staat erbij, met een knop om het op een vrij stuk buitenmuur te zetten.
+    const inWoning = kanInWoning(p);
+    if (inWoning) kop.append(el('span', { class: 'label niet-in-woning' }, 'staat nog niet in de woning'));
+    else if (!opening && t.plan.ruimtes.length && (p.model === 'AANBOUW' || isVastModel(p.model))) kop.append(el('span', { class: 'label' }, 'los onderdeel, niet in de woning'));
     const c = controles(p, r);
     const nL = c.filter((x) => x.toestand === 'let-op').length;
     kop.append(el('span', { class: `status ${!r.geldig ? 'fout' : nL ? 'let-op' : 'ok'}` }, !r.geldig ? `${nFouten(r)} fout${nFouten(r) === 1 ? '' : 'en'}` : nL ? `${nL} aandachtspunt${nL === 1 ? '' : 'en'}` : 'in orde'));
-    info.append(kop, PRIJZEN ? el('p', { class: 'klein' }, omschrijving(p)) : regelDetail(p, r));
+    // Doorloop B17 (het overzicht was op de tablet 7 schermen lang): een regel is de kop en de maat; Bewerken staat rechts
+    // bij het aantal, de andere knoppen in de open regel. Met prijzen zoals vroeger.
     const acties = el('div', { class: 'positieacties' });
+    const meer = PRIJZEN ? acties : el('div', { class: 'positieacties regelacties' });
+    if (PRIJZEN) info.append(kop, el('p', { class: 'klein' }, omschrijving(p)));
+    else info.append(regelDetail(p, r, meer, kop));
     const knop = (tekst: string, f: () => void, cls = 'tweede') => {
       const b = el('button', { type: 'button', class: cls }, tekst);
       b.addEventListener('click', f);
       return b;
     };
     acties.append(knop('Bewerken', () => naarPositie(p.id), ''));
-    if (opening) acties.append(knop('Toon in plattegrond', () => naarPlan(opening.id)));
-    acties.append(knop('Dupliceren', () => wijzig('offerte', (tt) => {
-      const kopie: Positie = { ...structuredClone(p), id: `${p.id}k${Date.now().toString(36)}`, naam: `${p.naam} (kopie)` };
-      tt.posities.splice(tt.posities.indexOf(tt.posities.find((x) => x.id === p.id)!) + 1, 0, kopie);
-    })));
-    acties.append(knop('Verwijderen', () => wijzig('offerte', (tt) => {
-      tt.posities = tt.posities.filter((x) => x.id !== p.id);
-      tt.plan.openingen = tt.plan.openingen.filter((x) => x.positie !== p.id);
-    }), 'gevaar'));
-    info.append(acties);
+    if (opening) meer.append(knop('Toon in plattegrond', () => naarPlan(opening.id)));
+    if (inWoning) {
+      const zet = knop('In de woning zetten', () => {
+        const id = zetInWoning(p.id);
+        if (id) { plaatsMelding = undefined; naarPlan(id); return; }
+        plaatsMelding = { id: p.id, tekst: 'Er is geen vrij stuk buitenmuur dat breed genoeg is: maak plaats in de plattegrond, of maak de positie smaller.' };
+        toonOfferte();
+      }, '');
+      zet.title = 'Op een vrij stuk buitenmuur, in een ruimte van deze soort; daarna verschuif je het in de plattegrond.';
+      zet.dataset.inWoning = p.id;
+      // Zonder prijzen onder de regel (de kolom rechts blijft smal), met prijzen bij de andere knoppen.
+      if (PRIJZEN) acties.append(zet);
+      else { const rijZet = el('div', { class: 'positieacties' }); rijZet.append(zet); info.append(rijZet); }
+    }
+    // De kopie komt achteraan in de nummering, en naast het origineel in de woning als daar plaats is (staat.ts).
+    meer.append(knop('Dupliceren', () => { dupliceerPositie(p.id, { naam: (q) => `${q.naam} (kopie)` }); }));
+    // Eén tik, met daarna onderaan *Ongedaan maken* (doorloop B8; ook Ctrl+Z op dit scherm).
+    meer.append(knop('Verwijderen', () => {
+      wijzig(BRON_TERUG, (tt) => {
+        tt.posities = tt.posities.filter((x) => x.id !== p.id);
+        tt.plan.openingen = tt.plan.openingen.filter((x) => x.positie !== p.id);
+      });
+      toonTerug(`${p.code} · ${p.naam} verwijderd${opening ? ' (ook uit de woning)' : ''}.`);
+    }, 'gevaar'));
+    if (PRIJZEN) info.append(acties);
+    if (plaatsMelding?.id === p.id) info.append(el('p', { class: 'klein melding', role: 'status' }, plaatsMelding.tekst));
     const prijs = el('div', { class: 'positieprijs' });
     const aantal = el('input', { type: 'number', min: '0', step: '1', 'aria-label': `Aantal ${p.code}` }) as HTMLInputElement;
     aantal.value = String(p.aantal);
@@ -368,6 +460,7 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     aantalRij.append(aantal, el('span', { class: 'alleen-klantweergave' }, String(p.aantal)), el('span', {}, geenPrijs ? (p.aantal === 1 ? 'stuk' : 'stuks') : `× ${eur(toonPrijs(pos.stukprijs, o.btwProcent))}`));
     prijs.append(aantalRij);
     if (PRIJZEN) prijs.append(el('strong', {}, zonderPrijs(p) ? 'Nog geen prijs' : eur(toonPrijs(pos.totaal, o.btwProcent))));
+    else prijs.append(acties);
     rij.append(tekening, info, prijs);
     return rij;
   }));
@@ -409,6 +502,13 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
   toonWerkenOverzicht();
   // Constructie (ronde 6): meetstaat, aanwijzing voor EPB en schatting van de stabiliteit, elk achter een kop die openklapt.
   toonConstructieOverzicht();
+  // Doorloop B14: een project met alleen een carport, tuinhuis, loods, staalwerk of aanbouw (zonder ruimtes) heeft geen
+  // plattegrond en geen ramen: dan geen kaart Constructie ("Nog geen ruimtes"), Uit de plattegrond of Statiek voor ramen.
+  const los = !t.plan.ruimtes.length && t.posities.some((p) => p.model === 'AANBOUW' || isVastModel(p.model));
+  const constructie = document.getElementById('o-constructie');
+  if (constructie) constructie.hidden = los;
+  $('#o-uitplan-kaart').hidden = los;
+  $('#o-statiek-kaart').hidden = los && !t.posities.some((p) => p.model === 'RAAM');
   // Techniek (ronde 10b): de telling per vak, alleen als het plan techniek heeft, dicht tot je ze openklapt.
   toonTechniekOverzicht();
   for (const x of document.querySelectorAll('.o-btwlabel')) x.textContent = PRIJZEN ? `prijzen ${btwLabel()}` : '';
@@ -657,7 +757,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
     bladRustTot = Infinity;
     knop.disabled = true;
     try {
-      const ok = await drukBlad(kort, omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
+      const ok = await naElkaar(() => drukBlad(kort, omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; }));
       melding.textContent = ok ? 'Blad klaar: kies in het afdrukvenster een printer of "Bewaren als PDF".' : 'Het blad kan niet gemaakt worden: de 3D werkt niet op dit toestel.';
     } finally {
       knop.disabled = false;
@@ -666,6 +766,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
   };
   $('#o-blad').addEventListener('click', () => metFirma($('#o-blad'), 'o-firmavraag', () => void maakBlad(), toonKlantVoorbeeld));
   startRamenlijst();
+  startTerug();
   for (const [id, veld] of [['o-klant', 'klant'], ['o-adres', 'adres'], ['o-project', 'project'], ['o-nummer', 'nummer'], ['o-datum', 'datum']] as const) {
     $<HTMLInputElement>(`#${id}`).addEventListener('change', (e) => wijzig('meta', (t) => { t.meta[veld] = (e.target as HTMLInputElement).value; }));
   }
@@ -715,7 +816,7 @@ export function startOfferte(nav: { naarPositie: (id: string) => void; naarPlan:
     const knop = $<HTMLButtonElement>('#o-zending'), melding = $('#o-melding');
     knop.disabled = true;
     try {
-      const z = await maakZending(exportGegevens({ prijzen: false }), omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; });
+      const z = await naElkaar(() => maakZending(exportGegevens({ prijzen: false }), omschrijving, (klaar, totaal) => { melding.textContent = `Beelden tekenen: ${klaar} van ${totaal} …`; }));
       const n = Object.keys(z.beelden.posities).length + (z.beelden.woning ? 1 : 0);
       download(`Zending ${toestand().meta.nummer}.json`, JSON.stringify(z), 'application/json');
       melding.textContent = n ? `Zending klaar: ${z.pakket3d.posities.length} regels, ${n} beelden en de 3D.` : 'Zending klaar, zonder beelden: de 3D werkt niet op dit toestel.';

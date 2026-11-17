@@ -4,7 +4,7 @@ import { aanbouw, aanbouwPrijslijst } from '../voorbeelden/aanbouw.js';
 import { planCatalogus } from '../voorbeelden/inrichting.js';
 import { berekenRaam } from '../voorbeelden/raam.js';
 import {
-  aanbouwKeuzes, aanbouwNaarPlan, begrensMaat, daklichtenOpDak, leesMaat, loodsIndeling, SNELSTART_TEGELS, snelModel, snelModelMaat, snelRaam, snelWoning, stapMaat,
+  aanbouwKeuzes, aanbouwNaarPlan, begrensMaat, daklichtenOpDak, leesLengte, leesMaat, loodsIndeling, SNELSTART_TEGELS, snelModel, snelModelMaat, snelRaam, snelWoning, stapMaat,
   verdeelDaklichten, type SnelMaat, type SnelSoort,
 } from '../voorbeelden/snelstart.js';
 import { berekenVastModel, VASTE_MODELLEN } from '../voorbeelden/vastemodellen.js';
@@ -300,3 +300,23 @@ describe('snelstart: vaste modellen (carport, tuinhuis, loods, staalwerk)', () =
     }
   });
 });
+
+describe('maten typen in de configurator en de ramenlijst (doorloop B16)', () => {
+  it('een kaal getal in de eenheid van het veld, een kommagetal onder 20 in meter, een eenheid of een som', () => {
+    expect(leesLengte('1200', 'mm')).toBe(1200);
+    expect(leesLengte('1,2', 'mm')).toBe(1200);
+    expect(leesLengte('1.2', 'mm')).toBe(1200);
+    expect(leesLengte(' 1,25 m', 'mm')).toBe(1250);
+    expect(leesLengte('120 cm', 'mm')).toBe(1200);
+    expect(leesLengte('1000 + 200', 'mm')).toBe(1200);
+    expect(leesLengte('2.500', 'mm')).toBe(2500);
+    expect(leesLengte('99999', 'mm')).toBe(99999);
+    expect(leesLengte('12', 'mm')).toBe(12);
+    expect(leesLengte('1200,5', 'mm')).toBe(1201);
+    expect(leesLengte('4,5', 'cm')).toBe(450);
+    expect(leesLengte('450', 'cm')).toBe(450);
+    expect(leesLengte('4500 mm', 'cm')).toBe(450);
+    for (const leeg of ['', '  ', 'abc', '-5', '12 x 14']) expect(leesLengte(leeg, 'mm'), leeg).toBeUndefined();
+  });
+});
+

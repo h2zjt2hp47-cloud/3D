@@ -20,6 +20,8 @@ import {
   type RuimteType,
   type HandmatigePost,
 } from '../../core/src/index.js';
+import { beslisStart, herstelIndex, uniekeNaam, voegLijstenSamen } from '../../core/src/projecten.js';
+import { plaatsNaast, vrijePlaats, type Plaats } from '../../core/src/openingplaats.js';
 import { UITBOUW_VOORBEELD_NAAM, UITBOUW_VOORBEELD_UITLEG, uitbouwVoorbeeld } from '../../core/voorbeelden/uitbouwvoorbeeld.js';
 import { aanbouw, aanbouwPrijslijst } from '../../core/voorbeelden/aanbouw.js';
 import { garagepoort, poortPrijslijst } from '../../core/voorbeelden/garagepoort.js';
@@ -116,7 +118,15 @@ export interface Toestand {
 // Opslag in de browser: een index met projecten, elk project apart, plus sjablonen en de bibliotheek.
 const OUD = 'bouw-demo.v1';
 const INDEX = 'bouw-demo.projecten.v1';
-const PROJECT = (id: string) => `bouw-demo.project.${id}`;
+const PROJECT_VOOR = 'bouw-demo.project.';
+const PROJECT = (id: string) => `${PROJECT_VOOR}${id}`;
+/**
+ * Doorloop B4 (16/11): een tweede sleutel met dezelfde lijst (de reserve), en in de opslag van dit tabblad (sessionStorage)
+ * of het al projecten zag en hoeveel keer het na elkaar opnieuw laadde omdat de opslag leeg leek. Zie core/src/projecten.ts.
+ */
+const RESERVE = 'bouw-demo.projecten.v1.reserve';
+const GEZIEN = 'bouw-demo.opslag-gezien';
+const HERLADEN = 'bouw-demo.herladen';
 const SJABLONEN = 'bouw-demo.sjablonen.v1';
 const BIBLIOTHEEK = 'bouw-demo.bibliotheek.v1';
 
@@ -214,25 +224,96 @@ const aanvullen = (x: Toestand): Toestand => ({ ...x, plan: { ...x.plan, meubels
 let index: { actief: string; projecten: ProjectInfo[] } = { actief: '', projecten: [] };
 export let laatstBewaard = '';
 export let opslagProbleem = '';
+/** Projecten die in dit tabblad verwijderd werden: ze komen niet terug bij het samenvoegen van de lijst. */
+const verwijderd = new Set<string>();
 
 function infoVan(id: string, x: Toestand): ProjectInfo {
   return { id, naam: x.meta.project || 'Naamloos project', klant: x.meta.klant, nummer: x.meta.nummer, gewijzigd: new Date().toISOString(), posities: x.posities.length };
 }
 
+/** De ids van alle projecten die in de opslag staan (alleen de sleutels, zonder ze te lezen). */
+function projectIds(): string[] {
+  const uit: string[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith(PROJECT_VOOR)) uit.push(k.slice(PROJECT_VOOR.length));
+    }
+  } catch { /* geen opslag */ }
+  return uit;
+}
+
+/** De opslag van dit tabblad (blijft bij herladen); lezen, of schrijven als er een waarde is. Kan ontbreken. */
+function sessie(sleutel: string, waarde?: string): string | null {
+  try {
+    if (waarde === undefined) return sessionStorage.getItem(sleutel);
+    sessionStorage.setItem(sleutel, waarde);
+  } catch { /* geen opslag */ }
+  return null;
+}
+
+/**
+ * Schrijft de lijst van projecten: nooit over wat er al staat, altijd samengevoegd (doorloop B4). Wat in de opslag staat en
+ * hier niet, blijft (behalve wat dit tabblad verwijderde, of een project zonder gegevens); ook in de reserve.
+ */
+function schrijfIndex(): boolean {
+  const ids = new Set(projectIds());
+  index.projecten = voegLijstenSamen([index.projecten, lees<typeof index>(INDEX)?.projecten, lees<typeof index>(RESERVE)?.projecten], { weg: verwijderd, bestaat: (id) => ids.has(id) });
+  const ok = schrijf(INDEX, index);
+  schrijf(RESERVE, index);
+  if (ok) sessie(GEZIEN, '1');
+  return ok;
+}
+
+/** Lijkt de opslag leeg terwijl dit tabblad ze gevuld zag, dan laadt de pagina opnieuw; tot dan wordt er niets bewaard. */
+let herladenBezig = false;
+
 function laad(): Toestand {
-  index = lees<typeof index>(INDEX) ?? { actief: '', projecten: [] };
-  const actief = index.projecten.find((p) => p.id === index.actief) ?? index.projecten[0];
-  if (actief) {
-    const x = lees<Toestand>(PROJECT(actief.id));
-    if (isToestand(x)) { index.actief = actief.id; return aanvullen(x); }
+  // De lijst: de index, aangevuld met de reserve en met elk project in de opslag dat in geen van beide staat.
+  index = herstelIndex({
+    index: lees<typeof index>(INDEX), reserve: lees<typeof index>(RESERVE), ids: projectIds(),
+    regelVan: (id) => { const x = lees<Toestand>(PROJECT(id)); return isToestand(x) ? { ...infoVan(id, x), gewijzigd: '' } : undefined; },
+  });
+  const gelezen = new Map<string, Toestand>();
+  const besluit = beslisStart({
+    index,
+    leesbaar: (id) => { const x = lees<Toestand>(PROJECT(id)); if (isToestand(x)) gelezen.set(id, x); return isToestand(x); },
+    opslagGezien: sessie(GEZIEN) === '1',
+    herladen: Number(sessie(HERLADEN) ?? 0) || 0,
+  });
+  if (besluit.soort === 'project') {
+    index.actief = besluit.id;
+    sessie(GEZIEN, '1');
+    sessie(HERLADEN, '0');
+    return aanvullen(gelezen.get(besluit.id)!);
   }
-  // Eerste keer: het oude enkele project (vorige versie van de demo) of de voorbeeldwoning.
+  if (besluit.soort === 'herladen') {
+    // De opslag is leeg terwijl dit tabblad ze gevuld zag: niets schrijven, opnieuw laden. Gemeten als bestand in
+    // Chromium: bij een volgende keer laden is alles terug.
+    sessie(HERLADEN, String((Number(sessie(HERLADEN) ?? 0) || 0) + 1));
+    herladenBezig = true;
+    index = { actief: '', projecten: [] };
+    try { location.reload(); } catch { /* niets */ }
+    return voorbeeldToestand();
+  }
+  if (besluit.soort === 'niet-te-lezen') {
+    // Na drie keer herladen nog altijd leeg: het voorbeeld tonen zonder iets te schrijven, en het zeggen. Laadt de
+    // verkoper zelf opnieuw en is de opslag dan nog leeg, dan is het een gewone eerste start.
+    sessie(HERLADEN, '0');
+    sessie(GEZIEN, '0');
+    index = { actief: '', projecten: [] };
+    opslagProbleem = 'De bewaarde projecten zijn nu niet te lezen: herlaad de pagina. Tot dan wordt er niets bewaard.';
+    return voorbeeldToestand();
+  }
+  // Eerste keer: het oude enkele project (vorige versie van de demo) of de voorbeeldwoning. Het komt bij de lijst
+  // (samengevoegd met wat er al stond), het overschrijft ze niet.
   const oud = lees<Toestand>(OUD);
   const start = isToestand(oud) ? aanvullen(oud) : voorbeeldToestand();
   const id = `pr${Date.now().toString(36)}`;
-  index = { actief: id, projecten: [infoVan(id, start)] };
+  index = { actief: id, projecten: [infoVan(id, start), ...index.projecten] };
   schrijf(PROJECT(id), start);
-  schrijf(INDEX, index);
+  schrijfIndex();
+  sessie(HERLADEN, '0');
   return start;
 }
 
@@ -244,13 +325,13 @@ export const toestand = () => t;
 export const actiefProject = () => index.actief;
 
 function bewaar() {
-  if (!index.actief) return;
+  if (!index.actief || herladenBezig) return;
   const ok = schrijf(PROJECT(index.actief), t);
   const info = infoVan(index.actief, t);
   index.projecten = index.projecten.some((p) => p.id === index.actief)
     ? index.projecten.map((p) => (p.id === index.actief ? info : p))
     : [...index.projecten, info];
-  const ok2 = schrijf(INDEX, index);
+  const ok2 = schrijfIndex();
   opslagProbleem = ok && ok2 ? '' : 'Bewaren in de browser lukt niet (opslag vol of uitgeschakeld). Bewaar het project als bestand.';
   if (!opslagProbleem) laatstBewaard = new Date().toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
 }
@@ -299,7 +380,8 @@ function schoon(x: Toestand, zonderKlant: boolean): Toestand {
 /** Nieuw project, vanuit een bron (leeg, voorbeeld, sjabloon of kopie). */
 export function nieuwProject(bron: Toestand, naam: string, opties: { zonderKlant?: boolean } = {}): string {
   const x = schoon(bron, opties.zonderKlant ?? true);
-  x.meta.project = naam || 'Nieuw project';
+  // Doorloop B20: twee projecten met dezelfde naam krijgen "(2)", zodat je weet welk je opent of verwijdert.
+  x.meta.project = uniekeNaam(naam || 'Nieuw project', index.projecten.map((p) => p.naam));
   x.meta.nummer = volgendNummer();
   const id = `pr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   index.projecten.push(infoVan(id, x));
@@ -312,7 +394,30 @@ export function dupliceerProject(id: string) {
   if (x) nieuwProject(x, `${x.meta.project} (kopie)`, { zonderKlant: false });
 }
 
+/**
+ * Een project hernoemen vanuit Projecten (doorloop B19; vroeger alleen via het veld Project in het overzicht). Bestaat de
+ * naam al bij een ander project, dan komt er "(2)" achter. Geeft de nieuwe naam (of undefined als het niet lukt).
+ */
+export function hernoemProject(id: string, naam: string): string | undefined {
+  const schoon = naam.trim();
+  if (!schoon) return undefined;
+  const nieuw = uniekeNaam(schoon, index.projecten.filter((p) => p.id !== id).map((p) => p.naam));
+  if (id === index.actief) {
+    wijzig('meta', (x) => { x.meta.project = nieuw; });
+    return nieuw;
+  }
+  const x = laadProject(id);
+  if (!x) return undefined;
+  x.meta.project = nieuw;
+  if (!schrijf(PROJECT(id), x)) return undefined;
+  index.projecten = index.projecten.map((p) => (p.id === id ? { ...p, naam: nieuw } : p));
+  schrijfIndex();
+  for (const l of luisteraars) l('projecten');
+  return nieuw;
+}
+
 export function verwijderProject(id: string) {
+  verwijderd.add(id);
   index.projecten = index.projecten.filter((p) => p.id !== id);
   try { localStorage.removeItem(PROJECT(id)); } catch { /* niets */ }
   if (id === index.actief) {
@@ -324,7 +429,7 @@ export function verwijderProject(id: string) {
       nieuwProject(legeToestand(), 'Nieuw project');
     }
   } else {
-    schrijf(INDEX, index);
+    schrijfIndex();
     for (const l of luisteraars) l('projecten');
   }
 }
@@ -344,6 +449,7 @@ export function projectUitBestand(tekst: string): string {
   if (!isToestand(x)) throw new Error('Dit bestand bevat geen project van de woningconfigurator.');
   const id = `pr${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
   const y = aanvullen(x);
+  y.meta.project = uniekeNaam(y.meta.project || 'Naamloos project', index.projecten.map((p) => p.naam));
   index.projecten.push(infoVan(id, y));
   wissel(id, y);
   return id;
@@ -616,6 +722,73 @@ function synchroniseer(bron: string) {
 
 export function klantKorting(): number {
   return t.meta.klanttype === 'aannemer' ? t.meta.korting : 0;
+}
+
+// ---------- in de woning zetten (doorloop B7) ----------
+const RAAM_NAAR_RUIMTE: Record<string, RuimteType[]> = {
+  leefruimte: ['leefruimte'], keuken: ['keuken'], slaapkamer: ['slaapkamer'], bureau: ['bureau'], badkamer: ['badkamer'],
+  wc: ['wc'], hal: ['hal'], berging: ['berging', 'garage'],
+};
+
+/** Kan deze positie een opening in de plattegrond worden (een raam, deur of garagepoort) en staat ze er nog niet in? */
+export const kanInWoning = (p: Positie) => (p.model === 'RAAM' || p.model === 'POORT') && !openingVan(p) && t.plan.ruimtes.length > 0 && !t.meta.zonderWoning;
+
+/** De opening van een positie op een plaats in de plattegrond (maten, soort en draairichting komen daarna van de positie). */
+function openingOp(p: Positie, plaats: Plaats, van?: Opening): Opening {
+  const b = typeof p.keuzes.breedte === 'number' ? p.keuzes.breedte / 10 : 100;
+  const h = typeof p.keuzes.hoogte === 'number' ? p.keuzes.hoogte / 10 : 140;
+  const type = String(p.keuzes.type ?? 'raam');
+  const soort: Opening['soort'] = p.model === 'POORT' ? 'garagepoort' : type === 'raam' || type === 'glaswand' ? 'raam' : ['schuif', 'hefschuif', 'vouwwand'].includes(type) ? 'schuifraam' : 'buitendeur';
+  const borst = soort === 'raam' && typeof p.keuzes.borstwering === 'number' ? p.keuzes.borstwering / 10 : 0;
+  return {
+    ...(van ? { scharnier: van.scharnier, naarPlus: van.naarPlus } : { scharnier: 'begin' as const, naarPlus: !!plaats.muur.plus }),
+    id: nieuweId('o'), soort, as: plaats.as, lijn: plaats.lijn, midden: plaats.midden, ...(plaats.richting ? { richting: plaats.richting } : {}),
+    breedte: b, hoogte: h, borstwering: borst, niveau: plaats.niveau, positie: p.id,
+  };
+}
+
+/**
+ * Zet een positie die nog niet in de woning staat op een vrij stuk buitenmuur: liefst in een ruimte van haar soort (de
+ * keuze *Ruimte*) en op haar verdieping, een garagepoort op het gelijkvloers. Geeft de id van de opening, of undefined als
+ * er nergens plaats is. Eén stap om ongedaan te maken.
+ */
+export function zetInWoning(id: string): string | undefined {
+  const p = t.posities.find((x) => x.id === id);
+  if (!p || !kanInWoning(p)) return undefined;
+  const poort = p.model === 'POORT';
+  const plaats = vrijePlaats(t.plan, {
+    breedte: typeof p.keuzes.breedte === 'number' ? p.keuzes.breedte / 10 : 100,
+    niveau: poort ? 0 : Number(p.keuzes.verdieping ?? 0) || 0,
+    ruimteTypes: poort ? ['garage', 'berging'] : RAAM_NAAR_RUIMTE[String(p.keuzes.ruimte ?? '')] ?? [],
+    alleenGelijkvloers: poort,
+  });
+  if (!plaats) return undefined;
+  const o = openingOp(p, plaats);
+  wijzig('positie', (tt) => {
+    tt.plan.openingen.push(o);
+    const q = tt.posities.find((x) => x.id === id);
+    if (q?.model === 'RAAM') q.keuzes.verdieping = plaats.niveau;
+  });
+  return o.id;
+}
+
+/**
+ * Dupliceren in het overzicht of de ramenlijst: de kopie komt achteraan in de nummering (de nummers van de andere ramen
+ * verschuiven niet), en staat het origineel in de plattegrond, dan staat de kopie ernaast op dezelfde muur als daar plaats
+ * is. Geeft de kopie en of ze in de woning staat.
+ */
+export function dupliceerPositie(id: string, opties: { naam?: (p: Positie) => string } = {}): { kopie: Positie; inWoning: boolean } | undefined {
+  const p = t.posities.find((x) => x.id === id);
+  if (!p) return undefined;
+  const kopie: Positie = { ...structuredClone(p), id: nieuweId('p'), naam: opties.naam ? opties.naam(p) : p.naam };
+  delete kopie.inmeting;
+  const origineel = openingVan(p);
+  const plaats = origineel ? plaatsNaast(t.plan, origineel) : undefined;
+  wijzig('positie', (tt) => {
+    tt.posities.push(kopie);
+    if (origineel && plaats) tt.plan.openingen.push(openingOp(kopie, plaats, origineel));
+  });
+  return { kopie: t.posities.find((x) => x.id === kopie.id) ?? kopie, inWoning: !!(origineel && plaats) };
 }
 
 // Bij het laden: plan en posities in overeenstemming brengen (na alle declaraties hierboven).

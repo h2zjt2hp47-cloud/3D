@@ -11,6 +11,7 @@ import {
   bewaarAlsSjabloon,
   bibliotheek,
   dupliceerProject,
+  hernoemProject,
   laadProject,
   MODELLEN,
   nieuwProject,
@@ -30,6 +31,8 @@ import {
 import { bewaarBestand } from '../../demo-web/src/bewaren.js';
 
 let naarPlan: () => void = () => {};
+/** Het scherm waarop het geopende project begint (doorloop B14: een carport in de configurator met de 3D). */
+let naarProject: () => void = () => {};
 /** De woning in 3D (het voorbeeldproject van ronde 11 opent meteen in 3D). */
 let naarWoning3D: () => void = () => {};
 
@@ -84,14 +87,34 @@ export function toonProjecten() {
     const tr = el('tr', { class: p.id === actiefProject() ? 'gekozen' : '' });
     const x = laadProject(p.id);
     const acties = el('td', { class: 'acties-cel' });
-    if (p.id !== actiefProject()) acties.append(knop('Openen', () => { openProject(p.id); naarPlan(); }, ''));
+    if (p.id !== actiefProject()) acties.append(knop('Openen', () => { openProject(p.id); naarProject(); }, ''));
     else acties.append(el('span', { class: 'status ok' }, 'open'));
+    // Doorloop B19: hernoemen hier, niet alleen via het overzicht. De naam wordt een veld; Enter of ernaast tikken bewaart.
+    const naamCel = el('td', {}, p.naam);
+    const hernoem = knop('Hernoemen', () => {
+      const veld = el('input', { type: 'text', 'aria-label': `Nieuwe naam voor ${p.naam}`, class: 'hernoemveld' }) as HTMLInputElement;
+      veld.value = p.naam;
+      let klaar = false;
+      const bewaar = () => {
+        if (klaar) return;
+        klaar = true;
+        const nieuw = veld.value.trim() && veld.value.trim() !== p.naam ? hernoemProject(p.id, veld.value) : undefined;
+        if (!nieuw) toonProjecten();
+        else $('#pr-melding').textContent = nieuw === veld.value.trim() ? `Hernoemd tot "${nieuw}".` : `Hernoemd tot "${nieuw}" (die naam bestond al).`;
+      };
+      veld.addEventListener('keydown', (e) => { if (e.key === 'Enter') bewaar(); if (e.key === 'Escape') { klaar = true; toonProjecten(); } });
+      veld.addEventListener('blur', bewaar);
+      naamCel.replaceChildren(veld);
+      veld.focus();
+      veld.select();
+    });
     acties.append(
+      hernoem,
       knop('Dupliceren', () => dupliceerProject(p.id)),
       knop('Bewaar als bestand', () => { if (x) download(bestandsnaam(x), projectAlsBestand(x), 'application/json'); }),
       gevaarKnop('Verwijderen', 'Zeker verwijderen?', () => verwijderProject(p.id)),
     );
-    tr.append(el('td', {}, p.naam), el('td', {}, p.klant || '—'), el('td', { class: 'code' }, p.nummer), el('td', { class: 'num' }, String(p.posities)),
+    tr.append(naamCel, el('td', {}, p.klant || '—'), el('td', { class: 'code' }, p.nummer), el('td', { class: 'num' }, String(p.posities)),
       el('td', { class: 'num prijsdeel' }, PRIJZEN && x ? eur(totaal(x)) : '—'), el('td', { class: 'klein' }, datum(p.gewijzigd)), acties);
     return tr;
   }));
@@ -103,7 +126,7 @@ export function toonProjecten() {
     li.append(el('strong', {}, s.naam), el('span', { class: 'klein' }, [s.omschrijving, s.gewijzigd ? `bewaard ${datum(s.gewijzigd)}` : ''].filter(Boolean).join(' · ')));
     const r = el('div', { class: 'positieacties' });
     // Het voorbeeldproject (ronde 11) opent meteen in 3D, met zijn eigen naam.
-    r.append(knop(s.in3D ? 'Openen in 3D' : 'Nieuw project hiermee', () => { nieuwProject(s.toestand, s.in3D ? s.naam : `${s.naam} – nieuw`); if (s.in3D) naarWoning3D(); else naarPlan(); }, ''));
+    r.append(knop(s.in3D ? 'Openen in 3D' : 'Nieuw project hiermee', () => { nieuwProject(s.toestand, s.in3D ? s.naam : `${s.naam} – nieuw`); if (s.in3D) naarWoning3D(); else naarProject(); }, ''));
     if (s.in3D) r.lastElementChild!.setAttribute('data-sjabloon', s.id);
     if (!s.ingebouwd) r.append(gevaarKnop('Verwijderen', 'Zeker?', () => verwijderSjabloon(s.id)));
     li.append(r);
@@ -125,8 +148,9 @@ export function toonProjecten() {
   }));
 }
 
-export function startProjecten(nav: { naarPlan: () => void; naarWoning3D?: () => void }) {
+export function startProjecten(nav: { naarPlan: () => void; naarWoning3D?: () => void; naarProject?: () => void }) {
   naarPlan = nav.naarPlan;
+  naarProject = nav.naarProject ?? nav.naarPlan;
   naarWoning3D = nav.naarWoning3D ?? nav.naarPlan;
   $('#pr-nieuw').addEventListener('click', () => {
     const bron = sjablonen().find((s) => s.id === $<HTMLSelectElement>('#pr-bron').value) ?? sjablonen()[0]!;
@@ -147,7 +171,7 @@ export function startProjecten(nav: { naarPlan: () => void; naarWoning3D?: () =>
     try {
       projectUitBestand(await f.text());
       $('#pr-melding').textContent = `"${f.name}" geopend als nieuw project.`;
-      naarPlan();
+      naarProject();
     } catch (fout) {
       $('#pr-melding').textContent = fout instanceof Error ? fout.message : String(fout);
     }

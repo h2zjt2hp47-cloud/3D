@@ -15,12 +15,12 @@ import { gebouwKader, passendKader, tekenSvg, type BouwWeergave, type Configurat
 import { berekenRaam, ruitenVan } from '../../core/voorbeelden/raam.js';
 import { INDELINGEN, indelingVan, pasIndelingToe, type Indeling } from '../../core/voorbeelden/raamindelingen.js';
 import { raamKeuzes } from '../../core/voorbeelden/woning.js';
-import { aanbouwNaarPlan } from '../../core/voorbeelden/snelstart.js';
+import { aanbouwNaarPlan, leesLengte } from '../../core/voorbeelden/snelstart.js';
 import { herstelKeuzes, isVastModel, meetstaatGroep, meetstaatTekst, VASTE_MODELLEN, vastModelOpbouw, type Herstel, type VastModelCode } from '../../core/voorbeelden/vastemodellen.js';
 import { maak3D, type Standpunt, type Viewer3D } from '../../demo-web/src/drie-d.js';
 import { $, alleenPrijs, el, eur, getal, kopieer, num, PRIJZEN } from './hulp.js';
 import { heeftConstructie, isGebouw, positieMaatlijnen, positieScene } from './positie-3d.js';
-import { bewaarInBibliotheek, klantKorting, MODELLEN, nieuweId, openingVan, resultaat, toestand, vrijeMuur, wijzig, zonderPrijs, type Positie } from './staat.js';
+import { bewaarInBibliotheek, kanInWoning, klantKorting, MODELLEN, nieuweId, openingVan, resultaat, toestand, vrijeMuur, wijzig, zetInWoning, zonderPrijs, type Positie } from './staat.js';
 
 type Toestand = 'ok' | 'let-op' | 'fout';
 export interface Controle { titel: string; toestand: Toestand; waarde?: string; uitleg?: string }
@@ -444,19 +444,45 @@ function bouwVeld(p: Positie, k: Kenmerk): HTMLElement {
   if (k.type === 'getal') {
     const rij = el('div', { class: 'getalrij' });
     const schuif = el('input', { type: 'range', 'aria-label': `${k.label} (schuifbalk)`, step: String(k.stapgrootte ?? 1) }) as HTMLInputElement;
-    const invoer = el('input', { type: 'number', id, inputmode: 'numeric', step: String(k.stapgrootte ?? 1) }) as HTMLInputElement;
+    // Een lengte (mm of cm) als tekst, zodat "1,2" (meter) of "120 cm" te typen is (doorloop B16); een ander getal blijft
+    // een getalveld.
+    const lengte = k.eenheid === 'mm' || k.eenheid === 'cm' ? k.eenheid : undefined;
+    const invoer = el('input', lengte ? { type: 'text', id, inputmode: 'decimal', autocomplete: 'off' } : { type: 'number', id, inputmode: 'numeric', step: String(k.stapgrootte ?? 1) }) as HTMLInputElement;
     const bereik = el('span', { class: 'bereik' });
+    const melding = el('p', { class: 'veldfout veldmelding', role: 'alert' });
+    let grens: { min?: number; max?: number } = {};
     invoer.value = String(p.keuzes[k.code] ?? '');
-    invoer.addEventListener('change', () => zet(k.code, invoer.value === '' ? null : Number(invoer.value)));
-    schuif.addEventListener('input', () => { invoer.value = schuif.value; });
+    invoer.addEventListener('change', () => {
+      melding.textContent = '';
+      if (!lengte) { zet(k.code, invoer.value === '' ? null : Number(invoer.value)); return; }
+      // Een leeg veld of een maat die niet kan, wordt niet bewaard: de melding zegt waarom, het veld toont weer de maat.
+      const oud = huidig()?.keuzes[k.code];
+      const terug = (tekst: string) => { melding.textContent = tekst; invoer.value = typeof oud === 'number' ? String(oud) : ''; };
+      const getypt = invoer.value.trim();
+      const w = leesLengte(getypt, lengte);
+      const nu = typeof oud === 'number' ? ` De maat blijft ${getal(oud)} ${lengte}.` : '';
+      if (!getypt) return terug(`Vul een maat in (bv. 1200 of 1,2 m).${nu}`);
+      if (w === undefined) return terug(`"${getypt}" is geen maat: typ bv. 1200, 1,2 m of 120 cm.${nu}`);
+      // Een vast model zet een maat buiten zijn grenzen zelf op de dichtste die kan (met een melding, herstelKeuzes).
+      const vast = isVastModel(huidig()?.model ?? 'RAAM');
+      if (!vast && ((grens.min !== undefined && w < grens.min) || (grens.max !== undefined && w > grens.max))) {
+        return terug(`${getal(w)} ${lengte} kan niet: ${k.label.toLowerCase()} is ${getal(grens.min ?? 0)} tot ${getal(grens.max ?? 0)} ${lengte}.${nu}`);
+      }
+      invoer.value = String(w);
+      zet(k.code, w);
+    });
+    schuif.addEventListener('input', () => { invoer.value = schuif.value; melding.textContent = ''; });
     schuif.addEventListener('change', () => zet(k.code, Number(schuif.value)));
     rij.append(schuif, invoer, el('span', { class: 'eenheid' }, k.eenheid ?? ''));
-    veld.append(el('label', { for: id }, k.label), rij, bereik);
+    veld.append(el('label', { for: id }, k.label), rij, bereik, melding);
     if (k.helptekst) veld.append(el('p', { class: 'hulp' }, k.helptekst));
     update = (r) => {
       const s = r.kenmerken.find((x) => x.code === k.code)!;
-      if (s.min !== undefined) schuif.min = invoer.min = String(s.min);
-      if (s.max !== undefined) schuif.max = invoer.max = String(s.max);
+      grens = { min: s.min, max: s.max };
+      if (s.min !== undefined) schuif.min = String(s.min);
+      if (s.max !== undefined) schuif.max = String(s.max);
+      if (!lengte && s.min !== undefined) invoer.min = String(s.min);
+      if (!lengte && s.max !== undefined) invoer.max = String(s.max);
       const w = huidig()?.keuzes[k.code];
       if (typeof w === 'number') { schuif.value = String(w); if (document.activeElement !== invoer) invoer.value = String(w); }
       bereik.textContent = s.min !== undefined && s.max !== undefined ? `${getal(s.min)} – ${getal(s.max)} ${k.eenheid ?? ''}` : '';
@@ -622,6 +648,9 @@ export function toonPositie(id?: string) {
   $<HTMLInputElement>('#p-aantal').value = String(p.aantal);
   const o = openingVan(p);
   $('#p-naarplan').hidden = !o;
+  // Doorloop B7: een raam, deur of poort uit het overzicht staat nog niet in de woning: dat zeggen, met een knop.
+  $('#p-inwoning-vak').hidden = !kanInWoning(p);
+  $('#p-inwoning-melding').textContent = '';
   // Een aanbouw (model) kan als ruimte tegen een woning in de plattegrond, om er vrij aan verder te tekenen.
   $('#p-vrij').hidden = p.model !== 'AANBOUW';
   $<HTMLButtonElement>('#p-vrij').disabled = toestand().plan.ruimtes.length > 0;
@@ -800,10 +829,30 @@ function toon3D(p: Positie, r: ConfiguratieResultaat) {
   const scene = gebouw || vast ? gebouwKader(s) : passendKader(s);
   const metMaten: Scene3DMetMaten = lijnen?.length ? { ...scene, maatlijnen: lijnen } : scene;
   viewer.toon(metMaten);
-  if (vast && in3D !== p.id) viewer.standpunt('schuin');
+  // Een andere positie: een vast model schuin van boven; een raam, deur of garagepoort van buiten (doorloop B6: daar zie je
+  // de buitenkleur, de cassettes en de screens; van binnen veranderde er bij die keuzes niets). De knop staat aangeduid.
+  if (in3D !== p.id) {
+    if (vast) zetStandpunt('schuin');
+    else if (!gebouw) zetStandpunt('achter');
+    else zetStandpunt(undefined, false);
+  }
   in3D = p.id;
   // Alleen een gewoon beeld (afgewerkt, zonder maten) gaat naar het overzicht.
   getekend = vast && bouwWeergave === 'afgewerkt' && !lijnen?.length ? `${p.id}:${JSON.stringify(p.keuzes)}` : '';
+}
+
+/**
+ * Het standpunt van de 3D (doorloop B6): de kijker erheen zetten en de knop ervan aanduiden, zodat je weet of je van binnen
+ * of van buiten kijkt. `draai: false` duidt alleen aan (of niets). Draait de verkoper zelf aan het beeld, dan staat er geen
+ * knop meer aangeduid.
+ */
+let standpuntNu: Standpunt | undefined;
+function zetStandpunt(s: Standpunt | undefined, draai = true) {
+  standpuntNu = s;
+  if (s && draai) viewer?.standpunt(s);
+  // Een raam heeft zijn eigen knoppen (Binnen, Buiten …), een gebouw de zijne (Schuin, Voor …): de verborgen tellen niet.
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.setAttribute('aria-pressed', String(b.dataset.pStandpunt === s));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-zicht]')) b.setAttribute('aria-pressed', String(b.dataset.pZicht === s));
 }
 
 /** Zet de weergave (vooraanzicht of 3D) zonder te tekenen; maakt de 3D bij de eerste keer. */
@@ -888,8 +937,18 @@ export function startPositie(nav: { naarPlan: (openingId: string) => void; naarO
   naarWoning3D = nav.naarWoning3D;
   $('#p-vrij').addEventListener('click', aanbouwVrijTekenen);
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-weergave]')) b.addEventListener('click', () => toonWeergave(b.dataset.pWeergave as 'voor' | '3d'));
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pStandpunt as 'schuin'));
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-zicht]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.pZicht as Standpunt));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-standpunt]')) b.addEventListener('click', () => zetStandpunt(b.dataset.pStandpunt as Standpunt));
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-zicht]')) b.addEventListener('click', () => zetStandpunt(b.dataset.pZicht as Standpunt));
+  // Zelf draaien (slepen of de pijltjes): dan kijk je niet meer vanuit een vast standpunt, en staat er geen knop meer aangeduid.
+  const vak3D = $('#p-3d');
+  let begin: [number, number] | undefined;
+  vak3D.addEventListener('pointerdown', (e) => { begin = [e.clientX, e.clientY]; });
+  vak3D.addEventListener('pointermove', (e) => {
+    if (!begin || !e.buttons || !standpuntNu) return;
+    if (Math.hypot(e.clientX - begin[0], e.clientY - begin[1]) > 12) zetStandpunt(undefined, false);
+  });
+  vak3D.addEventListener('pointerup', () => { begin = undefined; });
+  vak3D.addEventListener('keydown', (e) => { if (standpuntNu && /^Arrow/.test(e.key)) zetStandpunt(undefined, false); });
   for (const b of document.querySelectorAll<HTMLButtonElement>('[data-p-bouw]')) {
     b.addEventListener('click', () => {
       bouwWeergave = b.dataset.pBouw === 'constructie' ? 'constructie' : 'afgewerkt';
@@ -913,6 +972,12 @@ export function startPositie(nav: { naarPlan: (openingId: string) => void; naarO
     if (p) p.aantal = Math.max(1, Math.round(Number((e.target as HTMLInputElement).value) || 1));
   }));
   $('#p-terug').addEventListener('click', () => naarOfferte());
+  $('#p-inwoning').addEventListener('click', () => {
+    const p = huidig();
+    const id = p ? zetInWoning(p.id) : undefined;
+    if (id) naarPlan(id);
+    else $('#p-inwoning-melding').textContent = 'Er is geen vrij stuk buitenmuur dat breed genoeg is: maak plaats in de plattegrond, of maak de positie smaller.';
+  });
   $('#p-naarplan').addEventListener('click', () => {
     const p = huidig();
     const o = p && openingVan(p);
