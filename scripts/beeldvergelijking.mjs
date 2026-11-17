@@ -139,6 +139,10 @@ const BOUWBEELDEN = [
   // Techniek voor de klant (ronde 10c, 17/11): het pakket zoals het bestand voor de klant het krijgt (veld `techniek`),
   // in de losse kijker met *Techniek*: het gelijkvloers uitgezet, schuin, met de legende eronder.
   { naam: 'bouw-techniek-klant', techniek: 'klant' },
+  // Ronde 17 (17/11): hetzelfde bestand voor de klant, *De woning* met *Muren laag*, van de straatkant (de airco aan de
+  // tuingevel van voren): de techniek binnen op ware grootte (stopcontacten, schakelaars, de airco met een stukje muur
+  // erachter, warmtepomp en boiler in de berging).
+  { naam: 'bouw-techniek-woning-laag', techniek: 'klant-laag', toetsen: 'L31Z3' },
   // Techniek op het scherm (ronde 10b, 16/11), op een eigen pagina: *Voorbeeld openen: woning met techniek* in het palet,
   // de tekening met de techniek aan (elektriciteit op de voorgrond, de andere vakken en de meubels lichter), en de 3D
   // *In de woning* met lage muren, het gelijkvloers schuin. Sinds ronde 10c ook de afgewerkte woning schuin (de tuinkant), met
@@ -146,6 +150,11 @@ const BOUWBEELDEN = [
   { naam: 'bouw-techniek-scherm-plan', techniekScherm: 'plan' },
   { naam: 'bouw-techniek-scherm-3d', techniekScherm: '3d' },
   { naam: 'bouw-techniek-buiten', techniekScherm: 'buiten' },
+  // Ronde 17 (17/11): de techniek binnen in de afgewerkte woning. *Muren laag*, schuin en dichterbij (de keuken met de
+  // stopcontacten boven het werkblad, de schakelaars met een stukje muur erachter); en de leefruimte van binnen, twee keer
+  // *Andere kant* (de airco hoog aan de muur, de hanglamp boven de tafel, de lichtpunten en ventielen aan het plafond).
+  { naam: 'bouw-techniek-afgewerkt-laag', techniekScherm: 'afgewerkt-laag', toetsen: 'Z5' },
+  { naam: 'bouw-techniek-van-binnen', techniekScherm: 'van-binnen' },
   // Vaste modellen (ronde 8b, 16/11), elk via de snelstart in een nieuw project, op een eigen pagina: een carport met
   // berging en zadeldak (de bedekking wordt vanzelf zink), het poolhouse, de hal van 15 × 30 m buiten (helemaal in beeld)
   // en in de constructieweergave, en de rechte trap met haar maten. `klik` = wat er daarna in de configurator gebeurt.
@@ -672,6 +681,17 @@ async function maakBeelden() {
         await p.click('[data-weergave="techniek"]');
         await p.click('[data-standpunt="schuin"]');
         beelden.set(b.naam, png(await wachtTotStil(p, '#drie-d canvas')));
+      } else if (b.techniek === 'klant-laag') {
+        // Ronde 17: hetzelfde pakket, *De woning* met *Muren laag* (de techniek binnen staat standaard aan), schuin en dichterbij.
+        await p.evaluate((x) => window.postMessage(x, '*'), klant);
+        await p.waitForTimeout(1000);
+        await p.click('[data-weergave="ontwerp"]');
+        await p.check('#laag');
+        await p.click('[data-standpunt="schuin"]');
+        await p.locator('#drie-d canvas').focus();
+        const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
+        for (const [, k, n] of (b.toetsen ?? '').matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+        beelden.set(b.naam, png(await wachtTotStil(p, '#drie-d canvas')));
       } else {
         // Het pakket als bericht aan de kijker (zoals een pagina die hem insluit), dan schuin en een stap verder weg.
         await p.evaluate((x) => window.postMessage(x, '*'), pakket);
@@ -712,6 +732,27 @@ async function maakBeelden() {
         await p.check('#pl-alle-niveaus');
         await p.click('[data-pl-standpunt="schuin"]');
         beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+      } else if (b.techniekScherm === 'afgewerkt-laag') {
+        // Ronde 17: Afgewerkt met *Muren laag* (de schakelaar Techniek staat standaard aan), schuin en dichterbij.
+        await p.click('[data-pl-weergave="3d"]');
+        await p.click('[data-3d-weergave="afgewerkt"]');
+        await p.check('#pl-laag');
+        await p.click('[data-pl-standpunt="schuin"]');
+        await p.locator('#pl-3d canvas').focus();
+        const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
+        for (const [, k, n] of (b.toetsen ?? '').matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+        await p.uncheck('#pl-laag');
+      } else if (b.techniekScherm === 'van-binnen') {
+        // Ronde 17: de leefruimte van binnen (via de ruimte in de lijst en *Bekijk van binnen*), twee keer *Andere kant*:
+        // de muur met de airco achteraan. Daarna terug naar de woning.
+        await p.click('[data-pl-weergave="plan"]');
+        await p.locator('#pl-ruimtes tbody tr', { hasText: 'Leefruimte' }).first().click();
+        await p.locator('[data-van-binnen]').first().click();
+        await p.waitForTimeout(800);
+        for (let i = 0; i < 2; i++) { await p.click('[data-binnen-draai]'); await p.waitForTimeout(500); }
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+        await p.click('[data-binnen-terug]');
       } else {
         await p.click('[data-pl-weergave="3d"]');
         await p.click('[data-techniek-3d="woning"]');

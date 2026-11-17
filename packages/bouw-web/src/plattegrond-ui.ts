@@ -11,7 +11,7 @@ import {
   kantVan,
   planMetDak,
   openKantVan,
-  ruimteVanBinnen,
+  ruimteVanBinnen, heeftTechniekBinnen,
   type GevelKant,
   zonderOndergrond,
   delenVan,
@@ -189,6 +189,8 @@ let voorbeeldLosseWand: LosseWand | undefined;
 let viewer: Viewer3D | null | undefined;
 let laag = false;
 let toonMeubels = true;
+/** Ronde 17: de techniek binnen in de afgewerkte woning (stopcontacten, airco, lampen …), de schakelaar *Techniek* in de rij Tonen. */
+let toonTechniek = true;
 let melding = '';
 let naarPositie: (id: string) => void = () => {};
 let naarOfferte: () => void = () => {};
@@ -482,6 +484,8 @@ function plan3D() {
   zetStandpuntNamen();
   // De schakelaar "Dak tonen" heeft alleen zin met een dakkeuze (de constructie heeft altijd een dak).
   $('#pl-toon-dak-label').hidden = !heeftDak() && !constructieAan();
+  // Ronde 17: de schakelaar Techniek, alleen met techniek binnen in het plan en in Afgewerkt.
+  $('#pl-toon-techniek-label').hidden = !heeftTechniekBinnen(toestand().plan) || constructieAan() || techniekAan();
   // De knop Techniek (alleen met techniek in het plan of aan) en de balk eronder.
   toonBalk3D();
   if (!viewer || wachtend3D) return;
@@ -512,6 +516,8 @@ function plan3D() {
       ...techniek3DOpties(niveau),
       // Ronde 10c: in Afgewerkt wat je van de techniek buiten ziet (buitenunit, laadpaal, dakdoorvoer …), op ware grootte.
       techniekBuiten: true,
+      // Ronde 17: ook wat binnen hangt of staat (stopcontacten, airco, radiatoren, lampen …), tenzij de schakelaar Techniek uit staat.
+      techniekBinnen: toonTechniek,
       // Ronde 15: de ledstrips als dun profiel, en wat 's nachts licht geeft (ramen, lampen, strips) voor de nachtweergave.
       verlichting: true,
     });
@@ -543,7 +549,7 @@ function plan3D() {
 function toonBinnen3D(): boolean {
   const r = binnen && toestand().plan.ruimtes.find((x) => x.id === binnen!.ruimte);
   if (!binnen || !r || constructieAan() || techniekAan()) { stopBinnen(false); return false; }
-  const scene = ruimteVanBinnen(planMetDak(toestand().plan), cat, r.id, { open: binnen.open, inhoud: openingInhoud, meubels: toonMeubels, dingen: true });
+  const scene = ruimteVanBinnen(planMetDak(toestand().plan), cat, r.id, { open: binnen.open, inhoud: openingInhoud, meubels: toonMeubels, dingen: true, techniek: toonTechniek });
   if (!scene) { stopBinnen(false); return false; }
   // Zonder lichtinval, en zonder lucht en gras: buiten kleurt het gras het plafond groen (het licht dat van onder komt) en
   // lijkt een wit plafond olijfgrijs. Op de effen achtergrond, met het zachte licht van een bewolkte dag en een halve stop
@@ -2479,6 +2485,7 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     plan3D();
   });
   $<HTMLInputElement>('#pl-toon-meubels').addEventListener('change', (e) => { toonMeubels = (e.target as HTMLInputElement).checked; plan3D(); });
+  $<HTMLInputElement>('#pl-toon-techniek').addEventListener('change', (e) => { toonTechniek = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-alle-niveaus').addEventListener('change', (e) => { alleNiveaus = (e.target as HTMLInputElement).checked; plan3D(); });
   $<HTMLInputElement>('#pl-toon-dak').addEventListener('change', (e) => { toonDakIn3D = (e.target as HTMLInputElement).checked; plan3D(); });
   const kwaliteit = $<HTMLSelectElement>('#pl-3d-kwaliteit');

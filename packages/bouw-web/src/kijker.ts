@@ -30,8 +30,13 @@
  * vak toont alleen dat vak, nog een tik alles) met de kleuren van de leidingen, en een tik op een toestel of leiding zegt
  * wat het is, waar het zit en bij welke post het hoort. Ook een toestel dat je buiten ziet (de buitenunit in de woning)
  * zegt dat. Alle woorden komen uit het pakket; geen maten, lengtes of prijzen.
+ *
+ * De techniek binnen in de woning (ronde 17): staan er in de scènes van de woning toestellen binnen (stopcontacten,
+ * airco, lampen …, de blokken `binnentechniek_…`, zie core/src/techniekbinnen.ts), dan zet de schakelaar *Techniek* naast
+ * *Muren laag* ze aan of uit (standaard aan). Een tik erop zegt wat het is, zoals bij wat buiten staat. Een oudere kijker
+ * toont ze gewoon, zonder schakelaar.
  */
-import { gebouwKader, gebouwMaatlijnen, leesPakket3D, passendKader, PAKKET3D_VERSIE, raamMaatlijnen, type Pakket3D, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
+import { gebouwKader, gebouwMaatlijnen, isBinnenTechniek, leesPakket3D, passendKader, PAKKET3D_VERSIE, raamMaatlijnen, type Pakket3D, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
 import { maak3D, type Viewer3D } from '../../demo-web/src/drie-d.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as T;
@@ -58,6 +63,8 @@ let gekozen: string | null = null;
 let nacht = false;
 /** Heeft dit ontwerp licht voor de nacht (`licht` op de blokken van de woning; een bestand van vóór ronde 15 niet)? */
 const heeftNachtLicht = (p: Pakket3D) => p.woning.some((n) => n.scene.blokken.some((b) => !!b.licht));
+/** Heeft dit ontwerp techniek binnen in de woning (ronde 17)? Dan de schakelaar *Techniek* bij de woning. */
+const heeftTechniekBinnen = (p: Pakket3D) => p.woning.some((n) => [...n.scene.blokken, ...n.laag.blokken].some((b) => isBinnenTechniek(b.code)));
 
 const techniekNu = () => modus === 'techniek' && !!pakket?.techniek;
 /** De woning zelf in beeld (niet de techniek, niet een positie). */
@@ -88,7 +95,9 @@ function scene(): Scene3D | null {
   if (keuze === 'woning') {
     const n = pakket.woning[Number($<HTMLSelectElement>('#niveau').value)] ?? pakket.woning[pakket.woning.length - 1];
     if (!n) return null;
-    return $<HTMLInputElement>('#laag').checked ? n.laag : n.scene;
+    const s = $<HTMLInputElement>('#laag').checked ? n.laag : n.scene;
+    // Ronde 17: de techniek binnen uit (de schakelaar Techniek): die blokken vallen weg; wat buiten staat, blijft.
+    return $<HTMLInputElement>('#techniek-toon').checked ? s : { ...s, blokken: s.blokken.filter((b) => !isBinnenTechniek(b.code)) };
   }
   const positie = pakket.posities.find((p) => p.code === keuze);
   if (!positie) return null;
@@ -130,6 +139,7 @@ function teken() {
   $('#keuze-wrap').hidden = techniek;
   $('#niveau-wrap').hidden = !woning || pakket.woning.length < 2;
   $('#laag-wrap').hidden = !woning;
+  $('#techniek-wrap').hidden = !woning || !heeftTechniekBinnen(pakket);
   $('#maten-wrap').hidden = techniek;
   $('#techniek-niveaus').hidden = !techniek || (pakket.techniek?.niveaus.length ?? 0) < 2;
   $('#techniek').hidden = !techniek;
@@ -451,6 +461,7 @@ function toon(bron: unknown) {
   }));
   $('#varianten').hidden = alle.length < 2;
   $<HTMLInputElement>('#laag').checked = false;
+  $<HTMLInputElement>('#techniek-toon').checked = true;
   getoond = '';
   $('#leeg').hidden = true;
   $('#balk').hidden = false;
@@ -494,6 +505,11 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('#dagnacht button')
 for (const b of document.querySelectorAll<HTMLButtonElement>('#weergave button')) b.addEventListener('click', () => kiesModus(b.dataset.weergave === 'techniek' ? 'techniek' : 'ontwerp'));
 $('#niveau').addEventListener('change', teken);
 $('#laag').addEventListener('change', teken);
+$('#techniek-toon').addEventListener('change', () => {
+  // Een aangetikt toestel binnen verdwijnt: de uitleg dicht.
+  if (gekozen && !$<HTMLInputElement>('#techniek-toon').checked) toonInfo(null);
+  teken();
+});
 $('#maten').addEventListener('change', teken);
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-standpunt]')) b.addEventListener('click', () => viewer?.standpunt(b.dataset.standpunt as 'schuin'));
 $('#bewaar').addEventListener('click', () => {

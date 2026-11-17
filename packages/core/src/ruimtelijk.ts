@@ -127,6 +127,13 @@ export interface Blok {
    */
   alleenSchaduw?: boolean;
   /**
+   * Alleen te zien van voren (ronde 17, bouw): de kijker tekent het blok alleen als de camera aan de voorkant van dit vlak
+   * staat, (camera − `punt`) · `normaal` > 0 (wereld, cm), bij elk beeld opnieuw; dan vangt het ook geen tik en werpt
+   * het geen schaduw. Zo verdwijnt met lage muren een stukje muur met een hoog toestel erop als je het van achteren of van
+   * buiten de woning ziet. Een kijker die het veld niet kent, tekent het blok altijd.
+   */
+  alleenVanVoren?: { punt: [number, number, number]; normaal: [number, number, number] };
+  /**
    * Draaiing rond de verticale as in graden (van x naar z), rond het midden; bv. een kussen in een gebogen zetel, of een
    * raam, deur of meubel in een schuine muur (zie `draaiBlokken`). x, z, b en d zijn het blok vóór de draaiing.
    */

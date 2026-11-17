@@ -16,6 +16,7 @@ import { controleerLosseWanden, losseWandBlokken, losseWandRuimte, type LosseWan
 import { strokenVan, strookBlokken, type GevelStrook } from './gevelstroken.js';
 import { daklichtLicht, ledstripBlokken, raamLicht, toestelLicht } from './nacht.js';
 import { binnenKant, draaiKwart, isAccent, meubelIn, plafondBlokken, plintBlokken } from './binnenafwerking.js';
+import { techniekBinnenBlokken, techniekVanBinnen } from './techniekbinnen.js';
 import {
   toestelMaten, leidingVerloop, techniekBlokken, toestelBlokken, toestelVoetafdruk, voorRichting,
   type Leiding, type TechniekCatalogus, type TechniekWeergave, type Toestel, type ToestelType,
@@ -2213,6 +2214,13 @@ export interface Plan3DOpties {
    */
   techniekBuiten?: boolean;
   /**
+   * De techniek binnen in de afgewerkte woning (ronde 17, zie techniekbinnen.ts): elk toestel dat binnen hangt of staat
+   * (stopcontact, schakelaar, airco, radiator, lampen, warmtepomp …) op zijn plaats en echte maat, in zijn eigen kleur,
+   * zonder merkteken en zonder leidingen; met lage muren wat boven de snijhoogte aan de muur hangt met een stukje muur
+   * erachter, en niets aan het plafond. Na het kader. Niet als `techniek` gezet is. Uit = de blokken van vroeger.
+   */
+  techniekBinnen?: boolean;
+  /**
    * De verlichting (ronde 15, zie nacht.ts): de ledstrips als dun profiel in de afgewerkte woning (na het kader), en wat
    * 's nachts licht geeft krijgt `licht`: het glas van de ramen, buitendeuren en daklichten, de lampen die buiten hangen
    * of staan. De kijker toont dat alleen in de nachtweergave. Uit = de blokken van vroeger.
@@ -2384,6 +2392,7 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
     blokken.push(...buren);
     blokken.push(...techniek3D(plan, cat, opties));
     blokken.push(...techniekBuiten3D(plan, cat, opties, laatste, opbouw, topDak));
+    blokken.push(...techniekBinnen3D(plan, cat, opties, laatste, topDak));
     blokken.push(...ledstrips3D(plan, cat, opties, laatste));
     return { blokken, kader };
   }
@@ -2396,6 +2405,8 @@ export function plattegrond3D(plan: Plattegrond, cat: PlanCatalogus, opties: Pla
   blokken.push(...techniek3D(plan, cat, opties));
   // Wat je van de techniek buiten ziet, in de afgewerkte woning (ronde 10c): ook na het kader.
   blokken.push(...techniekBuiten3D(plan, cat, opties, laatste, opbouw, topDak));
+  // Ronde 17: de techniek binnen (stopcontacten, airco, radiatoren, lampen …), ook na het kader.
+  blokken.push(...techniekBinnen3D(plan, cat, opties, laatste, topDak));
   // De ledstrips (ronde 15): een dun profiel, ook na het kader.
   blokken.push(...ledstrips3D(plan, cat, opties, laatste));
   return { blokken, kader };
@@ -2409,6 +2420,8 @@ export interface BinnenOpties {
   meubels?: boolean;
   /** Aantikken: vloer, plafond en plint horen bij `ruimte:<id>`, een muur bij `ruimte:<id>:<kant>` (de kant van de ruimte). */
   dingen?: boolean;
+  /** De toestellen van de techniek in deze ruimte (ronde 17, zie `techniekVanBinnen`). */
+  techniek?: boolean;
 }
 
 /** De kant die standaard open blijft: tegenover de accentmuur (zodat je ze ziet), anders de onderkant van het plan. */
@@ -2438,6 +2451,8 @@ export function ruimteVanBinnen(plan: Plattegrond, cat: PlanCatalogus, id: strin
   const muren = murenVan(p).filter((m) => binnenKant(m, id) && binnenKant(m, id) !== open);
   const dikte = muren.length ? Math.max(...muren.map((m) => m.dikte)) : plan.buitenmuur;
   blokken.push(...plafondBlokken(p, cat, r, { open: [open], gaten, dikte, code: (c) => metDing(o3, `ruimte:${id}`, c) }));
+  // Ronde 17: de stopcontacten, de airco, de lampen aan het plafond … van deze ruimte.
+  if (opties.techniek) blokken.push(...techniekVanBinnen(plan, cat, r, [open], { dingen: opties.dingen }));
   // Draaien: de open kant naar +z (onder op het plan), rond het midden van de ruimte.
   const kwart: Record<GevelKant, number> = { onder: 0, rechts: 1, boven: 2, links: 3 };
   const gedraaid = draaiKwart(blokken, kwart[open], [r.x + r.b / 2, r.y + r.d / 2]);
@@ -2476,6 +2491,12 @@ function techniekBuiten3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DO
     uit.push(...(opties.verlichting ? toestelLicht(blokken, type, t) : blokken).map((b) => ({ ...b, code: metDing(opties, `toestel:${t.id}`, b.code) })));
   }
   return uit;
+}
+
+/** De techniek binnen in de afgewerkte woning (ronde 17, `Plan3DOpties.techniekBinnen`); niet als de techniek getoond wordt. */
+function techniekBinnen3D(plan: Plattegrond, cat: PlanCatalogus, opties: Plan3DOpties, laatste: number, topDak: boolean): Blok[] {
+  if (!opties.techniekBinnen || opties.techniek || !plan.toestellen?.length) return [];
+  return techniekBinnenBlokken(plan, cat, { laag: opties.laag, laatste, dakErop: topDak, dingen: opties.dingen, verlichting: opties.verlichting });
 }
 
 /** De ledstrips in de afgewerkte woning (ronde 15, `Plan3DOpties.verlichting`); niet als de techniek getoond wordt (dan staan ze er al). */

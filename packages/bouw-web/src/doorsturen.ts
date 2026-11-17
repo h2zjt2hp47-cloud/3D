@@ -10,9 +10,10 @@ import { resultaat, toestand, type Positie, type Toestand } from './staat.js';
 
 /**
  * De woning in 3D, zoals het plattegrondscherm ze toont: met de echte ramen en deuren van de posities. Van het actieve
- * project, of van een ander (een variant) als `t` gegeven is.
+ * project, of van een ander (een variant) als `t` gegeven is. `techniekBinnen` (ronde 17): ook de toestellen binnen
+ * (stopcontacten, airco, lampen …); alleen voor het bestand voor de klant, niet voor de zending, het blad of de varianten.
  */
-export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toestand = toestand(), opties: { dingen?: boolean } = {}): Scene3D {
+export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toestand = toestand(), opties: { dingen?: boolean; techniekBinnen?: boolean } = {}): Scene3D {
   // Zonder dakkeuze laat de plattegrond de bovenste verdieping open om erin te kijken. Wie het pakket krijgt (een klant,
   // Missing Link) ziet de hele woning beter dicht: dan het platte dak dat een plan zonder keuze altijd bedoelde.
   const heel = totNiveau === undefined && !laag;
@@ -29,6 +30,8 @@ export function woningScene(totNiveau: number | undefined, laag: boolean, t: Toe
     ...(opties.dingen ? { dingen: true } : {}),
     // Ronde 10c: wat je van de techniek buiten ziet (buitenunit, laadpaal, dakdoorvoer …), zoals in de 3D van de app.
     techniekBuiten: true,
+    // Ronde 17: wat binnen hangt of staat; de kijker kan het verbergen (schakelaar Techniek), een oudere toont het gewoon.
+    ...(opties.techniekBinnen ? { techniekBinnen: true } : {}),
     // Ronde 15: de ledstrips, en wat 's nachts licht geeft (de kijker toont de nacht; een oudere kijker negeert het).
     verlichting: true,
   });
@@ -43,6 +46,8 @@ export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = to
   const niveaus = t.meta.zonderWoning || !t.plan.ruimtes.length ? [] : verdiepingenVan(t.plan);
   // Ronde 10c (bestand voor de klant): de techniek per verdieping, uitgezet, met de woorden voor de klant. Optioneel.
   const techniek = opties.techniek && niveaus.length ? techniekPakket(t.plan, cat) : undefined;
+  // Ronde 17: in het bestand voor de klant ook de techniek binnen in de woning (met en zonder lage muren).
+  const scene = { dingen: opties.dingen, techniekBinnen: opties.techniek };
   return {
     soort: PAKKET3D_SOORT,
     versie: PAKKET3D_VERSIE,
@@ -51,8 +56,8 @@ export function maakPakket3D(omschrijf: (p: Positie) => string, t: Toestand = to
     woning: niveaus.map((v, n) => ({
       naam: v.naam,
       // Het laatste niveau is de hele woning met dak; met lage muren kijk je altijd tot en met die verdieping.
-      scene: woningScene(n === niveaus.length - 1 ? undefined : n, false, t, opties),
-      laag: woningScene(n, true, t, opties),
+      scene: woningScene(n === niveaus.length - 1 ? undefined : n, false, t, scene),
+      laag: woningScene(n, true, t, scene),
     })),
     posities: t.posities.map((p) => {
       const r = resultaat(p), maatlijnen = positieMaatlijnen(p, r);

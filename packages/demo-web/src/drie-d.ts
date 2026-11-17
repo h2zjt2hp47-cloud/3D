@@ -2791,6 +2791,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
 
   /** Wanden van het decor (wegvallen als de camera erachter staat) en hoe ver het schaduwbereik moet reiken. */
   let decorWanden: { obj: any; punt: [number, number, number]; normaal: [number, number, number] }[] = [];
+  /** Ronde 17 (bouw): blokken met `alleenVanVoren` (een stukje muur met een hoog toestel), ook weg als de camera erachter staat. */
+  let vanVorenDelen: typeof decorWanden = [];
   let decorMarge = 0;
   function zetDecor(s: Scene3D | null) {
     for (const d of kamerDelen) { scene.remove(d); d.traverse((o: any) => o.geometry?.dispose()); }
@@ -2866,7 +2868,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   }
   /** Wanden tussen de camera en de zetel weglaten (zoals in een bouwspel), anders zie je de zetel niet. */
   function wandenNaarCamera() {
-    for (const w of decorWanden) {
+    for (const w of [...decorWanden, ...vanVorenDelen]) {
       const d = (camera.position.x - w.punt[0]) * w.normaal[0] + (camera.position.y - w.punt[1]) * w.normaal[1] + (camera.position.z - w.punt[2]) * w.normaal[2];
       w.obj.visible = d > 0;
     }
@@ -3034,7 +3036,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     const r = renderer.domElement.getBoundingClientRect();
     straal.setFromCamera(new THREE.Vector2(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1), camera);
     // Een gebouw: blokken die alleen schaduw werpen (lichtinval, `schaduw_…`) zijn onzichtbaar en vangen geen tik.
-    const raak = straal.intersectObjects(groep.children, true).find((h: any) => (h.object.name || h.object.parent?.name) && (opties.zetel || !String(h.object.name).startsWith('schaduw_')));
+    const raak = straal.intersectObjects(groep.children, true).find((h: any) => (h.object.name || h.object.parent?.name) && (opties.zetel || !String(h.object.name).startsWith('schaduw_')) && h.object.userData.vanVoren?.visible !== false);
     // Echt 3D-model: het element onder de klik, volgens zijn stuk langs x.
     const echt = raak?.object.parent?.userData?.echt as Echt3DPlaatsing | undefined;
     if (echt) {
@@ -3676,7 +3678,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     const los: Blok[] = [];
     const groepen = new Map<string, { naam: string; mat: any; schaduw: boolean; vormen: any[] }>();
     for (const b of blokken) {
-      if (b.alleenSchaduw || b.soort === 'glas' || b.soort === 'matglas' || b.licht) { los.push(b); continue; }
+      if (b.alleenSchaduw || b.soort === 'glas' || b.soort === 'matglas' || b.licht || b.alleenVanVoren) { los.push(b); continue; }
       const m = mesh(b);
       const mats = Array.isArray(m.material) ? m.material : [m.material];
       if (!m.isMesh || m.children.length || mats.some((x: any) => x !== mats[0])) { m.geometry?.dispose(); los.push(b); continue; }
@@ -3758,8 +3760,14 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       const apart = zichtbaar.filter((b) => !versmolten.has(b));
       lichtDelen = [];
       waasDelen = [];
+      vanVorenDelen = [];
       for (const b of !opties.zetel && s.samenvoegen ? voegGelijkeSamen(apart) : apart) {
         const m = mesh(b);
+        // Ronde 17: alleen van voren (zie `wandenNaarCamera`); geen schaduw (die volgt de camera niet) en geen tik als het weg is.
+        if (b.alleenVanVoren) {
+          m.traverse((o: any) => { o.castShadow = false; o.userData.vanVoren = m; });
+          vanVorenDelen.push({ obj: m, punt: b.alleenVanVoren.punt, normaal: b.alleenVanVoren.normaal });
+        }
         // Licht bij nacht (ronde 15): onthouden met het gewone materiaal; `zetNacht` zet het oplichtende erop.
         if (!opties.zetel && b.licht && typeof b.licht.kleur === 'string' && !b.alleenSchaduw && m.isMesh) {
           lichtDelen.push({ mesh: m, licht: b.licht, dag: m.material });
