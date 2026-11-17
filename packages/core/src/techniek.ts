@@ -197,7 +197,17 @@ export interface Toestel {
   niveau?: number;
   /** Eigen naam of kring (bv. "kring 3"), optioneel. */
   naam?: string;
+  /** Met één tik geplaatst vanuit *Verlichting* (ronde 15b, zie verlichting.ts): uit haalt precies die weer weg. */
+  voorstel?: VerlichtingVoorstel;
+  /** Bij welk ding dat voorstel hoort: de opening (een buitenlamp, een tuinlamp bij haar terras of pad). */
+  voorstelBij?: string;
 }
+
+/**
+ * De voorstellen voor verlichting in één tik (ronde 15b): een ledstrip onder de dakrand, een buitenlamp bij elke deur naar
+ * buiten, tuinlampen langs het terras en het pad, een ledstrip rondom langs het plafond van een ruimte. Zie verlichting.ts.
+ */
+export type VerlichtingVoorstel = 'dakrand' | 'deuren' | 'tuin' | 'plafond';
 
 /** Een leiding in het plan: een lijn op één verdieping, van toestel naar toestel. */
 export interface Leiding {
@@ -227,6 +237,10 @@ export interface Leiding {
   kring?: string;
   /** Een ledstrip (ronde 15): de kleur van haar licht, een code uit `LICHTKLEUREN` in nacht.ts (standaard warm wit). */
   lichtkleur?: string;
+  /** Met één tik geplaatst vanuit *Verlichting* (ronde 15b, zie verlichting.ts): uit haalt precies die weer weg. */
+  voorstel?: VerlichtingVoorstel;
+  /** Bij welk ding dat voorstel hoort: de kant van de gevel (dakrand, bv. "onder") of de ruimte (plafond). */
+  voorstelBij?: string;
 }
 
 /** Hoe de 3D de techniek toont (zie `Plan3DOpties.techniek` in plattegrond.ts). */
