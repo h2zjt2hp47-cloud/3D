@@ -518,12 +518,13 @@ function strookTik(w: NonNullable<typeof wacht>) {
   const plan = toestand().plan;
   const bestaand = strookVanCode(w.code);
   if (bestaand) { gekozenStrook = bestaand; gekozen = undefined; toonGevelEditor(); return; }
+  // Naast de gevel: niets maken, de gekozen strook los.
+  if (!w.code) { gekozenStrook = undefined; toonGevelEditor(); return; }
   if (g.schuin) { $('#gv-hint').textContent = 'Op een schuine gevel kan (nog) geen strook: alleen op de vier rechte gevels.'; return; }
   const oid = /^(?:kader|vak|label|kast)\.([^.]+)/.exec(w.code)?.[1];
   const o = oid ? plan.openingen.find((x) => x.id === oid) : undefined;
   const H = plan.muurhoogte;
   if (strookVorm === 'band') {
-    if (!w.code) return;
     const n = niveauOpHoogte(plan, w.h), laag = n > 0 ? -VLOERDIKTE : 0;
     const onder = Math.min(H - BAND, Math.max(laag, rond5(w.h - vloerHoogte(plan, n) - BAND / 2)));
     maakStrook({ niveau: n, onder, boven: onder + BAND });
@@ -532,7 +533,6 @@ function strookTik(w: NonNullable<typeof wacht>) {
   // Een raam of deur in het aanzicht: van–tot (u, gezien van buiten).
   const ou = o ? [g.naarU(o.midden - o.breedte / 2), g.naarU(o.midden + o.breedte / 2)].sort((a, b) => a - b) as [number, number] : undefined;
   if (strookVorm === 'naast') {
-    if (!w.code) return;
     const [u0, u1] = ou ? (w.u < (ou[0] + ou[1]) / 2 ? [ou[0] - NAAST, ou[0]] : [ou[1], ou[1] + NAAST]) : [w.u - NAAST / 2, w.u + NAAST / 2];
     maakStrook(opPlan(g, u0, u1));
     return;
@@ -628,6 +628,14 @@ function strookEigenschappen(vak: HTMLElement, plan: Plattegrond, s: GevelStrook
     );
   }
   if (maten.childElementCount) vak.append(maten);
+  // Verwijderen vlak onder de maten (op een tablet nog naast de tekening).
+  const r = el('div', { class: 'knoppenrij' });
+  const weg = el('button', { type: 'button', class: 'gevaar', 'data-gv-strook-weg': '' }, 'Verwijderen');
+  weg.addEventListener('click', () => { gekozenStrook = undefined; wijzig('plan', (t) => verwijderStrook(t.plan, id)); });
+  const drie = el('button', { type: 'button', class: 'tweede' }, 'Bekijk in 3D');
+  drie.addEventListener('click', () => terug?.naar3D());
+  r.append(weg, drie);
+  vak.append(r);
   // Verdieping: de hoogtes blijven op dezelfde plaats.
   const namen = verdiepingenVan(plan);
   if (namen.length > 1) {
@@ -644,13 +652,6 @@ function strookEigenschappen(vak: HTMLElement, plan: Plattegrond, s: GevelStrook
     vak.append(el('p', { class: 'klein' }, 'Op welke verdieping'), verd);
   }
   vak.append(el('p', { class: 'klein' }, `${voorVinger('Klik')} een materiaal of kleur in het palet om de strook te veranderen. De maten tellen vanaf de buitenkant van de gevel en vanaf de vloer${s.niveau === undefined ? ' van het gelijkvloers' : ''}.`));
-  const r = el('div', { class: 'knoppenrij' });
-  const weg = el('button', { type: 'button', class: 'gevaar', 'data-gv-strook-weg': '' }, 'Verwijderen');
-  weg.addEventListener('click', () => { gekozenStrook = undefined; wijzig('plan', (t) => verwijderStrook(t.plan, id)); });
-  const drie = el('button', { type: 'button', class: 'tweede' }, 'Bekijk in 3D');
-  drie.addEventListener('click', () => terug?.naar3D());
-  r.append(weg, drie);
-  vak.append(r);
 }
 
 /** Opent de gevel van een strook met die strook gekozen (vanuit het keuzepaneel van de 3D). */
@@ -883,7 +884,8 @@ export function startGevels(nav: NonNullable<typeof terug>) {
   }));
   $('#gv-strookvorm').replaceChildren(...STROOK_VORMEN.map((x) => {
     const b = el('button', { type: 'button', 'data-gv-strookvorm': x.code, 'aria-pressed': String(x.code === strookVorm) }, x.label);
-    b.addEventListener('click', () => { strookVorm = x.code; if (gereedschap !== 'strook') kiesGereedschap('strook'); else toonPalet(); });
+    // Een andere soort kiezen = een nieuwe strook maken: de gekozen strook los (anders kreeg die het materiaal van de volgende).
+    b.addEventListener('click', () => { strookVorm = x.code; gekozenStrook = undefined; if (gereedschap !== 'strook') kiesGereedschap('strook'); else { toonPalet(); toonGevelEditor(); } });
     return b;
   }));
   $('#gv-ongedaan').addEventListener('click', () => ongedaan());
