@@ -322,6 +322,10 @@ function stripHeleMuur(code: string, p: Punt) {
   const soort = tc.leidingen[code]!, n = omg?.niveau() ?? 0;
   const r = stripOverMuur(toestand().plan, p, n, soort.hoogte);
   if (!r) { meld('Tik vlak bij een muur (binnen) of een gevel (buiten): de ledstrip loopt dan over dat hele stuk muur. Voor een strip waar geen muur is: Een deel.', p, true); return; }
+  // Een tweede tik op dezelfde muur (een dubbeltik op een tablet) legde er een tweede, gelijke strip bovenop.
+  const gelijk = (a: Punt[], b: Punt[]) => a.length === b.length && a.every((q, i) => Math.hypot(q[0] - b[i]![0], q[1] - b[i]![1]) < 1);
+  const al = (toestand().plan.leidingen ?? []).find((x) => x.soort === code && niveauVan(x) === n && x.hoogte === soort.hoogte && !x.hoogtes && (gelijk(x.punten, r.punten) || gelijk(x.punten, [...r.punten].reverse())));
+  if (al) { omg?.kies({ soort: 'leiding', id: al.id }); meld(`Over deze ${r.buiten ? 'gevel' : 'muur'} hangt al een ledstrip (nu gekozen). Een andere hoogte of kleur kies je hiernaast.`, p, true); return; }
   const l: Leiding = { id: nieuweId('l'), soort: code, punten: r.punten, hoogte: soort.hoogte, niveau: n };
   zichtbaar.add(soort.vak);
   wijzig('plan', (x) => { (x.plan.leidingen ??= []).push(l); });

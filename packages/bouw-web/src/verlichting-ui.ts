@@ -20,7 +20,7 @@ import {
 import { planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { el, getal, schakelaar } from './hulp.js';
 import { nachtGekozen, zetNacht } from './nacht-ui.js';
-import { nieuweId, opWijziging, positieVan, toestand, wijzig } from './staat.js';
+import { opWijziging, positieVan, toestand, wijzig } from './staat.js';
 
 /** De voorstellen bij de nacht, met een kort label voor de knop (de uitleg staat in de titel). */
 const BIJ_NACHT: [VerlichtingVoorstel, string][] = [
@@ -31,7 +31,8 @@ const BIJ_NACHT: [VerlichtingVoorstel, string][] = [
 
 /** Een deur die al bestaat en blijft (aantal 0), krijgt geen lamp: dat is geen werk. */
 const telt = (o: Opening) => positieVan(o)?.aantal !== 0;
-const opties = () => ({ nieuweId, telt });
+// Zonder `nieuweId`: vaste ids uit het voorstel (zelfde plan, zelfde ids, zelfde beeld; zie `voegToe` in de motor).
+const opties = () => ({ telt });
 
 let paneel: HTMLElement | undefined;
 /** De melding van een tik bij de nacht: linksonder over de 3D (waar meestal gras ligt), na een tiental seconden weg. */

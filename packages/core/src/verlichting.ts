@@ -45,7 +45,7 @@ export interface VoorstelGroep {
 }
 
 export interface VerlichtingOpties {
-  /** Een nieuwe id (zoals `nieuweId` in de app); zonder: een vaste id uit het voorstel en een volgnummer. */
+  /** Een nieuwe id; zonder (zoals in de app): een vaste id uit het voorstel, het ding en een volgnummer (zie `voegToe`). */
   nieuweId?: (prefix: string) => string;
   /** Telt deze opening mee (de app: niet een bestaande deur met aantal 0)? Standaard alles. */
   telt?: (o: Opening) => boolean;
@@ -596,15 +596,25 @@ function haalWeg(plan: Plattegrond, soort: VerlichtingVoorstel, bij?: string): n
 }
 
 function voegToe(plan: Plattegrond, groepen: VoorstelGroep[], opties: VerlichtingOpties): { stuks: number; lengte: number } {
-  let teller = (plan.leidingen?.length ?? 0) + (plan.toestellen?.length ?? 0), lengte = 0, stuks = 0;
-  const id = (prefix: string) => opties.nieuweId?.(prefix) ?? `${prefix}_v${++teller}`;
+  let lengte = 0, stuks = 0;
+  // Een vaste id uit het voorstel, het ding en een volgnummer ("dakrand_onder_2"): hetzelfde plan geeft dezelfde ids, dus
+  // ook hetzelfde beeld (de kijker kiest de echte lichten bij gelijke sterkte op de naam). Nooit een id die al bestaat.
+  const al = new Set([...(plan.leidingen ?? []), ...(plan.toestellen ?? [])].map((x) => x.id));
+  const id = (prefix: string, voorstel: string, bij: string, k: number) => {
+    if (opties.nieuweId) return opties.nieuweId(prefix);
+    const basis = `${voorstel}_${bij.replace(/[^A-Za-z0-9-]/g, '-')}_${k}`;
+    let x = basis;
+    for (let n = 2; al.has(x); n++) x = `${basis}_${n}`;
+    al.add(x);
+    return x;
+  };
   for (const g of groepen) {
-    for (const l of g.leidingen) {
-      (plan.leidingen ??= []).push({ id: id('l'), ...l });
+    g.leidingen.forEach((l, k) => {
+      (plan.leidingen ??= []).push({ id: id('l', l.voorstel ?? 'licht', g.bij, k + 1), ...l });
       lengte += l.punten.slice(1).reduce((s, p, i) => s + afstand(l.punten[i]!, p), 0);
       stuks++;
-    }
-    for (const t of g.toestellen) { (plan.toestellen ??= []).push({ id: id('t'), ...t }); stuks++; }
+    });
+    g.toestellen.forEach((t, k) => { (plan.toestellen ??= []).push({ id: id('t', t.voorstel ?? 'licht', g.bij, k + 1), ...t }); stuks++; });
   }
   return { stuks, lengte: Math.round(lengte) / 100 };
 }

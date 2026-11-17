@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  controleerPlan, dakrandStroken, deurLampen, murenVan, muurVanOpening, niveauPlan, PAKKET3D_VERSIE, plafondStroken, plattegrond3D, postenVan, ruimteOp,
+  controleerPlan, dakrandStroken, deurLampen, puntGroep, tekenPlattegrond, murenVan, muurVanOpening, niveauPlan, PAKKET3D_VERSIE, plafondStroken, plattegrond3D, postenVan, ruimteOp,
   stripBuiten, stripOverMuur, techniekVoorKlant, telTechniek, tuinLampen, verlichtingInPlan, verlichtingStaat, wisselVerlichting, VOEDING_LEDSTRIP,
   type Leiding, type Plattegrond, type Punt,
 } from '../src/index.js';
@@ -129,6 +129,19 @@ describe('ledstrip rondom langs het plafond', () => {
     // Rondom: het einde van het laatste stuk is het begin van het eerste.
     expect(g!.leidingen[g!.leidingen.length - 1]!.punten.at(-1)).toEqual(g!.leidingen[0]!.punten[0]);
   });
+  it('een kleine ruimte (de wc): één gesloten strip, zonder melding, te tekenen en te kiezen', () => {
+    const plan = woning();
+    const wc = plan.ruimtes.find((r) => r.type === 'wc')!;
+    const p = structuredClone(plan);
+    wisselVerlichting(p, cat, 'plafond', { bij: wc.id });
+    expect(p.leidingen!.length).toBe(1);
+    const l = p.leidingen![0]!;
+    expect(l.punten[0]).toEqual(l.punten.at(-1));
+    expect(controleerPlan(p, cat).map((m) => m.melding)).toEqual(controleerPlan(plan, cat).map((m) => m.melding));
+    // Het begin en het einde liggen op dezelfde plaats maar zijn geen stuk op of neer: een greep sleept alleen dat punt.
+    expect(puntGroep(l, 0)).toEqual([0]);
+    expect(tekenPlattegrond(p, cat, { techniek: true })).toContain('data-soort="leiding"');
+  });
   it('waar de muur op dezelfde lijn dunner wordt (buiten → binnen), een trapje en geen schuine strip', () => {
     const plan: Plattegrond = {
       ruimtes: [
@@ -216,6 +229,18 @@ describe('aan en uit in één tik', () => {
     wisselVerlichting(p, cat, 'deuren');
     expect(p.leidingen.map((l) => l.id)).toEqual(['eigen']);
     expect(p.toestellen.map((t) => t.id)).toEqual(['lamp']);
+  });
+  it('zonder eigen id: vaste ids uit het voorstel (hetzelfde plan, dezelfde ids, dus hetzelfde beeld), nooit dubbel', () => {
+    const a = woning(), b = woning();
+    for (const p of [a, b]) for (const s of ['dakrand', 'deuren', 'tuin'] as const) wisselVerlichting(p, cat, s);
+    expect(a.leidingen!.map((l) => l.id)).toEqual(b.leidingen!.map((l) => l.id));
+    expect(a.toestellen!.map((t) => t.id)).toContain('deuren_o9_2');
+    const ids = [...a.leidingen!, ...a.toestellen!].map((x) => x.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const c = woning();
+    c.leidingen = [{ id: 'dakrand_onder_1', soort: 'ledstrip', punten: [[0, 1000], [100, 1000]], hoogte: 20 }];
+    wisselVerlichting(c, cat, 'dakrand');
+    expect(c.leidingen.map((l) => l.id)).toContain('dakrand_onder_1_2');
   });
   it('met een eigen id; het 3D-pakket blijft op versie 4', () => {
     const p = woning();
