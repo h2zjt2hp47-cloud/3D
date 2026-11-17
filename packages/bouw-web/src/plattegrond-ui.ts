@@ -129,6 +129,24 @@ const GEREEDSCHAP: { code: Gereedschap; kort: string; label: string; toets: stri
   { code: 'meubel', kort: 'Meubel', label: 'Meubel of trap', toets: 'M', hint: 'Kies een meubel in het palet en klik in de plattegrond; daarna kun je het verslepen. Voor nog een kies je opnieuw een meubel.' },
   { code: 'daklicht', kort: 'Daklicht', label: 'Daklicht: lichtkoepel, lichtstraat of plat dakraam', toets: 'K', hint: 'Kies een daklicht in het palet en klik in een ruimte zonder verdieping erboven. Het dak moet daar plat zijn.' },
 ];
+/**
+ * Ronde 16 (17/11): het gereedschap in groepen, in de volgorde van het werk, elk met een korte kop (Jonas: *"alle
+ * mogelijkheden mooi groeperen in de menu's"*). Selecteren staat bovenaan zonder kop. `paar`: twee knoppen naast elkaar
+ * (met een muis staat het gereedschap in één kolom; zo blijft alles naast de tekening). Bij *Inrichting* komt de knop
+ * *Trap* (het meubelpalet op Trappen, zie `trapKnop`), bij *Techniek* de knop van de installateur (`startTechniek`).
+ * Alleen de schikking: de knoppen, hun `data-gereedschap` en de sneltoetsen zijn dezelfde (zie `docs/menu-indeling-bouw.md`).
+ */
+type GereedschapKnop = Gereedschap | 'trap';
+const GEREEDSCHAP_GROEPEN: { kop?: string; rijen: (GereedschapKnop | [GereedschapKnop, GereedschapKnop])[] }[] = [
+  { rijen: ['kies'] },
+  { kop: 'Ruimtes', rijen: ['ruimte', 'maten'] },
+  { kop: 'Muren', rijen: ['wand', 'losse_wand', ['wand_v', 'wand_h']] },
+  { kop: 'Ramen en deuren', rijen: ['raam', 'buitendeur', 'schuifraam', 'garagepoort', 'binnendeur', 'doorgang'] },
+  { kop: 'Dak', rijen: ['daklicht'] },
+  { kop: 'Inrichting', rijen: [['meubel', 'trap']] },
+];
+/** Het type van de trap in de meubelcatalogus (de knop *Trap* bij Inrichting), of geen. */
+const TRAP = Object.entries(cat.meubels).find(([, m]) => m.vorm === 'trap')?.[0];
 /** Gereedschap met een palet: het palet staat dan op de plaats van het gereedschap, naast de tekening. */
 type Palet = 'meubel' | 'daklicht';
 const PALET_TITEL: Record<Palet, string> = { meubel: 'Meubel of trap', daklicht: 'Daklicht' };
@@ -439,7 +457,7 @@ function nieuweVerdieping() {
   });
   niveau = n;
   selectie = undefined;
-  melding = 'Nieuwe verdieping: deel ze in met "Wand tekenen" of teken ruimtes erin. Plaats beneden een trap (Meubel → Trappen).';
+  melding = 'Nieuwe verdieping: deel ze in met "Wand tekenen" of teken ruimtes erin. Plaats beneden een trap (Inrichting → Trap).';
   if (gevolgd) melding = `Nieuwe verdieping met dezelfde vorm als beneden (${onderRuimtes.length} ruimtes). ${melding.replace(/^Nieuwe verdieping: d/, 'D')}`;
   kiesGereedschap('wand');
 }
@@ -2227,6 +2245,24 @@ function toonMeubelPalet() {
   vak.replaceChildren(paletKop(), tabs, tegels);
 }
 
+/**
+ * Ronde 16: de knop *Trap* bij Inrichting. Dezelfde weg als Meubel → Trappen → de trap (het meubelpalet opent op
+ * Trappen met de trap klaar), maar zonder te zoeken: een trap is voor een verkoper geen meubel.
+ */
+function trapKnop(): HTMLButtonElement {
+  const t = TRAP ? cat.meubels[TRAP] : undefined;
+  const b = el('button', { type: 'button', 'data-gereedschap-trap': '', title: t?.label ?? 'Trap' }) as HTMLButtonElement;
+  b.append(el('span', {}, 'Trap'));
+  b.addEventListener('click', () => {
+    if (!TRAP || !t) return;
+    sluitMaatVraag(true);
+    meubelType = TRAP;
+    meubelGroep = t.groep;
+    kiesGereedschap('meubel');
+  });
+  return b;
+}
+
 /** Het palet van de daklichten: lichtkoepels, lichtstraten en platte dakramen (vaste maten uit de catalogus). */
 function toonDaklichtPalet() {
   const vak = $('#pl-daklichten');
@@ -2363,13 +2399,32 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   naarProjecten = nav.naarProjecten;
   naarVarianten = nav.naarVarianten;
   const lijst = $('#pl-gereedschap');
-  lijst.replaceChildren(...GEREEDSCHAP.map((g) => {
-    const b = el('button', { type: 'button', 'data-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap), title: g.label });
+  // Ronde 16: in groepen met een kop (GEREEDSCHAP_GROEPEN); dezelfde knoppen als vroeger. Een kop of een paar is een eigen
+  // element in het rooster (`.groepkop` over de hele breedte, `.gpaar` twee naast elkaar); de knop Techniek komt erna.
+  const knopVan = (code: GereedschapKnop) => {
+    if (code === 'trap') return trapKnop();
+    const g = GEREEDSCHAP.find((x) => x.code === code)!;
+    const b = el('button', { type: 'button', 'data-gereedschap': g.code, 'aria-pressed': String(g.code === gereedschap), title: g.toets ? `${g.label} (${g.toets})` : g.label });
     b.append(el('span', {}, g.kort));
     if (g.toets) b.append(el('kbd', {}, g.toets));
     b.addEventListener('click', () => { sluitMaatVraag(true); kiesGereedschap(g.code); });
     return b;
-  }));
+  };
+  const delen: HTMLElement[] = [];
+  for (const groep of GEREEDSCHAP_GROEPEN) {
+    if (groep.kop) delen.push(el('p', { class: 'groepkop' }, groep.kop));
+    for (const rij of groep.rijen) {
+      const knoppen = (typeof rij === 'string' ? [rij] : rij).filter((c) => c !== 'trap' || TRAP).map(knopVan);
+      if (knoppen.length === 1) { delen.push(knoppen[0]!); continue; }
+      const paar = el('div', { class: 'gpaar' });
+      paar.append(...knoppen);
+      delen.push(paar);
+    }
+  }
+  delen.push(el('p', { class: 'groepkop' }, 'Techniek'));
+  // Een groep van één knop over de hele breedte (op een tablet staat het gereedschap in twee kolommen).
+  for (const code of ['kies', 'daklicht'] as Gereedschap[]) delen.find((x) => x.dataset?.gereedschap === code)?.classList.add('gbreed');
+  lijst.replaceChildren(...delen);
   // De paletten van Meubel en Daklicht worden opgebouwd als ze opengaan (toonGereedschapKaart).
   const houder = $('#pl-canvas');
   zoom = new Zoom({

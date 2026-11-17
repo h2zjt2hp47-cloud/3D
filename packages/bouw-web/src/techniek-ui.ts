@@ -788,6 +788,50 @@ export function techniekHint(): string {
 
 let palet: HTMLElement | undefined;
 
+/**
+ * Ronde 16 (17/11): de groepen in het palet, per vak, in de volgorde waarin een verkoper ze zoekt (wat het meest gebruikt
+ * wordt eerst). Alleen schikking: wat niet in een groep staat (een nieuw toestel of een nieuwe soort leiding in de
+ * catalogus), komt vanzelf onderaan bij *Leidingen* of *Andere toestellen*; zo blijft de catalogus gegevens.
+ */
+const VAK_GROEPEN: Record<TechniekVak, { kop: string; leidingen?: string[]; toestellen?: string[] }[]> = {
+  elektriciteit: [
+    { kop: 'Stopcontacten', leidingen: ['kabel'], toestellen: ['stopcontact', 'stopcontact_dubbel', 'stopcontact_werkblad', 'schakelaar', 'datapunt'] },
+    { kop: 'Verlichting', leidingen: ['ledstrip'], toestellen: ['lichtpunt', 'inbouwspot', 'pendel', 'wandlamp', 'buitenlamp', 'tuinlamp'] },
+    { kop: 'Kasten en aansluitingen', toestellen: ['tellerkast', 'verdeelbord', 'laadpaal', 'omvormer', 'batterij'] },
+  ],
+  klimaat: [
+    { kop: 'Leidingen', leidingen: ['koelleiding', 'condensafvoer', 'aanvoer_verwarming', 'retour_verwarming', 'vloerverwarming', 'gas'] },
+    { kop: 'Airco', toestellen: ['airco_wand', 'airco_cassette', 'airco_buiten'] },
+    { kop: 'Warmtepomp en ketel', toestellen: ['warmtepomp_buiten', 'warmtepomp_binnen', 'boiler', 'gasketel'] },
+    { kop: 'In de ruimtes', toestellen: ['radiator', 'verdeler_vloerverwarming', 'thermostaat'] },
+  ],
+  ventilatie: [
+    { kop: 'Kanalen', leidingen: ['ventilatie_rond', 'ventilatie_plat'] },
+    { kop: 'Toestellen', toestellen: ['ventilatie_c', 'ventilatie_d', 'toevoermond', 'afvoermond', 'gevelrooster', 'dakdoorvoer'] },
+  ],
+  sanitair: [
+    { kop: 'Leidingen', leidingen: ['warm_water', 'koud_water', 'afvoer', 'regenwater'] },
+    { kop: 'Toestellen', toestellen: ['boiler_elektrisch', 'collector', 'waterverzachter', 'regenwaterpomp', 'buitenkraan'] },
+  ],
+};
+
+/** De groepen van een vak met de codes die echt in de catalogus staan, en wat in geen groep staat, onderaan. */
+function vakGroepen(v: TechniekVak): { kop: string; leidingen: string[]; toestellen: string[] }[] {
+  const leidingen = Object.keys(tc.leidingen).filter((c) => tc.leidingen[c]!.vak === v);
+  const toestellen = Object.keys(tc.toestellen).filter((c) => tc.toestellen[c]!.vak === v);
+  const uit = (VAK_GROEPEN[v] ?? []).map((g) => ({
+    kop: g.kop,
+    leidingen: (g.leidingen ?? []).filter((c) => leidingen.includes(c)),
+    toestellen: (g.toestellen ?? []).filter((c) => toestellen.includes(c)),
+  }));
+  const geplaatst = new Set(uit.flatMap((g) => [...g.leidingen, ...g.toestellen]));
+  const losL = leidingen.filter((c) => !geplaatst.has(c)), losT = toestellen.filter((c) => !geplaatst.has(c));
+  const leidingGroep = uit.find((g) => g.kop === 'Leidingen' || g.kop === 'Kanalen');
+  if (losL.length) { if (leidingGroep) leidingGroep.leidingen.push(...losL); else uit.push({ kop: 'Leidingen', leidingen: losL, toestellen: [] }); }
+  if (losT.length) uit.push({ kop: uit.some((g) => g.toestellen.length) ? 'Andere toestellen' : 'Toestellen', leidingen: [], toestellen: losT });
+  return uit.filter((g) => g.leidingen.length || g.toestellen.length);
+}
+
 /** Een schakelaar per vak (tekening en 3D samen). */
 function vakSchakelaars(): HTMLElement {
   const rij = el('div', { class: 'tvakken', role: 'group', 'aria-label': 'Welke vakken tonen' });
@@ -835,27 +879,26 @@ export function toonPalet() {
     b.addEventListener('click', () => { vak = v; toonPalet(); omg?.opnieuw(); });
     tabs.append(b);
   }
-  const toestellen = el('div', { class: 'ttegels', role: 'group', 'aria-label': 'Toestellen' });
-  for (const [code, type] of Object.entries(tc.toestellen).filter(([, x]) => x.vak === vak)) {
+  const toestelTegel = (code: string, type: ToestelType) => {
     const actief = gereedschap.soort === 'toestel' && gereedschap.type === code;
     const b = el('button', { type: 'button', class: 'ttegel', 'data-toestel': code, 'aria-pressed': String(actief), title: `${type.label}${type.uitleg ? `: ${type.uitleg}` : ''}` });
     const beeld = el('span', { class: 'tbeeld' });
     beeld.innerHTML = toestelTekenBeeld(type, 36);
     b.append(beeld, el('span', {}, kortLabel(type.label)));
     b.addEventListener('click', () => kiesGereedschap(actief ? { soort: 'kies' } : { soort: 'toestel', type: code }));
-    toestellen.append(b);
-  }
-  const leidingen = el('div', { class: 'ttegels leidingen', role: 'group', 'aria-label': 'Leidingen' });
-  for (const [code, soort] of Object.entries(tc.leidingen).filter(([, x]) => x.vak === vak)) {
+    return b;
+  };
+  const leidingTegel = (code: string) => {
+    const soort = tc.leidingen[code]!;
     const actief = gereedschap.soort === 'leiding' && gereedschap.leiding === code;
-    const b = el('button', { type: 'button', class: 'ttegel', 'data-leiding': code, 'aria-pressed': String(actief), title: soort.label });
+    const b = el('button', { type: 'button', class: 'ttegel tleiding', 'data-leiding': code, 'aria-pressed': String(actief), title: soort.label });
     const lijn = el('span', { class: 'tlijn' });
     lijn.style.background = soort.kleur;
     if (soort.hoogte === 'vloer') lijn.classList.add('vloer');
     b.append(lijn, el('span', {}, kortLabel(soort.label)));
     b.addEventListener('click', () => kiesGereedschap(actief ? { soort: 'kies' } : { soort: 'leiding', leiding: code }));
-    leidingen.append(b);
-  }
+    return b;
+  };
   // Ronde 15b: bij de ledstrip de keuze Hele muur (één tik) of Een deel (twee tikken), vlak onder de tegels.
   const ledstripAan = gereedschap.soort === 'leiding' && !!tc.leidingen[gereedschap.leiding]?.ledstrip;
   const wijze = el('div', { class: 'tabs stripwijze', role: 'group', 'aria-label': 'Hoe je de ledstrip trekt' });
@@ -878,16 +921,25 @@ export function toonPalet() {
   een.append(tr, vv);
   const voorbeeld = el('button', { type: 'button', class: 'tweede', 'data-techniek-voorbeeld': '' }, 'Voorbeeld openen: woning met techniek');
   voorbeeld.addEventListener('click', openVoorbeeld);
-  // Wat je het meest nodig hebt bovenaan, zodat het naast de tekening staat, ook op een tablet liggend (doorloop A6): de
-  // technische ruimte en de vloerverwarming (in één tik, voor elk vak), de vakken, de leidingen (smalle tegels met een
-  // streep in hun kleur) en dan de toestellen (met hun teken); zonder koppen ertussen, de tegels zeggen zelf wat ze zijn.
-  // Tonen, het voorbehoud en het voorbeeld onderaan.
+  // Ronde 16: het open vak in groepen met een kop (`VAK_GROEPEN`), de verlichting als eigen groep bij de elektriciteit
+  // (geen eigen vak: zo kost de ledstrip geen tik meer). Per groep eerst de leidingen (smalle tegels met een streep in hun
+  // kleur), dan de toestellen (met hun teken); de keuze Hele muur / Een deel vlak onder de groep met de ledstrip.
+  const groepen: HTMLElement[] = [];
+  for (const g of vakGroepen(vak)) {
+    const tegels = el('div', { class: 'ttegels', role: 'group', 'aria-label': g.kop });
+    tegels.append(...g.leidingen.map(leidingTegel), ...g.toestellen.map((c) => toestelTegel(c, tc.toestellen[c]!)));
+    groepen.push(el('p', { class: 'groepkop' }, g.kop), tegels);
+    if (ledstripAan && g.leidingen.includes(gereedschap.soort === 'leiding' ? gereedschap.leiding : '')) groepen.push(wijze);
+  }
+  // Wat je het meest nodig hebt bovenaan, zodat het naast de tekening staat (doorloop A6): de technische ruimte en de
+  // vloerverwarming (in één tik, voor elk vak), de vakken, dan de groepen van het open vak. Tonen, het voorbehoud en het
+  // voorbeeld onderaan.
   palet.replaceChildren(
     kop,
-    el('p', { class: 'tsub', title: 'Kies, en tik dan op de ruimte' }, 'In één tik, op een ruimte'), een,
+    el('p', { class: 'groepkop', title: 'Kies, en tik dan op de ruimte' }, 'In één tik, op een ruimte'), een,
     tabs,
-    leidingen, ...(ledstripAan ? [wijze] : []), toestellen,
-    el('p', { class: 'tsub' }, 'Tonen (het vak hierboven staat op de voorgrond, de andere lichter)'), vakSchakelaars(),
+    ...groepen,
+    el('p', { class: 'groepkop' }, 'Tonen'), el('p', { class: 'tsub' }, 'Het vak hierboven staat op de voorgrond, de andere lichter.'), vakSchakelaars(),
     el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD),
     voorbeeld,
   );

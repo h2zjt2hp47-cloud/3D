@@ -1,7 +1,7 @@
 /**
  * Tik op het ding zelf in de 3D van de woning: alleen de keuzes van dat ding verschijnen, in een paneel vlak onder de 3D.
  * De 3D zegt bij een tik welk ding het is (code `<ding>.<blok>`, zie `Plan3DOpties.dingen` in de motor):
- *   dak                     vorm, bedekking en kleur, aantal lichtkoepels
+ *   dak                     vorm, bedekking en kleur, aantal daklichten
  *   gevel:<ruimte>:<kant>   materiaal en kleur, voor dit muurvlak, deze gevel of de hele woning
  *   opening:<id>            kleur van het schrijnwerk en zonwering (raam, deur) of kleur (poort); de rest in de configurator
  *   ruimte:<id>             vloer en wandkleur, plafond, plint en accentmuur (ronde 12), de ruimte van binnen bekijken

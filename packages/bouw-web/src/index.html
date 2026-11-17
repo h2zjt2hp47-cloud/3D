@@ -1000,9 +1000,9 @@ body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !impo
 .paletlade .tkop, .techniekpalet .tkop { flex-wrap: nowrap; }
 .paletlade .tkop button, .techniekpalet .tkop button { font-size: .85rem; padding: 6px 8px; min-width: 0; }
 /* Leidingen in het techniekpalet: de streep links, de naam ernaast (lager dan een tegel met een teken). */
-.ttegels.leidingen .ttegel { display: flex; align-items: center; gap: 6px; text-align: left; padding: 4px 6px; }
-.ttegels.leidingen .ttegel .tlijn { flex: none; width: 6px; height: 28px; margin: 0; }
-.ttegels.leidingen .ttegel .tlijn.vloer { -webkit-mask: repeating-linear-gradient(180deg, #000 0 7px, transparent 7px 11px); mask: repeating-linear-gradient(180deg, #000 0 7px, transparent 7px 11px); }
+.ttegels.leidingen .ttegel, .ttegel.tleiding { display: flex; align-items: center; gap: 6px; text-align: left; padding: 4px 6px; }
+.ttegels.leidingen .ttegel .tlijn, .ttegel.tleiding .tlijn { flex: none; width: 6px; height: 28px; margin: 0; }
+.ttegels.leidingen .ttegel .tlijn.vloer, .ttegel.tleiding .tlijn.vloer { -webkit-mask: repeating-linear-gradient(180deg, #000 0 7px, transparent 7px 11px); mask: repeating-linear-gradient(180deg, #000 0 7px, transparent 7px 11px); }
 .paletlade [data-palet-kies] { border: 1px solid var(--lijn); background: var(--vlak); color: inherit; border-radius: 6px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: .9rem; }
 .paletlade [data-palet-kies][aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--vlak); }
 .paletlade .ttegels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1121,6 +1121,31 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 .binnenbalk span { font-weight: 600; margin-right: auto; }
 .binnenbalk button { min-height: 36px; }
 @media (pointer: coarse) { .accentkant, .binnenbalk button, .binnenkeuzes select { min-height: 44px; } #pl-binnen .gv-kleur { width: 44px; height: 44px; } }
+/* ---------- ronde 16 (17/11): alle mogelijkheden gegroepeerd in de menu's ----------
+   Eén soort kop voor een groep in elk menu (gereedschap, paletten, de knoppen bij de 3D): klein, in hoofdletters, in de
+   zachte kleur, zodat je de kop niet voor een knop houdt. Alleen schikking: geen knop veranderde van functie, de maten
+   van de tekening en de 3D blijven exact gelijk (de kolommen niet aangeraakt). Zie docs/menu-indeling-bouw.md. */
+.groepkop { margin: 8px 0 0; font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--zacht); line-height: 1.25; }
+.gereedschap > .groepkop { grid-column: 1 / -1; margin: 5px 0 0; }
+/* Twee knoppen naast elkaar (met een muis staat het gereedschap in één kolom); op een tablet en smal scherm lopen ze in het
+   rooster van twee kolommen mee. */
+.gereedschap .gpaar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.gereedschap .gpaar button { padding-left: 8px; padding-right: 8px; }
+.groot-scherm .gereedschap .gpaar { display: contents; }
+#view-plan #pl-gereedschap .techniekknop { margin-top: 0; }
+/* Met een muis: iets krapper, zodat ook de koppen naast de tekening passen (de laatste knop op een laptop vlak boven 900). */
+@media (pointer: fine) { #view-plan:not(.groot-scherm) #pl-gereedschap { gap: 3px; } #view-plan:not(.groot-scherm) #pl-gereedschap button { padding-top: 6px; padding-bottom: 6px; } }
+@media (max-width: 760px) { .gereedschap .gpaar { display: contents; } }
+/* Het techniekpalet: de koppen van de groepen dicht bij hun tegels. */
+.techniekpalet > .groepkop { margin: 4px 0 -2px; }
+.techniekpalet > .tsub { margin: -4px 0 0; }
+@media (pointer: coarse) and (min-width: 761px) {
+  #view-plan:not(.groot-scherm) #pl-gereedschap .gpaar { display: contents; }
+  #view-plan:not(.groot-scherm) #pl-gereedschap .gbreed, #view-plan:not(.groot-scherm) #pl-gereedschap .techniekknop { grid-column: 1 / -1; margin-top: 0; }
+  /* Het gevelpalet op dezelfde manier: twee kolommen, ook wat je met één tik verft. */
+  #view-plan:not(.groot-scherm) #gv-gereedschap, #view-plan:not(.groot-scherm) #gv-bereik:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  #view-plan:not(.groot-scherm) #gv-gereedschap button { padding: 4px 8px; font-size: .84rem; line-height: 1.15; }
+}
 </style>
 </head>
 <body>
@@ -1222,8 +1247,10 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
       <section class="kaart alleen-gevel" id="gv-palet">
         <h3>Gevel ontwerpen</h3>
         <div id="gv-gereedschap" class="gereedschap" role="group" aria-label="Gereedschap gevel"></div>
-        <div class="knoppenrij"><button type="button" id="gv-ongedaan" class="tweede" title="Ctrl+Z">Ongedaan maken</button></div>
-        <div id="gv-bereik" class="tabs klein" role="group" aria-label="Wat verf je met één klik?"></div>
+        <div class="knoppenrij"><button type="button" id="gv-ongedaan" class="tweede" title="Ongedaan maken (Ctrl+Z)" aria-label="Ongedaan maken"><svg class="pijl" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3 2 7l4 4M2.5 7H10a4 4 0 0 1 0 8H8"/></svg><span class="ongedaan-tekst">Ongedaan</span></button></div>
+        <p class="groepkop" id="gv-bereik-kop">Met één tik verf je</p>
+        <div id="gv-bereik" class="tabs klein" role="group" aria-label="Wat verf je met één tik?"></div>
+        <p class="groepkop" id="gv-strookvorm-kop" hidden>Soort strook</p>
         <div id="gv-strookvorm" class="tabs klein" role="group" aria-label="Wat voor strook?" hidden></div>
         <div id="gv-strookmaten" hidden></div>
         <div id="gv-materialen"></div>
