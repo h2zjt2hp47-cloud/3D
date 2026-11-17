@@ -2182,7 +2182,7 @@ function toonWeergave(w: 'plan' | 'gevels' | '3d' | 'doorsnede') {
     else if (w === 'plan') $('#pl-zoomvlak').append(ongedaanKnop);
   }
   // Dag of nacht (ronde 15): rechtsboven op de 3D, één tik.
-  if (w === '3d') $('#pl-3d').append(dagNachtKnop(() => nachtIn3D()));
+  if (w === '3d') $('#pl-3d').append(dagNachtKnop(wisselNacht));
 }
 
 /** De knop *Varianten naast elkaar* alleen als dit ontwerp varianten heeft. */
@@ -2204,9 +2204,15 @@ export function ontwerpBeeld(): string | null {
 
 /** De nacht in de 3D (ronde 15): zoals gekozen, maar alleen in Afgewerkt (niet in de constructie of de techniek). */
 function nachtIn3D() {
-  const afgewerkt = !constructieAan() && !techniekAan();
-  toonDagNacht(afgewerkt);
-  viewer?.nacht?.(nachtGekozen() && afgewerkt);
+  const getoond = nachtGekozen() && !constructieAan() && !techniekAan();
+  toonDagNacht(getoond);
+  viewer?.nacht?.(getoond);
+}
+
+/** Een tik op Dag of Nacht: bij Nacht vanuit de constructie of de techniek eerst terug naar Afgewerkt (dat tekent opnieuw). */
+function wisselNacht(aan: boolean) {
+  if (aan && (constructieAan() || techniekAan())) zetConstructieWeergave('afgewerkt');
+  else nachtIn3D();
 }
 
 /** Kwaliteit van de 3D van de woning: de bewaarde keuze, anders Snel op een aanraakscherm en Mooi op een computer. */

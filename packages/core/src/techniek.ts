@@ -125,6 +125,8 @@ export interface ToestelType {
    * tik buiten de woning zet het tegen de buitenkant van de dichtste gevel.
    */
   gevel?: boolean;
+  /** Staat los in de tuin, waar je tikt (ronde 15: een tuinlamp), niet tegen de gevel zoals een buitenunit. */
+  tuin?: boolean;
 }
 
 /**

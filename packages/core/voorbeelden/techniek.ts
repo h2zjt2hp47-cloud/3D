@@ -98,7 +98,7 @@ const toestellen: Record<string, ToestelType> = {
   },
   tuinlamp: {
     label: 'Tuinlamp (paaltje)', vak: 'elektriciteit', b: 12, d: 12, h: 65, hoogte: 0, bevestiging: 'buiten',
-    teken: 'armatuur', vorm: 'paaltje', kleur: '#34373a', licht: { bereik: 300 },
+    teken: 'armatuur', vorm: 'paaltje', kleur: '#34373a', licht: { bereik: 300 }, tuin: true,
     herkomst: kennis('een paaltje van ± 65 cm langs een pad of terras: algemene kennis'),
     klant: { naam: 'Tuinlamp', uitleg: 'Een laag paaltje met licht in de tuin, bijvoorbeeld langs het pad of het terras.' },
   },

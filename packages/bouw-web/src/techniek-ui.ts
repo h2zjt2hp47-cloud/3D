@@ -13,7 +13,7 @@
  * `toestelVlak`, `verschuifLeidingPunten` (core/src/techniekplaatsen.ts) en `telTechniek` (core/src/techniek.ts).
  */
 import {
-  ALLE_VAKKEN, LICHTKLEUREN, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, klantWoorden, leidingLangsWanden, leidingVerloop, lichtkleurVan, maatTekst, maatVan, murenVan, niveauPlan,
+  ALLE_VAKKEN, LICHTKLEUREN, stripLangsMuren, TECHNIEK_KLANT_VAKKEN, TECHNIEK_VAKKEN, TECHNIEK_VOORBEHOUD, binnenVorm, delenVan, klantWoorden, leidingLangsWanden, leidingVerloop, lichtkleurVan, maatTekst, maatVan, murenVan, niveauPlan,
   niveauVan, nieuweTechniek, nieuwToestel, opToestelVlak, puntGroep, ruimteOp, techniekVoorKlant, technischeOpstelling, tegenWand, telTechniek, toestelMaten, toestelTekenBeeld, toestelVlak,
   toestelVoetafdruk, verschuifLeidingPunten, vloerHoogte, vloerverwarmingLus, vormVanDeel,
   type Leiding, type LeidingHoogte, type Plattegrond, type Punt, type Ruimte, type TechniekKlant, type TechniekRegel, type TechniekVak, type Toestel, type ToestelType,
@@ -205,6 +205,8 @@ function nieuwePlaats(code: string, p: Punt): Toestel | string {
   const binnen = ruimteOp(plan, p[0], p[1], n);
   if (t.aan === 'buiten') {
     if (binnen) return `${kortLabel(type.label)} hoort buiten: tik buiten de woning, naast de gevel.`;
+    // Ronde 15: een tuinlamp staat waar je tikt.
+    if (type.tuin) return t;
     const w = tegenWand(plan, t, type, { maxAfstand: 300 });
     if (!w) return 'Tik dichter bij de gevel (binnen 3 m).';
     return w.toestel;
@@ -249,7 +251,7 @@ function afstandVoor(van?: string, naar?: string): number {
 function trekLeiding(code: string, van: { punt: Punt; toestel?: string }, naar: { punt: Punt; toestel?: string }) {
   const soort = tc.leidingen[code]!, n = omg?.niveau() ?? 0, plan = toestand().plan;
   // Een ledstrip (ronde 15) hangt tegen de muur (1 cm, het profiel), niet een eind ervan zoals een leiding.
-  const punten = leidingLangsWanden(plan, van.punt, naar.punt, { niveau: n, afstand: soort.ledstrip ? LEDSTRIP_AFSTAND : afstandVoor(van.toestel, naar.toestel) });
+  const punten = soort.ledstrip ? stripLangsMuren(plan, van.punt, naar.punt, n) : leidingLangsWanden(plan, van.punt, naar.punt, { niveau: n, afstand: afstandVoor(van.toestel, naar.toestel) });
   if (punten.length < 2) { meld('Tik op twee verschillende plaatsen.', naar.punt, true); return; }
   const l: Leiding = { id: nieuweId('l'), soort: code, punten, hoogte: soort.hoogte, niveau: n, ...(van.toestel ? { van: van.toestel } : {}), ...(naar.toestel ? { naar: naar.toestel } : {}) };
   zichtbaar.add(soort.vak);
@@ -261,8 +263,6 @@ function trekLeiding(code: string, van: { punt: Punt; toestel?: string }, naar: 
     : `${kortLabel(soort.label)} getrokken: ${getal(lengte, 1)} m. Tik op het volgende toestel om er nog een te trekken, of op Selecteren.`, naar.punt);
 }
 
-/** Een ledstrip hangt zo ver (cm) van het muurvlak: het midden van het profiel. */
-const LEDSTRIP_AFSTAND = 1;
 /** De hoogtes van een ledstrip om uit te kiezen (ronde 15): bovenaan, onder een kast, laag (trap, plint, tuinmuur). */
 const STRIP_HOOGTE: [LeidingHoogte, string, string][] = [
   ['plafond', 'Bovenaan', 'Langs het plafond, of buiten onder de dakrand'],
@@ -743,7 +743,13 @@ function kiesGereedschap(g: Gereedschap) {
 /** Uitleg bij het gekozen gereedschap (onder de tekening). */
 export function techniekHint(): string {
   const g = gereedschap;
-  if (g.soort === 'toestel') return `Tik in het plan: ${kortLabel(tc.toestellen[g.type]?.label ?? '').toLowerCase()} komt ${tc.toestellen[g.type]?.bevestiging === 'plafond' ? 'aan het plafond, op de plaats van de tik' : tc.toestellen[g.type]?.bevestiging === 'buiten' ? 'buiten tegen de dichtste gevel' : 'tegen de dichtste muur'}. Blijf tikken voor meer; Selecteren om te stoppen. Daarna kun je de maten typen (of niet).`;
+  if (g.soort === 'toestel') {
+    const t = tc.toestellen[g.type];
+    // Ronde 15: een tuinlamp staat waar je tikt; een buitenlamp (en wat aan de gevel mag) komt binnen of buiten tegen de muur.
+    const waar = t?.bevestiging === 'plafond' ? 'aan het plafond, op de plaats van de tik' : t?.tuin ? 'buiten, op de plaats van de tik' : t?.bevestiging === 'buiten' ? 'buiten tegen de dichtste gevel' : t?.gevel ? 'tegen de dichtste muur (tik buiten de woning voor de buitenkant van de gevel)' : 'tegen de dichtste muur';
+    return `Tik in het plan: ${kortLabel(t?.label ?? '').toLowerCase()} komt ${waar}. Blijf tikken voor meer; Selecteren om te stoppen. Daarna kun je de maten typen (of niet).`;
+  }
+  if (g.soort === 'leiding' && tc.leidingen[g.leiding]?.ledstrip) return g.van ? 'Tik waar de ledstrip eindigt, langs dezelfde muur of gevel.' : 'Tik waar de ledstrip begint en waar ze eindigt, vlak bij een muur (binnen) of een gevel (buiten): ze komt tegen de muur, bovenaan; de hoogte en de kleur kies je daarna.';
   if (g.soort === 'leiding') return g.van ? 'Tik op het tweede toestel (of op een punt, bv. buiten of bij een lavabo).' : `Tik op het eerste toestel, dan op het tweede: de ${kortLabel(tc.leidingen[g.leiding]?.label ?? '').toLowerCase()} loopt langs de wanden.`;
   if (g.soort === 'technisch') return 'Tik op de berging, de garage of de ruimte waar de technische toestellen komen.';
   if (g.soort === 'vloerverwarming') return 'Tik op de ruimte die vloerverwarming krijgt.';
@@ -1016,7 +1022,7 @@ export function toonTechniekEigenschappen(vakEl: HTMLElement, s: TechniekSelecti
   if (l.punten.length >= 2) rij.append(knop('Opnieuw langs de wanden', () => {
     const plan2 = toestand().plan;
     const a = l.punten[0]!, b = l.punten[l.punten.length - 1]!;
-    const punten = leidingLangsWanden(plan2, van ? [van.x, van.y] : a, naar ? [naar.x, naar.y] : b, { niveau: niveauVan(l), afstand: soort.ledstrip ? LEDSTRIP_AFSTAND : 5 });
+    const punten = soort.ledstrip ? stripLangsMuren(plan2, a, b, niveauVan(l)) : leidingLangsWanden(plan2, van ? [van.x, van.y] : a, naar ? [naar.x, naar.y] : b, { niveau: niveauVan(l), afstand: 5 });
     zetLeiding(l.id, (x) => { x.punten = punten; delete x.hoogtes; });
   }));
   rij.append(knop('Verwijderen', verwijder, 'gevaar'));

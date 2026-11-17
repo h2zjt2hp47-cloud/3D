@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  controleerPlan, leesPakket3D, ledstripBlokken, LEDSTRIP_PROFIEL, LICHTKLEUREN, lichtkleurVan, plattegrond3D, postenVan, RAAM_LICHT, standaardDak,
+  controleerPlan, leesPakket3D, ledstripBlokken, stripLangsMuren, LEDSTRIP_PROFIEL, LICHTKLEUREN, lichtkleurVan, plattegrond3D, postenVan, RAAM_LICHT, standaardDak,
   techniekVoorKlant, telTechniek, toestelBlokken, VOEDING_LEDSTRIP, vloerHoogte,
   PAKKET3D_SOORT, PAKKET3D_VERSIE, type Blok, type Leiding, type Pakket3D, type Plattegrond, type Toestel,
 } from '../src/index.js';
@@ -126,6 +126,15 @@ describe('ledstrips', () => {
     expect(licht.licht!.kleur).toBe(LICHTKLEUREN.neutraal!.kleur);
     expect(licht.licht!.vanaf![2]).toBeGreaterThan(50);
     expect(licht.y).toBeCloseTo(145 - LEDSTRIP_PROFIEL.hoog / 2, 5);
+  });
+  it('trekken: van tik tot tik tegen de muur, zonder het stukje van de tik naar de muur', () => {
+    const { plan } = voorbeeldWoning();
+    // 25 cm buiten de tuingevel getikt (buitenvlak op y = 915): de strip hangt 1 cm van de gevel, van tik tot tik.
+    expect(stripLangsMuren(plan, [845, 940], [1385, 940])).toEqual([[845, 916], [1385, 916]]);
+    // Om de hoek van de woning (rechtsonder, buitenvlak x = 1415): langs beide gevels.
+    expect(stripLangsMuren(plan, [1000, 940], [1440, 700])).toEqual([[1000, 916], [1416, 916], [1416, 700]]);
+    // Ver van elke muur: waar je tikte.
+    expect(stripLangsMuren(plan, [500, 1200], [800, 1200])).toEqual([[500, 1200], [800, 1200]]);
   });
   it('telling: de lopende meter en de voedingen (één per strip, per begonnen 10 m één meer)', () => {
     const p: Plattegrond = { ...metStrip(), leidingen: [...metStrip().leidingen!, { id: 'ls3', soort: 'ledstrip', punten: [[0, 916], [0, 2116]], hoogte: 20 }] };

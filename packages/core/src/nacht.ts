@@ -17,8 +17,9 @@
  *     (`ledstripBlokken`).
  * Overal benaderingen om een avondbeeld te tonen: geen lichtberekening, geen lux, geen keuze van armaturen.
  */
-import { asVan, murenVan, niveauPlan, niveauVan, opAs, ruimteOp, vloerHoogte, type Muur, type Opening, type Plattegrond, type RuimteType } from './plattegrond.js';
+import { asVan, murenVan, niveauPlan, niveauVan, opAs, ruimteOp, vloerHoogte, type Muur, type Opening, type Plattegrond, type Punt, type RuimteType } from './plattegrond.js';
 import type { Blok, BlokLicht } from './ruimtelijk.js';
+import { leidingLangsWanden } from './techniekplaatsen.js';
 import { leidingVerloop, voorRichting, type Leiding, type TechniekCatalogus, type Toestel, type ToestelType, type ToestelVorm } from './techniek.js';
 
 /** De kleuren van het licht van een ledstrip (en van een lamp): drie soorten wit en een paar kleuren. Code → naam en kleur (sRGB). */
@@ -51,7 +52,7 @@ export const RAAM_LICHT: Record<RuimteType, number> = {
 };
 
 /** Hoe ver (cm) het echte licht reikt: een buitenlamp verder dan een ledstrip, het licht door een groot raam het minst ver. */
-export const LICHT_BEREIK = { lamp: 380, strip: 320, raam: 420 };
+export const LICHT_BEREIK = { lamp: 380, strip: 320, raam: 520 };
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
@@ -68,7 +69,7 @@ export function raamLicht(blokken: Blok[], plan: Plattegrond, m: Muur, o: Openin
   const sterkte = ruimte ? RAAM_LICHT[ruimte.type] ?? 0.7 : 0.7;
   // Naar binnen: de normaal naar de kant van de ruimte (plus of min).
   const { n } = asVan(m), teken = m.plus ? 1 : -1;
-  const binnen: [number, number, number] = [r2(n[0] * teken * 90), 0, r2(n[1] * teken * 90)];
+  const binnen: [number, number, number] = [r2(n[0] * teken * 60), 0, r2(n[1] * teken * 60)];
   const glas = blokken.filter((b) => b.soort === 'glas' || b.soort === 'matglas');
   if (!glas.length) return blokken;
   const groot = glas.reduce((a, b) => (b.b * b.h * b.d > a.b * a.h * a.d ? b : a));
@@ -76,8 +77,8 @@ export function raamLicht(blokken: Blok[], plan: Plattegrond, m: Muur, o: Openin
   return blokken.map((b) => {
     if (b.soort !== 'glas' && b.soort !== 'matglas') return b;
     const licht: BlokLicht = { kleur: RAAM_KLEUR, sterkte: b.soort === 'matglas' ? r2(sterkte * 0.8) : sterkte };
-    // Het licht hangt binnen, een eind van het raam, op de hoogte van een plafondlamp: het valt door het glas op het terras.
-    if (b === groot && totDeGrond && sterkte >= 0.5) { licht.bereik = LICHT_BEREIK.raam; licht.vanaf = [binnen[0], r2(-b.h / 2 + 200), binnen[2]]; }
+    // Het licht hangt binnen, vlak achter het glas en wat hoger dan een deurklink: het valt door het glas op het terras.
+    if (b === groot && totDeGrond && sterkte >= 0.5) { licht.bereik = LICHT_BEREIK.raam; licht.vanaf = [binnen[0], r2(-b.h / 2 + 150), binnen[2]]; }
     return { ...b, licht };
   });
 }
@@ -196,6 +197,24 @@ export function ledstripBlokken(plan: Plattegrond, tc: TechniekCatalogus | undef
     }
   }
   return uit;
+}
+
+/** Hoe ver (cm) het midden van het profiel van een ledstrip van het muurvlak hangt. */
+export const LEDSTRIP_AFSTAND = 1;
+
+/**
+ * De punten van een ledstrip van een tik tot een tik (ronde 15): langs de muren zoals een leiding (`leidingLangsWanden`),
+ * maar tegen het muurvlak (`LEDSTRIP_AFSTAND`) en zonder het stukje van de tik naar de muur aan elk einde: de strip
+ * begint en eindigt op de muur. Tik je ver van een muur (meer dan 80 cm), dan blijft de strip waar je tikte.
+ */
+export function stripLangsMuren(plan: Plattegrond, van: Punt, naar: Punt, niveau = 0): Punt[] {
+  const p = leidingLangsWanden(plan, van, naar, { niveau, afstand: LEDSTRIP_AFSTAND });
+  const zelfde = (a: Punt, b: Punt) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 0.6;
+  const aanloop = (a: Punt, b: Punt) => Math.hypot(a[0] - b[0], a[1] - b[1]) <= 81;
+  let q = p;
+  if (q.length > 2 && zelfde(q[0]!, van) && aanloop(q[0]!, q[1]!)) q = q.slice(1);
+  if (q.length > 2 && zelfde(q[q.length - 1]!, naar) && aanloop(q[q.length - 1]!, q[q.length - 2]!)) q = q.slice(0, -1);
+  return q;
 }
 
 /** Ligt een strip buiten de woning (het midden van het eerste stuk)? Voor de woorden voor de klant en het voorstel van de hoogte. */

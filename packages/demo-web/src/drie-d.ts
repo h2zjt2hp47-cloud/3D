@@ -367,7 +367,7 @@ const NACHT = {
    * Sterkte van het maanlicht en van het licht van de lucht (× π), de belichting van het beeld, en welk deel van het
    * omgevingslicht (de weerkaatsing van de lucht van overdag) overblijft.
    */
-  maan_sterkte: 0.2, hemel: 0.15, belichting: 1.25, omgeving: 0.06,
+  maan_sterkte: 0.3, hemel: 0.26, belichting: 1.3, omgeving: 0.06,
   /**
    * Hoe fel wat licht geeft (`Blok.licht`) oplicht (emissive), en de echte lichten: de sterkte is `lamp` × het bereik in
    * het kwadraat (verval 2, in cm), zodat op de helft van het bereik evenveel licht valt, hoe ver een licht ook reikt.
@@ -376,7 +376,7 @@ const NACHT = {
   /** Zoveel echte lichten bij nacht, in elke kwaliteit (een andere telling maakt alle tekenprogramma's opnieuw). */
   lampen: 6,
   /** Gloed rond wat oplicht, alleen in Mooi (nabewerking op wat oplicht, niet op het hele beeld). */
-  bloom: { sterkte: 0.55, straal: 0.25 },
+  bloom: { sterkte: 0.45, straal: 0.2 },
 };
 /** Het licht van de lucht bij nacht (hemellicht): boven blauwig, van de grond bijna niets. */
 const NACHT_HEMEL = { boven: '#7286b8', onder: '#2a2f24' };

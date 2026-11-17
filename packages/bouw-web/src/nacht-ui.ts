@@ -5,7 +5,8 @@
  * eruitziet, de kijker (`Viewer3D.nacht` in demo-web/src/drie-d.ts).
  *
  * De keuze hoort bij het kijken, niet bij het project (zoals de lichtinval): ze wordt niet bewaard en blijft staan zolang
- * de pagina open is. Alleen in *Afgewerkt*: de constructie en de techniek tonen altijd de dag.
+ * de pagina open is. De nacht toont de afgewerkte woning: de constructie en de techniek tonen altijd de dag (de knop staat
+ * er dan op *Dag*, en *Nacht* gaat terug naar Afgewerkt).
  */
 import { el } from './hulp.js';
 
@@ -37,15 +38,14 @@ export function dagNachtKnop(wissel: (aan: boolean) => void): HTMLElement {
   return knoppen;
 }
 
-/** Zet de keuze (en de knoppen), en geeft ze door. */
+/** Zet de keuze en geeft ze door (ook als ze niet verandert: in de constructie zet *Nacht* de afgewerkte woning terug). */
 export function zetNacht(aan: boolean) {
-  const anders = aan !== nacht;
   nacht = aan;
-  for (const b of knoppen?.querySelectorAll<HTMLButtonElement>('[data-pl-nacht]') ?? []) b.setAttribute('aria-pressed', String((b.dataset.plNacht === 'nacht') === nacht));
-  if (anders) bijWissel(nacht);
+  toonDagNacht(aan);
+  bijWissel(nacht);
 }
 
-/** De knop tonen of verbergen (alleen in Afgewerkt). */
-export function toonDagNacht(zichtbaar: boolean) {
-  if (knoppen) knoppen.hidden = !zichtbaar;
+/** De knoppen zoals de 3D het nu toont (bij de constructie of de techniek staat *Dag* aan, ook als de nacht gekozen is). */
+export function toonDagNacht(nachtGetoond: boolean) {
+  for (const b of knoppen?.querySelectorAll<HTMLButtonElement>('[data-pl-nacht]') ?? []) b.setAttribute('aria-pressed', String((b.dataset.plNacht === 'nacht') === nachtGetoond));
 }

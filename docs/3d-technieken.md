@@ -219,6 +219,33 @@ Wat we leerden:
 - **WebGPU in software** (`--enable-unsafe-webgpu`) viel hier weg vóór het eerste beeld, ook in de versie van vóór deze
   ronde: de omgeving en het dak zijn dus alleen op de WebGL2-weg gezien. Nakijken op een echt toestel.
 
+## Nacht en ledstrips (ronde 15 van de bouw, 17/11)
+
+Vraag van Jonas: *"ook bvb ledstrips en nachtweergave?"* Eén tik (*Dag / Nacht*) toont de woning bij avond. De motor zegt
+wat licht geeft (`Blok.licht`: het glas van de ramen, de lampen buiten, de strook van een ledstrip), de kijker maakt er een
+avondbeeld van met wat er al was: dezelfde lucht met andere getallen, de maan op de plaats van de zon, oplichtend materiaal,
+zes echte lichten, een band licht onder een strook en in *Mooi* een gloed (bloom) op wat oplicht. Uitleg in de skills
+`bouw-woning` (*Nachtweergave en ledstrips*) en `zetel-3d` (*Nacht*).
+
+Wat we leerden:
+- **Licht dat je echt ziet, kost per beeldpunt; licht dat je doet alsof, bijna niets.** Een strook langs een gevel met
+  echte puntlichten gaf vlekken op de muur (één per licht). Een vlak tegen de muur dat licht optelt (helder bij de strook,
+  naar onder uitdovend) geeft de gelijkmatige band van een echte ledstrip, zonder lichtbron; de echte lichten hangen een
+  eind van de muur en verlichten de grond.
+- **Een ander aantal lichten maakt alle tekenprogramma's opnieuw**, zonder grafische kaart seconden per wissel. Eén vaste
+  reeks die blijft staan (overdag op nul) maakt elke volgende wissel tussen dag en nacht meteen.
+- **Wat bij een wissel opnieuw berekend wordt, meet je per stap.** De eerste versie deed er 2,5 à 3 s over bij élke wissel:
+  het omgevingsbeeld werd opnieuw berekend en de schaduw ook. Nu blijft het omgevingsbeeld dat van overdag (gedimd) en staat
+  de maan waar de zon stond: na de eerste keer kost een wissel één gewoon beeld.
+- **`envMapIntensity` dimt niet wat van `scene.environment` komt** (WebGPU-renderer, ook op de WebGL2-weg): daarvoor is
+  `scene.environmentIntensity`. Zichtbaar pas toen het omgevingsbeeld van overdag bleef staan: het nachtbeeld werd ineens
+  fel en groen.
+- **Een raam licht op als een lamp, niet als glas.** Doorzichtig glas met gloed toont de donkere kamer erachter; een
+  donkere ruit met een verloop van licht (bovenaan feller) leest van buiten als een verlichte kamer en hoeft niet eerst te
+  tekenen wat erachter ligt.
+- **Een licht zonder schaduw schijnt door muren.** Het licht van een raam hangt daarom vlak achter een groot raam tot op
+  de grond (het valt op het terras) en reikt niet ver; de andere ramen lichten alleen op.
+
 ## Gratis hulpmiddelen (advies en proeven van 5/11)
 
 Voorwaarden: alles in één HTML-bestand, niets van internet laden, alleen materialen die we zelf maken (procedureel of
