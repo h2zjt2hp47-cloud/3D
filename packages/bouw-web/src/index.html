@@ -870,6 +870,24 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
 #o-ramenlijst input.maat { min-width: 0; }
 /* B13: het 3D-beeld van het ontwerp wordt getekend: een vak met de reden zolang het er niet is. */
 .ontwerp-wachtvak { display: grid; place-items: center; min-height: 160px; aspect-ratio: 960 / 595; border-radius: 4px; background: #e9e7e1; color: var(--zacht); font-size: .9rem; text-align: center; padding: 12px; }
+/* B17: een regel in het overzicht is compact: een klein beeld, de kop en de maat; Bewerken rechts bij het aantal. */
+body:not(.met-prijzen) .positie { grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; padding: 6px 0; align-items: start; }
+body:not(.met-prijzen) .positie .mini { height: 56px; overflow: hidden; }
+body:not(.met-prijzen) .positie .mini svg, body:not(.met-prijzen) .positie .mini img { max-height: 50px; width: auto; max-width: 100%; }
+body:not(.met-prijzen) .positie .mini svg[viewBox="0 0 120 110"] { width: 56px; }
+body:not(.met-prijzen) .positie { align-items: center; }
+body:not(.met-prijzen) .positie details.regeldetail { padding: 0; border-bottom: 0; }
+body:not(.met-prijzen) .positie details.regeldetail > summary { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 44px; font-weight: 400; }
+body:not(.met-prijzen) .positie details.regeldetail > summary .positiekop::before { content: '▸'; color: var(--zacht); }
+body:not(.met-prijzen) .positie details.regeldetail[open] > summary .positiekop::before { content: '▾'; }
+body:not(.met-prijzen) .positie .positiekop { gap: 6px; }
+body:not(.met-prijzen) .positie .regelmaat { font-size: .9rem; color: var(--zacht); }
+body:not(.met-prijzen) .positieprijs { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
+.regelacties { margin: 2px 0 10px; }
+@media (max-width: 700px) { body:not(.met-prijzen) .positie { grid-template-columns: 64px minmax(0, 1fr); } body:not(.met-prijzen) .positieprijs { justify-content: flex-start; } }
+/* B24: de vinkjes van "Uit de plattegrond" minstens 44 px hoog op een aanraakscherm (de algemene regel gaf 36 px). */
+@media (pointer: coarse) { #o-uitplan-kaart .schakelaars label { min-height: 44px; display: flex; align-items: center; gap: 8px; } }
 #p-inwoning { border: 1px solid var(--accent); background: var(--accent); color: var(--vlak); border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; min-height: 44px; }
 </style>
 </head>
@@ -1246,7 +1264,7 @@ label.schakelaar.schakelaar-groot { min-height: 44px; }
       </section>
       <section class="kaart alleen-woning">
         <div class="kaartkop"><h2 id="o-posities-kop">Ramen, deuren en poorten</h2><span class="klein o-btwlabel prijsdeel"></span><span id="o-status" class="status ok"></span></div>
-        <p class="klein">Tik op een regel om de materialen en de opbouw te zien.</p>
+        <p class="klein">Tik op een regel voor de materialen en de opbouw, en om te dupliceren of te verwijderen.</p>
         <div id="o-posities"></div>
         <p id="o-leeg" class="klein" hidden>Nog geen ramen of deuren. Plaats ze in de plattegrond of voeg ze hier toe.</p>
         <div class="nieuw">

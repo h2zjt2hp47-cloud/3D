@@ -133,10 +133,16 @@ function regelStaal(code: string): string {
 }
 
 /** Een positie als regel die openklapt: soort en maat, open de materialen en de opbouw (zonder prijzen). */
-function regelDetail(p: Positie, r: ReturnType<typeof resultaat>): HTMLElement {
+function regelDetail(p: Positie, r: ReturnType<typeof resultaat>, boven?: HTMLElement, kop?: HTMLElement): HTMLElement {
   const d = el('details', { class: 'regeldetail' });
-  d.append(el('summary', {}, kort(p)));
+  // Doorloop B17: de kop van de regel (nummer, naam, status) en de maat samen op de regel die openklapt.
+  const regelKop = el('summary');
+  if (kop) regelKop.append(kop, el('span', { class: 'regelmaat' }, kort(p)));
+  else regelKop.textContent = kort(p);
+  d.append(regelKop);
   const inhoud = el('div', { class: 'regelinhoud' });
+  // Doorloop B17: de knoppen die je zelden nodig hebt (Toon in plattegrond, Dupliceren, Verwijderen) staan in de open regel.
+  if (boven) inhoud.append(boven);
   inhoud.append(el('p', { class: 'klein' }, omschrijving(p)));
   const lijst = (titel: string, items: string[]) => {
     if (!items.length) return;
@@ -347,15 +353,19 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     const c = controles(p, r);
     const nL = c.filter((x) => x.toestand === 'let-op').length;
     kop.append(el('span', { class: `status ${!r.geldig ? 'fout' : nL ? 'let-op' : 'ok'}` }, !r.geldig ? `${nFouten(r)} fout${nFouten(r) === 1 ? '' : 'en'}` : nL ? `${nL} aandachtspunt${nL === 1 ? '' : 'en'}` : 'in orde'));
-    info.append(kop, PRIJZEN ? el('p', { class: 'klein' }, omschrijving(p)) : regelDetail(p, r));
+    // Doorloop B17 (het overzicht was op de tablet 7 schermen lang): een regel is de kop en de maat; Bewerken staat rechts
+    // bij het aantal, de andere knoppen in de open regel. Met prijzen zoals vroeger.
     const acties = el('div', { class: 'positieacties' });
+    const meer = PRIJZEN ? acties : el('div', { class: 'positieacties regelacties' });
+    if (PRIJZEN) info.append(kop, el('p', { class: 'klein' }, omschrijving(p)));
+    else info.append(regelDetail(p, r, meer, kop));
     const knop = (tekst: string, f: () => void, cls = 'tweede') => {
       const b = el('button', { type: 'button', class: cls }, tekst);
       b.addEventListener('click', f);
       return b;
     };
     acties.append(knop('Bewerken', () => naarPositie(p.id), ''));
-    if (opening) acties.append(knop('Toon in plattegrond', () => naarPlan(opening.id)));
+    if (opening) meer.append(knop('Toon in plattegrond', () => naarPlan(opening.id)));
     if (inWoning) {
       const zet = knop('In de woning zetten', () => {
         const id = zetInWoning(p.id);
@@ -365,19 +375,21 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
       }, '');
       zet.title = 'Op een vrij stuk buitenmuur, in een ruimte van deze soort; daarna verschuif je het in de plattegrond.';
       zet.dataset.inWoning = p.id;
-      acties.append(zet);
+      // Zonder prijzen onder de regel (de kolom rechts blijft smal), met prijzen bij de andere knoppen.
+      if (PRIJZEN) acties.append(zet);
+      else { const rijZet = el('div', { class: 'positieacties' }); rijZet.append(zet); info.append(rijZet); }
     }
     // De kopie komt achteraan in de nummering, en naast het origineel in de woning als daar plaats is (staat.ts).
-    acties.append(knop('Dupliceren', () => { dupliceerPositie(p.id, { naam: (q) => `${q.naam} (kopie)` }); }));
+    meer.append(knop('Dupliceren', () => { dupliceerPositie(p.id, { naam: (q) => `${q.naam} (kopie)` }); }));
     // Eén tik, met daarna onderaan *Ongedaan maken* (doorloop B8; ook Ctrl+Z op dit scherm).
-    acties.append(knop('Verwijderen', () => {
+    meer.append(knop('Verwijderen', () => {
       wijzig(BRON_TERUG, (tt) => {
         tt.posities = tt.posities.filter((x) => x.id !== p.id);
         tt.plan.openingen = tt.plan.openingen.filter((x) => x.positie !== p.id);
       });
       toonTerug(`${p.code} · ${p.naam} verwijderd${opening ? ' (ook uit de woning)' : ''}.`);
     }, 'gevaar'));
-    info.append(acties);
+    if (PRIJZEN) info.append(acties);
     if (plaatsMelding?.id === p.id) info.append(el('p', { class: 'klein melding', role: 'status' }, plaatsMelding.tekst));
     const prijs = el('div', { class: 'positieprijs' });
     const aantal = el('input', { type: 'number', min: '0', step: '1', 'aria-label': `Aantal ${p.code}` }) as HTMLInputElement;
@@ -392,6 +404,7 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
     aantalRij.append(aantal, el('span', {}, geenPrijs ? (p.aantal === 1 ? 'stuk' : 'stuks') : `× ${eur(toonPrijs(pos.stukprijs, o.btwProcent))}`));
     prijs.append(aantalRij);
     if (PRIJZEN) prijs.append(el('strong', {}, zonderPrijs(p) ? 'Nog geen prijs' : eur(toonPrijs(pos.totaal, o.btwProcent))));
+    else prijs.append(acties);
     rij.append(tekening, info, prijs);
     return rij;
   }));
