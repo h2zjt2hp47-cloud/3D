@@ -67,31 +67,44 @@ const toestellen: Record<string, ToestelType> = {
   },
   lichtpunt: {
     label: 'Lichtpunt (plafond)', vak: 'elektriciteit', b: 12, d: 12, h: 22, bevestiging: 'plafond',
-    teken: 'lichtpunt', vorm: 'lichtpunt', kleur: WIT,
+    teken: 'lichtpunt', vorm: 'lichtpunt', kleur: WIT, licht: {},
     herkomst: kennis(),
     klant: { naam: 'Lichtpunt', uitleg: 'Een aansluiting aan het plafond voor een lamp naar keuze.' },
   },
   inbouwspot: {
     label: 'Inbouwspot', vak: 'elektriciteit', b: 9, d: 9, h: 3, bevestiging: 'plafond',
-    teken: 'spot', vorm: 'spot', kleur: WIT,
+    teken: 'spot', vorm: 'spot', kleur: WIT, licht: {},
     herkomst: onderzoek('5.4 [L5]: 80 tot 100 cm van de muur, 1 tot 2 m uit elkaar; de maat: algemene kennis'),
     klant: { naam: 'Inbouwspot', uitleg: 'Een kleine lamp die in het plafond is ingebouwd.' },
   },
   pendel: {
     label: 'Hanglamp (pendel)', vak: 'elektriciteit', b: 40, d: 40, h: 130, bevestiging: 'plafond',
-    teken: 'armatuur', vorm: 'pendel', kleur: '#2f3437',
+    teken: 'armatuur', vorm: 'pendel', kleur: '#2f3437', licht: {},
     herkomst: onderzoek('5.4 [L5][L6]: 55 tot 70 cm boven de tafel (bij een plafond van 2,70 m en een tafel van 75 cm)'),
     klant: { naam: 'Hanglamp', uitleg: 'Een lamp die aan het plafond hangt, bijvoorbeeld boven de tafel.' },
   },
   wandlamp: {
     label: 'Wandlamp', vak: 'elektriciteit', b: 15, d: 12, h: 15, hoogte: 180, bevestiging: 'wand',
-    teken: 'wandlamp', vorm: 'wandlamp', kleur: '#2f3437',
+    teken: 'wandlamp', vorm: 'wandlamp', kleur: '#2f3437', licht: { bereik: 300 }, gevel: true,
     herkomst: kennis(),
     klant: { naam: 'Wandlamp', uitleg: 'Een lamp aan de muur.' },
   },
+  // Ronde 15: buitenverlichting. Een tik buiten de woning zet ze tegen de gevel (`gevel`); 's nachts lichten ze op.
+  buitenlamp: {
+    label: 'Buitenlamp (gevel, op en neer)', vak: 'elektriciteit', b: 9, d: 12, h: 22, hoogte: 190, bevestiging: 'wand',
+    teken: 'wandlamp', vorm: 'buitenlamp', kleur: '#34373a', licht: { bereik: 380 }, gevel: true,
+    herkomst: kennis('de maat van een kleine gevellamp en de hoogte (naast een deur, ± 1,9 m): algemene kennis'),
+    klant: { naam: 'Buitenlamp', uitleg: 'Een lamp buiten aan de gevel die naar boven en naar onder schijnt, bijvoorbeeld naast de voordeur of het terras.' },
+  },
+  tuinlamp: {
+    label: 'Tuinlamp (paaltje)', vak: 'elektriciteit', b: 12, d: 12, h: 65, hoogte: 0, bevestiging: 'buiten',
+    teken: 'armatuur', vorm: 'paaltje', kleur: '#34373a', licht: { bereik: 300 },
+    herkomst: kennis('een paaltje van ± 65 cm langs een pad of terras: algemene kennis'),
+    klant: { naam: 'Tuinlamp', uitleg: 'Een laag paaltje met licht in de tuin, bijvoorbeeld langs het pad of het terras.' },
+  },
   laadpaal: {
     label: 'Laadpaal (aan de muur)', vak: 'elektriciteit', b: 21, d: 11, h: 29, hoogte: 100, bevestiging: 'wand',
-    teken: 'kader', afkorting: 'LP', vorm: 'laadpaal', kleur: '#e9e8e3',
+    teken: 'kader', afkorting: 'LP', vorm: 'laadpaal', kleur: '#e9e8e3', gevel: true,
     herkomst: onderzoek('6.1 [I5]: voorbeeld van een kastje 29 × 21 × 11 cm; de montagehoogte niet gevonden (algemene kennis)'),
     klant: { naam: 'Laadpaal', uitleg: 'Een aansluiting aan de muur om een elektrische auto op te laden.' },
   },
@@ -197,7 +210,7 @@ const toestellen: Record<string, ToestelType> = {
   },
   gevelrooster: {
     label: 'Gevelrooster (aanzuig of uitblaas)', vak: 'ventilatie', b: 30, d: 3, h: 30, hoogte: 220, bevestiging: 'wand',
-    teken: 'rooster', vorm: 'rooster', kleur: '#8c8f91',
+    teken: 'rooster', vorm: 'rooster', kleur: '#8c8f91', gevel: true,
     herkomst: onderzoek('6.4 [I19]: 125 tot 200 mm; de maat van de kap en de hoogte: algemene kennis'),
     klant: { naam: 'Rooster in de gevel', uitleg: 'Een rooster in de buitenmuur waar de ventilatie lucht binnenhaalt of naar buiten blaast.' },
   },
@@ -236,7 +249,7 @@ const toestellen: Record<string, ToestelType> = {
   },
   buitenkraan: {
     label: 'Buitenkraan', vak: 'sanitair', b: 8, d: 12, h: 8, hoogte: 60, bevestiging: 'wand',
-    teken: 'kraan', vorm: 'kraan', kleur: '#9fa3a6',
+    teken: 'kraan', vorm: 'kraan', kleur: '#9fa3a6', gevel: true,
     herkomst: kennis('meestal op regenwater (6.3 [I16], afgeleid)'),
     klant: { naam: 'Buitenkraan', uitleg: 'Een kraan buiten aan de muur, bijvoorbeeld om de tuin te sproeien.' },
   },
@@ -247,6 +260,13 @@ const leidingen: Record<string, LeidingSoortType> = {
     label: 'Kabel in buis (kring)', vak: 'elektriciteit', kleur: '#8e44ad', vorm: 'rond', maten: [16, 20, 25], hoogte: 'vloer',
     herkomst: kennis('flexibele buis van 16, 20 of 25 mm; per kring hoogstens 8 stopcontacten volgt uit 5.3 [E6]'),
     klant: { naam: 'Elektriciteitskabel', uitleg: 'Kabels in een buis, van de zekeringkast naar de stopcontacten, de schakelaars en het licht.' },
+  },
+  // Ronde 15: een ledstrip trek je als een leiding, maar ze is licht dat je ziet (zie `ledstrip` en core/src/nacht.ts).
+  ledstrip: {
+    label: 'Ledstrip (in profiel)', vak: 'elektriciteit', kleur: '#e2a400', vorm: 'plat', maten: [[20, 12], [30, 15]], hoogte: 'plafond', ledstrip: true,
+    maxLengte: { waarde: 10, herkomst: kennis('een strip op 24 V wordt meestal om de 5 à 10 m opnieuw gevoed'), uitleg: 'de lengte op één voeding' },
+    herkomst: kennis('een aluminium profiel van 2 × 1,2 cm met een melkwitte afdekking; de maat: algemene kennis'),
+    klant: { naam: 'Ledstrip', uitleg: 'Een smalle strook met ledlampjes in een profiel: zacht licht langs het plafond, onder een kast, in een trap of buiten onder de dakrand.' },
   },
   koelleiding: {
     label: 'Koelleiding (vloeistof en gas, geïsoleerd)', vak: 'klimaat', kleur: '#11a3a3', vorm: 'paar',

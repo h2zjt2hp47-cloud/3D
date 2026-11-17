@@ -78,7 +78,9 @@ export type ToestelTeken =
 export type ToestelVorm =
   | 'kast' | 'stopcontact' | 'schakelaar' | 'plaatje' | 'lichtpunt' | 'spot' | 'pendel' | 'wandlamp' | 'wandunit'
   | 'cassette' | 'buitenunit' | 'kolom' | 'boiler' | 'radiator' | 'unit' | 'mond' | 'rooster' | 'doorvoer' | 'laadpaal'
-  | 'kraan' | 'pomp' | 'collector';
+  | 'kraan' | 'pomp' | 'collector'
+  // Buitenverlichting (ronde 15): een lamp aan de gevel die op en neer schijnt, een paaltje in de tuin.
+  | 'buitenlamp' | 'paaltje';
 
 /** Een soort toestel in de catalogus. Maten in cm; alles is een richtwaarde (zie `herkomst`). */
 export interface ToestelType {
@@ -113,6 +115,16 @@ export interface ToestelType {
   uitleg?: string;
   /** Voor de klant: hoe hij het noemt en wat het is (ontbreekt = het label zonder de uitleg tussen haakjes). */
   klant?: KlantWoorden;
+  /**
+   * Een lamp (ronde 15): haar kap licht 's nachts op (zie nacht.ts), in deze kleur (een code uit `LICHTKLEUREN`,
+   * standaard warm wit) en sterkte; met `bereik` (cm) verlicht ze ook echt wat errond ligt, als ze buiten hangt of staat.
+   */
+  licht?: { kleur?: string; sterkte?: number; bereik?: number };
+  /**
+   * Mag ook buiten aan de gevel hangen (ronde 15: een buitenlamp, een laadpaal, een buitenkraan, een gevelrooster): een
+   * tik buiten de woning zet het tegen de buitenkant van de dichtste gevel.
+   */
+  gevel?: boolean;
 }
 
 /**
@@ -149,6 +161,12 @@ export interface LeidingSoortType {
   uitleg?: string;
   /** Voor de klant: hoe hij het noemt en wat het is (zie `ToestelType.klant`). */
   klant?: KlantWoorden;
+  /**
+   * Een ledstrip (ronde 15): geen leiding die je verstopt maar licht dat je ziet. In de afgewerkte woning een dun profiel
+   * (`ledstripBlokken` in nacht.ts) dat 's nachts oplicht in de kleur van de strip (`Leiding.lichtkleur`); ze begint en
+   * eindigt waar je wil (geen melding over een los einde); de telling geeft ook de voedingen.
+   */
+  ledstrip?: boolean;
 }
 
 /** De catalogus techniek: zoals de plancatalogus, gegevens en geen programma. Zie core/voorbeelden/techniek.ts. */
@@ -205,6 +223,8 @@ export interface Leiding {
   niveau?: number;
   /** Naam van de kring (elektriciteit) of een eigen naam. */
   kring?: string;
+  /** Een ledstrip (ronde 15): de kleur van haar licht, een code uit `LICHTKLEUREN` in nacht.ts (standaard warm wit). */
+  lichtkleur?: string;
 }
 
 /** Hoe de 3D de techniek toont (zie `Plan3DOpties.techniek` in plattegrond.ts). */
@@ -511,6 +531,18 @@ export function toestelVorm(vorm: ToestelVorm, B: number, D: number, H: number, 
     case 'wandlamp':
       blok('voet', 'kunststof', B * 0.3, H * 0.2, 0, B * 0.4, H * 0.6, 2, kleur);
       blok('kap', 'kunststof', 0, 0, 2, B, H, D - 2, '#fff3c4', { afronding: Math.min(B, H, D - 2) / 3 });
+      break;
+    case 'buitenlamp':
+      // Ronde 15: een donkere koker tegen de gevel, open aan de boven- en onderkant (het licht schijnt op en neer langs de muur).
+      blok('kast', 'metaal', 0, 2, 0, B, H - 4, D, kleur);
+      blok('licht_onder', 'kunststof', 1, 0.6, 1, B - 2, 1.4, D - 2, '#fff3c4');
+      blok('licht_boven', 'kunststof', 1, H - 2, 1, B - 2, 1.4, D - 2, '#fff3c4');
+      break;
+    case 'paaltje':
+      // Ronde 15: een paaltje in de tuin met een lichtband onder een platte kap.
+      staand('paal', 'metaal', B / 2, 0, D / 2, Math.min(B, D) * 0.8, H - 14, kleur);
+      staand('licht', 'kunststof', B / 2, H - 14, D / 2, Math.min(B, D) * 0.72, 10, '#fff3c4');
+      staand('kap', 'metaal', B / 2, H - 4, D / 2, Math.min(B, D), 4, kleur);
       break;
     case 'wandunit':
       blok('kast', 'kunststof', 0, 0, 0, B, H, D, kleur, { afronding: 3 });

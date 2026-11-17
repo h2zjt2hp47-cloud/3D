@@ -136,6 +136,28 @@ export interface Blok {
    * doorlopende zetel (anders lange, smalle driehoeken met strepen in het reliëf).
    */
   glad?: boolean;
+  /**
+   * Geeft licht bij nacht (ronde 15, 17/11): het glas van een raam, de kap van een lamp, de strook van een ledstrip. De
+   * kijker toont het alleen in de nachtweergave (`Viewer3D.nacht`); overdag verandert er niets. Een kijker van vóór
+   * ronde 15 kent het veld niet en tekent het blok zoals altijd.
+   */
+  licht?: BlokLicht;
+}
+
+/** Hoe een blok 's nachts licht geeft (zie `Blok.licht`). */
+export interface BlokLicht {
+  /** Kleur van het licht (sRGB-hex), bv. warm wit. */
+  kleur: string;
+  /** Hoe fel het oplicht, standaard 1 (de ramen van een slaapkamer minder dan die van de leefruimte). */
+  sterkte?: number;
+  /**
+   * Er komt ook echt licht uit, tot zo ver (cm): het verlicht wat ernaast ligt (de gevel rond een buitenlamp, het terras
+   * voor een groot raam, de muur onder een ledstrip). Ontbreekt = alleen oplichten. De kijker zet er maar een paar: de
+   * felste en verst reikende eerst.
+   */
+  bereik?: number;
+  /** Waar dat licht vandaan komt, gerekend vanaf het midden van het blok (cm, [x, y, z]): binnen achter het glas, vóór de lamp, onder de strook. */
+  vanaf?: [number, number, number];
 }
 
 export interface Scene3D {

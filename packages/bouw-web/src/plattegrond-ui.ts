@@ -474,6 +474,8 @@ function plan3D() {
       ...techniek3DOpties(niveau),
       // Ronde 10c: in Afgewerkt wat je van de techniek buiten ziet (buitenunit, laadpaal, dakdoorvoer …), op ware grootte.
       techniekBuiten: true,
+      // Ronde 15: de ledstrips als dun profiel, en wat 's nachts licht geeft (ramen, lampen, strips) voor de nachtweergave.
+      verlichting: true,
     });
     // Constructie (ronde 6): wanden, vloeren en dak als skelet, met het kader van de afgewerkte woning (de camera springt niet).
     const constructie = constructieAan();

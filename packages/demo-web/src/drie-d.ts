@@ -4,7 +4,7 @@
  * De motor levert de blokken (bouw3D); hier worden ze omgezet naar meshes.
  * Bediening: slepen = draaien, scrollen/knijpen = zoomen, knoppen = vaste standpunten.
  */
-import type { Blok, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
+import type { Blok, BlokLicht, Echt3DPlaatsing, Scene3D, Weefsel } from '../../core/src/index.js';
 import { smeltMee, zachteVorm, type ZachteVorm } from '../../core/src/zachtevorm.js';
 import { wandDoorsnede } from '../../core/src/kuip.js';
 import { wielFactor, wielHint } from './zoom.js';
@@ -13,11 +13,12 @@ import { bouwDecor, type DecorSpec } from './decor3d.js';
 
 import * as THREE_ from 'three';
 import { NodeMaterial, RenderPipeline, WebGPURenderer } from 'three/webgpu';
-import { float, mix, mrt, normalView, output, packNormalToRGB, pass, sample, smoothstep, unpackRGBToNormal, vec4 } from 'three/tsl';
+import { emissive, float, mix, mrt, normalView, output, packNormalToRGB, pass, sample, smoothstep, unpackRGBToNormal, vec4 } from 'three/tsl';
 // Lucht achter een gebouw (zie `maakBuiten`): een eigen, berekende hemel, geen beeld van derden.
 import { atan, cameraProjectionMatrix, dot, equirectUV, max, modelViewMatrix, normalWorldGeometry, positionLocal, pow, sin, texture as tslTextuur, uniform, vec2 } from 'three/tsl';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import { denoise } from 'three/addons/tsl/display/DenoiseNode.js';
+import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -69,6 +70,13 @@ export interface Viewer3D {
    * scène die hij toont; de kijker gokt niet op de inhoud. De zon blijft de baas: lucht en licht volgen `zon()`.
    */
   omgeving?(naam: OmgevingNaam): void;
+  /**
+   * Nachtweergave (ronde 15, bouw, alleen met de omgeving 'buiten'): een late avond. De lucht donkerblauw met nog wat
+   * gloed aan de horizon, weinig licht van de lucht en zwak, koel maanlicht met schaduw; wat licht geeft (`Blok.licht`:
+   * de ramen, de lampen, de ledstrips) licht op, en de belangrijkste ervan verlichten ook echt wat ernaast ligt. In de
+   * kwaliteit Mooi met gloed (bloom). Gaat voor de stand van de zon. false = exact het beeld van overdag.
+   */
+  nacht?(aan: boolean): void;
   formaat(): void;
 }
 
@@ -347,6 +355,46 @@ function luchtVan(stand: ZonIn3D): Lucht {
     dag, warm, op: h > 0,
   };
 }
+// ---------- de nacht (ronde 15, zie Viewer3D.nacht) ----------
+/**
+ * De nacht voor een gebouw buiten: een late avond, geen zwart gat. De zon staat een eind onder de horizon achter de
+ * woning (wie de voorgevel bekijkt, ziet daar nog wat gloed); de maan staat schuin van rechts voor en hoog, zoals de zon
+ * overdag (ZON_BUITEN), zodat de gevel die je ziet vorm houdt. Op het oog gekozen, net als de lucht overdag.
+ */
+const NACHT = {
+  zon: { richting: 15, hoogte: -9 } as ZonIn3D,
+  /**
+   * Sterkte van het maanlicht en van het licht van de lucht (× π), de belichting van het beeld, en welk deel van het
+   * omgevingslicht (de weerkaatsing van de lucht van overdag) overblijft.
+   */
+  maan_sterkte: 0.2, hemel: 0.15, belichting: 1.25, omgeving: 0.06,
+  /**
+   * Hoe fel wat licht geeft (`Blok.licht`) oplicht (emissive), en de echte lichten: de sterkte is `lamp` × het bereik in
+   * het kwadraat (verval 2, in cm), zodat op de helft van het bereik evenveel licht valt, hoe ver een licht ook reikt.
+   */
+  gloed: 1.15, lamp: 0.25,
+  /** Zoveel echte lichten bij nacht, in elke kwaliteit (een andere telling maakt alle tekenprogramma's opnieuw). */
+  lampen: 6,
+  /** Gloed rond wat oplicht, alleen in Mooi (nabewerking op wat oplicht, niet op het hele beeld). */
+  bloom: { sterkte: 0.55, straal: 0.25 },
+};
+/** Het licht van de lucht bij nacht (hemellicht): boven blauwig, van de grond bijna niets. */
+const NACHT_HEMEL = { boven: '#7286b8', onder: '#2a2f24' };
+/** De lucht bij nacht: zoals `luchtVan` met de zon onder de horizon, in de kleuren van een late avond. */
+function nachtLucht(): Lucht {
+  const l = luchtVan(NACHT.zon);
+  return {
+    ...l,
+    zenit: lineair('#0a1431'), horizon: lineair('#34507a'),
+    // Wat gloed van de ondergegane zon, laag aan de horizon achter de woning.
+    gloed: maal(lineair('#ff8c3a'), 0.12),
+    bomen: lineair('#0b130f'), mist: lineair('#182130'), wolk: lineair('#262f49'),
+    grond: lineair('#151a12'),
+    // Het maanlicht: koel.
+    zonKleur: lineair('#a9bcf0'),
+    dag: 0, warm: 0, op: false,
+  };
+}
 /** Kleur van de lucht in een richting (lineair), zonder wolken en bomen: voor het omgevingsbeeld (weerkaatsing en strooilicht). */
 function luchtKleur(l: Lucht, x: number, y: number, z: number): Rgb {
   const t = Math.pow(Math.max(y, 0), 0.45), cz = Math.max(0, x * l.naarZon[0] + y * l.naarZon[1] + z * l.naarZon[2]);
@@ -414,7 +462,7 @@ function vasteReeks(sleutel: string) {
  * met een uitleg in plaats van eindeloos te herstarten.
  */
 export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | null {
-  const toestand: { scene?: Scene3D; decor?: DecorNaam; licht?: LichtNaam; kwaliteit?: Kwaliteit; weergave: Partial<Weergave3D>; markeer?: string | null; standpunt?: Standpunt; omgeving?: OmgevingNaam } = { weergave: {} };
+  const toestand: { scene?: Scene3D; decor?: DecorNaam; licht?: LichtNaam; kwaliteit?: Kwaliteit; weergave: Partial<Weergave3D>; markeer?: string | null; standpunt?: Standpunt; omgeving?: OmgevingNaam; nacht?: boolean } = { weergave: {} };
   let verliezen: number[] = [];
   let huidige: EigenViewer | null = null;
   /** Laatst gezette stand van de zon (zie Viewer3D.zon), om na een herstart terug te zetten. */
@@ -443,6 +491,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     if (toestand.standpunt) huidige.standpunt(toestand.standpunt);
     if (toestand.markeer) huidige.markeer?.(toestand.markeer);
     if (zonToestand) huidige.zon?.(zonToestand);
+    if (toestand.nacht) huidige.nacht?.(true);
   };
   huidige = start(false);
   if (!huidige) return null;
@@ -464,6 +513,7 @@ export function maak3D(houder: HTMLElement, opties: Opties3D = {}): Viewer3D | n
     markeer(id) { toestand.markeer = id; huidige?.markeer?.(id); },
     zon(stand) { zonToestand = stand; huidige?.zon?.(stand); },
     omgeving(naam) { toestand.omgeving = naam; huidige?.omgeving?.(naam); },
+    nacht(aan) { toestand.nacht = aan; huidige?.nacht?.(aan); },
     formaat() { huidige?.formaat(); },
     // Voor de tests: doen alsof het toestel wegvalt (zoals de browser het meldt).
     proefVerlies() { huidige?.proefVerlies(); },
@@ -2318,6 +2368,16 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   let buitenDelen: BuitenDelen | null = null;
   /** Voor welke stand van de zon het omgevingsbeeld gemaakt is ('' = nog niet), en de uitgestelde vernieuwing. */
   let luchtSleutel = '', luchtGepland = 0;
+  /** Nachtweergave gevraagd (zie Viewer3D.nacht); ze geldt alleen buiten. */
+  let nachtGevraagd = false;
+  const nachtNu = () => nachtGevraagd && isBuiten();
+  /** De vormen die 's nachts licht geven (`Blok.licht`) met hun gewone materiaal (één of een lijst), per scène. */
+  let lichtDelen: { mesh: any; licht: BlokLicht; dag: any }[] = [];
+  const gloeiMaterialen = new Map<string, any>();
+  /** Het licht van een strook op de muur (zie waasVan), per scène; alleen zichtbaar bij nacht. */
+  let waasDelen: any[] = [];
+  /** De echte lichten bij nacht (zie zetNachtLampen): pas gemaakt bij de eerste nacht met licht, daarna blijven ze (overdag op nul). */
+  const nachtLampen: any[] = [];
   /** Alles wat de omgeving 'buiten' nodig heeft, één keer gemaakt bij het eerste gebruik (niets ervan bestaat bij de zetels). */
   function maakBuiten(): BuitenDelen {
     // Gras: één grote tegel met vlekken (lichter, donkerder, wat geler) en sprietjes, herhaald tot aan de horizon. De
@@ -2448,6 +2508,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     if (buitenDelen) buitenDelen.gras.visible = buitenDelen.koepel.visible = !!d;
     scene.fog = d ? d.mist : null;
     scene.environment = d ? d.luchtbeeld : omgevingVoor('studio');
+    // Bij nacht (ronde 15) een fractie van het omgevingslicht, anders zoals altijd.
+    scene.environmentIntensity = d && nachtNu() ? NACHT.omgeving : 1;
     // Glas spiegelt buiten een eigen beeld van de lucht (zie vulLuchtbeeld).
     for (const m of materialen.values()) {
       if (!m?.userData?.glas) continue;
@@ -2473,7 +2535,10 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   }
   /** Het omgevingslicht buiten: sterker dan de studio, en glas spiegelt extra (na de gewone regeling in zetLicht). */
   function lichtBuiten() {
-    OMGEVING = OMGEVING_BUITEN;
+    // Bij nacht (ronde 15) weerkaatst en verlicht de lucht nog maar een fractie (het omgevingsbeeld zelf blijft dat van
+    // overdag). `environmentIntensity` geldt voor het omgevingsbeeld van de scène, `envMapIntensity` voor glas met een eigen beeld.
+    OMGEVING = OMGEVING_BUITEN * (nachtNu() ? NACHT.omgeving : 1);
+    scene.environmentIntensity = nachtNu() ? NACHT.omgeving : 1;
     scene.traverse((o: any) => {
       const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
       for (const m of ms) if ('envMapIntensity' in m && m !== bouwVloer) m.envMapIntensity = omgevingVan(m);
@@ -2488,10 +2553,16 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   function zonBuiten() {
     const d = buitenDelen;
     if (!d) return;
-    const stand = zonStand ?? ZON_BUITEN, l = luchtVan(stand);
+    // Bij nacht (ronde 15): de lucht van een late avond, en het licht (met schaduw) komt van de maan. De maan staat waar de
+    // zon stond (minstens 25° hoog): dan blijft de schaduwkaart geldig en is de wissel tussen dag en nacht meteen klaar.
+    const nacht = nachtNu(), dagStand = zonStand ?? ZON_BUITEN;
+    const stand = nacht ? { richting: dagStand.richting, hoogte: Math.max(25, dagStand.hoogte) } : dagStand, l = nacht ? nachtLucht() : luchtVan(stand);
     const grootte = Math.max(kader.b, kader.d, 120), bereik = grootte * 1.5, ver = grootte * 2.2;
     const r = (stand.richting * Math.PI) / 180, hoek = (Math.max(stand.hoogte, 1) * Math.PI) / 180;
+    const vorige = zon.position.clone();
     zon.position.set(doel.x + Math.sin(r) * Math.cos(hoek) * ver, doel.y + Math.sin(hoek) * ver, doel.z - Math.cos(r) * Math.cos(hoek) * ver);
+    // Een andere plaats van het licht (de maan bij een lage zon): de schaduw opnieuw (anders doet `zetZon` dat al).
+    if (nacht && vorige.distanceToSquared(zon.position) > 1) schaduwOpnieuw();
     zon.target.position.copy(doel);
     // Ruim schaduwbereik: de schaduw van de woning valt op het gras ernaast.
     const sc = zon.shadow.camera;
@@ -2502,15 +2573,17 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     sc.updateProjectionMatrix();
     // Vlak boven de horizon is de zon zwakker en warmer; eronder is er geen zon en blijft alleen het licht van de lucht.
     zon.color.setRGB(l.zonKleur[0], l.zonKleur[1], l.zonKleur[2]);
-    zon.intensity = l.op ? PI * 2.0 * Math.min(1, Math.max(0.3, stand.hoogte / 8)) : 0;
+    zon.intensity = nacht ? PI * NACHT.maan_sterkte : l.op ? PI * 2.0 * Math.min(1, Math.max(0.3, stand.hoogte / 8)) : 0;
     const hemelKleur = ontkleur(meng(l.zenit, l.horizon, 0.72), 0.78), bodem = maal(l.grond, 1.5);
     hemel.color.setRGB(hemelKleur[0], hemelKleur[1], hemelKleur[2]);
     hemel.groundColor.setRGB(bodem[0], bodem[1], bodem[2]);
     hemel.intensity = PI * (0.22 + 0.2 * l.dag);
+    // Bij nacht: zwak, blauwig licht van de lucht (de kleur van de lucht zelf is te donker om als lichtbron te dienen).
+    if (nacht) { hemel.color.set(NACHT_HEMEL.boven); hemel.groundColor.set(NACHT_HEMEL.onder); hemel.intensity = PI * NACHT.hemel; }
     vul.intensity = 0;
     // Bij een lage zon en na zonsondergang iets ruimer belicht, zoals een fotograaf zou doen: de gevels in de schaduw
-    // blijven leesbaar.
-    renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * BELICHTING_BUITEN * (1 + 0.3 * l.warm + 0.9 * (1 - l.dag));
+    // blijven leesbaar. Bij nacht een vaste belichting: wat oplicht, moet ook oplichten.
+    renderer.toneMappingExposure = Math.pow(2, weergave.helderheid) * BELICHTING_BUITEN * (nacht ? NACHT.belichting : 1 + 0.3 * l.warm + 0.9 * (1 - l.dag));
     d.u.zon.value.set(l.naarZon[0], l.naarZon[1], l.naarZon[2]);
     const zet = (naam: 'zenit' | 'horizon' | 'gloed' | 'schijf' | 'wolk' | 'bomen' | 'mist', k: Rgb) => d.u[naam].value.setRGB(k[0], k[1], k[2]);
     zet('zenit', l.zenit);
@@ -2521,20 +2594,199 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     zet('bomen', l.bomen);
     zet('mist', l.mist);
     d.mist.color.setRGB(l.mist[0], l.mist[1], l.mist[2]);
+    // Bij nacht blijft het omgevingsbeeld dat van overdag (het telt maar voor een fractie, zie lichtBuiten): opnieuw
+    // berekenen kost zonder grafische kaart seconden, en terug naar de dag is het dan meteen weer juist. Alleen als er nog
+    // geen is (de kijker start 's nachts), dat van de stand van overdag.
+    if (nacht && luchtSleutel) return;
+    const lb = nacht ? luchtVan(dagStand) : l, sb = nacht ? dagStand : stand;
     // Het omgevingsbeeld: de eerste keer meteen, daarna pas als de stand even niet meer verandert.
-    const sleutel = `${stand.richting.toFixed(1)}:${stand.hoogte.toFixed(1)}`;
+    const sleutel = `${sb.richting.toFixed(1)}:${sb.hoogte.toFixed(1)}`;
     if (sleutel === luchtSleutel) return;
     const vulBeelden = () => {
       if (gesloten || buitenDelen !== d) return;
       luchtSleutel = sleutel;
-      vulLuchtbeeld(d.luchtbeeld.image.data, LUCHT_W, LUCHT_H, l, false);
-      vulLuchtbeeld(d.glasbeeld.image.data, GLAS_W, GLAS_H, l, true);
+      vulLuchtbeeld(d.luchtbeeld.image.data, LUCHT_W, LUCHT_H, lb, false);
+      vulLuchtbeeld(d.glasbeeld.image.data, GLAS_W, GLAS_H, lb, true);
       for (const t of [d.luchtbeeld, d.glasbeeld]) { t.needsUpdate = true; t.needsPMREMUpdate = true; }
       render();
     };
     clearTimeout(luchtGepland);
     if (!luchtSleutel) vulBeelden();
     else luchtGepland = window.setTimeout(vulBeelden, 140);
+  }
+
+  // ---------- de nacht (ronde 15): wat licht geeft, licht op ----------
+  /** Het verloop van het licht achter een raam (gloed van een kamer), één keer getekend: helder bovenaan, zachter onderaan en opzij. */
+  let kamerGloedTextuur: any = null;
+  function kamerGloed() {
+    if (kamerGloedTextuur) return kamerGloedTextuur;
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 128;
+    const g = c.getContext('2d')!;
+    const hoog = g.createLinearGradient(0, 0, 0, 128);
+    hoog.addColorStop(0, '#ffffff');
+    hoog.addColorStop(0.45, '#d9d9d9');
+    hoog.addColorStop(1, '#8c8c8c');
+    g.fillStyle = hoog;
+    g.fillRect(0, 0, 64, 128);
+    const opzij = g.createLinearGradient(0, 0, 64, 0);
+    opzij.addColorStop(0, 'rgba(0,0,0,0.28)');
+    opzij.addColorStop(0.2, 'rgba(0,0,0,0)');
+    opzij.addColorStop(0.8, 'rgba(0,0,0,0)');
+    opzij.addColorStop(1, 'rgba(0,0,0,0.28)');
+    g.fillStyle = opzij;
+    g.fillRect(0, 0, 64, 128);
+    kamerGloedTextuur = new THREE.CanvasTexture(c);
+    kamerGloedTextuur.colorSpace = THREE.SRGBColorSpace;
+    return kamerGloedTextuur;
+  }
+  /**
+   * Het materiaal van een vorm die 's nachts oplicht: een kopie van haar gewone materiaal met de kleur van het licht als
+   * gloed (emissive), één keer gemaakt per materiaal en licht. Het gewone materiaal zelf verandert nooit (overdag blijft
+   * alles zoals het was). Glas wordt bij nacht een donkere ruit met het licht van binnen erin: niet doorzichtig (de kamer
+   * erachter is toch donker, en zo hoeft de kijker niet eerst te tekenen wat achter het glas ligt).
+   */
+  function gloeiMateriaal(dag: any, licht: BlokLicht): any {
+    const sterkte = Math.max(0, Number(licht.sterkte ?? 1)) || 0;
+    const sleutel = `${dag.uuid}|${licht.kleur}|${sterkte}`;
+    let m = gloeiMaterialen.get(sleutel);
+    if (m) return m;
+    if (dag.userData?.glas) {
+      // Het licht in de kamer: bovenaan feller (de lamp hangt hoog), naar onder en naar de randen wat zachter.
+      m = new THREE.MeshStandardMaterial({ color: 0x14120f, roughness: 0.14, metalness: 0, emissiveMap: kamerGloed() });
+      m.envMap = dag.envMap ?? null;
+      m.userData.buiten = dag.userData.buiten;
+    } else m = dag.clone();
+    m.envMapIntensity = dag.envMapIntensity;
+    try { m.emissive = new THREE.Color(licht.kleur); } catch { m.emissive = new THREE.Color('#ffc98f'); }
+    m.emissiveIntensity = sterkte * NACHT.gloed;
+    gloeiMaterialen.set(sleutel, m);
+    return m;
+  }
+  /** Het verloop van het licht van een strook op de muur: fel bij de strook, naar onder (of boven) uitdovend, aan de uiteinden zacht. */
+  let waasTextuur: any = null;
+  function waasVerloop() {
+    if (waasTextuur) return waasTextuur;
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 128;
+    const g = c.getContext('2d')!;
+    const beeld = g.createImageData(128, 128);
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+      // Bovenaan (y = 0) bij de strook; naar onder valt het licht af, opzij aan de uiteinden zacht weg.
+      const t = y / 127, u = Math.min(x, 127 - x) / 127;
+      const v = Math.pow(1 - t, 2.4) * (0.35 + 0.65 * Math.exp(-t * 3.5)) * Math.min(1, u / 0.12);
+      const i = (y * 128 + x) * 4, k = Math.round(255 * Math.min(1, v));
+      beeld.data[i] = beeld.data[i + 1] = beeld.data[i + 2] = k;
+      beeld.data[i + 3] = 255;
+    }
+    g.putImageData(beeld, 0, 0);
+    waasTextuur = new THREE.CanvasTexture(c);
+    waasTextuur.colorSpace = THREE.SRGBColorSpace;
+    return waasTextuur;
+  }
+  /**
+   * Het licht van een strook (een ledstrip) op de muur waartegen ze hangt: een vlak dat alleen bij nacht te zien is en
+   * licht optelt (geen echte lichtbron, dus geen kost per lamp), van de strook tot een eind eronder (of erboven), zodat de
+   * muur een gelijkmatige band licht krijgt. Een strook is een lang, dun blok met licht dat van een muur weg schijnt
+   * (`licht.vanaf` heeft een deel opzij); de muur ligt dan aan de andere kant. Anders niets.
+   */
+  function waasVan(b: Blok): any {
+    const l = b.licht;
+    if (!l || !Array.isArray(l.vanaf) || b.vorm !== 'blok') return null;
+    const opDraai = b.draai !== undefined && Math.abs(b.draai) > 1e-6;
+    const langsX = opDraai || b.b >= b.d;
+    const L = langsX ? b.b : b.d, D = langsX ? b.d : b.b;
+    if (L < 20 || D > 6 || b.h > 6) return null;
+    const vx = Number(l.vanaf[0]) || 0, vy = Number(l.vanaf[1]) || 0, vz = Number(l.vanaf[2]) || 0;
+    const opzij = Math.hypot(vx, vz);
+    if (opzij < 1 || Math.abs(vy) < 1) return null;
+    const weg = new THREE.Vector3(vx / opzij, 0, vz / opzij);
+    // Naar onder tot hoogstens 1,5 m (niet onder de grond), naar boven 1,5 m.
+    const hoog = vy < 0 ? Math.min(150, Math.max(30, b.y - 2)) : 150;
+    const sterkte = Math.max(0, Number(l.sterkte ?? 1)) || 0;
+    let kleur: any;
+    try { kleur = new THREE.Color(l.kleur); } catch { kleur = new THREE.Color('#ffc98f'); }
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(L, hoog), new THREE.MeshBasicMaterial({
+      color: kleur.multiplyScalar(0.62 * sterkte), map: waasVerloop(), transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
+    }));
+    const cx = b.x + b.b / 2, cz = b.z + b.d / 2;
+    const naar = vy < 0 ? -1 : 1;
+    m.position.set(cx - weg.x * (D / 2 + 0.35), naar < 0 ? b.y - hoog / 2 : b.y + b.h + hoog / 2, cz - weg.z * (D / 2 + 0.35));
+    m.rotation.y = Math.atan2(weg.x, weg.z);
+    // Naar boven: het verloop omgekeerd (fel bij de strook, onderaan).
+    if (naar > 0) m.rotation.z = Math.PI;
+    m.name = '';
+    m.raycast = () => {};
+    m.visible = nachtNu();
+    m.userData.waas = true;
+    m.renderOrder = 2;
+    waasDelen.push(m);
+    return m;
+  }
+  /**
+   * Zet alles wat licht geeft aan of uit volgens de nacht: het materiaal van de vormen met `licht` en de echte lichten.
+   * Overdag krijgen de vormen hun gewone materiaal terug en zijn de lichten onzichtbaar (dan tellen ze niet mee in de
+   * tekenprogramma's: het beeld is exact dat van vroeger).
+   */
+  function zetNacht() {
+    const aan = nachtNu();
+    for (const w of waasDelen) w.visible = aan;
+    for (const d of lichtDelen) {
+      d.mesh.material = aan ? (Array.isArray(d.dag) ? d.dag.map((x: any) => gloeiMateriaal(x, d.licht)) : gloeiMateriaal(d.dag, d.licht)) : d.dag;
+    }
+    zetNachtLampen(aan);
+  }
+  /**
+   * De echte lichten bij nacht: een vaste reeks puntlichten zonder schaduw. Ze gaan naar de vormen met een `bereik`, de
+   * felste en verst reikende eerst (een lange strook krijgt er twee, om beurten met de andere; een lamp gaat voor op het
+   * licht door een raam); één keer per scène, niet volgens de camera (anders springen ze bij het draaien). Zonder schaduw
+   * schijnt een licht ook door een muur: daarom zet de motor ze alleen waar wat ze verlichten te zien is (buiten, een eind
+   * achter een groot raam, vóór en onder een strook) en reiken ze niet ver.
+   * Een ander aantal lichten maakt alle tekenprogramma's opnieuw (in Chromium zonder grafische kaart ± 4 s). Daarom komt
+   * de reeks er pas bij de eerste nacht met iets dat licht geeft (een scène of een kijker die nooit 's nachts licht ziet,
+   * blijft zoals vroeger), en blijft ze daarna staan, overdag op sterkte nul (dan telt ze niet mee in het beeld): zo is
+   * elke volgende wissel tussen dag en nacht meteen.
+   */
+  function zetNachtLampen(aan: boolean) {
+    if (!aan) { for (const l of nachtLampen) l.intensity = 0; return; }
+    const kandidaten: { p: any; kleur: string; sterkte: number; bereik: number; waarde: number; code: string; i: number }[] = [];
+    for (const d of lichtDelen) {
+      const l = d.licht, bereik = Number(l.bereik) || 0;
+      if (bereik <= 0) continue;
+      const doos = new THREE.Box3().setFromObject(d.mesh);
+      if (doos.isEmpty()) continue;
+      const midden = doos.getCenter(new THREE.Vector3()), maat = doos.getSize(new THREE.Vector3());
+      const langs = maat.x >= maat.z ? 'x' : 'z', L = Math.max(maat.x, maat.z);
+      // Een lange strook: twee lichten (de band op de muur komt van `waasVan`, deze lichten zijn voor de grond).
+      const n = L > 400 ? 2 : 1;
+      const sterkte = Math.max(0, Number(l.sterkte ?? 1)) || 0;
+      const vanaf = Array.isArray(l.vanaf) ? new THREE.Vector3(Number(l.vanaf[0]) || 0, Number(l.vanaf[1]) || 0, Number(l.vanaf[2]) || 0) : null;
+      // Een lamp of een strip gaat voor op het licht door een raam (dat valt alleen op het terras ervoor).
+      const glas = (Array.isArray(d.dag) ? d.dag[0] : d.dag)?.userData?.glas ? 0.5 : 1;
+      for (let i = 0; i < n; i++) {
+        const p = midden.clone();
+        if (n > 1) p[langs] += ((i + 0.5) / n - 0.5) * L;
+        if (vanaf) p.add(vanaf);
+        kandidaten.push({ p, kleur: l.kleur, sterkte, bereik, waarde: sterkte * bereik * glas, code: String(d.mesh.name ?? ''), i });
+      }
+    }
+    if (!kandidaten.length && !nachtLampen.length) return;
+    while (nachtLampen.length < NACHT.lampen) {
+      const l = new THREE.PointLight(0xffffff, 0, 300, 2);
+      l.castShadow = false;
+      scene.add(l);
+      nachtLampen.push(l);
+    }
+    kandidaten.sort((a, b) => b.waarde - a.waarde || a.i - b.i || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+    nachtLampen.forEach((lamp, i) => {
+      const k = kandidaten[i];
+      if (!k) { lamp.intensity = 0; return; }
+      lamp.position.copy(k.p);
+      try { lamp.color.set(k.kleur); } catch { lamp.color.set('#ffc98f'); }
+      lamp.intensity = k.sterkte * NACHT.lamp * k.bereik * k.bereik;
+      lamp.distance = k.bereik;
+    });
   }
 
   /** Wanden van het decor (wegvallen als de camera erachter staat) en hoe ver het schaduwbereik moet reiken. */
@@ -2575,6 +2827,8 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     if (!opties.zetel || !dc.vloer) {
       vloer.material = bouwVloer;
       if (!opties.zetel) zetOmgeving();
+      // Bij nacht (ronde 15, alleen buiten): wat licht geeft in deze scène, oplichtend, en de echte lichten erbij.
+      if (!opties.zetel) zetNacht();
       virtueleLamp();
       zetLicht();
       return;
@@ -3047,12 +3301,19 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   // maten van een woning (schaduw in de hoek van twee muren, onder een dakrand, in een raamnis), tot op 70 à 120 m.
   const AO_ZETEL = { straal: 14, dikte: 8, schaal: 1.1, ver: [1000, 1600], sterkte: 0.9 };
   const AO_BOUW = { straal: 48, dikte: 18, schaal: 1.05, ver: [7000, 12000], sterkte: 0.78 };
-  let composer: { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void; sluit?(): void } | null = null;
-  function maakComposer(maten = AO_ZETEL) {
+  type Pijplijn = { render(): void; setPixelRatio(r: number): void; setSize(b: number, h: number): void; sluit?(): void };
+  let composer: Pijplijn | null = null;
+  /**
+   * De pijplijn bij nacht (ronde 15, alleen Mooi): dezelfde als die van overdag, met daarbij gloed (bloom) op wat
+   * oplicht. Een eigen pijplijn: die van overdag blijft exact zoals ze was (de referentiebeelden gaan erdoor).
+   */
+  let composerNacht: Pijplijn | null = null;
+  function maakComposer(maten = AO_ZETEL, gloed = false) {
     try {
       const pijplijn = new RenderPipeline(renderer);
       const scenePass = pass(scene, camera, { samples: 4 });
-      scenePass.setMRT(mrt({ output, normal: packNormalToRGB(normalView) }));
+      // Bij nacht ook wat oplicht (emissive) apart, voor de gloed: alleen de lampen, ramen en strooklichten, niet de lucht.
+      scenePass.setMRT(gloed ? mrt({ output, normal: packNormalToRGB(normalView), emissive }) : mrt({ output, normal: packNormalToRGB(normalView) }));
       const kleur = scenePass.getTextureNode('output');
       const normaalKleur = scenePass.getTextureNode('normal');
       const diepte = scenePass.getTextureNode('depth');
@@ -3068,14 +3329,17 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       // Afstand tot de camera van de scène (niet cameraNear/cameraFar: in de nabewerking is dat de camera van het schermvlak).
       const afstand = scenePass.getViewZNode().negate();
       const dichtbij = float(1).sub(smoothstep(maten.ver[0], maten.ver[1], afstand));
-      pijplijn.outputNode = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(maten.sterkte))), kleur.a);
-      composer = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {}, sluit: () => pijplijn.dispose?.() };
+      const beeld = vec4(kleur.rgb.mul(mix(float(1), aoZacht.r, dichtbij.mul(maten.sterkte))), kleur.a);
+      pijplijn.outputNode = gloed ? beeld.add(vec4(bloom(scenePass.getTextureNode('emissive'), NACHT.bloom.sterkte, NACHT.bloom.straal, 0).rgb, 0)) : beeld;
+      const c = { render: () => pijplijn.render(), setPixelRatio: () => {}, setSize: () => {}, sluit: () => pijplijn.dispose?.() };
+      if (gloed) composerNacht = c; else composer = c;
     } catch (fout) {
       console.warn('Nabewerking (GTAO) niet beschikbaar:', fout);
-      composer = null;
+      if (gloed) composerNacht = null; else composer = null;
     }
   }
-  const metNabewerking = () => (opties.zetel || isBuiten()) && kwaliteitNu === 'mooi' && composer;
+  /** De pijplijn die nu tekent (Mooi, zetel of buiten; bij nacht die met de gloed), of geen. */
+  const pijplijnNu = () => ((opties.zetel || isBuiten()) && kwaliteitNu === 'mooi' ? (nachtNu() ? composerNacht : composer) : null);
   // Tijdens draaien en zoomen: het snelle beeld; 180 ms na de laatste beweging één keer het mooie beeld (met GTAO).
   let mooiGepland = 0;
   // Veel aanvragen kort na elkaar (slepen, schuifregelaar) worden samengevoegd tot één beeld per schermverversing.
@@ -3087,7 +3351,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
   }
   function tekenNu(direct: boolean) {
     if (bezigMetFoto || !klaar || gesloten) return;
-    const c = metNabewerking() ? composer : null;
+    const c = pijplijnNu();
     if (!c) { renderer.render(scene, camera); return; }
     if (direct) { clearTimeout(mooiGepland); c.render(); return; }
     renderer.render(scene, camera);
@@ -3412,7 +3676,7 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
     const los: Blok[] = [];
     const groepen = new Map<string, { naam: string; mat: any; schaduw: boolean; vormen: any[] }>();
     for (const b of blokken) {
-      if (b.alleenSchaduw || b.soort === 'glas' || b.soort === 'matglas') { los.push(b); continue; }
+      if (b.alleenSchaduw || b.soort === 'glas' || b.soort === 'matglas' || b.licht) { los.push(b); continue; }
       const m = mesh(b);
       const mats = Array.isArray(m.material) ? m.material : [m.material];
       if (!m.isMesh || m.children.length || mats.some((x: any) => x !== mats[0])) { m.geometry?.dispose(); los.push(b); continue; }
@@ -3492,7 +3756,18 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
         if (taken.length) planZacht(s, taken);
       }
       const apart = zichtbaar.filter((b) => !versmolten.has(b));
-      for (const b of !opties.zetel && s.samenvoegen ? voegGelijkeSamen(apart) : apart) groep.add(mesh(b));
+      lichtDelen = [];
+      waasDelen = [];
+      for (const b of !opties.zetel && s.samenvoegen ? voegGelijkeSamen(apart) : apart) {
+        const m = mesh(b);
+        // Licht bij nacht (ronde 15): onthouden met het gewone materiaal; `zetNacht` zet het oplichtende erop.
+        if (!opties.zetel && b.licht && typeof b.licht.kleur === 'string' && !b.alleenSchaduw && m.isMesh) {
+          lichtDelen.push({ mesh: m, licht: b.licht, dag: m.material });
+          const w = waasVan(b);
+          if (w) groep.add(w);
+        }
+        groep.add(m);
+      }
       if (echt) groep.add(echt);
       schaduwOpnieuw();
       zetContactschaduw(s, echt);
@@ -3541,6 +3816,12 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
         clearTimeout(mooiGepland);
         try { composer.sluit?.(); } catch { /* al weg */ }
         composer = null;
+      }
+      // De pijplijn bij nacht (ronde 15) om dezelfde reden.
+      if (!opties.zetel && composerNacht && zon.shadow.mapSize.x !== maat) {
+        clearTimeout(mooiGepland);
+        try { composerNacht.sluit?.(); } catch { /* al weg */ }
+        composerNacht = null;
       }
       // De schaduwkaart past zich zelf aan de nieuwe maat aan (WebGPURenderer).
       zon.shadow.mapSize.set(maat, maat);
@@ -3670,6 +3951,18 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       zetLicht();
       render();
     },
+    nacht(aan) {
+      if (opties.zetel || !!aan === nachtGevraagd) return;
+      nachtGevraagd = !!aan;
+      // Een uitgesteld mooi beeld van daarnet niet meer tekenen.
+      clearTimeout(mooiGepland);
+      zetNacht();
+      // Alleen buiten verandert er iets: het omgevingslicht en de lucht, de zon of de maan (zonder de schaduw opnieuw te
+      // berekenen: de maan staat waar de zon stond), en in Mooi de pijplijn met de gloed.
+      if (isBuiten()) { lichtBuiten(); zonBuiten(); }
+      if (nachtNu() && kwaliteitNu === 'mooi' && !composerNacht) maakComposer(AO_BOUW, true);
+      render();
+    },
     omgeving(naam) {
       if (opties.zetel || naam === omgevingNaam || (naam !== 'buiten' && naam !== 'geen')) return;
       omgevingNaam = naam;
@@ -3724,7 +4017,9 @@ function maakViewer(houder: HTMLElement, opties: Opties3D, intern: { geenWebGPU:
       renderer.setSize(b, h);
       if (opties.zetel && !composer) maakComposer();
       if (isBuiten() && kwaliteitNu === 'mooi' && !composer) maakComposer(AO_BOUW);
+      if (nachtNu() && kwaliteitNu === 'mooi' && !composerNacht) maakComposer(AO_BOUW, true);
       if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(b, h); }
+      if (composerNacht) { composerNacht.setPixelRatio(renderer.getPixelRatio()); composerNacht.setSize(b, h); }
       camera.aspect = b / h;
       camera.updateProjectionMatrix();
       render();
