@@ -65,7 +65,8 @@ export function startConstructie(omgeving: { opnieuw: () => void; bijWeergave?: 
     tabs.append(b);
   }
   const noot = el('p', { class: 'constructienoot klein', id: 'pl-constructie-noot', hidden: '' }, CONSTRUCTIE_VOORBEHOUD);
-  rij.append(tabs, noot);
+  // Ronde 16: een kop links, zoals de andere rijen bij de 3D.
+  rij.append(el('span', { class: 'rijkop' }, 'Weergave'), tabs, noot);
   knoppen.prepend(rij);
 }
 

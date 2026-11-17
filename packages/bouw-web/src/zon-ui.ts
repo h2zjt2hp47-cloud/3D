@@ -85,7 +85,7 @@ export function toonZon() {
   $('#pl-zon-gevels').replaceChildren(
     tabel,
     el('p', { class: 'klein' }, 'Meetkundig berekend: zonder buren, bomen of de schaduw van de woning zelf (oversteek, uitbouw). Een hulp bij de keuze van zonwering, geen zonnestudie.'),
-    el('p', { class: 'klein' }, `Noord ligt ${noord ? `${getal(noord)}° gedraaid (met de klok mee vanaf de bovenkant van het plan)` : 'aan de bovenkant van het plan'}: te wijzigen bij Woning. Binnenkijken: zet "Dak tonen" of "Alle verdiepingen" uit, of "Muren laag" aan; wat je niet ziet, geeft nog altijd schaduw.`),
+    el('p', { class: 'klein' }, `Noord ligt ${noord ? `${getal(noord)}° gedraaid (met de klok mee vanaf de bovenkant van het plan)` : 'aan de bovenkant van het plan'}: te wijzigen bij Woning. Binnenkijken: zet bij Tonen "Dak" of "Alle verdiepingen" uit, of "Muren laag" aan; wat je niet ziet, geeft nog altijd schaduw.`),
   );
 }
 
@@ -100,7 +100,8 @@ export function startZon(acties: { opnieuw: () => void; zon: () => void }) {
   const vink = el('input', { type: 'checkbox', id: 'pl-zon-aan' }) as HTMLInputElement;
   schakel.append(vink, document.createTextNode(' Lichtinval: toon de zon op een dag en uur'));
   const rij = el('div', { class: 'schakelaars' });
-  rij.append(schakel);
+  // Ronde 16: een kop links, zoals de andere rijen bij de 3D.
+  rij.append(el('span', { class: 'rijkop' }, 'Zon'), schakel);
 
   const instellingen = el('div', { id: 'pl-zon-instellingen', class: 'zon-instellingen' });
   instellingen.hidden = true;

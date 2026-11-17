@@ -1105,6 +1105,28 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
 /* Binnenafwerking (ronde 12): sferen voor binnen, plafond, plint, accentmuur, de ruimte van binnen. */
 .sfeerknop .sfeerbeeld svg { width: 80px; height: 52px; display: block; border-radius: 5px; }
 #pl-3d-knoppen .stijlbalk > .klein:first-child { min-width: 3.4em; }
+/* Ronde 16: de rijen bij de 3D met een kop links, alle even breed (Weergave, Stijl, Binnen, Bekijk, Tonen, Beeld, Zon). */
+.knoprij { display: flex; align-items: center; gap: 6px 12px; margin: 8px 0 4px; }
+.knoprij > .knoppenrij, .knoprij > .schakelaars { margin: 0; flex: 1 1 auto; min-width: 0; }
+.constructiebalk > .beeldkeuze { margin-left: auto; gap: 4px 12px; }
+.tikrij { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
+.tikrij { margin: 8px 0 4px; }
+.tikrij > .tikhint { margin: 0; }
+#pl-zon > .schakelaars { align-items: center; }
+/* De kaarten naast de tekening: dezelfde kop (zoals Gereedschap en Woning), en een kaart klapt dicht tot haar kop
+   (vouw-ui.ts; standaard open). De binnenafwerking staat in de 3D en de doorsnede niet rechts: daar staat de rij Binnen
+   onder de 3D (dezelfde sferen), of zie je ze niet. */
+#view-plan .planraster > aside .kaartkop h2 { font-family: var(--tekst); font-size: 1rem; font-weight: 600; }
+#view-plan.driedmodus #pl-binnen { display: none !important; }
+.vouwkop { cursor: pointer; }
+.vouwbaar.dicht > :not(.vouwkop) { display: none !important; }
+.vouwbaar.dicht > .vouwkop { margin-bottom: 0; }
+.vouwknop { flex: none; margin-left: auto; width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--zacht); display: inline-grid; place-items: center; cursor: pointer; }
+.vouwknop:hover, .vouwknop:focus-visible { border-color: var(--lijn); background: var(--vlak); }
+.vouwpijl { width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+.vouwbaar.dicht .vouwpijl { transform: translateX(-2px) rotate(-45deg); }
+@media (pointer: coarse) { .vouwknop { width: 44px; height: 44px; } }
+#pl-3d-knoppen .rijkop, #pl-zon .rijkop, .constructiebalk > .rijkop, .techniekbalk > .rijkop { flex: none; width: 5.4em; min-width: 5.4em; margin: 0; font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--zacht); }
 .sfeerknop { width: 104px; }
 .sfeerknop[aria-pressed="true"], .stijlknop[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 #pl-binnen .sfeerrij { margin: 6px 0; }
@@ -1290,34 +1312,45 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
       <div class="drie-d" id="pl-3d" hidden></div>
       <section id="pl-3d-keuze" class="keuzepaneel" aria-live="polite" hidden></section>
       <div id="pl-3d-knoppen" hidden>
-        <p class="tikhint">Tik op het dak, een raam, een gevel of een vloer om alleen dat te wijzigen.</p>
+        <div class="tikrij"><p class="tikhint">Tik op het dak, een raam, een gevel of een vloer om alleen dat te wijzigen.</p><span class="klein alleen-vinger">slepen = draaien · knijpen = zoomen</span></div>
+        <!-- Ronde 16: de knoppen bij de 3D in rijen met een kop links (Weergave, met de kwaliteit, staat erboven, uit
+             constructie-ui.ts): eerst wat je aan het ontwerp verandert (Stijl, Binnen), dan hoe je kijkt (Bekijk, Tonen) en
+             de zon. Dag / Nacht, Verlichting en Ongedaan staan op de 3D zelf. -->
         <div class="stijlbalk">
-          <span class="klein">Stijl</span>
+          <span class="klein rijkop">Stijl</span>
           <div id="pl-stijlen"></div>
           <button type="button" id="pl-variant" class="tweede" title="Een kopie van dit ontwerp om iets anders te proberen; het origineel blijft">Variant maken</button>
           <button type="button" id="pl-naast" class="tweede" title="Twee of drie varianten van dit ontwerp in 3D naast elkaar, samen draaiend" hidden>Varianten naast elkaar</button>
           <span id="pl-variant-melding" class="klein" role="status"></span>
         </div>
         <div class="stijlbalk">
-          <span class="klein">Binnen</span>
+          <span class="klein rijkop">Binnen</span>
           <div id="pl-sferen"></div>
         </div>
-        <div class="knoppenrij">
-          <button type="button" data-pl-standpunt="schuin">Schuin</button>
-          <button type="button" data-pl-standpunt="voor">Voorgevel</button>
-          <button type="button" data-pl-standpunt="achter">Achtergevel</button>
-          <button type="button" data-pl-standpunt="zij">Zij</button>
-          <button type="button" data-pl-standpunt="boven">Boven</button>
+        <div class="knoprij">
+          <span class="rijkop">Bekijk</span>
+          <div class="knoppenrij" id="pl-standpunten" role="group" aria-label="Standpunt">
+            <button type="button" data-pl-standpunt="schuin">Schuin</button>
+            <button type="button" data-pl-standpunt="voor">Voorgevel</button>
+            <button type="button" data-pl-standpunt="achter">Achtergevel</button>
+            <button type="button" data-pl-standpunt="zij">Zij</button>
+            <button type="button" data-pl-standpunt="boven">Boven</button>
+          </div>
         </div>
-        <div class="schakelaars" style="margin-top:8px">
-          <label title="Breedte, diepte, hoogte en nok van het gebouw; tik op een raam voor zijn maten"><input type="checkbox" id="pl-maten"> Maten tonen</label>
-          <label><input type="checkbox" id="pl-laag"> Muren laag (binnenkijken)</label>
-          <label><input type="checkbox" id="pl-toon-meubels" checked> Meubels tonen</label>
-          <label><input type="checkbox" id="pl-alle-niveaus" checked> Alle verdiepingen</label>
-          <label id="pl-toon-dak-label" hidden><input type="checkbox" id="pl-toon-dak" checked> Dak tonen</label>
+        <div class="knoprij">
+          <span class="rijkop">Tonen</span>
+          <div class="schakelaars" role="group" aria-label="Tonen in de 3D">
+            <label title="Breedte, diepte, hoogte en nok van het gebouw; tik op een raam voor zijn maten"><input type="checkbox" id="pl-maten"> Maten</label>
+            <label title="De muren op 1,10 m: binnenkijken"><input type="checkbox" id="pl-laag"> Muren laag (binnenkijken)</label>
+            <label><input type="checkbox" id="pl-toon-meubels" checked> Meubels</label>
+            <label><input type="checkbox" id="pl-alle-niveaus" checked> Alle verdiepingen</label>
+            <label id="pl-toon-dak-label" hidden><input type="checkbox" id="pl-toon-dak" checked> Dak</label>
+            <span class="klein alleen-muis">klikken = kiezen · slepen = draaien · zoomen met Ctrl (⌘) + scrollen</span>
+          </div>
+        </div>
+        <!-- De kwaliteit: bij het starten naar de rij Weergave verhuisd (zie startPlattegrond). -->
+        <div id="pl-beeldkeuze" class="schakelaars beeldkeuze">
           <label title="Snel: vlot draaien, ook op een tablet. Mooi: scherper beeld, zachtere schaduw en schaduw in de hoeken.">Kwaliteit <select id="pl-3d-kwaliteit"><option value="snel">Snel</option><option value="mooi">Mooi</option></select></label>
-          <span class="klein alleen-muis">klikken = kiezen · slepen = draaien · zoomen met Ctrl (⌘) + scrollen</span>
-          <span class="klein alleen-vinger">tikken = kiezen · slepen = draaien · knijpen = zoomen</span>
         </div>
         <div id="pl-zon" class="zonblok"></div>
       </div>
@@ -1327,12 +1360,12 @@ body:not(.met-prijzen) .positieprijs .positieacties { flex-wrap: nowrap; }
       <section class="kaart alleen-plan" id="pl-dak" aria-label="Dak"></section>
       <section class="kaart alleen-plan" id="pl-binnen" aria-label="Binnenafwerking"></section>
       <section class="kaart alleen-gevel" id="gv-eigenschappen" aria-live="polite"></section>
-      <section class="kaart intern">
+      <section class="kaart intern" id="pl-controles-kaart">
         <div class="kaartkop"><h2>Controles</h2><span id="pl-controle-status" class="status ok"></span></div>
         <ul id="pl-meldingen" class="meldingen scroll"></ul>
         <p id="pl-meldingen-leeg" class="klein">Geen opmerkingen.</p>
       </section>
-      <section class="kaart">
+      <section class="kaart" id="pl-ruimtes-kaart">
         <div class="kaartkop"><h2>Ruimtes</h2></div>
         <div class="tabelhouder"><table id="pl-ruimtes"><thead><tr><th>Ruimte</th><th>Soort</th><th class="num">m²</th></tr></thead><tbody></tbody></table></div>
         <p id="pl-totaal" class="klein"></p>

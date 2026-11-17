@@ -15,7 +15,7 @@
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
 import { pasStijlToe, raamInStijl, stijlCatalogus, type Stijl } from '../../core/voorbeelden/stijlen.js';
-import { losseWandRuimte, murenVan, niveauPlan, strookPlaats, verfGevel, verwijderStrook, vlakSleutel, zetTegenBuren, type GevelKant, type GevelStrook, type LosseWand, type VerfBereik } from '../../core/src/index.js';
+import { kantVan, losseWandRuimte, murenVan, niveauPlan, niveauVan, strookPlaats, verfGevel, verwijderStrook, vlakSleutel, zetTegenBuren, type GevelKant, type GevelStrook, type LosseWand, type VerfBereik } from '../../core/src/index.js';
 import { bedekkingKeuze, dakVormKnoppen, koepelTeller, metDak, zetDak } from './dak-ui.js';
 import { gevelStaal } from './gevel-ui.js';
 import { el, schakelaar } from './hulp.js';
@@ -281,12 +281,25 @@ function strookKeuzes(vak: HTMLElement, id: string, nadien: () => void, naarGeve
 }
 
 /** Titel van een ding, in gewone taal. */
+/**
+ * Ronde 16: dezelfde naam voor een gevel als in de gevel-editor en bij de standpunten van de 3D (Voorgevel, Achtergevel,
+ * Zijgevel; volgens de voordeur, zoals `gevelAanzichten`), niet meer "Gevel … van het plan".
+ */
+function gevelRol(kant: string): string {
+  const plan = toestand().plan;
+  if (kant.startsWith('s')) return 'Schuine gevel';
+  const voordeur = plan.openingen.find((o) => niveauVan(o) === 0 && positieVan(o)?.keuzes.type === 'voordeur');
+  const deurKant = voordeur ? kantVan(plan, voordeur) : undefined;
+  const tegenover: Record<string, string> = { boven: 'onder', onder: 'boven', links: 'rechts', rechts: 'links' };
+  return !deurKant ? 'Gevel' : deurKant === kant ? 'Voorgevel' : tegenover[deurKant] === kant ? 'Achtergevel' : 'Zijgevel';
+}
+
 function titel(ding: string): string {
   const t = toestand();
   if (ding === 'dak') return 'Dak';
   const [soort, id = '', kant] = ding.split(':');
   const kanten: Record<string, string> = { boven: 'bovenkant', onder: 'onderkant', links: 'linkerkant', rechts: 'rechterkant' };
-  if (soort === 'gevel') return `Gevel · ${t.plan.ruimtes.find((r) => r.id === id)?.naam ?? ''} (${kant?.startsWith('s') ? 'schuine gevel' : `${kanten[kant ?? ''] ?? kant} van het plan`})`;
+  if (soort === 'gevel') return `${gevelRol(kant ?? '')} · ${t.plan.ruimtes.find((r) => r.id === id)?.naam ?? ''}${kant?.startsWith('s') ? '' : ` (${kanten[kant ?? ''] ?? kant})`}`;
   if (soort === 'opening') { const o = t.plan.openingen.find((x) => x.id === id); const p = o && positieVan(o); return p ? `${p.code} · ${p.naam}` : 'Opening'; }
   if (soort === 'ruimte') return `${t.plan.ruimtes.find((r) => r.id === id)?.naam ?? 'Ruimte'}${kant ? ` · muur ${kant}` : ''}`;
   if (soort === 'meubel') { const m = t.plan.meubels.find((x) => x.id === id); return cat.meubels[m?.type ?? '']?.label ?? 'Meubel'; }

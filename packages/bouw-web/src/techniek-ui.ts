@@ -1015,7 +1015,7 @@ export function toonBalk3D() {
     b.addEventListener('click', () => { uitgezet = w === 'uitgezet'; toonBalk3D(); omg?.drieD(); });
     weergave.append(b);
   }
-  balk3D.replaceChildren(weergave, vakSchakelaars(), ...klantLegende(), el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD));
+  balk3D.replaceChildren(el('span', { class: 'rijkop' }, 'Techniek'), weergave, vakSchakelaars(), ...klantLegende(), el('p', { class: 'voorbehoud' }, TECHNIEK_VOORBEHOUD));
   if (hint) {
     hint.dataset.afgewerkt ??= hint.textContent ?? '';
     hint.textContent = TIKHINT;

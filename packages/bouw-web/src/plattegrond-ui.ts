@@ -85,6 +85,7 @@ import { gevelCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { constructieAan, constructieScene, opbouwKeuze, startConstructie, toonOpbouwVanDing, zetWeergave as zetConstructieWeergave } from './constructie-ui.js';
 import { startDoorsnede, toonDoorsnede } from './doorsnede-ui.js';
 import { binnenKaart, binnenKeuzes, sfeerRij, toonSferen } from './binnen-ui.js';
+import { vouwbaar } from './vouw-ui.js';
 import {
   draaiToestel, maakZichtbaar, startTechniek, techniek3DOpties, techniekAan, techniekHint, techniekInWoning, techniekMetRuimte, techniekNaTekenen, techniekPlan, techniekPointerDown,
   techniekPointerMove, techniekPointerUp, techniekSelecteren, techniekTekenOpties, techniekUitgezet, techniekVoorbeeld, toonBalk3D, toonTechniekEigenschappen,
@@ -2488,6 +2489,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
   });
   // Afgewerkt of Constructie (ronde 6): de knop boven de knoppen van de 3D.
   startConstructie({ opnieuw: () => plan3D(), bijWeergave: () => { if (techniekAan()) zetTechniek(false); } });
+  // Ronde 16: de kwaliteit en de bediening (slepen = draaien …) in de rij Weergave, geen eigen rij.
+  document.querySelector('#pl-3d-knoppen .constructiebalk')?.append($('#pl-beeldkeuze'));
   // Techniek voor de installateur (ronde 10b): het palet, de knop in het gereedschap en *Techniek* bij de 3D.
   startTechniek({
     niveau: () => niveau,
@@ -2511,9 +2514,14 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
     },
   });
   startDoorsnede();
+  // Ronde 16: de kaarten rechts klappen dicht tot hun kop (standaard open, de keuze blijft in de browser).
+  vouwbaar(document.getElementById('pl-dak'), 'dak', 'Dak');
+  vouwbaar(document.getElementById('pl-binnen'), 'binnen', 'Binnenafwerking');
+  vouwbaar(document.getElementById('pl-controles-kaart'), 'controles', 'Controles');
+  vouwbaar(document.getElementById('pl-ruimtes-kaart'), 'ruimtes', 'Ruimtes');
   // Lichtinval: aan of uit bouwt de 3D opnieuw op (verborgen delen als schaduwwerper); dag en uur verzetten alleen de zon.
   startZon({ opnieuw: () => plan3D(), zon: () => viewer?.zon?.(zonVoorKijker()) });
-  $('#pl-3d-knoppen .knoppenrij').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
+  $('#pl-standpunten').append(grootSchermKnop($('#view-plan'), () => viewer?.formaat()));
   // Stijlen (één tik zet het hele ontwerp in een stijl) en een variant (kopie om te vergelijken), onder de 3D.
   $('#pl-stijlen').replaceChildren(stijlRij());
   // Ronde 12: de sferen voor binnen, onder de stijlen en in de kaart Binnenafwerking naast de plattegrond.
