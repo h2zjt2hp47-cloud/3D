@@ -94,7 +94,9 @@ export const stijlCatalogus: Record<string, Stijl> = {
  */
 export function pasStijlToe(plan: Plattegrond, stijl: Stijl): Plattegrond {
   let p = structuredClone(plan);
-  p.gevelOntwerp = { standaard: { ...stijl.gevel }, ...(stijl.sokkel ? { sokkel: { ...stijl.sokkel } } : {}) };
+  // De stroken (ronde 14) blijven: ze zijn een deel van het ontwerp (zoals een raam), geen verfbeurt van de stijl.
+  const stroken = p.gevelOntwerp?.stroken;
+  p.gevelOntwerp = { standaard: { ...stijl.gevel }, ...(stijl.sokkel ? { sokkel: { ...stijl.sokkel } } : {}), ...(stroken?.length ? { stroken } : {}) };
   const niveaus = Math.max(1, p.verdiepingen?.length ?? 1);
   if (stijl.verdieping) for (let n = 1; n < niveaus; n++) verfGevel(p, stijl.verdieping, 'verdieping', { niveau: n });
   p.dak = structuredClone(stijl.dak);

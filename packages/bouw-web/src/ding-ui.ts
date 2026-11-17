@@ -7,13 +7,14 @@
  *   ruimte:<id>             vloer en wandkleur
  *   meubel:<id>             draaien of verwijderen
  *   wand:<id>               een losse wand (ronde 2d): hoogte, afwerking of gevelmateriaal, verwijderen
+ *   strook:<id>             een strook op de gevel (ronde 14): materiaal en kleur, maten in de gevel, verwijderen
  *   toestel:<id>, leiding:<id>  techniek (ronde 10b, alleen met de techniek aan): hoogte of ligging, verwijderen (techniek-ui.ts)
  * Ook hier: de stijlen (één tik zet het hele ontwerp in een stijl) en een variant maken (een kopie om te vergelijken).
  */
 import { gevelCatalogus, gevelOntwerpVan, planCatalogus as cat } from '../../core/voorbeelden/inrichting.js';
 import { RAL_KLEUREN } from '../../core/voorbeelden/raam.js';
 import { pasStijlToe, raamInStijl, stijlCatalogus, type Stijl } from '../../core/voorbeelden/stijlen.js';
-import { losseWandRuimte, murenVan, niveauPlan, verfGevel, vlakSleutel, zetTegenBuren, type GevelKant, type LosseWand, type VerfBereik } from '../../core/src/index.js';
+import { losseWandRuimte, murenVan, niveauPlan, strookPlaats, verfGevel, verwijderStrook, vlakSleutel, zetTegenBuren, type GevelKant, type GevelStrook, type LosseWand, type VerfBereik } from '../../core/src/index.js';
 import { bedekkingKeuze, dakVormKnoppen, koepelTeller, metDak, zetDak } from './dak-ui.js';
 import { gevelStaal } from './gevel-ui.js';
 import { el, schakelaar } from './hulp.js';
@@ -24,7 +25,7 @@ import { familie } from './meegeven.js';
 import { techniekDingKeuzes, techniekTitel } from './techniek-ui.js';
 
 /** Is dit een ding dat je kan aantikken? Andere namen (binnenmuur, terras, schaduw) geven geen keuzes. */
-export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:|wand:|toestel:|leiding:)/.test(id);
+export const isDing = (id: string | null | undefined): id is string => !!id && /^(dak$|gevel:|opening:|ruimte:|meubel:|wand:|toestel:|leiding:|strook:)/.test(id);
 
 /** Kleuren voor het schrijnwerk die in één tik te kiezen zijn; de hele waaier staat in de configurator. */
 const SNELLE_KLEUREN = ['wit', 'creme', 'ral7035', 'ral7022', 'antraciet', 'zwart'];
@@ -232,6 +233,46 @@ function wandKeuzes(vak: HTMLElement, id: string, nadien: () => void) {
   vak.append(el('p', { class: 'klein' }, 'Lengte en plaats: in de plattegrond (tik op de wand of haar maat).'), knoppen);
 }
 
+/** Een strook op de gevel (ronde 14): materiaal en kleur, waar ze ligt; de maten in de gevel-editor; of weg. */
+function strookKeuzes(vak: HTMLElement, id: string, nadien: () => void, naarGevel?: (id: string) => void) {
+  const plan = toestand().plan;
+  const s = plan.gevelOntwerp?.stroken?.find((x) => x.id === id);
+  if (!s) return;
+  const zet = (f: (x: GevelStrook) => void) => wijzig('plan', (t) => { const x = t.plan.gevelOntwerp?.stroken?.find((y) => y.id === id); if (x) f(x); });
+  vak.append(el('p', { class: 'klein' }, `${strookPlaats(plan, s).replace(/^./, (c) => c.toUpperCase())}.`));
+  const tegels = el('div', { class: 'gv-tegels keuze-tegels' });
+  for (const [code, m] of Object.entries(gevelCatalogus)) {
+    const kleur = code === s.materiaal ? s.kleur : m.kleuren[s.kleur] ? s.kleur : Object.keys(m.kleuren)[0]!;
+    const b = el('button', { type: 'button', class: 'gv-tegel', 'aria-pressed': String(code === s.materiaal), 'data-strook-materiaal': code, title: m.uitleg ?? m.label });
+    const st = el('span', { class: 'gv-staal' });
+    st.innerHTML = gevelStaal(code, kleur, s.voeg);
+    b.append(st, el('span', {}, m.label));
+    b.addEventListener('click', () => zet((x) => {
+      x.materiaal = code;
+      x.kleur = kleur;
+      if (m.voegen) x.voeg = x.voeg && m.voegen[x.voeg] ? x.voeg : Object.keys(m.voegen)[0]!; else delete x.voeg;
+    }));
+    tegels.append(b);
+  }
+  vak.append(tegels);
+  const mat = gevelCatalogus[s.materiaal];
+  if (mat) {
+    const rij = el('div', { class: 'gv-rij', role: 'group', 'aria-label': 'Kleur' });
+    for (const [code, k] of Object.entries(mat.kleuren)) rij.append(staalKnop(k.hex, k.label, code === s.kleur, () => zet((x) => { x.kleur = code; }), { 'data-strook-kleur': code }));
+    vak.append(el('p', { class: 'klein' }, `Kleur: ${(mat.kleuren[s.kleur]?.label ?? s.kleur).toLowerCase()}`), rij);
+  }
+  const knoppen = el('div', { class: 'knoppenrij' });
+  if (naarGevel) {
+    const maten = el('button', { type: 'button', class: 'tweede', 'data-strook-gevel': id }, 'Maten in de gevel');
+    maten.addEventListener('click', () => naarGevel(id));
+    knoppen.append(maten);
+  }
+  const weg = el('button', { type: 'button', class: 'gevaar', 'data-strook-weg': id }, 'Verwijderen');
+  weg.addEventListener('click', () => { wijzig('plan', (t) => verwijderStrook(t.plan, id)); nadien(); });
+  knoppen.append(weg);
+  vak.append(knoppen);
+}
+
 /** Titel van een ding, in gewone taal. */
 function titel(ding: string): string {
   const t = toestand();
@@ -249,6 +290,10 @@ function titel(ding: string): string {
     return r ? `Losse wand · ${r.naam}` : 'Losse muur buiten';
   }
   if (soort === 'toestel' || soort === 'leiding') return techniekTitel(ding);
+  if (soort === 'strook') {
+    const s = t.plan.gevelOntwerp?.stroken?.find((x) => x.id === id);
+    return s ? `Strook op de gevel · ${gevelCatalogus[s.materiaal]?.label ?? s.materiaal}` : '';
+  }
   return '';
 }
 
@@ -256,7 +301,7 @@ function titel(ding: string): string {
  * Vult het paneel met de keuzes van een ding (of verbergt het). `sluit` haalt de keuze weg (ook de aanduiding in de 3D),
  * `naarPositie` opent de configurator voor alle keuzes van een raam.
  */
-export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: () => void; naarPositie: (id: string) => void; metMaten?: (muurId: string) => void }) {
+export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: () => void; naarPositie: (id: string) => void; metMaten?: (muurId: string) => void; naarGevel?: (strook: string) => void }) {
   const naam = ding ? titel(ding) : '';
   if (!ding || !naam) { vak.hidden = true; vak.replaceChildren(); return; }
   vak.hidden = false;
@@ -284,6 +329,7 @@ export function toonDing(vak: HTMLElement, ding: string | null, nav: { sluit: ()
   else if (soort === 'meubel') meubelKeuzes(vak, id, nav.sluit);
   else if (soort === 'wand') wandKeuzes(vak, id, nav.sluit);
   else if (soort === 'toestel' || soort === 'leiding') techniekDingKeuzes(vak, ding, nav);
+  else if (soort === 'strook') strookKeuzes(vak, id, nav.sluit, nav.naarGevel);
   dingPosten(vak, ding);
 }
 

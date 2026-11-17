@@ -21,6 +21,7 @@ import {
   splitsRuimtes,
   tekenRuimteIn,
   verdiepingenVan,
+  verwijderStrook,
   meubelVoetafdruk,
   langsAs,
   murenVan,
@@ -70,7 +71,7 @@ import { grootSchermKnop, Zoom, type Kader } from '../../demo-web/src/zoom.js';
 import { $, aanraak, el, eur, getal, getalVeld, keuzelijst, PRIJZEN, schakelaar, voorVinger } from './hulp.js';
 import { berekenHuidigeOfferte } from './offerte-ui.js';
 import { openingInfo, openingInhoud, prijsTekst } from './positie-3d.js';
-import { gevelNaWijziging, gevelToets, startGevels } from './gevel-ui.js';
+import { gevelNaWijziging, gevelToets, kiesStrookInGevel, startGevels } from './gevel-ui.js';
 import { dakLijnen, dakraamZonweringVan, heeftDak, LICHTSTRATEN, metDak, toonDak } from './dak-ui.js';
 import { lichtinvalAan, startZon, toonZon, zonVoorKijker } from './zon-ui.js';
 import { familie } from './meegeven.js';
@@ -380,6 +381,8 @@ function toonNiveaus() {
         if (t.plan.losseWanden) t.plan.losseWanden = t.plan.losseWanden.filter((w) => niveauVan(w) !== n);
         if (t.plan.toestellen) t.plan.toestellen = t.plan.toestellen.filter((x) => niveauVan(x) !== n);
         if (t.plan.leidingen) t.plan.leidingen = t.plan.leidingen.filter((x) => niveauVan(x) !== n);
+        // Stroken op die verdieping (ronde 14); een strook over de hele gevel blijft.
+        for (const s of (t.plan.gevelOntwerp?.stroken ?? []).filter((x) => x.niveau === n)) verwijderStrook(t.plan, s.id);
         t.plan.verdiepingen = verdiepingenVan(t.plan).slice(0, n);
       });
       niveau = n - 1;
@@ -514,7 +517,7 @@ function toonDingKeuzes() {
     if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
     return;
   }
-  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); } });
+  toonDing(vak, gekozenDing, { sluit: () => tikIn3D(null), naarPositie: (id) => naarPositie(id), metMaten: (muur) => { tikIn3D(null); openRuimteMetMaten({ gevelMuur: muur }); }, naarGevel: (strook) => { tikIn3D(null); kiesStrookInGevel(strook); toonWeergave('gevels'); } });
   // Bestaat het ding niet meer (verwijderd, ongedaan gemaakt): ook de aanduiding weg.
   if (gekozenDing && vak.hidden) { gekozenDing = null; viewer?.markeer?.(null); }
 }
@@ -2379,6 +2382,8 @@ export function startPlattegrond(nav: { naarPositie: (id: string) => void; naarO
       delete t.plan.losseWanden;
       delete t.plan.toestellen;
       delete t.plan.leidingen;
+      // De stroken op de gevel (ronde 14) hangen aan een kant en maten, niet aan een ruimte: ze gaan mee weg.
+      if (t.plan.gevelOntwerp?.stroken) t.plan.gevelOntwerp = (({ stroken: _, ...o }) => o)(t.plan.gevelOntwerp);
     });
     kiesGereedschap('ruimte');
   });

@@ -72,7 +72,8 @@ export function ontwerpKenmerken(plan: Plattegrond, posities: OntwerpPositie[], 
       const m = cat.gevels?.[g.materiaal];
       const kleur = m?.kleuren[g.kleur]?.label;
       const anders = Object.keys(plan.gevelOntwerp?.vlakken ?? {}).length;
-      uit.push({ soort: 'gevel', tekst: `gevel in ${m ? klein(m.label) : g.materiaal}${kleur ? `, ${klein(kleur)}` : ''}${anders ? ` (${anders} muurvla${anders === 1 ? 'k' : 'kken'} anders)` : ''}` });
+      const stroken = plan.gevelOntwerp?.stroken?.length ?? 0;
+      uit.push({ soort: 'gevel', tekst: `gevel in ${m ? klein(m.label) : g.materiaal}${kleur ? `, ${klein(kleur)}` : ''}${anders ? ` (${anders} muurvla${anders === 1 ? 'k' : 'kken'} anders)` : ''}${stroken ? `, ${stroken === 1 ? 'een strook' : `${stroken} stroken`} in een ander materiaal` : ''}` });
     }
     const vloer = meest(plan.ruimtes.filter((r) => !/badkamer|wc|berging/.test(r.type)).map((r): [string, number] => [r.vloer, delenVan(r).reduce((s, d) => s + d.b * d.d, 0)]));
     if (vloer && cat.vloeren[vloer]) uit.push({ soort: 'vloer', tekst: `vloer ${klein(cat.vloeren[vloer]!.label)}` });

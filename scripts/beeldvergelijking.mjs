@@ -165,6 +165,11 @@ const BOUWBEELDEN = [
   { naam: 'bouw-uitbouw-plan', uitbouw: 'plan' },
   // Doorloop A1 (16/11): een hoog, smal huis (7 × 8 m, drie bouwlagen) staat in het standpunt Schuin helemaal in beeld.
   { naam: 'bouw-hoog-schuin', hoog: 'schuin' },
+  // Stroken op de gevel (ronde 14, 17/11), op een eigen pagina met een vers project: de voorbeeldwoning met een kader in
+  // zink rond het schuifraam, een staande strook in hout naast de achterdeur en een band in ceder op de verdieping, rond de
+  // hoek (`STROKEN`). De 3D recht op die gevel (standpunt Voorgevel) en het aanzicht in de gevel-editor.
+  { naam: 'bouw-stroken-3d', stroken: '3d' },
+  { naam: 'bouw-stroken-gevel', stroken: 'gevel' },
 ];
 
 /**
@@ -192,6 +197,14 @@ const LOSSE_WANDEN = [
   { id: 'lw4', van: [150, 1300], tot: [650, 1300], dikte: 25, hoogte: 90, gevel: { materiaal: 'natuursteen', kleur: 'blauwgrijs' } },
   { id: 'lw5', van: [650, 1300], tot: [650, 1450], dikte: 25, hoogte: 90, gevel: { materiaal: 'natuursteen', kleur: 'blauwgrijs' } },
   { id: 'lw6', van: [650, 1450], tot: [900, 1350], dikte: 25, hoogte: 90, gevel: { materiaal: 'natuursteen', kleur: 'blauwgrijs' } },
+];
+
+/** De stroken van de beelden `bouw-stroken-…` (ronde 14), op de onderkant van het plan van de voorbeeldwoning. */
+const STROKEN = [
+  { id: 's1', kant: 'onder', niveau: 0, van: 205, tot: 635, onder: 0, boven: 270, materiaal: 'zink', kleur: 'antraciet' },
+  { id: 's2', kant: 'onder', niveau: 0, van: 1085, tot: 1125, materiaal: 'hout_staand', kleur: 'naturel' },
+  { id: 's3', kant: 'onder', niveau: 1, onder: 60, boven: 120, materiaal: 'hout_liggend', kleur: 'ceder' },
+  { id: 's4', kant: 'rechts', niveau: 1, onder: 60, boven: 120, materiaal: 'hout_liggend', kleur: 'ceder' },
 ];
 
 async function wachtTotStil(p, selector, maxMs = 40000) {
@@ -445,6 +458,38 @@ async function maakBeelden() {
         await p.locator('#pl-3d canvas').focus();
         const toets = { L: 'ArrowLeft', R: 'ArrowRight', U: 'ArrowUp', D: 'ArrowDown', Z: '+', O: '-' };
         for (const [, k, n] of b.toetsen.matchAll(/([LRUDZO])(\d+)/g)) for (let i = 0; i < Number(n); i++) await p.keyboard.press(toets[k]);
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
+      }
+      console.log('klaar');
+    }
+    await p.close();
+  }
+  const stroken = bouw.filter((x) => x.stroken);
+  if (stroken.length) {
+    // Een verse pagina (vers project, de voorbeeldwoning), de stroken erbij via het bewaarde project, en herladen.
+    const p = await nieuwePagina(BOUW);
+    await p.goto(`file://${BOUW}`);
+    await p.waitForTimeout(1500);
+    await p.evaluate((lijst) => {
+      const index = JSON.parse(localStorage.getItem('bouw-demo.projecten.v1'));
+      const sleutel = `bouw-demo.project.${index.actief}`;
+      const t = JSON.parse(localStorage.getItem(sleutel));
+      t.plan.gevelOntwerp.stroken = lijst;
+      localStorage.setItem(sleutel, JSON.stringify(t));
+    }, STROKEN);
+    await p.reload();
+    await p.waitForTimeout(1500);
+    for (const b of stroken) {
+      process.stdout.write(`  ${b.naam} … `);
+      await p.click('.nav [data-weergave="plan"]');
+      if (b.stroken === 'gevel') {
+        await p.click('[data-pl-weergave="gevels"]');
+        await p.click('[data-gevel="onder"]');
+        await p.waitForTimeout(800);
+        beelden.set(b.naam, PNG.sync.read(await p.locator('#gv-canvas svg').screenshot()));
+      } else {
+        await p.click('[data-pl-weergave="3d"]');
+        await p.click('[data-pl-standpunt="voor"]');
         beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       }
       console.log('klaar');
