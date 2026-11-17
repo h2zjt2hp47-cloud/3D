@@ -20,8 +20,9 @@ button { cursor: pointer; }
 button.hoofd { background: var(--accent); border-color: var(--accent); color: var(--op-accent); }
 input[type=checkbox] { width: 22px; height: 22px; }
 main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px; gap: 8px; }
-/* De 3D tekent op 62 % van haar breedte; kijker.ts kiest de breedte zo dat het beeld in het venster past (niet uitgerekt). */
-.drie-d { flex: none; align-self: center; width: 100%; max-width: 100%; border-radius: 6px; overflow: hidden; background: #f2f1ed; }
+/* De 3D tekent op 62 % van haar breedte; kijker.ts kiest de breedte van het vak zo dat het beeld in het venster past (niet uitgerekt). */
+.drie-d-vak { position: relative; flex: none; align-self: center; width: 100%; max-width: 100%; }
+.drie-d { width: 100%; border-radius: 6px; overflow: hidden; background: #f2f1ed; }
 .drie-d canvas { display: block; width: 100% !important; height: auto !important; cursor: grab; }
 .drie-d canvas:active { cursor: grabbing; }
 #uitleg { color: var(--zacht); font-size: 13px; margin: 0; }
@@ -50,6 +51,30 @@ header .aannemer { font-weight: 600; font-size: 14px; color: var(--accent); }
 #werk summary strong { flex: 1 1 14em; font-weight: 600; }
 #werk summary span { color: var(--zacht); font-size: 13px; white-space: nowrap; }
 #werk ul { margin: 0 0 10px; padding-left: 34px; font-size: 13.5px; }
+/* De techniek (ronde 10c): De woning / Techniek, de verdiepingen, de legende per vak en wat een aangetikt toestel is. */
+.tabs { display: inline-flex; flex-wrap: wrap; gap: 0; }
+.tabs button { border-radius: 0; margin-left: -1px; }
+.tabs button:first-child { border-radius: 6px 0 0 6px; margin-left: 0; }
+.tabs button:last-child { border-radius: 0 6px 6px 0; }
+.tabs button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--op-accent); position: relative; }
+#techniek { display: grid; gap: 6px; }
+#techniek-vakken { display: flex; flex-wrap: wrap; gap: 8px; }
+.tvak { display: inline-flex; align-items: center; gap: 8px; text-align: left; }
+.tvak .stip { width: 16px; height: 16px; border-radius: 4px; flex: none; }
+.tvak[aria-pressed="false"] { opacity: .55; }
+.tvak[aria-pressed="false"] .stip { filter: grayscale(.6); }
+#techniek .klein, .tinfo .klein { color: var(--zacht); font-size: 13px; margin: 0; }
+.tleidingen { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 13px; color: var(--inkt); margin: 0; }
+.tleidingen .lijn { display: inline-block; width: 22px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+#techniek-voorbehoud { font-size: 12px; }
+.tinfo { position: absolute; left: 10px; bottom: 10px; max-width: min(380px, calc(100% - 20px)); background: var(--vlak); border: 1px solid var(--lijn); border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, .18); padding: 10px 12px; display: grid; gap: 4px; font-size: 14px; }
+.tinfo .kop { display: flex; align-items: center; gap: 8px; padding-right: 40px; }
+.tinfo .kop strong { font-size: 15px; }
+.tinfo .stip { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.tinfo p { margin: 0; }
+.tinfo .sluit { position: absolute; top: 2px; right: 2px; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: 20px; color: var(--zacht); }
+.tinfo .post { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.tinfo .post button { min-height: 44px; padding: 6px 10px; }
 /* Bestand voor de klant: alleen kijken, geen ander pakket openen. */
 body.klantbestand #ander, body.klantbestand #leeg { display: none !important; }
 </style>
@@ -67,7 +92,12 @@ body.klantbestand #ander, body.klantbestand #leeg { display: none !important; }
   <div id="variantknoppen" role="group" aria-label="Variant" style="display:flex;flex-wrap:wrap;gap:8px"></div>
 </div>
 <div class="balk" id="balk" hidden>
-  <label>Toon <select id="keuze" aria-label="Wat tonen"></select></label>
+  <div id="weergave" class="tabs" role="group" aria-label="De woning of de techniek" hidden>
+    <button type="button" data-weergave="ontwerp" aria-pressed="true">De woning</button>
+    <button type="button" data-weergave="techniek" aria-pressed="false" title="Elektriciteit, verwarming en koeling, ventilatie, water en afvoer, per verdieping">Techniek</button>
+  </div>
+  <label id="keuze-wrap">Toon <select id="keuze" aria-label="Wat tonen"></select></label>
+  <div id="techniek-niveaus" class="tabs" role="group" aria-label="Verdieping" hidden></div>
   <label id="niveau-wrap">Tot en met <select id="niveau" aria-label="Tot en met verdieping"></select></label>
   <label id="laag-wrap"><input type="checkbox" id="laag"> Muren laag</label>
   <label id="maten-wrap"><input type="checkbox" id="maten"> Maten</label>
@@ -84,8 +114,16 @@ body.klantbestand #ander, body.klantbestand #leeg { display: none !important; }
     <p>Sleep hier een 3D-pakket uit de bouwconfigurator (Overzicht &gt; "3D doorsturen"), of kies het bestand.</p>
     <p><button type="button" class="hoofd" id="kies">Kies een 3D-pakket</button><input type="file" id="bestand" accept=".json,application/json" hidden></p>
   </div>
-  <div class="drie-d" id="drie-d" hidden></div>
+  <div class="drie-d-vak" id="drie-d-vak">
+    <div class="drie-d" id="drie-d" hidden></div>
+    <aside id="techniek-info" class="tinfo" aria-live="polite" hidden></aside>
+  </div>
   <p id="uitleg" hidden></p>
+  <section id="techniek" aria-label="Legende van de techniek" hidden>
+    <div id="techniek-vakken" role="group" aria-label="Welke techniek tonen"></div>
+    <div id="techniek-detail"></div>
+    <p id="techniek-voorbehoud" class="klein"></p>
+  </section>
   <p id="voorbehoud" hidden>Een ontwerp ter illustratie: kleuren en materialen zijn een benadering, maten onder voorbehoud van inmeting.</p>
   <section id="werk" hidden aria-labelledby="werk-titel">
     <h2 id="werk-titel">Wat er gebeurt, stap voor stap</h2>

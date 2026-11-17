@@ -10,7 +10,7 @@ import { planCatalogus, planNaarRegels } from '../../core/voorbeelden/inrichting
 import { ruitenVan } from '../../core/voorbeelden/raam.js';
 import { isVastModel, VASTE_MODELLEN, vastModelOmschrijving, vastModelOpbouw } from '../../core/voorbeelden/vastemodellen.js';
 import { $, el, eur, getal, kopieer, num, toonPrijs, btwLabel, PRIJZEN, alleenPrijs } from './hulp.js';
-import { gevelSvgs, ontwerpBeeld } from './plattegrond-ui.js';
+import { gevelSvgs, ontwerpBeeld, toonDingenIn3D } from './plattegrond-ui.js';
 import { gevelStaal } from './gevel-ui.js';
 import { startRamenlijst, toonRamenlijst } from './ramenlijst-ui.js';
 import { controles, inbegrepen, meetstaatLijst, positieBeeld, samenvatting } from './positie-ui.js';
@@ -509,8 +509,9 @@ export function toonOfferte(opties: { nieuwBeeld?: boolean } = {}) {
   if (constructie) constructie.hidden = los;
   $('#o-uitplan-kaart').hidden = los;
   $('#o-statiek-kaart').hidden = los && !t.posities.some((p) => p.model === 'RAAM');
-  // Techniek (ronde 10b): de telling per vak, alleen als het plan techniek heeft, dicht tot je ze openklapt.
-  toonTechniekOverzicht();
+  // Techniek (ronde 10b): de telling per vak, alleen als het plan techniek heeft, dicht tot je ze openklapt. In de
+  // klantweergave (ronde 10c) wat er komt in gewone woorden, en de techniek in de 3D met één tik.
+  toonTechniekOverzicht({ bekijk3D: () => { naarPlan(); toonDingenIn3D([], 'schuin', { techniek: true }); } });
   for (const x of document.querySelectorAll('.o-btwlabel')) x.textContent = PRIJZEN ? `prijzen ${btwLabel()}` : '';
 
   // Totalen (alleen met prijzen).

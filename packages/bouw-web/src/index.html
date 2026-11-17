@@ -721,6 +721,14 @@ ul.lijst li .positieacties button:not(.tweede):not(.gevaar) { border: 1px solid 
   .b-raam strong { font-weight: 600; }
   .b-klein { display: block; font-size: 8pt; color: #555; font-weight: 400; margin-top: 1mm; }
   .b-voet { margin-top: 6mm; }
+  /* De techniek (ronde 10c): de legende met de kleuren (die moeten mee op papier) en twee beelden per bladzijde. */
+  .b-legende { list-style: none; padding: 0; margin: 3mm 0 4mm; display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 6mm; font-size: 8.5pt; }
+  .b-legende li { break-inside: avoid; line-height: 1.35; }
+  .b-stip, .b-lijn { display: inline-block; vertical-align: middle; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .b-stip { width: 3mm; height: 3mm; border-radius: .7mm; margin-right: 1.5mm; }
+  .b-lijn { width: 5mm; height: 1.2mm; border-radius: .6mm; margin-right: 1mm; }
+  .b-leiding { white-space: nowrap; margin-right: 3mm; font-size: 8pt; color: #333; }
+  .b-techniek .b-boven img { max-height: 95mm; }
 }
 @media print {
   @page { size: A4; margin: 14mm; }
@@ -882,9 +890,24 @@ body.klantmodus #view-plan:not(.groot-scherm) .planraster { grid-template-column
 @media (max-width: 1200px) { body.klantmodus #view-plan:not(.groot-scherm) .planraster { grid-template-columns: minmax(0, 1fr); } }
 /* 3D: geen stijlen of Variant maken, geen uitleg "om te wijzigen"; een tik in de 3D toont alleen de posten van dat ding. */
 body.klantmodus #pl-3d-knoppen .tikhint, body.klantmodus .stijlbalk > :not(#pl-naast) { display: none !important; }
-body.klantmodus #pl-3d-keuze > :not(.kaartkop):not(.dingposten) { display: none !important; }
+body.klantmodus #pl-3d-keuze > :not(.kaartkop):not(.dingposten):not(.tklant) { display: none !important; }
 /* Configurator: wat voor de verkoper is. */
 body.klantmodus #p-bibliotheek, body.klantmodus #p-kopieer { display: none !important; }
+
+/* ---------- de techniek voor de klant (ronde 10c, 17/11) ----------
+   In de klantweergave: bij de 3D de kleuren van de leidingen, een tik op een toestel zegt wat het is (`.tklant`), en in
+   het overzicht de kaart Techniek zonder telling, per vak in gewone woorden (`.tklantkaart`). */
+.tleidingen { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: .82rem; margin: 2px 0; }
+.tleidingen .lijn { display: inline-block; width: 22px; height: 5px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+.techniekbalk .tleidingen, .techniekbalk p.klein { flex: 1 1 100%; margin: 0; }
+.tklant { display: grid; gap: 3px; margin: 2px 0 6px; }
+.tklant p { margin: 0; }
+.tklant .tstip, .tklantvak .tstip { display: inline-block; width: 11px; height: 11px; border-radius: 3px; margin-right: 6px; vertical-align: baseline; }
+.tklantvakken { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.tklantvakken li { border: 1px solid var(--lijn); border-radius: 8px; padding: 8px 10px; background: var(--papier); }
+.tklantvakken p { margin: 4px 0 0; font-size: .88rem; }
+.tklantkaart .acties { margin: 4px 0 8px; }
+.tklantkaart button { min-height: 44px; }
 
 /* ---------- kiezen, plaatsen, ongedaan maken en de uitleg samen in beeld (16/11, doorloop deel A) ----------
    Wat de verkoper nodig heeft om verder te tekenen, staat naast of vlak boven de tekening, op elk toestel, zonder

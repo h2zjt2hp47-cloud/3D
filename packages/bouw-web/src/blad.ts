@@ -5,6 +5,7 @@
  *      zichten (voorgevel, zijgevel, achtergevel) met de hoofdmaten;
  *   2. de gevels als aanzicht met de maten (dezelfde tekening als in het overzicht);
  *   3. per verdieping een beeld van boven, met lage muren en de breedte en diepte;
+ *   3b. als het plan techniek heeft (ronde 10c): per verdieping de techniek uitgezet, met de legende per vak;
  *   4. per raam of deur een beeld met de maten, een korte omschrijving en wat het is.
  * De beelden worden buiten beeld getekend (zoals de zending), het scherm verandert niet. Zonder woning (enkel ramen):
  * alleen het project en de ramen en deuren.
@@ -13,7 +14,7 @@
  * krijgt een eigen deel: een groot beeld (een gebouw buiten, staalwerk op de effen achtergrond), een zicht van voren en
  * van opzij met de hoofdmaten, en bij een vast model de constructie; met wat het is en de belangrijkste keuzes.
  */
-import { gebouwKader, gebouwMaatlijnen, passendKader, raamMaatlijnen, verdiepingenVan, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
+import { gebouwKader, gebouwMaatlijnen, passendKader, raamMaatlijnen, techniekPakket, verdiepingenVan, type Pakket3DTechniek, type Scene3D, type Scene3DMetMaten } from '../../core/src/index.js';
 import { planCatalogus } from '../../core/voorbeelden/inrichting.js';
 import { ontwerpKenmerken } from '../../core/voorbeelden/varianten.js';
 import type { Standpunt } from '../../demo-web/src/drie-d.js';
@@ -33,6 +34,26 @@ export function datumTekst(d: string): string {
 
 interface Opdracht { scene: Scene3D; standpunt: Standpunt; buiten: boolean; breedte: number }
 
+/** Een kleur uit het pakket als CSS (alleen een hexkleur; anders grijs). */
+const kleurCss = (k: string) => (/^#[0-9a-f]{3,8}$/i.test(k) ? k : '#777777');
+
+/**
+ * De techniek op het blad (ronde 10c): de legende per vak (kleur, naam, wat er komt, de kleuren van de leidingen) en per
+ * verdieping het beeld van de uitgezette 3D, met het voorbehoud. In gewone woorden, zonder aantallen of maten.
+ */
+function techniekSectie(t: Pakket3DTechniek, figuren: string[]): string {
+  const legende = t.vakken.map((v) => {
+    const toestellen = v.toestellen.map((x, i) => (i ? x.charAt(0).toLowerCase() + x.slice(1) : x)).join(', ');
+    const leidingen = v.leidingen.map((l) => `<span class="b-leiding"><span class="b-lijn" style="background:${kleurCss(l.kleur)}"></span>${esc(l.naam)}</span>`).join('');
+    return `<li><span class="b-stip" style="background:${kleurCss(v.kleur)}"></span><strong>${esc(v.naam)}</strong>${toestellen ? ` <span>${esc(toestellen)}.</span>` : ''}${leidingen ? `<br>${leidingen}` : ''}</li>`;
+  }).join('');
+  return `<section class="b-blad b-nieuw b-techniek"><h2>De techniek, per verdieping</h2>
+    <p class="b-klein">De woning als lage wanden: de toestellen staan in de kleur van hun vak, met een schijf op de vloer; de leidingen in hun eigen kleur.</p>
+    <ul class="b-legende">${legende}</ul>
+    <div class="b-boven">${figuren.join('')}</div>
+    ${t.voorbehoud ? `<p class="b-klein">${esc(t.voorbehoud)}</p>` : ''}</section>`;
+}
+
 /**
  * Tekent de beelden, vult het afdrukblad en opent het afdrukvenster. `kort` en `omschrijf` geven de regel en de
  * omschrijving van een positie zoals in het overzicht. Geeft false als de 3D op dit toestel niet werkt (dan geen blad).
@@ -47,6 +68,8 @@ export async function drukBlad(kort: (p: Positie) => string, omschrijf: (p: Posi
   const posities = alle.filter((p) => !onderdelen.includes(p));
   const heel = woning ? woningScene(undefined, false) : null;
   const met = (s: Scene3D, maatlijnen: Scene3DMetMaten['maatlijnen']): Scene3DMetMaten => ({ ...s, maatlijnen });
+  // De techniek (ronde 10c): alleen als het plan er heeft, zoals in het bestand voor de klant.
+  const techniek = heel ? techniekPakket(t.plan, planCatalogus) : undefined;
 
   // Alle beelden die nodig zijn, in de volgorde van het blad. Kleinere beelden voor kleine vakjes: dan blijft de tekst
   // van een maat leesbaar op papier (ze is op het scherm altijd even groot in beeldpunten).
@@ -58,6 +81,8 @@ export async function drukBlad(kort: (p: Positie) => string, omschrijf: (p: Posi
       const laag = woningScene(n, true);
       opdrachten.push({ scene: met(laag, gebouwMaatlijnen(laag, { hoogtes: false })), standpunt: 'boven', buiten: true, breedte: 800 });
     }
+    // Ronde 10c: per verdieping met techniek de uitgezette 3D, schuin, zoals in het bestand voor de klant.
+    for (const n of techniek?.niveaus ?? []) opdrachten.push({ scene: n.scene, standpunt: 'schuin', buiten: true, breedte: 960 });
   }
   for (const p of onderdelen) {
     const r = resultaat(p), buiten = isGebouw(p), kader = gebouwKader;
@@ -96,6 +121,7 @@ export async function drukBlad(kort: (p: Positie) => string, omschrijf: (p: Posi
     const gevels = gevelSvgs(560);
     if (gevels.length) html += `<section class="b-blad b-nieuw"><h2>De gevels</h2><div class="b-gevels">${gevels.map((g) => `<figure><figcaption>${esc(g.naam)}</figcaption>${g.svg}</figure>`).join('')}</div></section>`;
     html += `<section class="b-blad b-nieuw"><h2>Per verdieping, van boven</h2><div class="b-boven">${niveaus.map((v) => figuur(volgend(), v.naam)).join('')}</div></section>`;
+    if (techniek) html += techniekSectie(techniek, techniek.niveaus.map((n) => figuur(volgend(), n.naam)));
   } else {
     html += `<ul class="b-kort">${kenmerken.map((k) => `<li>${esc(k.tekst.charAt(0).toUpperCase() + k.tekst.slice(1))}</li>`).join('')}</ul>`;
   }

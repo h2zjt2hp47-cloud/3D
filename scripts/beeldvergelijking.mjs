@@ -136,11 +136,16 @@ const BOUWBEELDEN = [
   // kijker: de uitgeruste voorbeeldwoning in de uitgezette weergave, en de tekening van het gelijkvloers met de tekens.
   { naam: 'bouw-techniek', techniek: '3d', toetsen: 'O1' },
   { naam: 'bouw-techniek-plan', techniek: 'plan' },
+  // Techniek voor de klant (ronde 10c, 17/11): het pakket zoals het bestand voor de klant het krijgt (veld `techniek`),
+  // in de losse kijker met *Techniek*: het gelijkvloers uitgezet, schuin, met de legende eronder.
+  { naam: 'bouw-techniek-klant', techniek: 'klant' },
   // Techniek op het scherm (ronde 10b, 16/11), op een eigen pagina: *Voorbeeld openen: woning met techniek* in het palet,
   // de tekening met de techniek aan (elektriciteit op de voorgrond, de andere vakken en de meubels lichter), en de 3D
-  // *In de woning* met lage muren, het gelijkvloers schuin.
+  // *In de woning* met lage muren, het gelijkvloers schuin. Sinds ronde 10c ook de afgewerkte woning schuin (de tuinkant), met
+  // wat je van de techniek buiten ziet (de buitenunits van de airco en de warmtepomp, de dakdoorvoer) op ware grootte.
   { naam: 'bouw-techniek-scherm-plan', techniekScherm: 'plan' },
   { naam: 'bouw-techniek-scherm-3d', techniekScherm: '3d' },
+  { naam: 'bouw-techniek-buiten', techniekScherm: 'buiten' },
   // Vaste modellen (ronde 8b, 16/11), elk via de snelstart in een nieuw project, op een eigen pagina: een carport met
   // berging en zadeldak (de bedekking wordt vanzelf zink), het poolhouse, de hal van 15 × 30 m buiten (helemaal in beeld)
   // en in de constructieweergave, en de rechte trap met haar maten. `klik` = wat er daarna in de configurator gebeurt.
@@ -512,7 +517,7 @@ async function maakBeelden() {
   if (techniek.length) {
     // De gegevens uit de motor (core/voorbeelden/techniekbeeld.ts): het 3D-pakket en de tekening.
     const tsx = join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'tsx.cmd' : 'tsx');
-    const { pakket, plan } = JSON.parse(execSync(`"${tsx}" packages/core/voorbeelden/techniekbeeld.ts`, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 }).toString());
+    const { pakket, plan, klant } = JSON.parse(execSync(`"${tsx}" packages/core/voorbeelden/techniekbeeld.ts`, { cwd: ROOT, maxBuffer: 256 * 1024 * 1024 }).toString());
     const p = await nieuwePagina(KIJKER);
     await p.goto(`file://${KIJKER}`);
     await p.waitForTimeout(1000);
@@ -524,6 +529,13 @@ async function maakBeelden() {
         await t.waitForTimeout(300);
         beelden.set(b.naam, PNG.sync.read(await t.locator('svg').first().screenshot()));
         await t.close();
+      } else if (b.techniek === 'klant') {
+        // Ronde 10c: het pakket van het bestand voor de klant, dan *Techniek* (het gelijkvloers uitgezet), schuin.
+        await p.evaluate((x) => window.postMessage(x, '*'), klant);
+        await p.waitForTimeout(1000);
+        await p.click('[data-weergave="techniek"]');
+        await p.click('[data-standpunt="schuin"]');
+        beelden.set(b.naam, png(await wachtTotStil(p, '#drie-d canvas')));
       } else {
         // Het pakket als bericht aan de kijker (zoals een pagina die hem insluit), dan schuin en een stap verder weg.
         await p.evaluate((x) => window.postMessage(x, '*'), pakket);
@@ -555,6 +567,15 @@ async function maakBeelden() {
         await p.click('[data-pl-weergave="plan"]');
         await p.waitForTimeout(800);
         beelden.set(b.naam, PNG.sync.read(await p.locator('#pl-canvas').screenshot()));
+      } else if (b.techniekScherm === 'buiten') {
+        // Ronde 10c: Afgewerkt (de techniek uit), de hele woning schuin (de tuinkant): de buitenunits van de airco en de
+        // warmtepomp en de dakdoorvoer op ware grootte.
+        await p.click('[data-pl-weergave="3d"]');
+        await p.click('[data-3d-weergave="afgewerkt"]');
+        await p.uncheck('#pl-laag');
+        await p.check('#pl-alle-niveaus');
+        await p.click('[data-pl-standpunt="schuin"]');
+        beelden.set(b.naam, png(await wachtTotStil(p, '#pl-3d canvas')));
       } else {
         await p.click('[data-pl-weergave="3d"]');
         await p.click('[data-techniek-3d="woning"]');
